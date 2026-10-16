@@ -335,9 +335,10 @@ pub fn player_killed_player_now(g: &mut Game, iKiller: i16, mut killed: Ptr<CPla
     }
 }
 
-fn gamemode_as<T: 'static>() -> Option<&'static mut T> {
+fn gamemode_as<T: 'static>(g: &mut Game) -> Option<&'static mut T> {
+    let mut gp = g.ptr();
     unsafe {
-        let gm = game().game_values.gamemode;
+        let gm = gp.game_values.gamemode;
         if gm.is_null() {
             return None;
         }
@@ -624,7 +625,7 @@ impl CPlayer {
 
             let mut maxVel: f32 = 0.0;
             if !self.frozen {
-                let gmTag = gamemode_as::<CGM_Tag>();
+                let gmTag = gamemode_as::<CGM_Tag>(g);
                 let isTagged = match &gmTag {
                     Some(t) => t.tagged() == Ptr::from_mut(self),
                     None => false,
@@ -1115,13 +1116,13 @@ impl CPlayer {
             }
             let this = Ptr::from_raw(self as *const CPlayer as *mut CPlayer);
             if g.game_values.gamemode.gamemode == game_mode_star {
-                let starmode = gamemode_as::<CGM_Star>().unwrap();
+                let starmode = gamemode_as::<CGM_Star>(g).unwrap();
                 let starmodetype = starmode.getcurrentmodetype();
                 if starmodetype != StarStyle::Multi && starmode.isplayerstar(g, this) {
                     return if starmodetype == StarStyle::Ztar { gfx_palette::ztarred } else { gfx_palette::got_shine };
                 }
             }
-            if let Some(gmTag) = gamemode_as::<CGM_Tag>() {
+            if let Some(gmTag) = gamemode_as::<CGM_Tag>(g) {
                 if gmTag.tagged() == this {
                     return gfx_palette::tagged;
                 }
@@ -1266,7 +1267,7 @@ impl CPlayer {
 
         unsafe {
             let mut isGlidingChicken = false;
-            if let Some(gmChicken) = gamemode_as::<CGM_Chicken>() {
+            if let Some(gmChicken) = gamemode_as::<CGM_Chicken>(g) {
                 isGlidingChicken = gmChicken.chicken() == Ptr::from_mut(self) && g.game_values.gamemodesettings.chicken.glide && self.powerup == -1;
             }
 
@@ -2010,7 +2011,7 @@ impl CPlayer {
                 let iDeathSprite = if deathStyle == PlayerDeathStyle::Jump { PGFX_DEADFLYING } else { PGFX_DEAD } as usize;
 
                 let mut corpseSprite: Ptr<gfxSprite> = Ptr::from_mut(&mut self.sprites.get()[iDeathSprite]);
-                let isChicken = match gamemode_as::<CGM_Chicken>() {
+                let isChicken = match gamemode_as::<CGM_Chicken>(g) {
                     Some(gmChicken) => gmChicken.chicken() == Ptr::from_mut(self),
                     None => false,
                 };
@@ -2261,7 +2262,7 @@ impl CPlayer {
                 return PlayerKillType::None;
             }
 
-            if let Some(gmChicken) = gamemode_as::<CGM_Chicken>() {
+            if let Some(gmChicken) = gamemode_as::<CGM_Chicken>(g) {
                 if gmChicken.chicken() == killer && style != KillStyle::Pow {
                     if_sound_on_play(g, &mut gp.rm.sfx_chicken);
                 }
@@ -2310,7 +2311,7 @@ impl CPlayer {
         let mut o1 = self.this();
 
         unsafe {
-            let gmTag = match gamemode_as::<CGM_Tag>() {
+            let gmTag = match gamemode_as::<CGM_Tag>(g) {
                 Some(t) => t,
                 None => return,
             };
@@ -2364,7 +2365,7 @@ impl CPlayer {
                 return;
             }
 
-            let sgt = gamemode_as::<CGM_ShyGuyTag>().unwrap();
+            let sgt = gamemode_as::<CGM_ShyGuyTag>(g).unwrap();
 
             if o1.shyguy && !o2.shyguy && !o2.is_shielded() && !o2.is_invincible() {
                 sgt.set_shy_guy(g, o2.get_team_id());
@@ -2471,7 +2472,7 @@ impl CPlayer {
             self.pScoreboardSprite = self.sprites;
 
             let mut chicken: Ptr<CPlayer> = Ptr::null();
-            if let Some(gmChicken) = gamemode_as::<CGM_Chicken>() {
+            if let Some(gmChicken) = gamemode_as::<CGM_Chicken>(g) {
                 chicken = gmChicken.chicken();
             }
 

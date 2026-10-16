@@ -125,7 +125,7 @@ impl CGameModeTrait for CGM_ShyGuyTag {
         self.gameClock.init(g, 0, true);
 
         unsafe {
-            for iScore in 0..game().score_cnt as usize {
+            for iScore in 0..g.score_cnt as usize {
                 gp.score[iScore].set_score(g, 0);
             }
 

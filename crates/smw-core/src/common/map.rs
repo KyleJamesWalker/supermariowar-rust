@@ -2799,14 +2799,13 @@ pub(crate) mod tests {
     /// Brings up the globals `CMap::load_map` touches, against the repository's data/ directory.
     pub(crate) fn init_map_globals(g: &mut Game) {
         let mut gp = g.ptr();
-        let mut gp = g.ptr();
         INIT.call_once(|| unsafe {
             g.RootDataDirectory = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data").to_string();
             std::env::set_var("SDL_VIDEODRIVER", "dummy");
             SDL_Init(0);
             g.screen = SDL_CreateRGBSurface(0, 640, 480, 32, 0, 0, 0, 0);
             g.blitdest = g.screen;
-            g.filterslist = Ptr::new_box(FiltersList::new());
+            g.filterslist = Ptr::new_box(FiltersList::new(g));
             if !g.game_values.is_initialized() {
                 g.game_values.init(CGameValues::new());
             }

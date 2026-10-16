@@ -63,7 +63,6 @@ impl CGM_Race {
 
     pub fn set_next_goal(&mut self, g: &mut Game, teamID: i16) {
         let mut gp = g.ptr();
-        let mut gp = g.ptr();
         unsafe {
             self.nextGoal[teamID as usize] += 1;
             if self.nextGoal[teamID as usize] >= self.quantity {

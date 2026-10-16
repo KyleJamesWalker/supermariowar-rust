@@ -85,12 +85,13 @@ pub fn gameloop(g: &mut Game) {
 unsafe extern "C-unwind" fn gameloop_frame_web() {
     const MAX_CATCH_UP_FRAMES: u32 = 5;
     let g = game().get();
-    let ml = &mut game().get().main_loop;
+    let mut gp = g.ptr();
+    let ml = &mut gp.get().main_loop;
 
-    let frame_ms = game().game_values.framelimiter as f64;
+    let frame_ms = gp.game_values.framelimiter as f64;
     if harness::no_limit(g) || frame_ms <= 0.0 {
         gameloop_frame();
-        web_quit_if_done(game().get());
+        web_quit_if_done(gp.get());
         return;
     }
 
@@ -101,11 +102,11 @@ unsafe extern "C-unwind" fn gameloop_frame_web() {
     ml.web_last_time = now;
 
     let mut frames = 0;
-    while ml.web_accumulated >= frame_ms && frames < MAX_CATCH_UP_FRAMES && game().game_values.appstate != crate::common::game_values::AppState::Quit {
-        assign_hotplugged(game().get());
-        harness::frame_start(game().get());
-        GameStateManager::instance(game().get()).currentState.get().update(game().get());
-        harness::frame_end(game().get());
+    while ml.web_accumulated >= frame_ms && frames < MAX_CATCH_UP_FRAMES && gp.game_values.appstate != crate::common::game_values::AppState::Quit {
+        assign_hotplugged(gp.get());
+        harness::frame_start(gp.get());
+        GameStateManager::instance(gp.get()).currentState.get().update(gp.get());
+        harness::frame_end(gp.get());
 
         ml.web_accumulated -= frame_ms;
         frames += 1;
@@ -115,9 +116,9 @@ unsafe extern "C-unwind" fn gameloop_frame_web() {
     }
 
     if frames > 0 {
-        gfx_flipscreen(game().get());
+        gfx_flipscreen(gp.get());
     }
-    web_quit_if_done(game().get());
+    web_quit_if_done(gp.get());
 }
 
 /// The browser main loop never returns, so when the game quits (the end of a watched replay) stop
@@ -134,29 +135,30 @@ unsafe fn web_quit_if_done(g: &mut Game) {
 
 unsafe extern "C-unwind" fn gameloop_frame() {
     let g = game().get();
+    let mut gp = g.ptr();
     #[cfg(not(target_os = "emscripten"))]
     use crate::smw::pad::phase;
     #[cfg(target_os = "emscripten")]
     fn phase(_: usize) {}
 
     phase(1);
-    FPSLimiter::instance(game().get()).frame_start(g);
+    FPSLimiter::instance(gp.get()).frame_start(g);
 
-    assign_hotplugged(game().get());
+    assign_hotplugged(gp.get());
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::touch::flush(g);
-    harness::frame_start(game().get());
+    harness::frame_start(gp.get());
     phase(5);
-    GameStateManager::instance(game().get()).currentState.get().update(game().get());
+    GameStateManager::instance(gp.get()).currentState.get().update(gp.get());
     phase(6);
-    harness::frame_end(game().get());
+    harness::frame_end(gp.get());
 
     phase(1);
-    FPSLimiter::instance(game().get()).before_flip(game().get());
+    FPSLimiter::instance(gp.get()).before_flip(gp.get());
     phase(7);
-    gfx_flipscreen(game().get());
+    gfx_flipscreen(gp.get());
     phase(1);
-    FPSLimiter::instance(game().get()).after_flip(game().get());
+    FPSLimiter::instance(gp.get()).after_flip(gp.get());
 }
 
 pub fn create_globals(g: &mut Game) {
@@ -166,7 +168,7 @@ pub fn create_globals(g: &mut Game) {
         g.rm = Ptr::new_box(CResourceManager::new());
 
         g.g_map = Ptr::from_box(CMap::new());
-        g.filterslist = Ptr::new_box(FiltersList::new());
+        g.filterslist = Ptr::new_box(FiltersList::new(g));
         g.maplist = Ptr::new_box(MapList::new(g, false));
 
         //TODO: add proper test via size
@@ -177,14 +179,14 @@ pub fn create_globals(g: &mut Game) {
         g.skinlist = Ptr::new_box(SkinList::new(g));
         g.musiclist = Ptr::new_box(MusicList::new(g));
         g.worldmusiclist = Ptr::new_box(WorldMusicList::new(g));
-        g.soundpacklist = Ptr::new_box(SoundsList::new());
-        g.announcerlist = Ptr::new_box(AnnouncerList::new());
-        g.tourlist = Ptr::new_box(TourList::new());
-        g.worldlist = Ptr::new_box(WorldList::new());
+        g.soundpacklist = Ptr::new_box(SoundsList::new(g));
+        g.announcerlist = Ptr::new_box(AnnouncerList::new(g));
+        g.tourlist = Ptr::new_box(TourList::new(g));
+        g.worldlist = Ptr::new_box(WorldList::new(g));
 
-        g.menugraphicspacklist = Ptr::new_box(GraphicsList::new());
-        g.worldgraphicspacklist = Ptr::new_box(GraphicsList::new());
-        g.gamegraphicspacklist = Ptr::new_box(GraphicsList::new());
+        g.menugraphicspacklist = Ptr::new_box(GraphicsList::new(g));
+        g.worldgraphicspacklist = Ptr::new_box(GraphicsList::new(g));
+        g.gamegraphicspacklist = Ptr::new_box(GraphicsList::new(g));
 
         g.announcerlist.set_current_index(0);
         g.musiclist.set_current(0);
@@ -214,7 +216,7 @@ pub fn init_joysticks(g: &mut Game) {
         g.joystickcount = SDL_NumJoysticks() as i16;
         g.joysticks = Box::leak(vec![null_mut::<SDL_Joystick>(); g.joystickcount.max(0) as usize].into_boxed_slice()).as_mut_ptr();
 
-        for i in 0..game().joystickcount as usize {
+        for i in 0..g.joystickcount as usize {
             *g.joysticks.add(i) = SDL_JoystickOpen(i as i32);
         }
 
@@ -245,7 +247,7 @@ fn assign_inputs(g: &mut Game) {
         #[cfg(not(target_os = "emscripten"))]
         let mut pads = crate::smw::pad::player_pads(g);
         #[cfg(target_os = "emscripten")]
-        let mut pads: Vec<usize> = (0..game().joystickcount.max(0) as usize).filter(|k| !g.main_loop.web_removed.contains(k)).collect();
+        let mut pads: Vec<usize> = (0..gp.joystickcount.max(0) as usize).filter(|k| !g.main_loop.web_removed.contains(k)).collect();
         pads.retain(|&k| k < MAX_PLAYERS as usize);
         let touch_session = touch_session(g);
         if pads.is_empty() && !touch_session {
@@ -503,6 +505,7 @@ pub fn run(argv: Vec<String>) {
 
 pub fn main_game() {
     let g = game().get();
+    let mut gp = g.ptr();
     unsafe {
         println!("-------------------------------------------------------------------------------");
         println!(" {} {} {}", TITLESTRING, GIT_REVISION, GIT_DATE);
@@ -533,11 +536,11 @@ pub fn main_game() {
             g.score[iScore] = Ptr::new_box(CScore::new(iScore as i16));
         }
 
-        CGameValues::init(&mut game().game_values, g);
+        CGameValues::init(&mut gp.game_values, g);
 
         create_gamemodes(g);
 
-        game().game_values.read_binary_config(g);
+        gp.game_values.read_binary_config(g);
         assign_inputs(g);
 
         //Assign the powerup weights to the selected preset
@@ -554,11 +557,11 @@ pub fn main_game() {
 
         //Load the gfx color palette
         let pack = g.gamegraphicspacklist.current_path().to_string_lossy().into_owned();
-        let png = std::panic::catch_unwind(|| gfx_loadpalette(game().get(), Path::new(&convert_path_pack(game().get(), "gfx/packs/palette.png", &pack))));
+        let png = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| gfx_loadpalette(gp.get(), Path::new(&convert_path_pack(gp.get(), "gfx/packs/palette.png", &pack)))));
         if let Err(payload) = png {
             let Some(err) = payload.downcast_ref::<String>() else { std::panic::resume_unwind(payload) };
             println!("\nwarning: {} -> falling back to BMP", err);
-            gfx_loadpalette(g, Path::new(&convert_path_pack(game().get(), "gfx/packs/palette.bmp", &pack)));
+            gfx_loadpalette(g, Path::new(&convert_path_pack(gp.get(), "gfx/packs/palette.bmp", &pack)));
         }
 
         srand(harness::libc_seed(g, time(null_mut()) as u32));

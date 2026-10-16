@@ -104,7 +104,7 @@ fn snapshot(g: &mut Game) -> Vec<i32> {
     unsafe {
         let gm = g.game_values.gamemode;
         let mut v = vec![gm.gameover as i32, gm.winningteam as i32];
-        for t in 0..game().score_cnt as usize {
+        for t in 0..g.score_cnt as usize {
             v.push(g.score[t].score as i32);
             v.extend(g.score[t].subscore.iter().map(|s| *s as i32));
         }
@@ -113,8 +113,9 @@ fn snapshot(g: &mut Game) -> Vec<i32> {
 }
 
 fn record(g: &mut Game) {
+    let mut gp = g.ptr();
     unsafe {
-        let scores: Vec<i16> = (0..game().score_cnt as usize).map(|t| g.score[t].score).collect();
+        let scores: Vec<i16> = (0..gp.score_cnt as usize).map(|t| g.score[t].score).collect();
         if scores != outcome_state(g).g_lastScores {
             let text: Vec<String> = scores.iter().map(|s| s.to_string()).collect();
             harness::note_net(g, format!("scores {}", text.join(",")));
@@ -226,8 +227,9 @@ pub fn remove_team_event(g: &mut Game, teamid: i16) -> Option<bool> {
 }
 
 pub fn net_remove_team(g: &mut Game, teamid: i16) {
+    let mut gp = g.ptr();
     unsafe {
-        if (0..game().score_cnt).contains(&teamid) {
+        if (0..gp.score_cnt).contains(&teamid) {
             outcome_state(g).g_removeResult = crate::smw::gamemodes::game_mode::remove_team_now(g, teamid);
         }
     }

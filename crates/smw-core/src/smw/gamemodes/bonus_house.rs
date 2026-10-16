@@ -107,7 +107,6 @@ impl CGameModeTrait for CGM_Bonus {
 
     fn draw_background(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        let mut gp = g.ptr();
         unsafe {
             //Draw Toad
             gp.rm.spr_worldbonushouse.draw_src(g, 544, 256, &SDL_Rect { x: if gp.players[0].left_x() > 544 { 224 } else { 192 }, y: 0, w: 32, h: 64 });

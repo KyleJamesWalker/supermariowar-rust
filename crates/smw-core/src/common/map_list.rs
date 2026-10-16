@@ -468,7 +468,7 @@ impl MapList {
             if g.game_values.fNeedWriteFilters {
                 g.game_values.fNeedWriteFilters = false;
 
-                for iFilter in 0..game().filterslist.count() {
+                for iFilter in 0..g.filterslist.count() {
                     let path = g.filterslist.at(iFilter).clone();
                     let Ok(mut fp) = std::fs::File::create(&path) else {
                         continue;
@@ -553,7 +553,7 @@ impl MapList {
             }
 
             self.current = 0;
-            for iFilter in 0..game().filterslist.count() {
+            for iFilter in 0..g.filterslist.count() {
                 let Ok(f) = std::fs::File::open(g.filterslist.at(iFilter)) else {
                     continue;
                 };

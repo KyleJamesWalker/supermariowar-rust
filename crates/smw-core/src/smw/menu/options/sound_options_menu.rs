@@ -85,7 +85,7 @@ impl UI_SoundOptionsMenu {
 
             let iCurrentMusic = g.worldmusiclist.current_index() as i32;
             g.worldmusiclist.set_current(0);
-            for iMusic in 0..game().worldmusiclist.count() {
+            for iMusic in 0..g.worldmusiclist.count() {
                 let name = g.worldmusiclist.current_name().to_string();
                 this.miWorldMusicField.add(name, iMusic as i16);
                 g.worldmusiclist.next();

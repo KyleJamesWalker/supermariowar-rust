@@ -427,6 +427,7 @@ pub fn main() {
 
 pub fn inner_main() {
     let g = game().get();
+    let mut gp = g.ptr();
     unsafe {
         ensure_settings_dir(g);
 
@@ -462,12 +463,12 @@ pub fn inner_main() {
         let mut rm = g.rm;
 
         g.g_map = Ptr::from_box(CMap::new());
-        game().g_tilesetmanager = Ptr::new_box(CTilesetManager::new(g, &convert_path(game().get(), "gfx/Classic/tilesets")));
-        g.filterslist = Ptr::new_box(FiltersList::new());
+        gp.g_tilesetmanager = Ptr::new_box(CTilesetManager::new(g, &convert_path(gp.get(), "gfx/Classic/tilesets")));
+        g.filterslist = Ptr::new_box(FiltersList::new(g));
         g.maplist = Ptr::new_box(MapList::new(g, true));
-        g.menugraphicspacklist = Ptr::new_box(GraphicsList::new());
-        g.gamegraphicspacklist = Ptr::new_box(GraphicsList::new());
-        g.worldlist = Ptr::new_box(WorldList::new());
+        g.menugraphicspacklist = Ptr::new_box(GraphicsList::new(g));
+        g.gamegraphicspacklist = Ptr::new_box(GraphicsList::new(g));
+        g.worldlist = Ptr::new_box(WorldList::new(g));
 
         g.game_values.sound = false;
         g.game_values.music = false;
@@ -493,8 +494,8 @@ pub fn inner_main() {
         ed().menu_shade.init(ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_shade.png")).with_alpha(128).create(g));
         ed().spr_largedialog.init(ImageLoader::new(convert_path(g, "gfx/leveleditor/leveleditor_platform.png")).with_alpha(255).create(g));
 
-        game().rm.menu_font_small = gfxFont::from_path(g, &convert_path(game().get(), "gfx/packs/Classic/fonts/font_small.png"));
-        game().rm.menu_font_large = gfxFont::from_path(g, &convert_path(game().get(), "gfx/packs/Classic/fonts/font_large.png"));
+        gp.rm.menu_font_small = gfxFont::from_path(g, &convert_path(gp.get(), "gfx/packs/Classic/fonts/font_small.png"));
+        gp.rm.menu_font_large = gfxFont::from_path(g, &convert_path(gp.get(), "gfx/packs/Classic/fonts/font_large.png"));
 
         println!("\n---------------- load world ----------------");
 
@@ -573,7 +574,7 @@ pub fn inner_main() {
         g.rm.spr_hazard_pirhanaplant[1] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/pirhanaplant_preview.png")).create(g);
         g.rm.spr_hazard_pirhanaplant[2] = ImageLoader::new(convert_path(g, "gfx/packs/Classic/hazards/pirhanaplant_thumbnail.png")).create(g);
 
-        game().rm.load_menu_graphics(g);
+        gp.rm.load_menu_graphics(g);
 
         ed().sMapSurface = SDL_CreateRGBSurface((*g.screen).flags, 768, 608, (*(*g.screen).format).BitsPerPixel as i32, 0, 0, 0, 0);
 
@@ -687,7 +688,7 @@ pub fn inner_main() {
         }
 
         //Mode Settings Button
-        ed().miModeSettingsButton = Ptr::new_box(MI_Button::new_left(g, sprite(&mut game().rm.spr_selectfield), 430, 100, "Settings", 140));
+        ed().miModeSettingsButton = Ptr::new_box(MI_Button::new_left(g, sprite(&mut gp.rm.spr_selectfield), 430, 100, "Settings", 140));
         ed().miModeSettingsButton.set_code(MENU_CODE_TO_MODE_SETTINGS_MENU);
 
         //Points Field
@@ -706,7 +707,7 @@ pub fn inner_main() {
         ed().miMapField = Ptr::new_box(MI_MapField::new(g, sprite(&mut rm.spr_selectfield), 70, 180, "Map", 500, 120, true));
 
         //Bonus Item Picker Menu Button
-        ed().miBonusItemsButton = Ptr::new_box(MI_Button::new_left(g, sprite(&mut game().rm.spr_selectfield), 430, 220, "Bonuses", 140));
+        ed().miBonusItemsButton = Ptr::new_box(MI_Button::new_left(g, sprite(&mut gp.rm.spr_selectfield), 430, 220, "Bonuses", 140));
         ed().miBonusItemsButton.set_code(MENU_CODE_TO_BONUS_PICKER_MENU);
 
         //Bonus Type
@@ -729,15 +730,15 @@ pub fn inner_main() {
         ed().miBonusTextField[4].set_disallowed_chars(",|");
 
         //Delete Stage Button
-        ed().miDeleteStageButton = Ptr::new_box(MI_Button::new_left(g, sprite(&mut game().rm.spr_selectfield), 430, 440, "Delete", 140));
+        ed().miDeleteStageButton = Ptr::new_box(MI_Button::new_left(g, sprite(&mut gp.rm.spr_selectfield), 430, 440, "Delete", 140));
         ed().miDeleteStageButton.set_code(MENU_CODE_DELETE_STAGE_BUTTON);
 
         //Are You Sure Dialog for Delete Stage
         ed().miDeleteStageDialogImage = Ptr::new_box(MI_Image::new(ed().spr_dialog.as_ptr(), 224, 176, 0, 0, 192, 128, 1, 1, 0));
         ed().miDeleteStageDialogAreYouText = Ptr::new_box(MI_HeaderText::new(g, "Are You", 320, 195));
         ed().miDeleteStageDialogSureText = Ptr::new_box(MI_HeaderText::new(g, "Sure?", 320, 220));
-        ed().miDeleteStageDialogYesButton = Ptr::new_box(MI_Button::new(g, sprite(&mut game().rm.spr_selectfield), 235, 250, "Yes", 80, TextAlign::CENTER));
-        ed().miDeleteStageDialogNoButton = Ptr::new_box(MI_Button::new(g, sprite(&mut game().rm.spr_selectfield), 325, 250, "No", 80, TextAlign::CENTER));
+        ed().miDeleteStageDialogYesButton = Ptr::new_box(MI_Button::new(g, sprite(&mut gp.rm.spr_selectfield), 235, 250, "Yes", 80, TextAlign::CENTER));
+        ed().miDeleteStageDialogNoButton = Ptr::new_box(MI_Button::new(g, sprite(&mut gp.rm.spr_selectfield), 325, 250, "No", 80, TextAlign::CENTER));
 
         ed().miDeleteStageDialogYesButton.set_code(MENU_CODE_DELETE_STAGE_YES);
         ed().miDeleteStageDialogNoButton.set_code(MENU_CODE_DELETE_STAGE_NO);
@@ -894,7 +895,7 @@ pub fn inner_main() {
         ed().miVehicleBoundaryField.set_current_value(ed().g_wvVehicleStamp.iBoundary);
         ed().miVehicleBoundaryField.allow_fast_scroll(true);
 
-        ed().miVehicleCreateButton = Ptr::new_box(MI_Button::new(g, sprite(&mut game().rm.spr_selectfield), 430, 360, "OK", 140, TextAlign::CENTER));
+        ed().miVehicleCreateButton = Ptr::new_box(MI_Button::new(g, sprite(&mut gp.rm.spr_selectfield), 430, 360, "OK", 140, TextAlign::CENTER));
         ed().miVehicleCreateButton.set_code(MENU_CODE_CREATE_VEHICLE);
 
         ed().miTitleText = Ptr::new_box(MI_Text::new(g, "Clicking on the map will add the vehicle configured below", 320, 50, 640, true, TextAlign::CENTER));
@@ -951,7 +952,7 @@ pub fn inner_main() {
 
         WriteVehiclesIntoWorld(g);
         WriteWarpsIntoWorld(g);
-        game().g_worldmap.save(g, &convert_path(game().get(), "worlds/ZZworldeditor.txt"));
+        gp.g_worldmap.save(g, &convert_path(gp.get(), "worlds/ZZworldeditor.txt"));
 
         {
             let options_path = get_home_directory(g) + "worldeditor.bin";
@@ -1197,7 +1198,6 @@ fn copy_vehicle_into_stamp(vehicle: &WorldVehicle) {
 }
 
 pub fn editor_edit(g: &mut Game) -> i32 {
-        let mut gp = g.ptr();
         let mut gp = g.ptr();
     unsafe {
         let mut done = false;
@@ -2453,7 +2453,7 @@ pub fn editor_start_items(g: &mut Game) -> i32 {
                 gp.rm.spr_worlditempopup.draw_src(g, 320, 416 - (iPopup << 6), &r(192, 0, 320, 64));
             }
 
-            for iPickedItem in 0..game().g_worldmap.iNumInitialBonuses as usize {
+            for iPickedItem in 0..g.g_worldmap.iNumInitialBonuses as usize {
                 let iPowerup: i16 = g.g_worldmap.iInitialBonuses[iPickedItem];
                 if iPowerup as i32 >= NUM_POWERUPS {
                     gp.rm.spr_worlditems.draw_src(g, rPickedItemDst[iPickedItem].x, rPickedItemDst[iPickedItem].y, &r((iPowerup as i32 - NUM_POWERUPS) << 5, 0, 32, 32));
@@ -3000,7 +3000,7 @@ pub fn editor_vehicles(g: &mut Game) -> i32 {
 
         ed().miVehicleStageField.clear();
 
-        for iStage in 0..game().g_worldmap.iNumStages {
+        for iStage in 0..g.g_worldmap.iNumStages {
             let ts = g.game_values.tourstops[iStage as usize];
             let szStageName = format!("({}) {}", iStage + 1, ts.szName);
 
@@ -3147,7 +3147,6 @@ pub fn editor_path(g: &mut Game) -> i32 {
 }
 
 pub fn DisplayStageDetails(g: &mut Game, fForce: bool, iStageId: i16, mut iMouseX: i16, mut iMouseY: i16) {
-        let mut gp = g.ptr();
         let mut gp = g.ptr();
     unsafe {
         let ts = g.game_values.tourstops[iStageId as usize];
@@ -3562,7 +3561,6 @@ pub fn NewStage(g: &mut Game, iEditStage: &mut i16) {
 
 pub fn editor_stage(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
-        let mut gp = g.ptr();
     unsafe {
         ed().mCurrentMenu = ed().mStageSettingsMenu.as_ptr();
         ed().mCurrentMenu.reset_menu(g);
@@ -3930,7 +3928,7 @@ pub fn editor_stage(g: &mut Game) -> i32 {
             let color = SDL_MapRGB((*g.blitdest).format, 0, 0, 255);
 
             if iEditStage == -1 {
-                for iStage in 0..game().g_worldmap.iNumStages as i32 {
+                for iStage in 0..g.g_worldmap.iNumStages as i32 {
                     let ix: i16 = ((iStage % 20) << 5) as i16;
                     let iy: i16 = ((iStage / 20) << 5) as i16;
 

@@ -150,7 +150,7 @@ impl CObjectTrait for MO_Boomerang {
             self.animate();
 
             // Detection collision with boomerang breakable blocks
-            let blocks = self.get_collision_blocks();
+            let blocks = self.get_collision_blocks(g);
             for iBlock in 0..4usize {
                 let mut block = blocks[iBlock];
                 if block.is_null() {

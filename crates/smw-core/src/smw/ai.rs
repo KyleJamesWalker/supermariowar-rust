@@ -791,7 +791,7 @@ impl CPlayerAI {
             let gmChicken = dynamic_cast_gamemode::<CGM_Chicken>(g);
 
             //Figure out where the other players are
-            for iPlayer in 0..game().players.len() {
+            for iPlayer in 0..g.players.len() {
                 if iPlayer == pPlayer.localID as usize || g.players[iPlayer].state != PlayerState::Ready {
                     continue;
                 }
@@ -1566,7 +1566,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                     PowerupType::JailKey => return pPlayer.jail.is_active(),
                     PowerupType::MysteryMushroom => {
                         //See if another player has a powerup
-                        for iPlayer in 0..game().players.len() {
+                        for iPlayer in 0..g.players.len() {
                             if iPlayer == pPlayer.localID as usize || g.players[iPlayer].teamID == iTeamID {
                                 continue;
                             }

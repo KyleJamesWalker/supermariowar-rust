@@ -48,7 +48,7 @@ impl CGM_Boss_MiniGame {
         remove_players_but_team(g, self.winningteam);
 
         unsafe {
-            for iScore in 0..game().score_cnt {
+            for iScore in 0..g.score_cnt {
                 if self.winningteam == iScore {
                     continue;
                 }
@@ -95,7 +95,6 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
 
     fn init(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        let mut gp = g.ptr();
         gm::cgamemode_init(g, self);
 
         self.fReverseScoring = false;
@@ -104,7 +103,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
         self.poweruptimer = 120;
 
         unsafe {
-            for iScore in 0..game().score_cnt as usize {
+            for iScore in 0..g.score_cnt as usize {
                 gp.score[iScore].set_score(g, self.goal);
             }
 
@@ -200,7 +199,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
             if !self.playedwarningsound {
                 let mut countscore: i16 = 0;
                 unsafe {
-                    for k in 0..game().score_cnt as usize {
+                    for k in 0..g.score_cnt as usize {
                         countscore = countscore.wrapping_add(g.score[k].score);
                     }
                 }
@@ -228,7 +227,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
             if !self.playedwarningsound {
                 let mut countscore: i16 = 0;
                 unsafe {
-                    for k in 0..game().score_cnt as usize {
+                    for k in 0..g.score_cnt as usize {
                         countscore = countscore.wrapping_add(g.score[k].score);
                     }
                 }

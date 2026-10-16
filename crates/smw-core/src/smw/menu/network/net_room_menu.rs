@@ -45,8 +45,6 @@ crate::impl_base!(UI_NetRoomMenu => ui_menu: UI_Menu);
 impl UI_NetRoomMenu {
     pub fn new(g: &mut Game) -> Box<Self> {
         let mut gp = g.ptr();
-        let mut gp = g.ptr();
-        let mut gp = g.ptr();
         let mut this = Box::<Self>::default();
         unsafe {
             let selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
@@ -133,7 +131,6 @@ impl UI_NetRoomMenu {
     }
 
     pub fn refresh(&mut self, g: &mut Game) {
-        let mut gp = g.ptr();
         let mut gp = g.ptr();
         unsafe {
             let name = g.netplay.currentRoom.name.clone();

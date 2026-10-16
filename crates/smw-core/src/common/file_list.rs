@@ -271,32 +271,32 @@ impl SimpleDirectoryList {
 }
 
 macro_rules! file_list_subclass {
-    ($name:ident, $base:ty, $field:ident, $ctor:expr) => {
+    ($name:ident, $base:ty, $field:ident, |$g:ident| $ctor:expr) => {
         #[derive(Clone, Debug)]
         pub struct $name {
             pub $field: $base,
         }
         impl_base!($name => $field: $base);
         impl $name {
-            pub fn new() -> Self {
+            pub fn new($g: &mut Game) -> Self {
                 $name { $field: $ctor }
             }
         }
     };
 }
 
-file_list_subclass!(AnnouncerList, SimpleFileList, simple_file_list, SimpleFileList::new(convert_path(game().get(), "sfx/announcer/"), ".txt", false));
-file_list_subclass!(GraphicsList, SimpleDirectoryList, simple_directory_list, SimpleDirectoryList::new(convert_path(game().get(), "gfx/packs/")));
-file_list_subclass!(SoundsList, SimpleDirectoryList, simple_directory_list, SimpleDirectoryList::new(convert_path(game().get(), "sfx/packs/")));
-file_list_subclass!(TourList, SimpleFileList, simple_file_list, SimpleFileList::new(convert_path(game().get(), "tours/"), ".txt", false));
-file_list_subclass!(WorldList, SimpleFileList, simple_file_list, SimpleFileList::new(convert_path(game().get(), "worlds/"), ".txt", true));
+file_list_subclass!(AnnouncerList, SimpleFileList, simple_file_list, |g| SimpleFileList::new(convert_path(g, "sfx/announcer/"), ".txt", false));
+file_list_subclass!(GraphicsList, SimpleDirectoryList, simple_directory_list, |g| SimpleDirectoryList::new(convert_path(g, "gfx/packs/")));
+file_list_subclass!(SoundsList, SimpleDirectoryList, simple_directory_list, |g| SimpleDirectoryList::new(convert_path(g, "sfx/packs/")));
+file_list_subclass!(TourList, SimpleFileList, simple_file_list, |g| SimpleFileList::new(convert_path(g, "tours/"), ".txt", false));
+file_list_subclass!(WorldList, SimpleFileList, simple_file_list, |g| SimpleFileList::new(convert_path(g, "worlds/"), ".txt", true));
 file_list_subclass!(
     BackgroundList,
     SimpleFileList,
     simple_file_list,
-    SimpleFileList::new(convert_path(game().get(), "gfx/packs/Classic/backgrounds/"), ".png", false)
+    |g| SimpleFileList::new(convert_path(g, "gfx/packs/Classic/backgrounds/"), ".png", false)
 );
-file_list_subclass!(FiltersList, SimpleFileList, simple_file_list, SimpleFileList::new(convert_path(game().get(), "filters/"), ".txt", false));
+file_list_subclass!(FiltersList, SimpleFileList, simple_file_list, |g| SimpleFileList::new(convert_path(g, "filters/"), ".txt", false));
 
 ///////////// SkinList ///////////////
 
@@ -947,27 +947,27 @@ mod tests {
         let mut gp = g.ptr();
         set_data_root(g);
 
-        let gfx = GraphicsList::new();
+        let gfx = GraphicsList::new(g);
         assert!(gfx.count() >= 1);
         assert!(gfx.m_filelist.iter().any(|p| p.ends_with("Classic")));
 
-        let sounds = SoundsList::new();
+        let sounds = SoundsList::new(g);
         assert!(sounds.count() >= 1);
 
         // data/sfx/announcer/ has only subdirectories when None.txt is missing from the checkout.
-        let ann = AnnouncerList::new();
+        let ann = AnnouncerList::new(g);
         assert_eq!(ann.current_index(), if ann.count() == 0 { usize::MAX } else { 0 });
 
-        let tours = TourList::new();
+        let tours = TourList::new(g);
         assert!(tours.count() >= 1);
 
-        let worlds = WorldList::new();
+        let worlds = WorldList::new(g);
         assert!(worlds.count() >= 1);
         let names: Vec<String> =
             worlds.m_filelist.iter().map(|p| strip_path_and_extension(&filename_string(p)).to_ascii_lowercase()).collect();
         assert!(names.windows(2).all(|w| w[0] <= w[1]), "worlds not alphabetized: {names:?}");
 
-        let filters = FiltersList::new();
+        let filters = FiltersList::new(g);
         assert!(filters.count() >= 1);
 
         let skins = SkinList::new(gp.get());

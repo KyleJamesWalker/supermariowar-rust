@@ -99,11 +99,6 @@ unsafe fn teamids_flat(g: &mut Game, iTeam: i16, iMember: i16) -> i16 {
     }
 }
 
-impl Default for MI_World {
-    fn default() -> Self {
-        Self::new(game().get())
-    }
-}
 
 impl MI_World {
     pub fn new(g: &mut Game) -> Self {
@@ -915,7 +910,7 @@ impl UI_ControlTrait for MI_World {
 
                 let mut iStoredPowerupBoxX: i16 = (296 - 48 * (iPlayerCount as i32 - 1)) as i16;
                 for iTeamStore in 0..4usize {
-                    for iMemberStore in 0..game().game_values.teamcounts[iTeamStore] {
+                    for iMemberStore in 0..g.game_values.teamcounts[iTeamStore] {
                         let iPlayerId = g.game_values.teamids[iTeamStore][iMemberStore as usize] as usize;
 
                         gp.rm.spr_worlditempopup.draw_src(
@@ -1007,7 +1002,7 @@ impl UI_ControlTrait for MI_World {
             if self.iState == -1 && iPlayerState == 0 && self.iNumPopups == 0 && !self.fNoInterestingMoves {
                 fNeedAiControl = true;
                 let ct = self.iControllingTeam as usize;
-                for iTeamMember in 0..game().game_values.teamcounts[ct] {
+                for iTeamMember in 0..g.game_values.teamcounts[ct] {
                     if g.game_values.playercontrol[g.game_values.teamids[ct][iTeamMember as usize] as usize] == 1 {
                         fNeedAiControl = false;
                         break;

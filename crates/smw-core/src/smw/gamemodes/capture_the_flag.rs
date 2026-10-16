@@ -37,13 +37,12 @@ impl CGameModeTrait for CGM_CaptureTheFlag {
 
     fn init(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        let mut gp = g.ptr();
         cgamemode_init(g, self);
 
         let mut fTeamUsed: [bool; 4] = [false, false, false, false];
 
         unsafe {
-            for i in 0..game().players.len() {
+            for i in 0..g.players.len() {
                 let player = g.players[i];
                 let iTeamID: i16 = player.get_team_id();
                 if !fTeamUsed[iTeamID as usize] {

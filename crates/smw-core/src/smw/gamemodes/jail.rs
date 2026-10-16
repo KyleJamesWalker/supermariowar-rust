@@ -82,12 +82,12 @@ pub fn cgm_jail_playerkilledplayer(g: &mut Game, this: &mut CGM_Jail, mut inflic
                 if g.game_values.gamemodesettings.jail.style == JailStyle::Classic {
                     let mut jailedteams: [i16; 4] = [0; 4];
 
-                    for i in 0..game().score_cnt {
+                    for i in 0..g.score_cnt {
                         jailedteams[i as usize] = g.game_values.teamcounts[i as usize];
                     }
 
                     //Figure out which teams have been jailed
-                    for i in 0..game().players.len() {
+                    for i in 0..g.players.len() {
                         let mut player = g.players[i];
                         if player.jail().is_active() {
                             jailedteams[player.get_team_id() as usize] -= 1;
@@ -96,7 +96,7 @@ pub fn cgm_jail_playerkilledplayer(g: &mut Game, this: &mut CGM_Jail, mut inflic
 
                     //Determine if a single team is the only one not completely jailed
                     let mut iTeamPoint: i16 = -1;
-                    for i in 0..game().score_cnt {
+                    for i in 0..g.score_cnt {
                         if jailedteams[i as usize] == 0 {
                             continue;
                         }
@@ -113,7 +113,7 @@ pub fn cgm_jail_playerkilledplayer(g: &mut Game, this: &mut CGM_Jail, mut inflic
                     if iTeamPoint >= 0 {
                         let mut numjailedplayers: i16 = 0;
 
-                        for i in 0..game().players.len() {
+                        for i in 0..g.players.len() {
                             let mut player = g.players[i];
                             //If they weren't just the one killed and they were jailed, give them a transform cloud
                             if player != other && player.jail().is_active() {
@@ -139,7 +139,7 @@ pub fn cgm_jail_playerkilledplayer(g: &mut Game, this: &mut CGM_Jail, mut inflic
                     let mut jailedteams: [i16; 4] = [-1, -1, -1, -1];
 
                     //Figure out which teams have been jailed
-                    for i in 0..game().players.len() {
+                    for i in 0..g.players.len() {
                         let mut player = g.players[i];
                         let piMarker = &mut jailedteams[player.get_team_id() as usize];
 
@@ -158,9 +158,9 @@ pub fn cgm_jail_playerkilledplayer(g: &mut Game, this: &mut CGM_Jail, mut inflic
 
                     //Determine if a single team is the only one not completely jailed
                     let mut iTeamPoint: i16 = -1;
-                    for i in 0..game().score_cnt {
+                    for i in 0..g.score_cnt {
                         let mut iJailOwner: i16 = -1;
-                        for j in 0..game().score_cnt {
+                        for j in 0..g.score_cnt {
                             if i == j {
                                 continue;
                             }
@@ -190,7 +190,7 @@ pub fn cgm_jail_playerkilledplayer(g: &mut Game, this: &mut CGM_Jail, mut inflic
                     if iTeamPoint >= 0 {
                         let mut numjailedplayers: i16 = 0;
 
-                        for i in 0..game().players.len() {
+                        for i in 0..g.players.len() {
                             let mut player = g.players[i];
                             if player.jail().is_active() && player.get_team_id() != iTeamPoint {
                                 numjailedplayers += 1;
@@ -202,7 +202,7 @@ pub fn cgm_jail_playerkilledplayer(g: &mut Game, this: &mut CGM_Jail, mut inflic
                             gp.score[iTeamPoint as usize].adjust_score(g, 1);
 
                             //Release other teams if a bonus was awarded for locking them up
-                            for i in 0..game().players.len() {
+                            for i in 0..g.players.len() {
                                 let mut player = g.players[i];
                                 //Don't release players that were not jailed by this team
                                 if player.jail().owner_teamID as i16 != iTeamPoint {

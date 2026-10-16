@@ -361,7 +361,7 @@ impl MI_TournamentScoreboard {
                     ));
                 }
 
-                for iGame in 0..game().game_values.tourstopcurrent {
+                for iGame in 0..g.game_values.tourstopcurrent {
                     let icon = &mut self.miIconImages[t][iGame];
                     icon.set_image(0, g.game_values.tournament_scores[t].type_[iGame] * 32, 32, 32);
 
@@ -456,7 +456,7 @@ impl MI_TournamentScoreboard {
 
             for iTeam in 0..self.iNumTeams {
                 let t = iTeam as usize;
-                for iGame in 0..game().game_values.tournament_scores[t].wins {
+                for iGame in 0..g.game_values.tournament_scores[t].wins {
                     let g = iGame as usize;
                     self.miIconImages[t][g].set_image(gp.game_values.tournament_scores[t].type_[g] * 32, 0, 32, 32);
 

@@ -53,7 +53,6 @@ impl CGameModeTrait for CGM_Chase {
 
     fn init(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        let mut gp = g.ptr();
         gm::cgamemode_init(g, self);
 
         unsafe {

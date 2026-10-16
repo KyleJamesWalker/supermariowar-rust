@@ -127,7 +127,7 @@ pub fn init(g: &mut Game, translate: bool) {
         if let Some(config) = std::env::var_os("SDL_GAMECONTROLLERCONFIG") {
             println!("[pad] SDL_GAMECONTROLLERCONFIG has {} mapping(s)", config.to_string_lossy().lines().filter(|l| l.contains(',')).count());
         }
-        for i in 0..game().joystickcount.max(0) as usize {
+        for i in 0..g.joystickcount.max(0) as usize {
             let js = *g.joysticks.add(i);
             if !js.is_null() {
                 st(gp.get()).pads.push(open_pad(g, i as i32, js, i));
@@ -198,7 +198,7 @@ pub fn hotplug(g: &mut Game) -> bool {
         if !st(gp.get()).translate_on || !HOTPLUG.swap(false, Ordering::Relaxed) {
             return false;
         }
-        for index in 0..game().joystickcount.max(0) as usize {
+        for index in 0..g.joystickcount.max(0) as usize {
             let js = *g.joysticks.add(index);
             if !js.is_null() && SDL_JoystickGetAttached(js) == SDL_bool::SDL_FALSE {
                 close(g, index);
@@ -208,7 +208,7 @@ pub fn hotplug(g: &mut Game) -> bool {
         let mut added = false;
         for device in 0..SDL_NumJoysticks().max(0) {
             let instance = SDL_JoystickGetDeviceInstanceID(device);
-            let already = (0..game().joystickcount.max(0) as usize).any(|i| {
+            let already = (0..gp.joystickcount.max(0) as usize).any(|i| {
                 let js = *g.joysticks.add(i);
                 !js.is_null() && SDL_JoystickInstanceID(js) == instance
             });
@@ -366,7 +366,7 @@ fn apply_binds(pad: &mut Pad, buttons: &[Bind; DPAD_UP + 4], axes: &[Bind; 6]) {
 pub fn player_pads(g: &mut Game) -> Vec<usize> {
     let mut gp = g.ptr();
     unsafe {
-        let mut open: Vec<usize> = (0..game().joystickcount.max(0) as usize).filter(|&i| !(*g.joysticks.add(i)).is_null()).collect();
+        let mut open: Vec<usize> = (0..gp.joystickcount.max(0) as usize).filter(|&i| !(*g.joysticks.add(i)).is_null()).collect();
         if st(gp.get()).pads.iter().any(|p| p.controller) {
             open.retain(|&i| st(gp.get()).pads.iter().any(|p| p.index == i && p.controller));
         }

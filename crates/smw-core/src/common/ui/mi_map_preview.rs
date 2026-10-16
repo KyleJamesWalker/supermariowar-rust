@@ -95,7 +95,6 @@ impl MI_MapPreview {
 
     pub fn draw_impl(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        let mut gp = g.ptr();
         if !self.m_visible {
             return;
         }
@@ -123,7 +122,7 @@ impl MI_MapPreview {
 
             //Draw map hazards
             let (ox, oy) = (self.rectDst.x as i16, self.rectDst.y as i16);
-            for i in 0..game().objectcontainer[1].list().len() {
+            for i in 0..g.objectcontainer[1].list().len() {
                 let mut obj = g.objectcontainer[1].list()[i];
                 let any = obj.as_any();
                 if let Some(hazard) = any.downcast_mut::<OMO_OrbitHazard>() {

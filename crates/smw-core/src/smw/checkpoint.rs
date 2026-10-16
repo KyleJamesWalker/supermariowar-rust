@@ -272,7 +272,6 @@ pub fn restore(g: &mut Game, bytes: Vec<u8>) -> Result<(), String> {
 /// Saves or restores every part of the checkpoint, in the order a restore must apply them.
 fn walk(g: &mut Game, s: &mut Snap, online: bool) {
         let mut gp = g.ptr();
-        let mut gp = g.ptr();
     unsafe {
         let gv = &mut *gp.get().game_values;
         if online {
@@ -592,9 +591,10 @@ pub fn start_fields(g: &mut Game) -> String {
 
 /// The result fields of a match's later markers.
 pub fn result_fields(g: &mut Game) -> String {
+    let mut gp = g.ptr();
     unsafe {
         let gm = g.game_values.gamemode;
-        let scores: Vec<String> = (0..game().score_cnt.max(0) as usize).map(|k| g.score[k].score.to_string()).collect();
+        let scores: Vec<String> = (0..gp.score_cnt.max(0) as usize).map(|k| g.score[k].score.to_string()).collect();
         let mut f = vec![kv("scores", &scores.join(","))];
         if gm.gameover {
             f.push(kv("winner", &if gm.winningteam >= 0 { format!("team{}", gm.winningteam + 1) } else { "tie".to_string() }));

@@ -292,7 +292,7 @@ impl CObjectTrait for MO_PirhanaPlant {
                 let iPlantY: i16 = (self.iy as i32 + if self.iDirection == 0 { 16 } else { self.ih as i32 - 16 }) as i16;
 
                 unsafe {
-                    for i in 0..game().players.len() {
+                    for i in 0..g.players.len() {
                         let player = g.players[i];
                         if player.state != PlayerState::Ready {
                             continue;

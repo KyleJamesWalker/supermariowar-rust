@@ -953,7 +953,7 @@ fn device_index(g: &mut Game, which: i32) -> Option<i32> {
     let mut gp = g.ptr();
     unsafe {
         let js = gp.joysticks;
-        for i in 0..crate::game::game().joystickcount.max(0) as usize {
+        for i in 0..gp.joystickcount.max(0) as usize {
             let j = *js.add(i);
             if !j.is_null() && SDL_JoystickInstanceID(j) == which {
                 return Some(i as i32);

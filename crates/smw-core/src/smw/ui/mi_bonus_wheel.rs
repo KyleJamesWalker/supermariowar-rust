@@ -210,7 +210,7 @@ impl MI_BonusWheel {
 
             //Figure out if only cpus are on the winning team, if so, the wheel will be stopped early
             self.fCpuControlled = true;
-            for iPlayer in 0..game().game_values.teamcounts[self.iWinningTeam as usize] as usize {
+            for iPlayer in 0..g.game_values.teamcounts[self.iWinningTeam as usize] as usize {
                 if g.game_values.playercontrol[g.game_values.teamids[self.iWinningTeam as usize][iPlayer] as usize] == 1 {
                     self.fCpuControlled = false;
                 }
@@ -348,7 +348,7 @@ impl UI_ControlTrait for MI_BonusWheel {
 
                         //Give the newly won stored item to the winning players
                         let w = self.iWinningTeam as usize;
-                        for iPlayer in 0..game().game_values.teamcounts[w] as usize {
+                        for iPlayer in 0..g.game_values.teamcounts[w] as usize {
                             gp.get().game_values.storedpowerups[gp.get().game_values.teamids[w][iPlayer] as usize] = self.iSelectedPowerup;
                         }
 

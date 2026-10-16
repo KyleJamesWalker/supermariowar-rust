@@ -322,7 +322,7 @@ pub struct MI_InputControlContainer {
 crate::impl_base!(MI_InputControlContainer => ui_control: UI_Control);
 
 unsafe fn add_joysticks(g: &mut Game, field: &mut MI_SelectField<i16>) {
-    for iJoystick in 0..game().joystickcount {
+    for iJoystick in 0..g.joystickcount {
         let js = if g.joysticks.is_null() { std::ptr::null_mut() } else { *g.joysticks.add(iJoystick as usize) };
         let p = if js.is_null() { SDL_JoystickNameForIndex(iJoystick as i32) } else { SDL_JoystickName(js) };
         let name = if harness::replay_joysticks(g).is_some() {
@@ -348,7 +348,6 @@ fn key_ptr(g: &mut Game, iPlayerID: i16, iType: usize, iKey: usize) -> *mut SDL_
 impl MI_InputControlContainer {
     //call with x = 94, y = 19
     pub fn new(g: &mut Game, spr_button: Ptr<gfxSprite>, x: i16, y: i16, playerID: i16) -> Self {
-        let mut gp = g.ptr();
         let mut gp = g.ptr();
         unsafe {
             let iPlayerID = playerID;

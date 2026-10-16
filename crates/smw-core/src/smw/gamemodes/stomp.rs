@@ -130,7 +130,7 @@ impl CGameModeTrait for CGM_Stomp {
             if self.gameover {
                 self.displayplayertext(g);
             } else {
-                for i in 0..game().players.len() {
+                for i in 0..g.players.len() {
                     let player = g.players[i];
                     self.check_winner(g, player);
                 }

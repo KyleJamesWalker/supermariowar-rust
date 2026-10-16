@@ -224,7 +224,6 @@ fn star_time(g: &mut Game) -> i16 {
 
 pub fn cgm_star_init(g: &mut Game, this: &mut CGM_Star) {
         let mut gp = g.ptr();
-        let mut gp = g.ptr();
     cgm_timelimit_init(g, &mut this.cgm_time_limit);
 
     this.fDisplayTimer = true;
@@ -240,7 +239,7 @@ pub fn cgm_star_init(g: &mut Game, this: &mut CGM_Star) {
         this.fReverseScoring = this.goal == -1;
 
         //Set initial scores
-        for iScore in 0..game().score_cnt {
+        for iScore in 0..g.score_cnt {
             if this.fReverseScoring {
                 gp.score[iScore as usize].set_score(g, 0);
             } else {
@@ -257,10 +256,11 @@ pub fn cgm_star_init(g: &mut Game, this: &mut CGM_Star) {
     this.setup_mode(g);
 }
 
-fn star_needs_reassign(this: &CGM_Star) -> bool {
+fn star_needs_reassign(g: &mut Game, this: &CGM_Star) -> bool {
+    let mut gp = g.ptr();
     unsafe {
         if this.iCurrentModeType == StarStyle::Multi {
-            (0..game().players.len().saturating_sub(1)).any(|i| this.starPlayer[i].is_null())
+            (0..gp.players.len().saturating_sub(1)).any(|i| this.starPlayer[i].is_null())
         } else {
             this.starPlayer[0].is_null()
         }
@@ -313,7 +313,7 @@ fn time_out(g: &mut Game, this: &mut CGM_Star) {
             this.starPlayer[0] = this.get_highest_score_player(g, fGetHighest);
             this.starItem[0].place_star(g);
         } else if this.iCurrentModeType == StarStyle::Shine {
-            for i in 0..game().players.len() {
+            for i in 0..g.players.len() {
                 let mut player = g.players[i];
                 if this.starPlayer[0].get_team_id() == player.get_team_id() {
                     continue;
@@ -328,7 +328,7 @@ fn time_out(g: &mut Game, this: &mut CGM_Star) {
             if this.fReverseScoring {
                 this.starPlayer[0].score().adjust_score(g, 1);
             } else {
-                for iTeam in 0..game().score_cnt {
+                for iTeam in 0..g.score_cnt {
                     if this.starPlayer[0].get_team_id() == iTeam {
                         continue;
                     }
@@ -344,7 +344,7 @@ fn time_out(g: &mut Game, this: &mut CGM_Star) {
             this.starPlayer[0] = this.get_highest_score_player(g, false);
             this.starItem[0].place_star(g);
         } else if this.iCurrentModeType == StarStyle::Multi {
-            for iPlayer in 0..game().players.len() {
+            for iPlayer in 0..g.players.len() {
                 let mut fFound = false;
                 let mut iStar: usize = 0;
                 while iStar + 1 < g.players.len() {
@@ -392,8 +392,8 @@ fn time_out(g: &mut Game, this: &mut CGM_Star) {
         //Play warning sound if needed
         if !this.fReverseScoring && !this.playedwarningsound {
             let mut countscore: i16 = 0;
-            for j in 0..game().score_cnt {
-                for k in 0..game().score_cnt {
+            for j in 0..g.score_cnt {
+                for k in 0..g.score_cnt {
                     if j == k {
                         continue;
                     }
@@ -418,28 +418,29 @@ fn time_out(g: &mut Game, this: &mut CGM_Star) {
     }
 }
 
-fn star_mode() -> Option<&'static mut CGM_Star> {
-    unsafe { game().game_values.gamemode.get().as_any().downcast_mut::<CGM_Star>() }
+fn star_mode(g: &mut Game) -> Option<&'static mut CGM_Star> {
+    let mut gp = g.ptr();
+    unsafe { gp.game_values.gamemode.get().as_any().downcast_mut::<CGM_Star>() }
 }
 
 pub fn net_reassign(g: &mut Game) {
-    if let Some(this) = star_mode() {
-        if star_needs_reassign(this) {
+    if let Some(this) = star_mode(g) {
+        if star_needs_reassign(g, this) {
             reassign(g, this);
         }
     }
 }
 
 pub fn net_timeout(g: &mut Game) {
-    if let Some(this) = star_mode() {
-        if !star_needs_reassign(this) {
+    if let Some(this) = star_mode(g) {
+        if !star_needs_reassign(g, this) {
             time_out(g, this);
         }
     }
 }
 
-pub fn net_state() -> String {
-    match star_mode() {
+pub fn net_state(g: &mut Game) -> String {
+    match star_mode(g) {
         Some(this) => {
             let ids: Vec<String> = this.starPlayer.iter().map(|p| if p.is_null() { "-".to_string() } else { p.globalID.to_string() }).collect();
             format!("mode{} stars{}", this.iCurrentModeType as i32, ids.join(","))
@@ -449,8 +450,8 @@ pub fn net_state() -> String {
 }
 
 /// Replay-harness `T` record (docs/REPLAY.md).
-pub fn harness_record() -> Option<String> {
-    star_mode().map(|this| {
+pub fn harness_record(g: &mut Game) -> Option<String> {
+    star_mode(g).map(|this| {
         let ids: Vec<String> = this.starPlayer.iter().map(|p| if p.is_null() { "-1".to_string() } else { p.globalID.to_string() }).collect();
         format!("T type={} holders={}", this.iCurrentModeType as i32, ids.join(","))
     })
@@ -465,7 +466,7 @@ pub fn cgm_star_think(g: &mut Game, this: &mut CGM_Star) {
 
     unsafe {
         //Make sure there is a star player(s)
-        if star_needs_reassign(this) && !net_random::event(g, Ev::StarReassign, &[]) {
+        if star_needs_reassign(g, this) && !net_random::event(g, Ev::StarReassign, &[]) {
             reassign(g, this);
         }
 

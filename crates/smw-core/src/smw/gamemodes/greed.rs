@@ -112,9 +112,9 @@ impl CGM_Greed {
             //Play warning sound if game is almost over
             if self.goal != -1 && !self.playedwarningsound {
                 let mut playwarning = false;
-                for j in 0..game().score_cnt {
+                for j in 0..g.score_cnt {
                     let mut countscore: i16 = 0;
-                    for k in 0..game().score_cnt {
+                    for k in 0..g.score_cnt {
                         if j == k {
                             continue;
                         }
@@ -153,7 +153,7 @@ impl CGameModeTrait for CGM_Greed {
         let iGoal: i16 = if self.goal == -1 { 0 } else { self.goal };
 
         unsafe {
-            for iScore in 0..game().score_cnt {
+            for iScore in 0..g.score_cnt {
                 gp.score[iScore as usize].set_score(g, iGoal);
             }
         }

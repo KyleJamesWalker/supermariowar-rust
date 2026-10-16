@@ -67,7 +67,7 @@ impl UI_NetServersMenu {
             this.miNetServersNicknameField = Ptr::new_box(MI_TextField::new(plain, 70, 120, "Your name", 640 - 2 * 70, 150));
             this.miNetServersNicknameField.set_data(g, &mut gp.netplay.myPlayerName, NET_MAX_PLAYER_NAME_LENGTH as i16);
 
-            for iServer in 0..game().netplay.savedServers.len() {
+            for iServer in 0..g.netplay.savedServers.len() {
                 let host = g.netplay.savedServers[iServer].hostname.clone();
                 this.miNetServersScroll.add(&host, "");
             }
@@ -139,7 +139,7 @@ impl UI_NetServersMenu {
     pub fn refresh_scroll(&mut self, g: &mut Game) {
         unsafe {
             self.miNetServersScroll.clear();
-            for iServer in 0..game().netplay.savedServers.len() {
+            for iServer in 0..g.netplay.savedServers.len() {
                 let host = g.netplay.savedServers[iServer].hostname.clone();
                 self.miNetServersScroll.add(&host, "");
             }

@@ -288,7 +288,6 @@ const PREVIEW_MS: u32 = 2500;
 /// Not in the C++: the match settings every client shows while it waits to start (`waiting_to_start`).
 pub fn draw_match_preview(g: &mut Game) {
         let mut gp = g.ptr();
-        let mut gp = g.ptr();
     unsafe {
         gp.rm.menu_backdrop.draw(g, 0, 0);
         gp.rm.menu_dialog.draw_src(g, 144, 100, &sdl2::sys::SDL_Rect { x: 0, y: 0, w: 336, h: 264 });
@@ -719,7 +718,6 @@ impl NetClient {
     }
 
     fn handle_skin_change_message(&mut self, g: &mut Game, data: &[u8]) {
-        let mut gp = g.ptr();
         let mut gp = g.ptr();
         if data.len() <= std::mem::size_of::<MessageHeader>() + 5 || data.len() > 20000 {
             println!("[error] Corrupt skin arrived");

@@ -38,7 +38,7 @@ pub fn remove_players_but_team(g: &mut Game, teamid: i16) {
 
 pub fn remove_players_but_team_now(g: &mut Game, teamid: i16) {
     unsafe {
-        for i in 0..game().players.len() {
+        for i in 0..g.players.len() {
             let mut player = g.players[i];
             if player.get_team_id() != teamid {
                 player.state = PlayerState::Dead;
@@ -58,14 +58,14 @@ pub fn remove_players_but_highest_scoring_now(g: &mut Game) {
         let mut iMaxScore: i16 = -1;
 
         //Figure out what the maximum score is
-        for iScore in 0..game().score_cnt {
+        for iScore in 0..g.score_cnt {
             if g.score[iScore as usize].score > iMaxScore {
                 iMaxScore = g.score[iScore as usize].score;
             }
         }
 
         //Remove all players that don't have that max score
-        for i in 0..game().players.len() {
+        for i in 0..g.players.len() {
             let mut player = g.players[i];
             if player.score().score < iMaxScore {
                 player.state = PlayerState::Dead;
@@ -87,11 +87,11 @@ pub fn setup_score_board_now(g: &mut Game, fOrderMatters: bool) {
 
         let mut oldmax: i16;
         let mut max: i16 = -1;
-        for i in 0..game().score_cnt {
+        for i in 0..g.score_cnt {
             oldmax = max;
             max = -1;
 
-            for j in 0..game().score_cnt {
+            for j in 0..g.score_cnt {
                 if !doneWithScore[j as usize] {
                     let sj = g.score[j as usize];
                     //The boxes minigame doesn't use "score" it uses "subscore[0]" to determine the winner
@@ -171,7 +171,7 @@ pub fn show_score_board_now(g: &mut Game) {
             iScoreboardElementHeight = 63;
         }
 
-        for i in 0..game().score_cnt {
+        for i in 0..g.score_cnt {
             let mut s = g.score[i as usize];
             s.destx = (309 - 34 * g.game_values.teamcounts[i as usize] as i32) as i16;
             s.desty = (s.displayorder as i32 * iScoreboardElementHeight as i32 + 140) as i16;
@@ -205,7 +205,7 @@ pub fn remove_team_now(g: &mut Game, teamid: i16) -> bool {
 
         //kill all players on the dead team
         let mut iAnnouncementColor: i16 = -1;
-        for i in 0..game().players.len() {
+        for i in 0..g.players.len() {
             let mut player = g.players[i];
             if player.get_team_id() == teamid {
                 if iAnnouncementColor == -1 {
@@ -258,7 +258,7 @@ impl CGameMode {
     pub fn displayplayertext(&mut self, g: &mut Game) {
         if self.winningteam > -1 {
             unsafe {
-                for i in 0..game().players.len() {
+                for i in 0..g.players.len() {
                     let mut player = g.players[i];
                     if player.get_team_id() == self.winningteam {
                         player.spawn_text(g, "Winner!");
@@ -346,7 +346,7 @@ impl CGameMode {
         unsafe {
             let mut iNumPlayersInList: i16 = 0;
 
-            for i in 0..game().players.len() {
+            for i in 0..g.players.len() {
                 let player = g.players[i];
                 if player.isdead() {
                     continue;
@@ -418,7 +418,7 @@ pub fn cgamemode_init<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T) {
     this.playedwarningsound = false;
 
     unsafe {
-        for iScore in 0..game().score_cnt {
+        for iScore in 0..g.score_cnt {
             gp.score[iScore as usize].set_score(g, 0);
         }
     }
@@ -428,7 +428,7 @@ pub fn cgamemode_think<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T) {
         let mut gp = g.ptr();
     unsafe {
         if g.netplay.active {
-            for k in 0..game().players.len() {
+            for k in 0..g.players.len() {
                 if g.netplay.player_disconnected[k] {
                     gp.players[k].spawn_text(g, "Disconnected!");
                 }

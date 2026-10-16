@@ -54,7 +54,7 @@ pub fn cgm_classic_init(g: &mut Game, this: &mut CGM_Classic) {
     this.fReverseScoring = this.goal == -1;
 
     unsafe {
-        for iScore in 0..game().score_cnt {
+        for iScore in 0..g.score_cnt {
             if this.fReverseScoring {
                 gp.score[iScore as usize].set_score(g, 0);
             } else {
@@ -80,7 +80,7 @@ pub fn cgm_classic_playerkilledplayer(g: &mut Game, this: &mut CGM_Classic, mut 
 
                 if !this.playedwarningsound {
                     let mut countscore: i16 = 0;
-                    for k in 0..game().score_cnt {
+                    for k in 0..g.score_cnt {
                         if Ptr::from_mut(inflictor.score()) == g.score[k as usize] {
                             continue;
                         }
@@ -124,8 +124,8 @@ pub fn cgm_classic_playerkilledself(g: &mut Game, this: &mut CGM_Classic, mut pl
                 if !this.playedwarningsound {
                     let mut countscore: i16 = 0;
                     let mut playwarning = false;
-                    for j in 0..game().score_cnt {
-                        for k in 0..game().score_cnt {
+                    for j in 0..g.score_cnt {
+                        for k in 0..g.score_cnt {
                             if j == k {
                                 continue;
                             }

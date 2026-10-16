@@ -150,7 +150,7 @@ impl CObjectTrait for OMO_RaceGoal {
             } else {
                 self.spr.draw_src(g, x, y, &SDL_Rect { x: self.drawframe as i32, y: 0, w: self.iw as i32, h: self.ih as i32 });
 
-                for k in 0..game().score_cnt {
+                for k in 0..g.score_cnt {
                     if self.tagged[k as usize] > -1 {
                         let fp = &flagpositions[(g.score_cnt - 2) as usize][k as usize];
                         gp.rm.spr_bonus.draw_src(g, x + fp[0] as i32, y + fp[1] as i32, &SDL_Rect { x: 0, y: self.tagged[k as usize] as i32 * 16, w: 16, h: 16 });

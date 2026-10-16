@@ -23,7 +23,7 @@ pub fn load_map_hazards(g: &mut Game, fPreview: bool) {
         let iPreview: usize = if fPreview { 1 } else { 0 };
 
         //Create objects for all the map hazards
-        for i in 0..game().g_map.maphazards.len() {
+        for i in 0..g.g_map.maphazards.len() {
             let hazard = g.g_map.maphazards[i].clone();
             let pos = Vec2s::new((hazard.ix as i32 * 16) as i16, (hazard.iy as i32 * 16) as i16);
 

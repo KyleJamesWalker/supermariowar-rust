@@ -115,7 +115,7 @@ impl CGameModeTrait for CGM_Collection {
 
         //Zero out the number of cards teams have
         unsafe {
-            for iScore in 0..game().score_cnt as usize {
+            for iScore in 0..g.score_cnt as usize {
                 g.score[iScore].subscore[0] = 0;
                 g.score[iScore].subscore[1] = 0;
             }
@@ -146,7 +146,7 @@ impl CGameModeTrait for CGM_Collection {
             }
 
             //Check if this team has collected 3 cards
-            for iScore in 0..game().score_cnt as usize {
+            for iScore in 0..g.score_cnt as usize {
                 if g.score[iScore].subscore[0] >= 3 {
                     g.score[iScore].subscore[2] += 1;
                     if g.score[iScore].subscore[2] >= g.game_values.gamemodemenusettings.collection.banktime {
@@ -213,7 +213,7 @@ impl CGameModeTrait for CGM_Collection {
                 remove_players_but_team(g, self.winningteam);
 
                 unsafe {
-                    for iScore in 0..game().score_cnt as usize {
+                    for iScore in 0..g.score_cnt as usize {
                         g.score[iScore].subscore[0] = 0;
                         g.score[iScore].subscore[1] = 0;
                         g.score[iScore].subscore[2] = 0;

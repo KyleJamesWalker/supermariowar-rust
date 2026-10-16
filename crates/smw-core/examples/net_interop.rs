@@ -61,36 +61,36 @@ fn main() {
         smw::services::services(gp.get()).clock = Box::new(TickingClock(Cell::new(0)));
     }
 
-    smw::globals::init_globals(game().get());
+    smw::globals::init_globals(gp.get());
     unsafe {
-        game().RootDataDirectory = data.clone();
+        gp.RootDataDirectory = data.clone();
         ensure_settings_dir(g);
-        gfx_init(game().get(), 640, 480, false);
-        game().blitdest = game().screen;
-        game().rm = Ptr::new_box(CResourceManager::new());
-        game().filterslist = Ptr::new_box(FiltersList::new());
-        game().skinlist = Ptr::new_box(SkinList::new(game().get()));
-        game().menugraphicspacklist = Ptr::new_box(GraphicsList::new());
-        game().worldgraphicspacklist = Ptr::new_box(GraphicsList::new());
-        game().gamegraphicspacklist = Ptr::new_box(GraphicsList::new());
-        game().menugraphicspacklist.set_current_index(0);
-        if !game().game_values.is_initialized() {
-            game().game_values.init(CGameValues::new());
+        gfx_init(gp.get(), 640, 480, false);
+        gp.blitdest = gp.screen;
+        gp.rm = Ptr::new_box(CResourceManager::new());
+        gp.filterslist = Ptr::new_box(FiltersList::new(g));
+        gp.skinlist = Ptr::new_box(SkinList::new(gp.get()));
+        gp.menugraphicspacklist = Ptr::new_box(GraphicsList::new(g));
+        gp.worldgraphicspacklist = Ptr::new_box(GraphicsList::new(g));
+        gp.gamegraphicspacklist = Ptr::new_box(GraphicsList::new(g));
+        gp.menugraphicspacklist.set_current_index(0);
+        if !gp.game_values.is_initialized() {
+            gp.game_values.init(CGameValues::new());
         }
-        CGameValues::init(&mut game().game_values, game().get());
-        create_gamemodes(game().get());
+        CGameValues::init(&mut gp.get().game_values, gp.get());
+        create_gamemodes(gp.get());
 
-        if !net_init(game().get()) {
+        if !net_init(gp.get()) {
             println!("EV net_init failed");
             std::process::exit(2);
         }
-        game().netplay.myPlayerName = name;
-        game().netplay.savedServers = vec![ServerAddress { hostname: server }];
-        game().netplay.selectedServerIndex = 0;
-        game().netplay.mapfilepath = format!("{}/maps/0smw.map", data);
-        game().netplay.newroom_name = "InteropRoom".to_string();
+        gp.netplay.myPlayerName = name;
+        gp.netplay.savedServers = vec![ServerAddress { hostname: server }];
+        gp.netplay.selectedServerIndex = 0;
+        gp.netplay.mapfilepath = format!("{}/maps/0smw.map", data);
+        gp.netplay.newroom_name = "InteropRoom".to_string();
 
-        if !net_start_session(game().get()) || !game().netplay.client.send_connect_request_to_selected_server(game().get()) {
+        if !net_start_session(gp.get()) || !gp.get().netplay.client.send_connect_request_to_selected_server(gp.get()) {
             println!("EV connect failed");
             std::process::exit(2);
         }
@@ -103,65 +103,65 @@ fn main() {
         let other = if is_host { 1 } else { 0 };
 
         while start.elapsed() < Duration::from_secs(20) {
-            game().netplay.client.update(game().get());
+            gp.get().netplay.client.update(gp.get());
 
             match stage {
-                0 if game().netplay.connectSuccessful && role == "connect" => {
-                    let (sent, recv) = (game().netplay.client.lastSentMessage, game().netplay.client.lastReceivedMessage);
+                0 if gp.netplay.connectSuccessful && role == "connect" => {
+                    let (sent, recv) = (gp.netplay.client.lastSentMessage, gp.netplay.client.lastReceivedMessage);
                     let advances = sent.packageType == NET_NOTICE_SKIN_CHANGE && recv.packageType == NET_RESPONSE_CONNECT_OK && sent.timestamp >= recv.timestamp;
                     println!("EV servers menu advances {} (sent {}@{}, received {}@{})", advances, sent.packageType, sent.timestamp, recv.packageType, recv.timestamp);
-                    net_close(game().get());
+                    net_close(gp.get());
                     std::process::exit(if advances { 0 } else { 1 });
                 }
-                0 if game().netplay.connectSuccessful => {
+                0 if gp.netplay.connectSuccessful => {
                     println!("EV connected");
                     if is_host {
-                        game().netplay.client.send_create_room_message(game().get());
+                        gp.get().netplay.client.send_create_room_message(gp.get());
                     } else {
-                        game().netplay.client.request_room_list(game().get());
+                        gp.get().netplay.client.request_room_list(gp.get());
                     }
                     stage = 1;
                 }
-                1 if is_host && game().netplay.joinSuccessful => {
+                1 if is_host && gp.netplay.joinSuccessful => {
                     println!("EV room created");
                     stage = 2;
                 }
-                1 if !is_host && !game().netplay.currentRooms.is_empty() => {
-                    println!("EV room listed: {} ({}/4)", game().netplay.currentRooms[0].name, game().netplay.currentRooms[0].playerCount);
-                    game().netplay.selectedRoomIndex = 0;
-                    game().netplay.client.send_join_room_message(game().get());
+                1 if !is_host && !gp.netplay.currentRooms.is_empty() => {
+                    println!("EV room listed: {} ({}/4)", gp.netplay.currentRooms[0].name, gp.netplay.currentRooms[0].playerCount);
+                    gp.netplay.selectedRoomIndex = 0;
+                    gp.get().netplay.client.send_join_room_message(gp.get());
                     stage = 2;
                 }
-                2 if game().netplay.currentRoom.player_count() >= 2 => {
+                2 if gp.netplay.currentRoom.player_count() >= 2 => {
                     println!(
                         "EV room {} players: {} | {} | {} | {} me={} host={}",
-                        game().netplay.currentRoom.name,
-                        game().netplay.currentRoom.playerNames[0],
-                        game().netplay.currentRoom.playerNames[1],
-                        game().netplay.currentRoom.playerNames[2],
-                        game().netplay.currentRoom.playerNames[3],
-                        game().netplay.remotePlayerNumber,
-                        game().netplay.hostPlayerNumber
+                        gp.netplay.currentRoom.name,
+                        gp.netplay.currentRoom.playerNames[0],
+                        gp.netplay.currentRoom.playerNames[1],
+                        gp.netplay.currentRoom.playerNames[2],
+                        gp.netplay.currentRoom.playerNames[3],
+                        gp.netplay.remotePlayerNumber,
+                        gp.netplay.hostPlayerNumber
                     );
-                    seen_players = game().netplay.currentRoom.player_count();
+                    seen_players = gp.netplay.currentRoom.player_count();
                     if is_host {
-                        game().netplay.client.send_chat_message(game().get(), "hello from host");
-                        game().netplay.client.local_gamehost.send_start_room_message(game().get());
+                        gp.get().netplay.client.send_chat_message(gp.get(), "hello from host");
+                        gp.get().netplay.client.local_gamehost.send_start_room_message(gp.get());
                     }
                     stage = 3;
                 }
-                3 if game().netplay.gameRunning => {
+                3 if gp.netplay.gameRunning => {
                     println!("EV game running, players in room {}", seen_players);
                     stage = 4;
                 }
                 4 => {
                     if frame < FRAMES {
-                        game().game_values.playerInput.outputControls[0] = pattern(if is_host { 1 } else { 2 }, frame);
-                        game().netplay.client.store_local_input(game().get());
-                        game().netplay.client.send_local_input(game().get());
+                        gp.game_values.playerInput.outputControls[0] = pattern(if is_host { 1 } else { 2 }, frame);
+                        gp.get().netplay.client.store_local_input(gp.get());
+                        gp.get().netplay.client.send_local_input(gp.get());
                         frame += 1;
                     }
-                    while let Some((_, keys)) = game().netplay.remote_input_buffer[other].pop_front() {
+                    while let Some((_, keys)) = gp.netplay.remote_input_buffer[other].pop_front() {
                         received.push(bits(&keys));
                     }
                     if frame >= FRAMES && (received.len() >= FRAMES as usize || start.elapsed() > Duration::from_secs(8)) {
@@ -183,14 +183,14 @@ fn main() {
         println!("EV inputs received {} matching {}", received.len(), matched);
         println!("EV final stage {}", stage);
 
-        if game().netplay.gameRunning {
-            game().netplay.client.send_leave_game_message(game().get());
+        if gp.netplay.gameRunning {
+            gp.get().netplay.client.send_leave_game_message(gp.get());
         }
         for _ in 0..20 {
-            game().netplay.client.update(game().get());
+            gp.get().netplay.client.update(gp.get());
             std::thread::sleep(Duration::from_millis(5));
         }
-        net_close(game().get());
+        net_close(gp.get());
         std::process::exit(if stage == 5 && matched { 0 } else { 1 });
     }
 }

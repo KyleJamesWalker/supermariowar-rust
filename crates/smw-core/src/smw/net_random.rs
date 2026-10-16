@@ -593,19 +593,19 @@ fn outcome(g: &mut Game, ev: Ev, args: &[i32]) -> Vec<String> {
             let o = find_object(g, args[0]);
             vec![if o.is_null() { "gone".to_string() } else { format!("dead{}", o.dead as i32) }]
         }
-        Ev::StarTimeout | Ev::StarReassign => vec![gm_state_star()],
+        Ev::StarTimeout | Ev::StarReassign => vec![gm_state_star(g)],
         Ev::Kill => vec![crate::smw::net_outcomes::kill_outcome(g, args)],
-        Ev::TagReassign => vec![gm_state_tag()],
+        Ev::TagReassign => vec![gm_state_tag(g)],
         _ => vec![],
     }
 }
 
-fn gm_state_star() -> String {
-    crate::smw::gamemodes::star::net_state()
+fn gm_state_star(g: &mut Game) -> String {
+    crate::smw::gamemodes::star::net_state(g)
 }
 
-fn gm_state_tag() -> String {
-    crate::smw::gamemodes::tag::net_state()
+fn gm_state_tag(g: &mut Game) -> String {
+    crate::smw::gamemodes::tag::net_state(g)
 }
 
 /// A net match's checkpoint (smw/checkpoint.rs): the event state from the sync on.

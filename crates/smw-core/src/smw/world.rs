@@ -1084,7 +1084,7 @@ impl WorldMap {
         unsafe {
             let _ = writeln!(file, "{}", g.game_values.tourstops.len() as i32);
 
-            for iStage in 0..game().game_values.tourstops.len() {
+            for iStage in 0..g.game_values.tourstops.len() {
                 let line = write_tour_stop_line(&g.game_values.tourstops[iStage], true);
                 file += &line;
             }

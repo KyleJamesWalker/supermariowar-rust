@@ -303,7 +303,6 @@ impl MenuState {
 
     fn start_game(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        let mut gp = g.ptr();
         unsafe {
             println!("> StartGame");
 
@@ -424,7 +423,7 @@ impl MenuState {
 
             if iControlTeam >= 0 {
                 let mut fNeedAI = true;
-                for iPlayer in 0..game().game_values.teamcounts[iControlTeam as usize] {
+                for iPlayer in 0..g.game_values.teamcounts[iControlTeam as usize] {
                     if g.game_values.playercontrol[g.game_values.teamids[iControlTeam as usize][iPlayer as usize] as usize] == 1 {
                         fNeedAI = false;
                         break;
@@ -702,7 +701,7 @@ impl MenuState {
                     let mut iNumInPlace: i16 = 0;
                     let mut iInPlace: [i16; 4] = [0; 4];
                     let mut iLowestPlace: i16 = 0;
-                    for iScore in 0..game().score_cnt {
+                    for iScore in 0..g.score_cnt {
                         if g.score[iScore as usize].place == iLowestPlace {
                             iInPlace[iNumInPlace as usize] = iScore;
                             iNumInPlace += 1;
@@ -721,7 +720,7 @@ impl MenuState {
                     let mut iNumInPlace: i16 = 0;
                     let mut iInPlace: [i16; 4] = [0; 4];
                     let mut iMostWins: i16 = 0;
-                    for iTeam in 0..game().score_cnt {
+                    for iTeam in 0..g.score_cnt {
                         if g.game_values.tournament_scores[iTeam as usize].wins == iMostWins {
                             iInPlace[iNumInPlace as usize] = iTeam;
                             iNumInPlace += 1;
@@ -741,7 +740,7 @@ impl MenuState {
                     let mut iInPlace: [i16; 4] = [0, 0, 0, 0];
                     let mut iLeastWins: i16 = 20; //Most possible wins are 10
 
-                    for iTeam in 0..game().score_cnt {
+                    for iTeam in 0..g.score_cnt {
                         if g.game_values.tournament_scores[iTeam as usize].wins == iLeastWins {
                             iInPlace[iNumInPlace as usize] = iTeam;
                             iNumInPlace += 1;
@@ -766,14 +765,14 @@ impl MenuState {
                     let mut iInPlace: [i16; 4] = [0, 0, 0, 0];
                     let mut iWinner: i16 = 0;
 
-                    for iTeam in 0..game().score_cnt {
+                    for iTeam in 0..g.score_cnt {
                         if g.score[iTeam as usize].place == 0 {
                             iWinner = iTeam;
                             break;
                         }
                     }
 
-                    for iTeam in 0..game().score_cnt {
+                    for iTeam in 0..g.score_cnt {
                         if iTeam == iWinner {
                             continue;
                         }
@@ -932,7 +931,6 @@ fn load_match_map(g: &mut Game, path: &str) {
 /// (smw/checkpoint.rs) restores the state up to that point and starts the match here.
 pub fn enter_gameplay_tail(g: &mut Game) {
         let mut gp = g.ptr();
-        let mut gp = g.ptr();
     unsafe {
         g.game_values.appstate = AppState::Game;
         println!("  GS_GAME");
@@ -953,8 +951,6 @@ pub fn enter_gameplay_tail(g: &mut Game) {
 impl MenuState {
     /// Handles one `MenuCodeEnum` from `mCurrentMenu->SendInput`. Returns true where C++ `return`s from `update`.
     fn handle_menu_code(&mut self, g: &mut Game, mut code: MenuCodeEnum, fGenerateMapThumbs: &mut bool) -> bool {
-        let mut gp = g.ptr();
-        let mut gp = g.ptr();
         let mut gp = g.ptr();
         unsafe {
             // Shortcut to game start

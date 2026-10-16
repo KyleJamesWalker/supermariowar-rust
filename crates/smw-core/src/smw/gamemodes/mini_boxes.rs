@@ -43,7 +43,6 @@ impl CGM_Boxes_MiniGame {
 
     fn release_coin(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) {
         let mut gp = g.ptr();
-        let mut gp = g.ptr();
         if player.score().subscore[0] > 0 {
             player.score().subscore[0] -= 1;
 
@@ -87,7 +86,7 @@ impl CGameModeTrait for CGM_Boxes_MiniGame {
         self.fReverseScoring = false;
 
         unsafe {
-            for iScore in 0..game().score_cnt as usize {
+            for iScore in 0..g.score_cnt as usize {
                 gp.score[iScore].set_score(g, self.goal);
                 g.score[iScore].subscore[0] = 0;
             }
@@ -112,7 +111,7 @@ impl CGameModeTrait for CGM_Boxes_MiniGame {
         if !self.playedwarningsound {
             let mut countscore: i16 = 0;
             unsafe {
-                for k in 0..game().score_cnt as usize {
+                for k in 0..g.score_cnt as usize {
                     if Ptr::from_mut(inflictor.score()) == g.score[k] {
                         continue;
                     }
@@ -148,8 +147,8 @@ impl CGameModeTrait for CGM_Boxes_MiniGame {
             let mut countscore: i16 = 0;
             let mut playwarning = false;
             unsafe {
-                for j in 0..game().score_cnt {
-                    for k in 0..game().score_cnt {
+                for j in 0..g.score_cnt {
+                    for k in 0..g.score_cnt {
                         if j == k {
                             continue;
                         }

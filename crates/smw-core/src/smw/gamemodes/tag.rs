@@ -26,8 +26,8 @@ impl_base!(CGM_Tag => cgame_mode: CGameMode);
 unsafe fn tag_warning_needed(g: &mut Game, goal: i16) -> bool {
     let mut countscore: i16 = 0;
     let mut playwarning = false;
-    for j in 0..game().score_cnt {
-        for k in 0..game().score_cnt {
+    for j in 0..g.score_cnt {
+        for k in 0..g.score_cnt {
             if j == k {
                 continue;
             }
@@ -84,7 +84,7 @@ impl CGameModeTrait for CGM_Tag {
         self.fReverseScoring = self.goal == -1;
 
         unsafe {
-            for iScore in 0..game().score_cnt {
+            for iScore in 0..g.score_cnt {
                 if self.fReverseScoring {
                     gp.score[iScore as usize].set_score(g, 0);
                 } else {
@@ -173,7 +173,7 @@ impl CGameModeTrait for CGM_Tag {
                 }
 
                 let mut countscore: i16 = 0;
-                for k in 0..game().score_cnt {
+                for k in 0..g.score_cnt {
                     if Ptr::from_mut(inflictor.score()) == g.score[k as usize] {
                         continue;
                     }
@@ -235,20 +235,21 @@ impl CGameModeTrait for CGM_Tag {
     }
 }
 
-fn tag_mode() -> Option<&'static mut CGM_Tag> {
-    unsafe { game().game_values.gamemode.get().as_any().downcast_mut::<CGM_Tag>() }
+fn tag_mode(g: &mut Game) -> Option<&'static mut CGM_Tag> {
+    let mut gp = g.ptr();
+    unsafe { gp.game_values.gamemode.get().as_any().downcast_mut::<CGM_Tag>() }
 }
 
 pub fn net_reassign(g: &mut Game) {
-    if let Some(this) = tag_mode() {
+    if let Some(this) = tag_mode(g) {
         if this.m_tagged.is_null() {
             this.reassign(g);
         }
     }
 }
 
-pub fn net_state() -> String {
-    match tag_mode() {
+pub fn net_state(g: &mut Game) -> String {
+    match tag_mode(g) {
         Some(this) if !this.m_tagged.is_null() => format!("tagged{}", this.m_tagged.globalID),
         _ => "tagged-".to_string(),
     }

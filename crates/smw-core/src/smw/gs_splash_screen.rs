@@ -64,8 +64,6 @@ impl GameState for SplashScreenState {
 
     fn update(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        let mut gp = g.ptr();
-        let mut gp = g.ptr();
         unsafe {
             g.game_values.playerInput.clear_pressed_keys(1);
 

@@ -11,65 +11,67 @@ use smw::globals::*;
 use std::path::Path;
 
 fn main() {
-    let args: Vec<String> = std::env::args().collect();
+    let g = game().get();
+
+    let mut gp = g.ptr();    let args: Vec<String> = std::env::args().collect();
     let data = args.get(1).cloned().unwrap_or_else(|| concat!(env!("CARGO_MANIFEST_DIR"), "/../../data").to_string());
     let out = args.get(2).cloned().unwrap_or_else(|| "gfx_smoke_rust.bmp".to_string());
 
-    smw::globals::init_globals(game().get());
+    smw::globals::init_globals(gp.get());
     unsafe {
-        game().RootDataDirectory = data.clone();
+        gp.RootDataDirectory = data.clone();
     }
 
-    gfx_init(game().get(), 640, 480, false);
-    unsafe { game().blitdest = game().screen };
+    gfx_init(gp.get(), 640, 480, false);
+    unsafe { gp.blitdest = gp.screen };
 
     let pack = format!("{}/gfx/packs/Classic", data);
-    assert!(gfx_loadpalette(game().get(), Path::new(&format!("{}/palette.png", pack))));
+    assert!(gfx_loadpalette(gp.get(), Path::new(&format!("{}/palette.png", pack))));
 
-    let backdrop = ImageLoader::new(format!("{}/menu/menu_background.png", pack)).without_color_key().create(game().get());
-    let smw_logo = ImageLoader::new(format!("{}/menu/menu_smw.png", pack)).create(game().get());
-    let shade = ImageLoader::new(format!("{}/menu/menu_shade.png", pack)).with_alpha(72).without_color_key().create(game().get());
-    let ghost = ImageLoader::new(format!("{}/eyecandy/ghost.png", pack)).with_alpha(128).with_wrapping(640).create(game().get());
+    let backdrop = ImageLoader::new(format!("{}/menu/menu_background.png", pack)).without_color_key().create(gp.get());
+    let smw_logo = ImageLoader::new(format!("{}/menu/menu_smw.png", pack)).create(gp.get());
+    let shade = ImageLoader::new(format!("{}/menu/menu_shade.png", pack)).with_alpha(72).without_color_key().create(gp.get());
+    let ghost = ImageLoader::new(format!("{}/eyecandy/ghost.png", pack)).with_alpha(128).with_wrapping(640).create(gp.get());
     let overlay = ImageLoader::new(format!("{}/eyecandy/overlayholes.png", pack))
         .with_color_key(smw::common::gfx::color::RGB { r: 0, g: 255, b: 0 })
-        .create(game().get());
+        .create(gp.get());
 
-    let mut font_large = gfxFont::from_path(game().get(), &format!("{}/menu/menu_font_large.png", pack));
-    let font_small = gfxFont::from_path(game().get(), &format!("{}/fonts/font_small.png", pack));
+    let mut font_large = gfxFont::from_path(gp.get(), &format!("{}/menu/menu_font_large.png", pack));
+    let font_small = gfxFont::from_path(gp.get(), &format!("{}/fonts/font_small.png", pack));
 
-    let skin = gfx_loadfullskin(game().get(), Path::new(&format!("{}/gfx/skins/0smw.png", data)), 1).unwrap();
-    let menuskin = gfx_loadmenuskin(game().get(), Path::new(&format!("{}/gfx/skins/0smw.png", data)), 2, true).unwrap();
+    let skin = gfx_loadfullskin(gp.get(), Path::new(&format!("{}/gfx/skins/0smw.png", data)), 1).unwrap();
+    let menuskin = gfx_loadmenuskin(gp.get(), Path::new(&format!("{}/gfx/skins/0smw.png", data)), 2, true).unwrap();
 
-    backdrop.draw(game().get(), 0, 0);
-    smw_logo.draw(game().get(), 70, 30);
-    shade.draw_part(game().get(), 100, 200, 0, 0, 200, 100);
-    ghost.draw_part(game().get(), 620, 300, 0, 0, 32, 32);
-    overlay.draw_part(game().get(), 400, 350, 0, 0, 64, 64);
+    backdrop.draw(gp.get(), 0, 0);
+    smw_logo.draw(gp.get(), 70, 30);
+    shade.draw_part(gp.get(), 100, 200, 0, 0, 200, 100);
+    ghost.draw_part(gp.get(), 620, 300, 0, 0, 32, 32);
+    overlay.draw_part(gp.get(), 400, 350, 0, 0, 64, 64);
     for i in 0..10 {
-        skin[i].draw_part(game().get(), 20 + i as i32 * 34, 400, 0, 0, 32, 32);
-        skin[i].draw_part(game().get(), 20 + i as i32 * 34, 434, 32 * (i as i32 % 9), 0, 32, 32);
+        skin[i].draw_part(gp.get(), 20 + i as i32 * 34, 400, 0, 0, 32, 32);
+        skin[i].draw_part(gp.get(), 20 + i as i32 * 34, 434, 32 * (i as i32 % 9), 0, 32, 32);
     }
-    menuskin[0].draw_part(game().get(), 380, 400, 0, 0, 32, 32);
-    menuskin[3].draw_part(game().get(), 414, 400, 96, 0, 32, 32);
-    skin[0].draw_clip(game().get(), 450, 400, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 }, ClipEdge::Left, 460);
-    skin[0].draw_stretch(&SDL_Rect { x: 0, y: 0, w: 32, h: 32 }, unsafe { game().blitdest }, &SDL_Rect { x: 500, y: 380, w: 64, h: 64 });
-    gfx_drawpreview(game().get(), &skin[2], 620, 300, 0, 0, 32, 32, &SDL_Rect { x: 0, y: 0, w: 640, h: 480 }, true, None);
+    menuskin[0].draw_part(gp.get(), 380, 400, 0, 0, 32, 32);
+    menuskin[3].draw_part(gp.get(), 414, 400, 96, 0, 32, 32);
+    skin[0].draw_clip(gp.get(), 450, 400, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 }, ClipEdge::Left, 460);
+    skin[0].draw_stretch(&SDL_Rect { x: 0, y: 0, w: 32, h: 32 }, unsafe { gp.blitdest }, &SDL_Rect { x: 500, y: 380, w: 64, h: 64 });
+    gfx_drawpreview(gp.get(), &skin[2], 620, 300, 0, 0, 32, 32, &SDL_Rect { x: 0, y: 0, w: 640, h: 480 }, true, None);
 
-    font_large.draw(game().get(), 10, 150, "Super Mario War: 0123456789");
-    font_small.draw_centered(game().get(), 320, 180, "centered small text ~!@#$%^&*()");
-    font_large.draw_right_justified(game().get(), 630, 210, "right justified");
-    font_small.draw_chop_right(game().get(), 10, 250, 120, "chopped right text that is long");
-    font_small.draw_chop_left(game().get(), 630, 250, 120, "chopped left text that is long");
-    font_small.draw_chop_centered(game().get(), 320, 270, 100, "chop centered text that is long");
+    font_large.draw(gp.get(), 10, 150, "Super Mario War: 0123456789");
+    font_small.draw_centered(gp.get(), 320, 180, "centered small text ~!@#$%^&*()");
+    font_large.draw_right_justified(gp.get(), 630, 210, "right justified");
+    font_small.draw_chop_right(gp.get(), 10, 250, 120, "chopped right text that is long");
+    font_small.draw_chop_left(gp.get(), 630, 250, 120, "chopped left text that is long");
+    font_small.draw_chop_centered(gp.get(), 320, 270, 100, "chop centered text that is long");
     font_large.set_alpha(128);
-    font_large.draw(game().get(), 10, 300, "translucent");
+    font_large.draw(gp.get(), 10, 300, "translucent");
     unsafe {
-        game().x_shake = 3;
-        game().y_shake = -2;
+        gp.x_shake = 3;
+        gp.y_shake = -2;
     }
-    font_small.draw(game().get(), 10, 330, "shaken");
-    smw_logo.draw_part(game().get(), 300, 330, 0, 0, 40, 20);
+    font_small.draw(gp.get(), 10, 330, "shaken");
+    smw_logo.draw_part(gp.get(), 300, 330, 0, 0, 40, 20);
 
-    assert!(gfx_save_screen_bmp(game().get(), &out));
+    assert!(gfx_save_screen_bmp(gp.get(), &out));
     println!("wrote {}", out);
 }
