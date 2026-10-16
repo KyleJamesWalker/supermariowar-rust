@@ -1,7 +1,6 @@
 //! Port of src/smw/objects/overmap/OverMapObject.cpp
 
 use crate::game::Game;
-use crate::game::game;
 use crate::common::gfx::gfx_drawpreview;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::math::vec2::Vec2s;

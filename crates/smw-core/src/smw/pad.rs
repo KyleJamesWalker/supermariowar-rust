@@ -1,7 +1,6 @@
 //! Not in upstream: with `SMW_PAD_TRANSLATE=1`, a game controller's raw joystick events renumbered through its mapping into `LAYOUT` (docs/PROGRESS.md, Deliberate deviations).
 
 use crate::game::Game;
-use crate::globals::game;
 use sdl2::sys::{
     SDL_Event, SDL_EventFilter, SDL_EventType, SDL_GameController, SDL_GameControllerAddMapping, SDL_GameControllerAxis, SDL_GameControllerBindType, SDL_GameControllerButton,
     SDL_GameControllerButtonBind, SDL_GameControllerClose, SDL_GameControllerGetBindForAxis, SDL_GameControllerGetBindForButton, SDL_GameControllerMappingForDeviceIndex, SDL_GameControllerOpen,

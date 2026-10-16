@@ -726,7 +726,7 @@ impl MO_CarriedObjectTrait for CO_Shell {
         {
             vel = 10.0f;
             fSmoking = true;
-            ifSoundOnPlay(game().rm->sfx_cannon);
+            ifSoundOnPlay(rm->sfx_cannon);
         }
         */
 

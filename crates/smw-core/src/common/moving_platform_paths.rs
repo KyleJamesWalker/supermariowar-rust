@@ -1,7 +1,6 @@
 //! Port of src/common/MovingPlatformPaths.cpp
 
 use crate::game::Game;
-use crate::game::game;
 use crate::common::eyecandy_styles::SpawnStyle;
 use crate::common::game::App;
 use crate::common::global_constants::*;

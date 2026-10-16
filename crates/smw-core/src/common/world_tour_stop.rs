@@ -1,7 +1,6 @@
 //! Port of src/common/WorldTourStop.cpp
 
 use crate::game::Game;
-use crate::game::game;
 use crate::common::game_mode::*;
 use crate::common::game_mode_settings::*;
 use crate::common::game_mode_settings_serialization::{deserialize_gms, serialize_gms};

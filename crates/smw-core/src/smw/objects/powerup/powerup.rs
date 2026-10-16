@@ -1,7 +1,6 @@
 //! Port of src/smw/objects/powerup/Powerup.cpp
 
 use crate::game::Game;
-use crate::game::game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::*;
 use crate::common::math::vec2::Vec2s;

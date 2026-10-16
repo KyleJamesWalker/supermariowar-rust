@@ -810,7 +810,7 @@ mod tests {
 
     #[test]
     fn the_overlay_draws_each_control_once_and_tints_the_held_arm() {
-        let g = crate::game::game().get();
+        let g = crate::game::Game::create();
         let l = pixel();
         let mut t = Touch { controls: Controls::new(Mode::Dpad, l), visible: true, alpha: 1.0, cutouts: Vec::new(), images: None, generation: 0 };
         let images = build_images(&l);
@@ -841,7 +841,7 @@ mod tests {
 
     #[test]
     fn multi_touch_holds_a_direction_run_and_jump() {
-        let g = crate::game::game().get();
+        let g = crate::game::Game::create();
         let l = pixel();
         let mut c = Controls::new(Mode::Dpad, l);
         c.down(g, 1, l.dpad.x + l.dpad.r * 0.8, l.dpad.y);
@@ -864,7 +864,7 @@ mod tests {
 
     #[test]
     fn floating_stick_spawns_under_the_thumb_and_follows_it() {
-        let g = crate::game::game().get();
+        let g = crate::game::Game::create();
         let l = pixel();
         let mut c = Controls::new(Mode::Stick, l);
         let (x, y) = (155.0, 600.0);
@@ -887,7 +887,7 @@ mod tests {
 
     #[test]
     fn the_stick_stays_in_the_left_bar() {
-        let g = crate::game::game().get();
+        let g = crate::game::Game::create();
         let l = pixel();
         let mut c = Controls::new(Mode::Stick, l);
         c.down(g, 1, l.view.x - 10.0, 700.0);
@@ -915,7 +915,7 @@ mod tests {
 
     #[test]
     fn stick_mode_leaves_the_keys_and_toggle_alone() {
-        let g = crate::game::game().get();
+        let g = crate::game::Game::create();
         let l = pixel();
         let mut c = Controls::new(Mode::Stick, l);
         c.down(g, 1, l.back.x + 5.0, l.back.y + 5.0);
@@ -930,7 +930,7 @@ mod tests {
 
     #[test]
     fn sliding_between_buttons_presses_both() {
-        let g = crate::game::game().get();
+        let g = crate::game::Game::create();
         let l = pixel();
         let mut c = Controls::new(Mode::Dpad, l);
         c.down(g, 1, l.run.x, (l.run.y + l.item.y) / 2.0);
@@ -942,7 +942,7 @@ mod tests {
 
     #[test]
     fn a_still_finger_off_the_controls_taps_the_picture() {
-        let g = crate::game::game().get();
+        let g = crate::game::Game::create();
         let l = pixel();
         let mut c = Controls::new(Mode::Dpad, l);
         c.down(g, 1, 1122.0, 504.0);

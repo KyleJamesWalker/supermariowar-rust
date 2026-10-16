@@ -1,7 +1,6 @@
 //! Port of src/smw/objects/blocks/NoteBlock.cpp
 
 use crate::game::Game;
-use crate::game::game;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::*;

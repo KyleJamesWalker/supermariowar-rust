@@ -1,7 +1,6 @@
 //! Port of src/smw/ObjectContainer.cpp
 
 use crate::game::Game;
-use crate::game::game;
 use crate::common::moving_object_types::MovingObjectType;
 use crate::common::object_base::{CObjectTrait, ObjectType};
 use crate::globals::{Aliased, Ptr};

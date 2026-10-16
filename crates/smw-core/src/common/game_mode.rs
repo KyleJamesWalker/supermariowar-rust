@@ -1,7 +1,6 @@
 //! Port of src/common/GameMode.h
 
 use crate::game::Game;
-use crate::game::game;
 use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
 use crate::globals::{Aliased, Ptr};

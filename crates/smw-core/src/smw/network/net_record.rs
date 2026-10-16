@@ -2,7 +2,6 @@
 //! network event its listeners saw as `#@ net` lines; a replay hands them to the same handlers at the same frame.
 
 use crate::game::Game;
-use crate::globals::game;
 use crate::smw::harness::{self, base64_decode, base64_encode};
 use smw_netplay::common_netplay::network_interface::{NetPeer, NetworkEventHandler};
 use std::any::Any;

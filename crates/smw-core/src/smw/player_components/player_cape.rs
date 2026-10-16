@@ -61,7 +61,7 @@ impl PlayerCape {
 
     pub fn draw(&mut self, g: &mut Game, player: &mut CPlayer) {
         let mut gp = g.ptr();
-        /* See game().eyecandy/cape.png for reference */
+        /* See eyecandy/cape.png for reference */
         unsafe {
             self.iCapeTimer = self.iCapeTimer.wrapping_add(1);
             if self.iCapeTimer > 3 {

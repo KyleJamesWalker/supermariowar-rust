@@ -3,8 +3,6 @@
 //! HOME=<dir> cargo run --example net_config
 
 #![allow(static_mut_refs)]
-
-use smw::game::game;
 use smw::smw::network::net_config_manager::NetConfigManager;
 
 fn main() {

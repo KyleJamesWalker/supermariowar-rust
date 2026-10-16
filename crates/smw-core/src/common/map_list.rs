@@ -1,7 +1,6 @@
 //! Port of src/common/MapList.cpp
 
 use crate::game::Game;
-use crate::game::game;
 use crate::common::file_list::SimpleDirectoryList;
 use crate::common::file_io::throw_runtime_error;
 use crate::common::global::*;

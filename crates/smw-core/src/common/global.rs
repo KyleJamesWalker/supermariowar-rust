@@ -11,7 +11,6 @@ pub fn init_globals(g: &mut Game) {
 }
 
 use crate::game::Game;
-use crate::game::game;
 use crate::common::game_values::CGameValues;
 use crate::globals::{Global, Ptr};
 

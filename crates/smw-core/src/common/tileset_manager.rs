@@ -1,7 +1,6 @@
 //! Port of src/common/TilesetManager.cpp
 
 use crate::game::Game;
-use crate::game::game;
 use crate::common::file_io::BinaryFile;
 use crate::common::gfx::gfx_sprite::{gfxSprite, ImageLoader};
 use crate::common::global_constants::*;

@@ -1,7 +1,6 @@
 //! Port of src/common/gfx/gfxPalette.cpp
 
 use crate::game::Game;
-use crate::game::game;
 use crate::globals::Aliased;
 use crate::common::gfx::color::RGB;
 use crate::common::gfx::get_rgb;

@@ -1,7 +1,6 @@
 //! Port of src/common/movingplatform.cpp
 
 use crate::game::Game;
-use crate::game::game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::game::App;
 use crate::common::gfx::gfx_drawpreview;

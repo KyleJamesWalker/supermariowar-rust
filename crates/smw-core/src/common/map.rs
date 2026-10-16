@@ -8,7 +8,6 @@ pub mod map_reader18xx;
 pub mod map_reader_constants;
 
 use crate::game::Game;
-use crate::game::game;
 use crate::common::file_io::BinaryFile;
 use crate::common::game::App;
 use crate::common::gfx::gfx_sprite::{gfxSprite, ImageLoader};
@@ -2962,7 +2961,7 @@ pub(crate) mod tests {
 
     #[test]
     fn loads_every_map_without_panicking() {
-        let g = crate::game::game().get();
+        let g = crate::game::Game::create();
         let mut gp = g.ptr();
         let _g = lock_globals();
         init_map_globals(g);
@@ -3063,7 +3062,7 @@ pub(crate) mod tests {
     /// Compares MapList against the original C++ (`tools/ref/map_list_dump.sh`); set `SMW_MAP_LIST_DUMP`.
     #[test]
     fn matches_cpp_map_list_dump() {
-        let g = crate::game::game().get();
+        let g = crate::game::Game::create();
         let _g = lock_globals();
         let Ok(bin) = std::env::var("SMW_MAP_LIST_DUMP") else {
             eprintln!("SMW_MAP_LIST_DUMP not set; skipping C++ comparison");
@@ -3086,7 +3085,7 @@ pub(crate) mod tests {
     /// binary is absent; set `SMW_MAP_DUMP` to its path.
     #[test]
     fn matches_cpp_map_dump() {
-        let g = crate::game::game().get();
+        let g = crate::game::Game::create();
         let mut gp = g.ptr();
         let _g = lock_globals();
         let Ok(bin) = std::env::var("SMW_MAP_DUMP") else {

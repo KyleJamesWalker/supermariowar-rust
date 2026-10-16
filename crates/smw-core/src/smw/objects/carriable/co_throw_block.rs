@@ -421,7 +421,7 @@ impl MO_CarriedObjectTrait for CO_ThrowBlock {
         {
             vel = 12.0f;
             fSmoking = true;
-            ifSoundOnPlay(game().rm->sfx_cannon);
+            ifSoundOnPlay(rm->sfx_cannon);
         }
         */
 

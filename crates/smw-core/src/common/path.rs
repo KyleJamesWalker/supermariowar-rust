@@ -1,7 +1,6 @@
 //! Port of src/common/path.cpp
 
 use crate::game::Game;
-use crate::globals::game;
 use std::path::Path;
 
 

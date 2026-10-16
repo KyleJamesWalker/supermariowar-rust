@@ -2,7 +2,7 @@
 
 use crate::game::Game;
 use crate::common::sfx_durations;
-use crate::globals::Aliased;
+use crate::globals::{Aliased, Ptr};
 use crate::services::services;
 use smw_platform::{SoundId, TrackId};
 use std::io::Write;
@@ -160,15 +160,14 @@ pub fn sfx_virtual_advance(g: &mut Game) {
     }
 }
 
-/// `std::unique_ptr<Mix_Chunk, MixDeleter>`: the audio service's copy of a sound.
-pub struct MixChunkPtr(Option<SoundId>);
-/// `std::unique_ptr<Mix_Music, MixDeleter>`: the audio service's copy of a track.
-pub struct MixMusicPtr(Option<TrackId>);
+/// `std::unique_ptr<Mix_Chunk, MixDeleter>`: the audio service's copy of a sound, and the game that loaded it.
+pub struct MixChunkPtr(Option<SoundId>, Ptr<Game>);
+/// `std::unique_ptr<Mix_Music, MixDeleter>`: the audio service's copy of a track, and the game that loaded it.
+pub struct MixMusicPtr(Option<TrackId>, Ptr<Game>);
 
 impl Drop for MixChunkPtr {
     fn drop(&mut self) {
-        let g = crate::game::game().get();
-        let mut gp = g.ptr();
+        let mut gp = self.1;
         if let Some(id) = self.0 {
             unsafe {
                 for ch in sfx_state(gp.get()).v_channels.iter_mut() {
@@ -184,8 +183,7 @@ impl Drop for MixChunkPtr {
 
 impl Drop for MixMusicPtr {
     fn drop(&mut self) {
-        let g = crate::game::game().get();
-        let mut gp = g.ptr();
+        let mut gp = self.1;
         if let Some(id) = self.0 {
             unsafe {
                 let sfx = sfx_state(gp.get());
@@ -249,7 +247,7 @@ pub struct sfxSound {
 
 impl Default for sfxSound {
     fn default() -> Self {
-        sfxSound { _alias: Aliased::new(), m_sfx: MixChunkPtr(None), m_duration_ms: 0, m_name: String::new(), m_channels: 0, m_last_start_time: 0 }
+        sfxSound { _alias: Aliased::new(), m_sfx: MixChunkPtr(None, Ptr::null()), m_duration_ms: 0, m_name: String::new(), m_channels: 0, m_last_start_time: 0 }
     }
 }
 
@@ -275,7 +273,7 @@ impl sfxSound {
         println!(" done");
         Ok(sfxSound {
             _alias: Aliased::new(),
-            m_sfx: MixChunkPtr(Some(id)),
+            m_sfx: MixChunkPtr(Some(id), gp),
             m_duration_ms: sfx_durations::sound_ms(&name).unwrap_or(decoded_ms),
             m_name: name,
             m_channels: 0,
@@ -353,7 +351,7 @@ pub struct sfxMusic {
 
 impl Default for sfxMusic {
     fn default() -> Self {
-        sfxMusic { _alias: Aliased::new(), m_music: MixMusicPtr(None), m_duration: -1.0, m_name: String::new(), m_paused: false }
+        sfxMusic { _alias: Aliased::new(), m_music: MixMusicPtr(None, Ptr::null()), m_duration: -1.0, m_name: String::new(), m_paused: false }
     }
 }
 
@@ -377,7 +375,7 @@ impl sfxMusic {
         println!(" done");
         Ok(sfxMusic {
             _alias: Aliased::new(),
-            m_music: MixMusicPtr(Some(id)),
+            m_music: MixMusicPtr(Some(id), gp),
             m_duration: sfx_durations::track_seconds(&name).unwrap_or(decoded),
             m_name: name,
             m_paused: false,

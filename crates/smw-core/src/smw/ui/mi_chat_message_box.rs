@@ -1,6 +1,5 @@
 //! Port of src/smw/ui/MI_ChatMessageBox.cpp
 use crate::game::Game;
-use crate::game::game;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use sdl2::sys::SDL_Rect;
 

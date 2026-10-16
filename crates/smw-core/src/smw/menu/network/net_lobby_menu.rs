@@ -1,6 +1,5 @@
 //! Port of src/smw/menu/network/NetLobbyMenu.cpp
 use crate::game::Game;
-use crate::game::game;
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_button::MI_Button;
 use crate::common::ui::mi_image::MI_Image;

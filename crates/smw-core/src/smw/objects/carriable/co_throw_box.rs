@@ -155,7 +155,7 @@ impl CObjectTrait for CO_ThrowBox {
         //Kill player when another player is holding the box
         else
         {
-            if (owner && player != owner && (game().game_values.teamcollision == TeamCollisionStyle::On || player->teamID != owner->teamID))
+            if (owner && player != owner && (game_values.teamcollision == TeamCollisionStyle::On || player->teamID != owner->teamID))
             {
                     iPlayerID = owner->globalID;
                     iTeamID = owner->teamID;

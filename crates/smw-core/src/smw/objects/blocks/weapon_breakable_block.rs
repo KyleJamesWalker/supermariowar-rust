@@ -1,7 +1,6 @@
 //! Port of src/smw/objects/blocks/WeaponBreakableBlock.cpp
 
 use crate::game::Game;
-use crate::game::game;
 use crate::common::eyecandy::EC_FallingObject;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gameplay_styles::TeamCollisionStyle;

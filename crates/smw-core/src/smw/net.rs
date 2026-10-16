@@ -1,7 +1,6 @@
 //! Port of src/smw/net.cpp
 
 use crate::game::Game;
-use crate::game::game;
 use crate::common::game_mode::{GameModeType, *};
 use crate::common::game_mode_settings::GAMEMODESETTINGS_RAW_SIZE;
 

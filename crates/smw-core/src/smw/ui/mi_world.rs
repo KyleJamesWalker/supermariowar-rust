@@ -469,9 +469,9 @@ impl MI_World {
             if p < NUM_POWERUPS {
                 /*
                 //Comment this in to give the powerup to all members of the team
-                for (short iPlayer = 0; iPlayer < game().game_values.teamcounts[iTeam]; iPlayer++)
+                for (short iPlayer = 0; iPlayer < game_values.teamcounts[iTeam]; iPlayer++)
                 {
-                    game().game_values.storedpowerups[game().game_values.teamids[iTeam][iPlayer]] = iPowerup;
+                    game_values.storedpowerups[game_values.teamids[iTeam][iPlayer]] = iPowerup;
                 }*/
 
                 //Give the powerup only to the player that selected it

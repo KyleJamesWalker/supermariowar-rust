@@ -1595,7 +1595,7 @@ impl GameState for MenuState {
                         }
                     }
                 }
-                /*else if (game().game_values.tournamentwinner > -1) //World is completed
+                /*else if (game_values.tournamentwinner > -1) //World is completed
                 {
                     miBonusWheel->Reset(true);
                     mCurrentMenu = mBonusWheelMenu;
@@ -1766,7 +1766,7 @@ impl GameState for MenuState {
 
             //Watch for the konami code to unlock the minigames match type
             /*
-            if (!game().game_values.minigameunlocked && mCurrentMenu == mMatchSelectionMenu) {
+            if (!game_values.minigameunlocked && mCurrentMenu == mMatchSelectionMenu) {
                 ... (commented out in the C++)
             }
             */
