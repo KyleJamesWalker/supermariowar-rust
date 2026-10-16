@@ -78,10 +78,8 @@ impl OMO_RaceGoal {
 
         this.place_race_goal(g);
 
-        unsafe {
-            this.speed = g.game_values.gamemodesettings.race.speed as f32 / 4.0f32;
-            this.quantity = g.game_values.gamemodesettings.race.quantity;
-        }
+        this.speed = g.game_values.gamemodesettings.race.speed as f32 / 4.0f32;
+        this.quantity = g.game_values.gamemodesettings.race.quantity;
         this.isfinishline = this.goalID as i32 == this.quantity as i32 - 1;
         this
     }
@@ -97,24 +95,22 @@ impl OMO_RaceGoal {
         let mut x: i16 = 0;
         let mut y: i16 = 0;
 
-        unsafe {
-            if self.goalID < g.g_map.iNumRaceGoals {
-                x = g.g_map.racegoallocations[self.goalID as usize].x;
-                y = g.g_map.racegoallocations[self.goalID as usize].y;
-            } else {
-                let mut tries: i16 = 0;
-                loop {
-                    tries += 1;
-                    if tries > 32 {
-                        break;
-                    }
+        if self.goalID < g.g_map.iNumRaceGoals {
+            x = g.g_map.racegoallocations[self.goalID as usize].x;
+            y = g.g_map.racegoallocations[self.goalID as usize].y;
+        } else {
+            let mut tries: i16 = 0;
+            loop {
+                tries += 1;
+                if tries > 32 {
+                    break;
+                }
 
-                    x = RANDOM_INT(gp.get(), App::screenWidth - self.collisionWidth as i32) as i16;
-                    y = RANDOM_INT(gp.get(), App::screenHeight - self.collisionHeight as i32) as i16;
+                x = RANDOM_INT(gp.get(), App::screenWidth - self.collisionWidth as i32) as i16;
+                y = RANDOM_INT(gp.get(), App::screenHeight - self.collisionHeight as i32) as i16;
 
-                    if !(g.objectcontainer[2].get_closest_object(x, y, object_race_goal) <= 250.0f32 - (self.quantity as f32 * 25.0f32)) {
-                        break;
-                    }
+                if !(g.objectcontainer[2].get_closest_object(x, y, object_race_goal) <= 250.0f32 - (self.quantity as f32 * 25.0f32)) {
+                    break;
                 }
             }
         }
@@ -144,22 +140,20 @@ impl CObjectTrait for OMO_RaceGoal {
         let x = self.ix as i32 - self.collisionOffsetX as i32;
         let y = self.iy as i32 - self.collisionOffsetY as i32;
 
-        unsafe {
-            if self.isfinishline {
-                self.spr.draw_src(g, x, y, &Rect { x: self.drawframe as i32, y: 54, w: self.iw as i32, h: self.ih as i32 });
-            } else {
-                self.spr.draw_src(g, x, y, &Rect { x: self.drawframe as i32, y: 0, w: self.iw as i32, h: self.ih as i32 });
+        if self.isfinishline {
+            self.spr.draw_src(g, x, y, &Rect { x: self.drawframe as i32, y: 54, w: self.iw as i32, h: self.ih as i32 });
+        } else {
+            self.spr.draw_src(g, x, y, &Rect { x: self.drawframe as i32, y: 0, w: self.iw as i32, h: self.ih as i32 });
 
-                for k in 0..g.score_cnt {
-                    if self.tagged[k as usize] > -1 {
-                        let fp = &flagpositions[(g.score_cnt - 2) as usize][k as usize];
-                        gp.rm.spr_bonus.draw_src(g, x + fp[0] as i32, y + fp[1] as i32, &Rect { x: 0, y: self.tagged[k as usize] as i32 * 16, w: 16, h: 16 });
-                    }
+            for k in 0..g.score_cnt {
+                if self.tagged[k as usize] > -1 {
+                    let fp = &flagpositions[(g.score_cnt - 2) as usize][k as usize];
+                    gp.rm.spr_bonus.draw_src(g, x + fp[0] as i32, y + fp[1] as i32, &Rect { x: 0, y: self.tagged[k as usize] as i32 * 16, w: 16, h: 16 });
                 }
             }
-
-            gp.rm.spr_racetext.draw_src(g, x + 26, y, &Rect { x: (self.goalID as i32 + 1) * 16, y: 0, w: 16, h: 16 });
         }
+
+        gp.rm.spr_racetext.draw_src(g, x + 26, y, &Rect { x: (self.goalID as i32 + 1) * 16, y: 0, w: 16, h: 16 });
     }
 
     fn update(&mut self, g: &mut Game) {
@@ -209,23 +203,21 @@ impl CObjectTrait for OMO_RaceGoal {
 
     fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         let mut gp = g.ptr();
-        unsafe {
-            if g.game_values.gamemode.getgamemode() == game_mode_race && player.tanookisuit.not_statue() {
-                let gamemode: &mut CGM_Race = g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Race>().unwrap();
+        if g.game_values.gamemode.getgamemode() == game_mode_race && player.tanookisuit.not_statue() {
+            let gamemode: &mut CGM_Race = g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Race>().unwrap();
 
-                if self.tagged[player.teamID as usize] != player.colorID && gamemode.get_next_goal(player.teamID) >= self.goalID {
-                    self.tagged[player.teamID as usize] = player.colorID;
+            if self.tagged[player.teamID as usize] != player.colorID && gamemode.get_next_goal(player.teamID) >= self.goalID {
+                self.tagged[player.teamID as usize] = player.colorID;
 
-                    if self.isfinishline {
-                        if_sound_on_play(g, &mut gp.rm.sfx_racesound);
-                    } else {
-                        if_sound_on_play(g, &mut gp.rm.sfx_areatag);
-                    }
+                if self.isfinishline {
+                    if_sound_on_play(g, &mut gp.rm.sfx_racesound);
+                } else {
+                    if_sound_on_play(g, &mut gp.rm.sfx_areatag);
                 }
+            }
 
-                if gamemode.get_next_goal(player.teamID) == self.goalID {
-                    gamemode.set_next_goal(g, player.teamID);
-                }
+            if gamemode.get_next_goal(player.teamID) == self.goalID {
+                gamemode.set_next_goal(g, player.teamID);
             }
         }
         false

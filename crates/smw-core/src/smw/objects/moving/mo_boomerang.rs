@@ -97,12 +97,10 @@ impl MO_Boomerang {
 
         o.iStateTimer = 0;
 
-        unsafe {
-            if g.game_values.boomerangstyle == BoomerangStyle::Random {
-                o.iStyle = BoomerangStyle::from_u8(RANDOM_INT(gp.get(), 3) as u8);
-            } else {
-                o.iStyle = g.game_values.boomerangstyle;
-            }
+        if g.game_values.boomerangstyle == BoomerangStyle::Random {
+            o.iStyle = BoomerangStyle::from_u8(RANDOM_INT(gp.get(), 3) as u8);
+        } else {
+            o.iStyle = g.game_values.boomerangstyle;
         }
 
         o.fObjectCollidesWithMap = false;
@@ -114,21 +112,19 @@ impl MO_Boomerang {
     // Call to kill boomerang when it is not caught by player
     fn forcedead(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        unsafe {
-            removeifprojectile(g, self.as_mo_ptr(), false, true);
-            gp.rm.sfx_boomerang.stop(g);
+        removeifprojectile(g, self.as_mo_ptr(), false, true);
+        gp.rm.sfx_boomerang.stop(g);
 
-            if g.game_values.boomeranglimit == 0 {
-                return;
-            }
+        if g.game_values.boomeranglimit == 0 {
+            return;
+        }
 
-            // Penalize player if they did not catch it
-            let mut player = get_player_from_global_id(g, self.iPlayerID);
+        // Penalize player if they did not catch it
+        let mut player = get_player_from_global_id(g, self.iPlayerID);
 
-            if !player.is_null() {
-                if player.projectilelimit > 0 {
-                    player.decrease_projectile_limit(g);
-                }
+        if !player.is_null() {
+            if player.projectilelimit > 0 {
+                player.decrease_projectile_limit(g);
             }
         }
     }
@@ -142,268 +138,264 @@ impl CObjectTrait for MO_Boomerang {
 
     fn update(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        unsafe {
-            if !g.rm.sfx_boomerang.is_playing() {
-                if_sound_on_play(g, &mut gp.rm.sfx_boomerang);
+        if !g.rm.sfx_boomerang.is_playing() {
+            if_sound_on_play(g, &mut gp.rm.sfx_boomerang);
+        }
+
+        self.animate();
+
+        // Detection collision with boomerang breakable blocks
+        let blocks = self.get_collision_blocks(g);
+        for iBlock in 0..4usize {
+            let mut block = blocks[iBlock];
+            if block.is_null() {
+                continue;
             }
-
-            self.animate();
-
-            // Detection collision with boomerang breakable blocks
-            let blocks = self.get_collision_blocks(g);
-            for iBlock in 0..4usize {
-                let mut block = blocks[iBlock];
-                if block.is_null() {
-                    continue;
-                }
-                if let Some(weaponbreakableblock) = block.as_any().downcast_mut::<B_WeaponBreakableBlock>() {
-                    if weaponbreakableblock.r#type() == WeaponDamageType::Boomerang {
-                        weaponbreakableblock.trigger_behavior_player(g, self.iPlayerID, self.iTeamID);
-                        self.forcedead(g);
-                        return;
-                    }
-                }
-            }
-
-            let screenWidth = App::screenWidth as f32;
-
-            if self.iStyle == BoomerangStyle::Flat {
-                // Flat style
-                self.fOldX = self.fx;
-                let fx = self.fx + self.velx;
-                self.set_xf(fx);
-
-                if self.fMoveToRight && self.fx + self.iw as f32 >= screenWidth && self.fOldX + (self.iw as f32) < screenWidth {
-                    if self.fFlipped {
-                        self.forcedead(g);
-                        return;
-                    } else {
-                        let fx = (App::screenWidth - self.iw as i32) as f32;
-                        self.set_xf(fx);
-                        self.fFlipped = true;
-                        self.fMoveToRight = false;
-                        self.velx = -self.velx;
-                    }
-                } else if !self.fMoveToRight && self.fx < 0.0 && self.fOldX >= 0.0 {
-                    if self.fFlipped {
-                        self.forcedead(g);
-                        return;
-                    } else {
-                        self.set_xf(0.0);
-                        self.fFlipped = true;
-                        self.fMoveToRight = true;
-                        self.velx = -self.velx;
-                    }
-                }
-            } else if self.iStyle == BoomerangStyle::SMB3 {
-                // Attempting to emulate the SMB3 boomerang behavior
-                self.iStateTimer += 1;
-
-                self.fOldX = self.fx;
-                let fx = self.fx + self.velx;
-                self.set_xf(fx);
-
-                if self.fx < 0.0 {
-                    let fx = self.fx + screenWidth;
-                    self.set_xf(fx);
-                } else if self.fx + self.iw as f32 >= screenWidth {
-                    let fx = self.fx - screenWidth;
-                    self.set_xf(fx);
-                }
-
-                if self.state == 1 {
-                    self.fOldY = self.fy;
-                    let fy = self.fy - 3.2f32;
-                    self.set_yf(fy);
-
-                    if self.iStateTimer >= 20 {
-                        self.iStateTimer = 0;
-                        self.state = 2;
-                    }
-                } else if self.state == 2 {
-                    if self.iStateTimer >= 26 {
-                        self.iStateTimer = 0;
-                        self.state = 3;
-                    }
-                } else if self.state == 3 {
-                    self.fOldY = self.fy;
-                    let fy = self.fy + 1.0f32;
-                    self.set_yf(fy);
-
-                    if self.fMoveToRight {
-                        // Add amount so that by time fy lowers by two tiles, we turn around the boomerang
-                        self.velx -= 0.15625f32;
-
-                        if self.velx <= -5.0f32 {
-                            self.velx = -5.0;
-                            self.state = 4;
-                            self.fFlipped = true;
-                        }
-                    } else {
-                        self.velx += 0.15625f32;
-
-                        if self.velx >= 5.0f32 {
-                            self.velx = 5.0;
-                            self.state = 4;
-                            self.fFlipped = true;
-                        }
-                    }
-
-                    self.iStateTimer = 0;
-                } else if self.state == 4 {
-                    if self.iStateTimer >= 46 {
-                        if (self.fMoveToRight && self.fx < 0.0 && self.fOldX >= 0.0)
-                            || (!self.fMoveToRight && self.fx + self.iw as f32 >= screenWidth && self.fOldX + (self.iw as f32) < screenWidth)
-                        {
-                            self.forcedead(g);
-                            return;
-                        }
-                    }
-                }
-            } else if self.iStyle == BoomerangStyle::Zelda {
-                // Zelda style boomerang
-                self.iStateTimer += 1;
-
-                self.fOldX = self.fx;
-                let fx = self.fx + self.velx;
-                self.set_xf(fx);
-
-                if self.fx < 0.0 {
-                    let fx = self.fx + screenWidth;
-                    self.set_xf(fx);
-                } else if self.fx + self.iw as f32 >= screenWidth {
-                    let fx = self.fx - screenWidth;
-                    self.set_xf(fx);
-                }
-
-                if self.iStateTimer > g.game_values.boomeranglife {
+            if let Some(weaponbreakableblock) = block.as_any().downcast_mut::<B_WeaponBreakableBlock>() {
+                if weaponbreakableblock.r#type() == WeaponDamageType::Boomerang {
+                    weaponbreakableblock.trigger_behavior_player(g, self.iPlayerID, self.iTeamID);
                     self.forcedead(g);
                     return;
                 }
+            }
+        }
 
-                if self.state == 1 {
-                    if self.iStateTimer >= 64 {
-                        self.state = 2;
+        let screenWidth = App::screenWidth as f32;
+
+        if self.iStyle == BoomerangStyle::Flat {
+            // Flat style
+            self.fOldX = self.fx;
+            let fx = self.fx + self.velx;
+            self.set_xf(fx);
+
+            if self.fMoveToRight && self.fx + self.iw as f32 >= screenWidth && self.fOldX + (self.iw as f32) < screenWidth {
+                if self.fFlipped {
+                    self.forcedead(g);
+                    return;
+                } else {
+                    let fx = (App::screenWidth - self.iw as i32) as f32;
+                    self.set_xf(fx);
+                    self.fFlipped = true;
+                    self.fMoveToRight = false;
+                    self.velx = -self.velx;
+                }
+            } else if !self.fMoveToRight && self.fx < 0.0 && self.fOldX >= 0.0 {
+                if self.fFlipped {
+                    self.forcedead(g);
+                    return;
+                } else {
+                    self.set_xf(0.0);
+                    self.fFlipped = true;
+                    self.fMoveToRight = true;
+                    self.velx = -self.velx;
+                }
+            }
+        } else if self.iStyle == BoomerangStyle::SMB3 {
+            // Attempting to emulate the SMB3 boomerang behavior
+            self.iStateTimer += 1;
+
+            self.fOldX = self.fx;
+            let fx = self.fx + self.velx;
+            self.set_xf(fx);
+
+            if self.fx < 0.0 {
+                let fx = self.fx + screenWidth;
+                self.set_xf(fx);
+            } else if self.fx + self.iw as f32 >= screenWidth {
+                let fx = self.fx - screenWidth;
+                self.set_xf(fx);
+            }
+
+            if self.state == 1 {
+                self.fOldY = self.fy;
+                let fy = self.fy - 3.2f32;
+                self.set_yf(fy);
+
+                if self.iStateTimer >= 20 {
+                    self.iStateTimer = 0;
+                    self.state = 2;
+                }
+            } else if self.state == 2 {
+                if self.iStateTimer >= 26 {
+                    self.iStateTimer = 0;
+                    self.state = 3;
+                }
+            } else if self.state == 3 {
+                self.fOldY = self.fy;
+                let fy = self.fy + 1.0f32;
+                self.set_yf(fy);
+
+                if self.fMoveToRight {
+                    // Add amount so that by time fy lowers by two tiles, we turn around the boomerang
+                    self.velx -= 0.15625f32;
+
+                    if self.velx <= -5.0f32 {
+                        self.velx = -5.0;
+                        self.state = 4;
                         self.fFlipped = true;
-
-                        /*
-                        CPlayer * player = GetPlayerFromGlobalID(iPlayerID);
-
-                        //No wrap boomerang
-                        if (player)
-                        {
-                            if ((player->ix < ix && velx > 0) || (player->ix > ix && velx < 0))
-                                        velx = -velx;
-                        }
-                        else
-                        {
-                                velx = -velx;
-                        }
-                        */
-
-                        self.velx = -self.velx; // Wrap Boomerang
                     }
-                } else if self.state == 2 {
-                    self.fOldY = self.fy;
-                    let fy = self.fy + self.vely;
-                    self.set_yf(fy);
+                } else {
+                    self.velx += 0.15625f32;
 
-                    // Follow the player zelda style
-                    let player = get_player_from_global_id(g, self.iPlayerID);
+                    if self.velx >= 5.0f32 {
+                        self.velx = 5.0;
+                        self.state = 4;
+                        self.fFlipped = true;
+                    }
+                }
 
-                    if !player.is_null() {
-                        let mut fWrap = false;
-                        if (player.ix as i32 - self.ix as i32).abs() > 320 {
-                            fWrap = true;
-                        }
-
-                        if (player.ix < self.ix && !fWrap) || (player.ix > self.ix && fWrap)
-                        // Wrap Boomerang
-                        // if (player->ix < ix)  //No Wrap Boomerang
-                        {
-                            self.velx -= 0.2f32;
-
-                            if self.velx < -5.0f32 {
-                                self.velx = -5.0;
-                            }
-                        } else {
-                            self.velx += 0.2f32;
-
-                            if self.velx > 5.0f32 {
-                                self.velx = 5.0;
-                            }
-                        }
-
-                        if player.iy < self.iy {
-                            self.vely -= 0.2f32;
-
-                            if self.vely < -3.0f32 {
-                                self.vely = -3.0;
-                            }
-                        } else {
-                            self.vely += 0.2f32;
-
-                            if self.vely > 3.0f32 {
-                                self.vely = 3.0;
-                            }
-                        }
-                    } else {
-                        // Remove boomerang if player was removed from game
+                self.iStateTimer = 0;
+            } else if self.state == 4 {
+                if self.iStateTimer >= 46 {
+                    if (self.fMoveToRight && self.fx < 0.0 && self.fOldX >= 0.0)
+                        || (!self.fMoveToRight && self.fx + self.iw as f32 >= screenWidth && self.fOldX + (self.iw as f32) < screenWidth)
+                    {
                         self.forcedead(g);
                         return;
-
-                        /*
-                        //Die at nearest edge if player was removed from game
-                        if (velx > 0)
-                                velx = 5.0f;
-                        else
-                                velx = -5.0f;
-
-                        if ((fx < 0.0f && fOldX >= 0.0f) ||
-                                (fx + iw >= App::screenWidth && fOldX + iw < App::screenWidth))
-                        {
-                                forcedead();
-                                return;
-                        }
-                        */
                     }
                 }
             }
+        } else if self.iStyle == BoomerangStyle::Zelda {
+            // Zelda style boomerang
+            self.iStateTimer += 1;
 
-            if g.game_values.spotlights {
-                if self.sSpotlight.is_null() {
-                    self.sSpotlight = gp.spotlightManager.add_spotlight(
-                        g,
-                        (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16,
-                        (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16,
-                        3,
-                    );
-                }
+            self.fOldX = self.fx;
+            let fx = self.fx + self.velx;
+            self.set_xf(fx);
 
-                if !self.sSpotlight.is_null() {
-                    let x = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
-                    let y = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
-                    self.sSpotlight.update_position(x, y);
+            if self.fx < 0.0 {
+                let fx = self.fx + screenWidth;
+                self.set_xf(fx);
+            } else if self.fx + self.iw as f32 >= screenWidth {
+                let fx = self.fx - screenWidth;
+                self.set_xf(fx);
+            }
+
+            if self.iStateTimer > g.game_values.boomeranglife {
+                self.forcedead(g);
+                return;
+            }
+
+            if self.state == 1 {
+                if self.iStateTimer >= 64 {
+                    self.state = 2;
+                    self.fFlipped = true;
+
+                    /*
+                    CPlayer * player = GetPlayerFromGlobalID(iPlayerID);
+
+                    //No wrap boomerang
+                    if (player)
+                    {
+                        if ((player->ix < ix && velx > 0) || (player->ix > ix && velx < 0))
+                                    velx = -velx;
+                    }
+                    else
+                    {
+                            velx = -velx;
+                    }
+                    */
+
+                    self.velx = -self.velx; // Wrap Boomerang
                 }
+            } else if self.state == 2 {
+                self.fOldY = self.fy;
+                let fy = self.fy + self.vely;
+                self.set_yf(fy);
+
+                // Follow the player zelda style
+                let player = get_player_from_global_id(g, self.iPlayerID);
+
+                if !player.is_null() {
+                    let mut fWrap = false;
+                    if (player.ix as i32 - self.ix as i32).abs() > 320 {
+                        fWrap = true;
+                    }
+
+                    if (player.ix < self.ix && !fWrap) || (player.ix > self.ix && fWrap)
+                    // Wrap Boomerang
+                    // if (player->ix < ix)  //No Wrap Boomerang
+                    {
+                        self.velx -= 0.2f32;
+
+                        if self.velx < -5.0f32 {
+                            self.velx = -5.0;
+                        }
+                    } else {
+                        self.velx += 0.2f32;
+
+                        if self.velx > 5.0f32 {
+                            self.velx = 5.0;
+                        }
+                    }
+
+                    if player.iy < self.iy {
+                        self.vely -= 0.2f32;
+
+                        if self.vely < -3.0f32 {
+                            self.vely = -3.0;
+                        }
+                    } else {
+                        self.vely += 0.2f32;
+
+                        if self.vely > 3.0f32 {
+                            self.vely = 3.0;
+                        }
+                    }
+                } else {
+                    // Remove boomerang if player was removed from game
+                    self.forcedead(g);
+                    return;
+
+                    /*
+                    //Die at nearest edge if player was removed from game
+                    if (velx > 0)
+                            velx = 5.0f;
+                    else
+                            velx = -5.0f;
+
+                    if ((fx < 0.0f && fOldX >= 0.0f) ||
+                            (fx + iw >= App::screenWidth && fOldX + iw < App::screenWidth))
+                    {
+                            forcedead();
+                            return;
+                    }
+                    */
+                }
+            }
+        }
+
+        if g.game_values.spotlights {
+            if self.sSpotlight.is_null() {
+                self.sSpotlight = gp.spotlightManager.add_spotlight(
+                    g,
+                    (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16,
+                    (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16,
+                    3,
+                );
+            }
+
+            if !self.sSpotlight.is_null() {
+                let x = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
+                let y = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
+                self.sSpotlight.update_position(x, y);
             }
         }
     }
 
     fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
-        unsafe {
-            if self.iPlayerID != player.globalID && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID) {
-                if !player.is_shielded() {
-                    removeifprojectile(g, self.as_mo_ptr(), false, false);
+        if self.iPlayerID != player.globalID && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID) {
+            if !player.is_shielded() {
+                removeifprojectile(g, self.as_mo_ptr(), false, false);
 
-                    if !player.is_invincible() && !player.shyguy {
-                        // Find the player that shot this boomerang so we can attribute a kill
-                        player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Boomerang, false, false);
-                        return true;
-                    }
+                if !player.is_invincible() && !player.shyguy {
+                    // Find the player that shot this boomerang so we can attribute a kill
+                    player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Boomerang, false, false);
+                    return true;
                 }
-            } else if self.iPlayerID == player.globalID && self.fFlipped {
-                removeifprojectile(g, self.as_mo_ptr(), false, true);
             }
+        } else if self.iPlayerID == player.globalID && self.fFlipped {
+            removeifprojectile(g, self.as_mo_ptr(), false, true);
         }
 
         false

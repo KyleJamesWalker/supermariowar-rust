@@ -69,21 +69,19 @@ impl MO_CheepCheep {
 
     pub fn hittop(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         let mut gp = g.ptr();
-        unsafe {
-            let mut p = player;
-            p.set_yi((self.iy as i32 - PH - 1) as i16);
-            p.bouncejump();
-            p.get().collisions.checktop(g, player.get());
-            p.platform = Ptr::null();
+        let mut p = player;
+        p.set_yi((self.iy as i32 - PH - 1) as i16);
+        p.bouncejump();
+        p.get().collisions.checktop(g, player.get());
+        p.platform = Ptr::null();
 
-            p.add_killer_award(g, Ptr::null(), KillStyle::CheepCheep);
+        p.add_killer_award(g, Ptr::null(), KillStyle::CheepCheep);
 
-            if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
-                p.score().adjust_score(g, 1);
-            }
-
-            if_sound_on_play(g, &mut gp.rm.sfx_mip);
+        if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
+            p.score().adjust_score(g, 1);
         }
+
+        if_sound_on_play(g, &mut gp.rm.sfx_mip);
 
         self.die(g);
 
@@ -100,20 +98,18 @@ impl MO_CheepCheep {
 
     pub fn shatter_die(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        unsafe {
-            if_sound_on_play(g, &mut gp.rm.sfx_breakblock);
-            self.dead = true;
+        if_sound_on_play(g, &mut gp.rm.sfx_breakblock);
+        self.dead = true;
 
-            let iBrokenIceX: i16 = (self.ix as i32 - self.collisionOffsetX as i32) as i16;
-            let iBrokenIceY: i16 = (self.iy as i32 - self.collisionOffsetY as i32) as i16;
-            let spr = Ptr::from_mut(&mut g.rm.spr_brokeniceblock);
-            g.eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, iBrokenIceY, -1.5f32, -7.0f32, 4, 2, 0, 0, 16, 16));
-            g.eyecandy[2].emplace(EC_FallingObject::new(spr, (iBrokenIceX as i32 + 16) as i16, iBrokenIceY, 1.5f32, -7.0f32, 4, 2, 0, 0, 16, 16));
-            g.eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, (iBrokenIceY as i32 + 16) as i16, -1.5f32, -4.0f32, 4, 2, 0, 0, 16, 16));
-            g.eyecandy[2].emplace(EC_FallingObject::new(spr, (iBrokenIceX as i32 + 16) as i16, (iBrokenIceY as i32 + 16) as i16, 1.5f32, -4.0f32, 4, 2, 0, 0, 16, 16));
+        let iBrokenIceX: i16 = (self.ix as i32 - self.collisionOffsetX as i32) as i16;
+        let iBrokenIceY: i16 = (self.iy as i32 - self.collisionOffsetY as i32) as i16;
+        let spr = Ptr::from_mut(&mut g.rm.spr_brokeniceblock);
+        g.eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, iBrokenIceY, -1.5f32, -7.0f32, 4, 2, 0, 0, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(spr, (iBrokenIceX as i32 + 16) as i16, iBrokenIceY, 1.5f32, -7.0f32, 4, 2, 0, 0, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(spr, iBrokenIceX, (iBrokenIceY as i32 + 16) as i16, -1.5f32, -4.0f32, 4, 2, 0, 0, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(spr, (iBrokenIceX as i32 + 16) as i16, (iBrokenIceY as i32 + 16) as i16, 1.5f32, -4.0f32, 4, 2, 0, 0, 16, 16));
 
-            g.game_values.unlocksecret2part2 += 1;
-        }
+        g.game_values.unlocksecret2part2 += 1;
     }
 }
 
@@ -150,34 +146,30 @@ impl CObjectTrait for MO_CheepCheep {
         self.spr.draw_src(g, x, y, &Rect { x: self.drawframe as i32, y: self.iColorOffsetY as i32, w: self.iw as i32, h: self.ih as i32 });
 
         if self.frozen {
-            unsafe {
-                gp.rm.spr_iceblock.draw_src(g, x, y, &Rect { x: 0, y: 0, w: 32, h: 32 });
-            }
+            gp.rm.spr_iceblock.draw_src(g, x, y, &Rect { x: 0, y: 0, w: 32, h: 32 });
         }
     }
 
     fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
         let mut gp = g.ptr();
-        unsafe {
-            if player.is_invincible() || self.frozen {
-                player.add_killer_award(g, Ptr::null(), KillStyle::CheepCheep);
+        if player.is_invincible() || self.frozen {
+            player.add_killer_award(g, Ptr::null(), KillStyle::CheepCheep);
 
-                if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
-                    player.score().adjust_score(g, 1);
-                }
+            if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
+                player.score().adjust_score(g, 1);
+            }
 
-                if self.frozen {
-                    self.shatter_die(g);
-                } else {
-                    if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
-                    self.die(g);
-                }
+            if self.frozen {
+                self.shatter_die(g);
             } else {
-                if player.fOldY + PH as f32 <= self.fOldY && player.iy as i32 + PH >= self.iy as i32 {
-                    return self.hittop(g, player);
-                } else {
-                    return self.hitother(g, player);
-                }
+                if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
+                self.die(g);
+            }
+        } else {
+            if player.fOldY + PH as f32 <= self.fOldY && player.iy as i32 + PH >= self.iy as i32 {
+                return self.hittop(g, player);
+            } else {
+                return self.hitother(g, player);
             }
         }
 
@@ -186,71 +178,69 @@ impl CObjectTrait for MO_CheepCheep {
 
     fn collide_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) {
         let mut gp = g.ptr();
-        unsafe {
-            if !object.is_dead() {
-                removeifprojectile(g, object, false, false);
+        if !object.is_dead() {
+            removeifprojectile(g, object, false, false);
 
-                let r#type: MovingObjectType = object.get_moving_object_type();
+            let r#type: MovingObjectType = object.get_moving_object_type();
 
-                if r#type == movingobject_fireball
-                    || r#type == movingobject_hammer
-                    || r#type == movingobject_boomerang
-                    || r#type == movingobject_shell
-                    || r#type == movingobject_throwblock
-                    || r#type == movingobject_throwbox
-                    || r#type == movingobject_bulletbill
-                    || r#type == movingobject_podobo
-                    || r#type == movingobject_attackzone
-                    || r#type == movingobject_explosion
-                    || r#type == movingobject_sledgehammer
-                {
-                    // Don't kill goombas with non-moving shells
-                    if r#type == movingobject_shell && object.get_state() == 2 {
-                        return;
-                    }
+            if r#type == movingobject_fireball
+                || r#type == movingobject_hammer
+                || r#type == movingobject_boomerang
+                || r#type == movingobject_shell
+                || r#type == movingobject_throwblock
+                || r#type == movingobject_throwbox
+                || r#type == movingobject_bulletbill
+                || r#type == movingobject_podobo
+                || r#type == movingobject_attackzone
+                || r#type == movingobject_explosion
+                || r#type == movingobject_sledgehammer
+            {
+                // Don't kill goombas with non-moving shells
+                if r#type == movingobject_shell && object.get_state() == 2 {
+                    return;
+                }
 
-                    if r#type == movingobject_throwbox && !object.as_any().downcast_mut::<CO_ThrowBox>().unwrap().has_kill_velocity() {
-                        return;
-                    }
+                if r#type == movingobject_throwbox && !object.as_any().downcast_mut::<CO_ThrowBox>().unwrap().has_kill_velocity() {
+                    return;
+                }
 
-                    if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
-                        // Find the player that shot this projectile so we can attribute a kill
-                        let mut killer = get_player_from_global_id(g, object.iPlayerID);
+                if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
+                    // Find the player that shot this projectile so we can attribute a kill
+                    let mut killer = get_player_from_global_id(g, object.iPlayerID);
 
-                        if !killer.is_null() {
-                            killer.add_killer_award(g, Ptr::null(), KillStyle::CheepCheep);
-                            killer.score().adjust_score(g, 1);
+                    if !killer.is_null() {
+                        killer.add_killer_award(g, Ptr::null(), KillStyle::CheepCheep);
+                        killer.score().adjust_score(g, 1);
 
-                            if r#type == movingobject_shell {
-                                object.as_any().downcast_mut::<CO_Shell>().unwrap().add_moving_kill(g, killer);
-                            }
+                        if r#type == movingobject_shell {
+                            object.as_any().downcast_mut::<CO_Shell>().unwrap().add_moving_kill(g, killer);
                         }
                     }
-
-                    if self.frozen {
-                        self.shatter_die(g);
-                    } else {
-                        if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
-                        self.die(g);
-                    }
-
-                    if r#type == movingobject_shell || r#type == movingobject_throwblock {
-                        object.check_and_die(g);
-                    } else if r#type == movingobject_bulletbill || r#type == movingobject_attackzone || r#type == movingobject_throwbox {
-                        object.die(g);
-                    }
-                } else if r#type == movingobject_iceblast {
-                    self.animationspeed = 0;
-                    self.frozen = true;
-
-                    g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                        Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
-                        (self.ix as i32 - self.collisionOffsetX as i32) as i16,
-                        (self.iy as i32 - self.collisionOffsetY as i32) as i16,
-                        3,
-                        8,
-                    ));
                 }
+
+                if self.frozen {
+                    self.shatter_die(g);
+                } else {
+                    if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
+                    self.die(g);
+                }
+
+                if r#type == movingobject_shell || r#type == movingobject_throwblock {
+                    object.check_and_die(g);
+                } else if r#type == movingobject_bulletbill || r#type == movingobject_attackzone || r#type == movingobject_throwbox {
+                    object.die(g);
+                }
+            } else if r#type == movingobject_iceblast {
+                self.animationspeed = 0;
+                self.frozen = true;
+
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                    Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+                    (self.ix as i32 - self.collisionOffsetX as i32) as i16,
+                    (self.iy as i32 - self.collisionOffsetY as i32) as i16,
+                    3,
+                    8,
+                ));
             }
         }
     }
@@ -266,20 +256,18 @@ impl IO_MovingObjectTrait for MO_CheepCheep {
         }
 
         self.dead = true;
-        unsafe {
-            g.eyecandy[2].emplace(EC_FallingObject::new(
-                Ptr::from_mut(&mut g.rm.spr_cheepcheepdead),
-                self.ix,
-                self.iy,
-                0.0,
-                -VELJUMP / 2.0f32,
-                1,
-                0,
-                0,
-                self.iColorOffsetY,
-                32,
-                32,
-            ));
-        }
+        g.eyecandy[2].emplace(EC_FallingObject::new(
+            Ptr::from_mut(&mut g.rm.spr_cheepcheepdead),
+            self.ix,
+            self.iy,
+            0.0,
+            -VELJUMP / 2.0f32,
+            1,
+            0,
+            0,
+            self.iColorOffsetY,
+            32,
+            32,
+        ));
     }
 }

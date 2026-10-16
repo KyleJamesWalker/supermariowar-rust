@@ -77,10 +77,8 @@ pub struct CObject {
 }
 
 pub fn set_network_id_context(g: &mut Game, context: u32) {
-    unsafe {
-        g.g_networkIDContext = context;
-        g.g_networkIDCount = 0;
-    }
+    g.g_networkIDContext = context;
+    g.g_networkIDCount = 0;
 }
 
 /// The ID context and the count of objects made in it, for checkpoints.
@@ -89,13 +87,11 @@ pub fn network_id_state(g: &mut Game) -> (&mut u32, &mut u32) {
 }
 
 fn next_network_id(g: &mut Game) -> i32 {
-    unsafe {
-        if g.g_networkIDContext == 0 {
-            return 0;
-        }
-        g.g_networkIDCount += 1;
-        (g.g_networkIDContext << 16 | (g.g_networkIDCount & 0xFFFF)) as i32
+    if g.g_networkIDContext == 0 {
+        return 0;
     }
+    g.g_networkIDCount += 1;
+    (g.g_networkIDContext << 16 | (g.g_networkIDCount & 0xFFFF)) as i32
 }
 
 impl CObject {
@@ -211,18 +207,16 @@ impl CObject {
 
         let mut blocks: [Ptr<dyn IO_BlockTrait>; 4] = [Ptr::null(); 4];
 
-        unsafe {
-            if iy >= 0 && iy < 480 {
-                let yt = (iy / TILESIZE) as i16;
-                blocks[0] = g.g_map.block(xl, yt);
-                blocks[1] = g.g_map.block(xr, yt);
-            }
+        if iy >= 0 && iy < 480 {
+            let yt = (iy / TILESIZE) as i16;
+            blocks[0] = g.g_map.block(xl, yt);
+            blocks[1] = g.g_map.block(xr, yt);
+        }
 
-            if iy + ih >= 0 && iy + ih < 480 {
-                let yb = ((iy + ih) / TILESIZE) as i16;
-                blocks[2] = g.g_map.block(xl, yb);
-                blocks[3] = g.g_map.block(xr, yb);
-            }
+        if iy + ih >= 0 && iy + ih < 480 {
+            let yb = ((iy + ih) / TILESIZE) as i16;
+            blocks[2] = g.g_map.block(xl, yb);
+            blocks[3] = g.g_map.block(xr, yb);
         }
 
         blocks

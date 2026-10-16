@@ -54,13 +54,11 @@ impl OMO_KingOfTheHillZone {
             multiplier: 1,
             multipliertimer: 0,
         };
-        unsafe {
-            this.size = g.game_values.gamemodesettings.kingofthehill.areasize;
+        this.size = g.game_values.gamemodesettings.kingofthehill.areasize;
 
-            if this.size < 2 {
-                this.size = 2;
-                g.game_values.gamemodesettings.kingofthehill.areasize = this.size;
-            }
+        if this.size < 2 {
+            this.size = 2;
+            g.game_values.gamemodesettings.kingofthehill.areasize = this.size;
         }
 
         this.iw = (TILESIZE * this.size as i32) as i16;
@@ -99,94 +97,92 @@ impl OMO_KingOfTheHillZone {
 
         let size = self.size;
 
-        unsafe {
-            for iLoop in 0..64i16 {
-                x = RANDOM_INT(gp.get(), MAPWIDTH - size as i32 + 1) as i16;
-                y = RANDOM_INT(gp.get(), MAPHEIGHT - size as i32) as i16;
+        for iLoop in 0..64i16 {
+            x = RANDOM_INT(gp.get(), MAPWIDTH - size as i32 + 1) as i16;
+            y = RANDOM_INT(gp.get(), MAPHEIGHT - size as i32) as i16;
 
-                // First move the zone down so it is sitting on atleast 1 solid tile
-                let mut iFindY: i16 = (y as i32 + size as i32) as i16;
-                let iOldFindY: i16 = iFindY;
-                let mut fTryAgain = false;
-                let mut fDone = false;
+            // First move the zone down so it is sitting on atleast 1 solid tile
+            let mut iFindY: i16 = (y as i32 + size as i32) as i16;
+            let iOldFindY: i16 = iFindY;
+            let mut fTryAgain = false;
+            let mut fDone = false;
 
-                while !fDone {
-                    for iCol in 0..size {
-                        let r#type: i32 = g.g_map.map(x as i32 + iCol as i32, iFindY as i32);
-                        if (((r#type & tile_flag_solid_on_top) != 0 || (r#type & tile_flag_solid) != 0) && (r#type & tile_flag_death_on_top) == 0)
-                            || !g.g_map.block((x as i32 + iCol as i32) as i16, iFindY).is_null()
+            while !fDone {
+                for iCol in 0..size {
+                    let r#type: i32 = g.g_map.map(x as i32 + iCol as i32, iFindY as i32);
+                    if (((r#type & tile_flag_solid_on_top) != 0 || (r#type & tile_flag_solid) != 0) && (r#type & tile_flag_death_on_top) == 0)
+                        || !g.g_map.block((x as i32 + iCol as i32) as i16, iFindY).is_null()
+                    {
+                        fDone = true;
+                        break;
+                    }
+                }
+
+                if fDone {
+                    break;
+                }
+
+                iFindY += 1;
+                if iFindY as i32 >= MAPHEIGHT {
+                    iFindY = size;
+                }
+
+                if iFindY == iOldFindY {
+                    // If we didn't find solid ground in that loop, look for a new place for the zone
+                    fTryAgain = true;
+                    break;
+                }
+            }
+
+            if fTryAgain {
+                continue;
+            }
+
+            y = (iFindY as i32 - size as i32) as i16;
+
+            // Now verify that the area is not completely covered with solid tiles
+            let mut iCountSolidTiles: i16 = 0;
+            for iRow in 0..size {
+                for iCol in 0..size {
+                    let tx = (x as i32 + iCol as i32) as i16;
+                    let ty = (y as i32 + iRow as i32) as i16;
+                    // If there is a solid tile inside the zone
+                    if (g.g_map.map(tx as i32, ty as i32) & tile_flag_solid) != 0 || !g.g_map.spawn(1, tx, ty) || !g.g_map.block(tx, ty).is_null() {
+                        iCountSolidTiles += 1;
+
+                        // Be more picky in the first few loops, but allow solid tiles to be in
+                        let limits = &iKingOfTheHillZoneLimits[(size - 2) as usize];
+                        if (iLoop < 16 && iCountSolidTiles > limits[0])
+                            || (iLoop < 32 && iCountSolidTiles > limits[1])
+                            || (iLoop < 48 && iCountSolidTiles > limits[2])
+                            || (iLoop < 63 && iCountSolidTiles > limits[3])
                         {
-                            fDone = true;
+                            fTryAgain = true;
                             break;
                         }
                     }
-
-                    if fDone {
-                        break;
-                    }
-
-                    iFindY += 1;
-                    if iFindY as i32 >= MAPHEIGHT {
-                        iFindY = size;
-                    }
-
-                    if iFindY == iOldFindY {
-                        // If we didn't find solid ground in that loop, look for a new place for the zone
-                        fTryAgain = true;
-                        break;
-                    }
                 }
 
                 if fTryAgain {
-                    continue;
+                    break;
                 }
-
-                y = (iFindY as i32 - size as i32) as i16;
-
-                // Now verify that the area is not completely covered with solid tiles
-                let mut iCountSolidTiles: i16 = 0;
-                for iRow in 0..size {
-                    for iCol in 0..size {
-                        let tx = (x as i32 + iCol as i32) as i16;
-                        let ty = (y as i32 + iRow as i32) as i16;
-                        // If there is a solid tile inside the zone
-                        if (g.g_map.map(tx as i32, ty as i32) & tile_flag_solid) != 0 || !g.g_map.spawn(1, tx, ty) || !g.g_map.block(tx, ty).is_null() {
-                            iCountSolidTiles += 1;
-
-                            // Be more picky in the first few loops, but allow solid tiles to be in
-                            let limits = &iKingOfTheHillZoneLimits[(size - 2) as usize];
-                            if (iLoop < 16 && iCountSolidTiles > limits[0])
-                                || (iLoop < 32 && iCountSolidTiles > limits[1])
-                                || (iLoop < 48 && iCountSolidTiles > limits[2])
-                                || (iLoop < 63 && iCountSolidTiles > limits[3])
-                            {
-                                fTryAgain = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if fTryAgain {
-                        break;
-                    }
-                }
-
-                if fTryAgain {
-                    continue;
-                }
-
-                // Verify zone is not in a platform
-                if g.g_map.is_in_platform_no_spawn_zone(
-                    ((x as i32) << 5) as i16,
-                    ((y as i32) << 5) as i16,
-                    ((size as i32) << 5) as i16,
-                    ((size as i32) << 5) as i16,
-                ) {
-                    continue;
-                }
-
-                break;
             }
+
+            if fTryAgain {
+                continue;
+            }
+
+            // Verify zone is not in a platform
+            if g.g_map.is_in_platform_no_spawn_zone(
+                ((x as i32) << 5) as i16,
+                ((y as i32) << 5) as i16,
+                ((size as i32) << 5) as i16,
+                ((size as i32) << 5) as i16,
+            ) {
+                continue;
+            }
+
+            break;
         }
 
         self.ix = ((x as i32) << 5) as i16;
@@ -233,14 +229,12 @@ impl CObjectTrait for OMO_KingOfTheHillZone {
                 let iRowX: i16 = (self.iy as i32 + ((iRow as i32) << 5)) as i16;
 
                 if self.multiplier > 1 {
-                    unsafe {
-                        gp.rm.spr_awardkillsinrow.draw_src(
-                            g,
-                            iColX as i32 + 8,
-                            iRowX as i32 + 8,
-                            &Rect { x: (self.multiplier as i32 - 1) << 4, y: (self.colorID as i32) << 4, w: 16, h: 16 },
-                        );
-                    }
+                    gp.rm.spr_awardkillsinrow.draw_src(
+                        g,
+                        iColX as i32 + 8,
+                        iRowX as i32 + 8,
+                        &Rect { x: (self.multiplier as i32 - 1) << 4, y: (self.colorID as i32) << 4, w: 16, h: 16 },
+                    );
                 }
 
                 self.spr.draw_src(g, iColX as i32, iRowX as i32, &Rect { x: iXPiece as i32 + self.frame as i32, y: iYPiece as i32, w: TILESIZE, h: TILESIZE });
@@ -271,38 +265,36 @@ impl CObjectTrait for OMO_KingOfTheHillZone {
             self.frame = 0;
         }
 
-        unsafe {
-            if self.iPlayerID != -1 && !g.game_values.gamemode.gameover {
-                // Speed of point accumulation is proportional to how many players are in zone
-                self.scoretimer = (self.scoretimer as i32 + (((iMax as i32) << 1) - self.totalTouchingPlayers as i32)) as i16;
+        if self.iPlayerID != -1 && !g.game_values.gamemode.gameover {
+            // Speed of point accumulation is proportional to how many players are in zone
+            self.scoretimer = (self.scoretimer as i32 + (((iMax as i32) << 1) - self.totalTouchingPlayers as i32)) as i16;
 
-                if self.scoretimer >= g.game_values.pointspeed {
-                    self.scoretimer = 0;
-                    gp.players[self.iPlayerID as usize].score().adjust_score(g, self.multiplier);
-                    gp.get().game_values.gamemode.check_winner(g, gp.get().players[self.iPlayerID as usize]);
+            if self.scoretimer >= g.game_values.pointspeed {
+                self.scoretimer = 0;
+                gp.players[self.iPlayerID as usize].score().adjust_score(g, self.multiplier);
+                gp.get().game_values.gamemode.check_winner(g, gp.get().players[self.iPlayerID as usize]);
 
-                    if g.game_values.gamemodesettings.kingofthehill.maxmultiplier > 1 && {
-                        self.multipliertimer += 1;
-                        self.multipliertimer >= 5
-                    } {
-                        self.multipliertimer = 0;
+                if g.game_values.gamemodesettings.kingofthehill.maxmultiplier > 1 && {
+                    self.multipliertimer += 1;
+                    self.multipliertimer >= 5
+                } {
+                    self.multipliertimer = 0;
 
-                        if self.multiplier < g.game_values.gamemodesettings.kingofthehill.maxmultiplier {
-                            self.multiplier += 1;
-                        }
+                    if self.multiplier < g.game_values.gamemodesettings.kingofthehill.maxmultiplier {
+                        self.multiplier += 1;
                     }
                 }
-            } else {
-                self.multiplier = 1;
-                self.multipliertimer = 0;
             }
+        } else {
+            self.multiplier = 1;
+            self.multipliertimer = 0;
+        }
 
-            if g.game_values.gamemodesettings.kingofthehill.relocationfrequency > 0 {
-                self.relocatetimer += 1;
-                if self.relocatetimer >= g.game_values.gamemodesettings.kingofthehill.relocationfrequency {
-                    self.relocatetimer = 0;
-                    self.place_area(g);
-                }
+        if g.game_values.gamemodesettings.kingofthehill.relocationfrequency > 0 {
+            self.relocatetimer += 1;
+            if self.relocatetimer >= g.game_values.gamemodesettings.kingofthehill.relocationfrequency {
+                self.relocatetimer = 0;
+                self.place_area(g);
             }
         }
 

@@ -59,12 +59,10 @@ impl CObjectTrait for MO_Goomba {
         let mut gp = g.ptr();
         // if frozen, just draw shell, not entire koopa
         if self.frozen {
-            unsafe {
-                let x = self.ix as i32 - self.collisionOffsetX as i32 + self.iw as i32 - 32;
-                let y = self.iy as i32 - self.collisionOffsetY as i32 + self.ih as i32 - 32;
-                gp.rm.spr_goomba.draw_src(g, x, y, &Rect { x: 0, y: 0, w: 32, h: 32 });
-                gp.rm.spr_iceblock.draw_src(g, x, y, &Rect { x: 0, y: 0, w: 32, h: 32 });
-            }
+            let x = self.ix as i32 - self.collisionOffsetX as i32 + self.iw as i32 - 32;
+            let y = self.iy as i32 - self.collisionOffsetY as i32 + self.ih as i32 - 32;
+            gp.rm.spr_goomba.draw_src(g, x, y, &Rect { x: 0, y: 0, w: 32, h: 32 });
+            gp.rm.spr_iceblock.draw_src(g, x, y, &Rect { x: 0, y: 0, w: 32, h: 32 });
         } else {
             mo_walking_enemy_draw(g, self);
         }
@@ -102,9 +100,7 @@ impl IO_MovingObjectTrait for MO_Goomba {
         }
 
         self.dead = true;
-        unsafe {
-            g.eyecandy[2].emplace(EC_FallingObject::new(Ptr::from_mut(&mut g.rm.spr_goombadeadflying), self.ix, self.iy, 0.0f32, -VELJUMP / 2.0f32, 1, 0, 0, 0, 0, 0));
-        }
+        g.eyecandy[2].emplace(EC_FallingObject::new(Ptr::from_mut(&mut g.rm.spr_goombadeadflying), self.ix, self.iy, 0.0f32, -VELJUMP / 2.0f32, 1, 0, 0, 0, 0, 0));
     }
 }
 
@@ -114,52 +110,50 @@ impl MO_WalkingEnemyTrait for MO_Goomba {
     fn hittop_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         let mut gp = g.ptr();
         let mut player = player;
-        unsafe {
-            player.set_yi((self.iy as i32 - PH - 1) as i16);
-            player.bouncejump();
-            let p = player;
-            player.collisions.checktop(g, p.get());
-            player.platform = Ptr::null();
+        player.set_yi((self.iy as i32 - PH - 1) as i16);
+        player.bouncejump();
+        let p = player;
+        player.collisions.checktop(g, p.get());
+        player.platform = Ptr::null();
 
-            if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
-                player.score().adjust_score(g, 1);
-            }
-
-            if self.fBouncing {
-                self.fBouncing = false;
-                self.bounce = GRAVITATION;
-
-                if self.vely < GRAVITATION {
-                    self.vely = GRAVITATION;
-                }
-
-                self.iw = 32;
-                self.ih = 32;
-
-                self.collisionOffsetX = 1;
-                self.collisionOffsetY = 11;
-
-                self.animationWidth = 64;
-                self.drawframe = 0;
-
-                self.animationOffsetY = if self.velx > 0.0f32 { 0 } else { self.ih };
-                self.spr = Ptr::from_mut(&mut g.rm.spr_goomba);
-            } else {
-                self.dead = true;
-
-                let killStyle = self.killStyle;
-                player.add_killer_award(g, Ptr::null(), killStyle);
-
-                g.eyecandy[0].emplace(EC_Corpse::new(
-                    Ptr::from_mut(&mut g.rm.spr_goombadead),
-                    (self.ix as i32 - self.collisionOffsetX as i32) as f32,
-                    (self.iy as i32 + self.collisionHeight as i32 - 32) as f32,
-                    0,
-                ));
-            }
-
-            if_sound_on_play(g, &mut gp.rm.sfx_mip);
+        if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
+            player.score().adjust_score(g, 1);
         }
+
+        if self.fBouncing {
+            self.fBouncing = false;
+            self.bounce = GRAVITATION;
+
+            if self.vely < GRAVITATION {
+                self.vely = GRAVITATION;
+            }
+
+            self.iw = 32;
+            self.ih = 32;
+
+            self.collisionOffsetX = 1;
+            self.collisionOffsetY = 11;
+
+            self.animationWidth = 64;
+            self.drawframe = 0;
+
+            self.animationOffsetY = if self.velx > 0.0f32 { 0 } else { self.ih };
+            self.spr = Ptr::from_mut(&mut g.rm.spr_goomba);
+        } else {
+            self.dead = true;
+
+            let killStyle = self.killStyle;
+            player.add_killer_award(g, Ptr::null(), killStyle);
+
+            g.eyecandy[0].emplace(EC_Corpse::new(
+                Ptr::from_mut(&mut g.rm.spr_goombadead),
+                (self.ix as i32 - self.collisionOffsetX as i32) as f32,
+                (self.iy as i32 + self.collisionHeight as i32 - 32) as f32,
+                0,
+            ));
+        }
+
+        if_sound_on_play(g, &mut gp.rm.sfx_mip);
 
         false
     }

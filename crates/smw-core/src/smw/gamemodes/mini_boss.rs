@@ -47,25 +47,23 @@ impl CGM_Boss_MiniGame {
 
         remove_players_but_team(g, self.winningteam);
 
-        unsafe {
-            for iScore in 0..g.score_cnt {
-                if self.winningteam == iScore {
-                    continue;
-                }
-
-                gp.score[iScore as usize].set_score(g, 0);
+        for iScore in 0..g.score_cnt {
+            if self.winningteam == iScore {
+                continue;
             }
 
-            setup_score_board(g, false);
-            show_score_board(g);
+            gp.score[iScore as usize].set_score(g, 0);
+        }
 
-            if g.game_values.music {
-                gp.rm.sfx_invinciblemusic.stop(g);
-                gp.rm.sfx_timewarning.stop(g);
-                gp.rm.sfx_slowdownmusic.stop(g);
+        setup_score_board(g, false);
+        show_score_board(g);
 
-                gp.rm.backgroundmusic[1].play(g, true, false);
-            }
+        if g.game_values.music {
+            gp.rm.sfx_invinciblemusic.stop(g);
+            gp.rm.sfx_timewarning.stop(g);
+            gp.rm.sfx_slowdownmusic.stop(g);
+
+            gp.rm.backgroundmusic[1].play(g, true, false);
         }
 
         //game_values.noexit = true;
@@ -102,73 +100,69 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
         self.enemytimer = (RANDOM_INT(gp.get(), 120) + 120) as i16;
         self.poweruptimer = 120;
 
-        unsafe {
-            for iScore in 0..g.score_cnt as usize {
-                gp.score[iScore].set_score(g, self.goal);
-            }
-
-            let platformY: i16 = if self.iBossType == Boss::Hammer {
-                256
-            } else if self.iBossType == Boss::Bomb {
-                256
-            } else {
-                (App::screenWidth / 2) as i16
-            };
-            let obj = Ptr::new_box(MO_SledgeBrother::new(g, Ptr::from_mut(&mut gp.get().rm.spr_sledgebrothers), platformY, self.iBossType));
-            gp.get().objectcontainer[0].add(g, obj);
+        for iScore in 0..g.score_cnt as usize {
+            gp.score[iScore].set_score(g, self.goal);
         }
+
+        let platformY: i16 = if self.iBossType == Boss::Hammer {
+            256
+        } else if self.iBossType == Boss::Bomb {
+            256
+        } else {
+            (App::screenWidth / 2) as i16
+        };
+        let obj = Ptr::new_box(MO_SledgeBrother::new(g, Ptr::from_mut(&mut gp.get().rm.spr_sledgebrothers), platformY, self.iBossType));
+        gp.get().objectcontainer[0].add(g, obj);
     }
 
     fn think(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         let mut rm = g.rm;
         let mut gp = g.ptr();
-        unsafe {
-            if !self.gameover && g.players.len() == 0 {
-                self.gameover = true;
+        if !self.gameover && g.players.len() == 0 {
+            self.gameover = true;
 
-                if g.game_values.music {
-                    gp.rm.sfx_invinciblemusic.stop(g);
-                    gp.rm.sfx_timewarning.stop(g);
-                    gp.rm.sfx_slowdownmusic.stop(g);
-                    if_sound_on_play(g, &mut gp.rm.sfx_gameover);
+            if g.game_values.music {
+                gp.rm.sfx_invinciblemusic.stop(g);
+                gp.rm.sfx_timewarning.stop(g);
+                gp.rm.sfx_slowdownmusic.stop(g);
+                if_sound_on_play(g, &mut gp.rm.sfx_gameover);
 
-                    gp.rm.backgroundmusic[1].stop(g);
-                }
+                gp.rm.backgroundmusic[1].stop(g);
             }
+        }
 
-            if self.gameover {
-                self.displayplayertext(g);
-            } else {
-                if self.iBossType == Boss::Hammer {
-                    //Randomly spawn koopas
-                    self.enemytimer -= 1;
-                    if self.enemytimer <= 0 {
-                        let obj = Ptr::new_box(MO_Koopa::new(g, Ptr::from_mut(&mut rm.spr_koopa), RANDOM_BOOL(gp.get()), false, false, true));
-                        gp.objectcontainer[0].add(g, obj);
-                        self.enemytimer = (RANDOM_INT(gp.get(), 120) as i16 as i32 + 120) as i16; //Spawn koopas slowly
-                    }
-                } else if self.iBossType == Boss::Bomb {
-                } else if self.iBossType == Boss::Fire {
-                    //Only create podobos if the difficulty is moderate or greater
-                    self.enemytimer -= 1;
-                    if self.enemytimer <= 0 && g.game_values.gamemodesettings.boss.difficulty >= 2 {
-                        let x = RANDOM_INT(gp.get(), (App::screenWidth as f32 * 0.95f32) as i32) as i16;
-                        let pos = Vec2s::new(x, App::screenHeight as i16);
-                        let nspeed: f32 = -((RANDOM_INT(gp.get(), 9) as f32) / 2.0f32) - 9.0f32;
-                        let obj = Ptr::new_box(MO_Podobo::new(g, Ptr::from_mut(&mut rm.spr_podobo), pos, nspeed, -1, -1, -1, false));
-                        gp.objectcontainer[2].add(g, obj);
-                        self.enemytimer = (RANDOM_INT(gp.get(), 80) + 60) as i16;
-                    }
+        if self.gameover {
+            self.displayplayertext(g);
+        } else {
+            if self.iBossType == Boss::Hammer {
+                //Randomly spawn koopas
+                self.enemytimer -= 1;
+                if self.enemytimer <= 0 {
+                    let obj = Ptr::new_box(MO_Koopa::new(g, Ptr::from_mut(&mut rm.spr_koopa), RANDOM_BOOL(gp.get()), false, false, true));
+                    gp.objectcontainer[0].add(g, obj);
+                    self.enemytimer = (RANDOM_INT(gp.get(), 120) as i16 as i32 + 120) as i16; //Spawn koopas slowly
+                }
+            } else if self.iBossType == Boss::Bomb {
+            } else if self.iBossType == Boss::Fire {
+                //Only create podobos if the difficulty is moderate or greater
+                self.enemytimer -= 1;
+                if self.enemytimer <= 0 && g.game_values.gamemodesettings.boss.difficulty >= 2 {
+                    let x = RANDOM_INT(gp.get(), (App::screenWidth as f32 * 0.95f32) as i32) as i16;
+                    let pos = Vec2s::new(x, App::screenHeight as i16);
+                    let nspeed: f32 = -((RANDOM_INT(gp.get(), 9) as f32) / 2.0f32) - 9.0f32;
+                    let obj = Ptr::new_box(MO_Podobo::new(g, Ptr::from_mut(&mut rm.spr_podobo), pos, nspeed, -1, -1, -1, false));
+                    gp.objectcontainer[2].add(g, obj);
+                    self.enemytimer = (RANDOM_INT(gp.get(), 80) + 60) as i16;
+                }
 
-                    self.poweruptimer -= 1;
-                    if self.poweruptimer <= 0 {
-                        self.poweruptimer = (RANDOM_INT(gp.get(), 80) + 60) as i16;
+                self.poweruptimer -= 1;
+                if self.poweruptimer <= 0 {
+                    self.poweruptimer = (RANDOM_INT(gp.get(), 80) + 60) as i16;
 
-                        if g.objectcontainer[1].count_types(object_frenzycard) < g.players.len() {
-                            let obj = Ptr::new_box(MO_FrenzyCard::new(g, Ptr::from_mut(&mut gp.get().rm.spr_frenzycards), 0));
-                            gp.get().objectcontainer[1].add(g, obj);
-                        }
+                    if g.objectcontainer[1].count_types(object_frenzycard) < g.players.len() {
+                        let obj = Ptr::new_box(MO_FrenzyCard::new(g, Ptr::from_mut(&mut gp.get().rm.spr_frenzycards), 0));
+                        gp.get().objectcontainer[1].add(g, obj);
                     }
                 }
             }
@@ -179,14 +173,12 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
         let mut gp = g.ptr();
         if self.gameover {
             if self.winningteam == -1 {
-                unsafe {
-                    gp.rm.game_font_large.draw_centered(g, App::screenWidth / 2, 96, "You Failed To Defeat");
+                gp.rm.game_font_large.draw_centered(g, App::screenWidth / 2, 96, "You Failed To Defeat");
 
-                    match self.iBossType {
-                        Boss::Hammer => gp.rm.game_font_large.draw_centered(g, App::screenWidth / 2, 118, "The Mighty Sledge Brother"),
-                        Boss::Bomb => gp.rm.game_font_large.draw_centered(g, App::screenWidth / 2, 118, "The Mighty Bomb Brother"),
-                        Boss::Fire => gp.rm.game_font_large.draw_centered(g, App::screenWidth / 2, 118, "The Mighty Flame Brother"),
-                    }
+                match self.iBossType {
+                    Boss::Hammer => gp.rm.game_font_large.draw_centered(g, App::screenWidth / 2, 118, "The Mighty Sledge Brother"),
+                    Boss::Bomb => gp.rm.game_font_large.draw_centered(g, App::screenWidth / 2, 118, "The Mighty Bomb Brother"),
+                    Boss::Fire => gp.rm.game_font_large.draw_centered(g, App::screenWidth / 2, 118, "The Mighty Flame Brother"),
                 }
             }
         }
@@ -198,10 +190,8 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
 
             if !self.playedwarningsound {
                 let mut countscore: i16 = 0;
-                unsafe {
-                    for k in 0..g.score_cnt as usize {
-                        countscore = countscore.wrapping_add(g.score[k].score);
-                    }
+                for k in 0..g.score_cnt as usize {
+                    countscore = countscore.wrapping_add(g.score[k].score);
                 }
 
                 if countscore <= 2 {
@@ -226,10 +216,8 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
 
             if !self.playedwarningsound {
                 let mut countscore: i16 = 0;
-                unsafe {
-                    for k in 0..g.score_cnt as usize {
-                        countscore = countscore.wrapping_add(g.score[k].score);
-                    }
+                for k in 0..g.score_cnt as usize {
+                    countscore = countscore.wrapping_add(g.score[k].score);
                 }
 
                 if countscore <= 2 {

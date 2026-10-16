@@ -69,11 +69,9 @@ impl OMO_Phanto {
         this.velx = dVelX;
         this.vely = dVelY;
 
-        unsafe {
-            this.dMaxSpeedY = g.game_values.gamemodesettings.chase.phantospeed as f32 / 2.0f32;
-            this.dMaxSpeedX = this.dMaxSpeedY + 1.0f32;
-            this.dSpeedRatio = g.game_values.gamemodesettings.chase.phantospeed as f32 / 6.0f32;
-        }
+        this.dMaxSpeedY = g.game_values.gamemodesettings.chase.phantospeed as f32 / 2.0f32;
+        this.dMaxSpeedX = this.dMaxSpeedY + 1.0f32;
+        this.dSpeedRatio = g.game_values.gamemodesettings.chase.phantospeed as f32 / 6.0f32;
 
         this.dReactionSpeed = 0.2f32;
         this
@@ -110,72 +108,70 @@ impl CObjectTrait for OMO_Phanto {
             self.change_speed(g);
         }
 
-        unsafe {
-            // Chase player or move off screen if there is no player holding the key
-            if g.game_values.gamemode.gamemode == game_mode_chase {
-                let chasemode: &mut CGM_Chase = g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Chase>().unwrap();
+        // Chase player or move off screen if there is no player holding the key
+        if g.game_values.gamemode.gamemode == game_mode_chase {
+            let chasemode: &mut CGM_Chase = g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Chase>().unwrap();
 
-                let player: Ptr<CPlayer> = chasemode.get_key_holder();
+            let player: Ptr<CPlayer> = chasemode.get_key_holder();
 
-                if !g.game_values.gamemode.gameover && !player.is_null() {
-                    // Chase the player
-                    let mut fWrap = false;
-                    if (player.ix as i32 - self.ix as i32).abs() > 320 {
-                        fWrap = true;
-                    }
+            if !g.game_values.gamemode.gameover && !player.is_null() {
+                // Chase the player
+                let mut fWrap = false;
+                if (player.ix as i32 - self.ix as i32).abs() > 320 {
+                    fWrap = true;
+                }
 
-                    // Chase wrapped around edge of screen
-                    if (player.ix < self.ix && !fWrap) || (player.ix > self.ix && fWrap) {
-                        self.velx -= self.dReactionSpeed;
+                // Chase wrapped around edge of screen
+                if (player.ix < self.ix && !fWrap) || (player.ix > self.ix && fWrap) {
+                    self.velx -= self.dReactionSpeed;
 
-                        if self.velx < -self.dMaxSpeedX {
-                            self.velx = -self.dMaxSpeedX;
-                        }
-                    } else {
-                        self.velx += self.dReactionSpeed;
-
-                        if self.velx > self.dMaxSpeedX {
-                            self.velx = self.dMaxSpeedX;
-                        }
-                    }
-
-                    if player.iy < self.iy {
-                        self.vely -= self.dReactionSpeed;
-
-                        if self.vely < -self.dMaxSpeedY {
-                            self.vely = -self.dMaxSpeedY;
-                        }
-                    } else {
-                        self.vely += self.dReactionSpeed;
-
-                        if self.vely > self.dMaxSpeedY {
-                            self.vely = self.dMaxSpeedY;
-                        }
+                    if self.velx < -self.dMaxSpeedX {
+                        self.velx = -self.dMaxSpeedX;
                     }
                 } else {
-                    // Wander off screen
-                    if self.iy > 240 {
-                        self.vely += self.dReactionSpeed;
+                    self.velx += self.dReactionSpeed;
 
-                        if self.vely > self.dMaxSpeedY {
-                            self.vely = self.dMaxSpeedY;
-                        }
-                    } else {
-                        self.vely -= self.dReactionSpeed;
-
-                        if self.vely < -self.dMaxSpeedY {
-                            self.vely = -self.dMaxSpeedY;
-                        }
+                    if self.velx > self.dMaxSpeedX {
+                        self.velx = self.dMaxSpeedX;
                     }
+                }
 
-                    if self.iy as i32 >= App::screenHeight || (self.iy as i32 + self.ih as i32) < -CRUNCHMAX {
-                        self.vely = 0.0f32;
-                        self.velx = 0.0f32;
+                if player.iy < self.iy {
+                    self.vely -= self.dReactionSpeed;
 
-                        // Randomly position phanto off screen
-                        if !net_random::object_event(g, Ev::PhantoReturn, &[self.iNetworkID]) {
-                            self.return_offscreen(g);
-                        }
+                    if self.vely < -self.dMaxSpeedY {
+                        self.vely = -self.dMaxSpeedY;
+                    }
+                } else {
+                    self.vely += self.dReactionSpeed;
+
+                    if self.vely > self.dMaxSpeedY {
+                        self.vely = self.dMaxSpeedY;
+                    }
+                }
+            } else {
+                // Wander off screen
+                if self.iy > 240 {
+                    self.vely += self.dReactionSpeed;
+
+                    if self.vely > self.dMaxSpeedY {
+                        self.vely = self.dMaxSpeedY;
+                    }
+                } else {
+                    self.vely -= self.dReactionSpeed;
+
+                    if self.vely < -self.dMaxSpeedY {
+                        self.vely = -self.dMaxSpeedY;
+                    }
+                }
+
+                if self.iy as i32 >= App::screenHeight || (self.iy as i32 + self.ih as i32) < -CRUNCHMAX {
+                    self.vely = 0.0f32;
+                    self.velx = 0.0f32;
+
+                    // Randomly position phanto off screen
+                    if !net_random::object_event(g, Ev::PhantoReturn, &[self.iNetworkID]) {
+                        self.return_offscreen(g);
                     }
                 }
             }
@@ -188,26 +184,24 @@ impl CObjectTrait for OMO_Phanto {
             return false;
         }
 
-        unsafe {
-            // If the player is holding the key, kill him
-            if !player.is_invincible() && !player.is_shielded() {
-                if self.iType == 2 {
+        // If the player is holding the key, kill him
+        if !player.is_invincible() && !player.is_shielded() {
+            if self.iType == 2 {
+                player.kill_player_map_hazard(g, false, KillStyle::Phanto, false, -1);
+                return true;
+            } else if g.game_values.gamemode.gamemode == game_mode_chase {
+                let chasemode: &mut CGM_Chase = g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Chase>().unwrap();
+                let keyholder: Ptr<CPlayer> = chasemode.get_key_holder();
+
+                if keyholder == player {
                     player.kill_player_map_hazard(g, false, KillStyle::Phanto, false, -1);
-                    return true;
-                } else if g.game_values.gamemode.gamemode == game_mode_chase {
-                    let chasemode: &mut CGM_Chase = g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Chase>().unwrap();
-                    let keyholder: Ptr<CPlayer> = chasemode.get_key_holder();
 
-                    if keyholder == player {
-                        player.kill_player_map_hazard(g, false, KillStyle::Phanto, false, -1);
-
-                        if !g.game_values.gamemode.gameover && self.iType == 1 {
-                            player.score().adjust_score(g, -10);
-                            if_sound_on_play(g, &mut gp.rm.sfx_stun);
-                        }
-
-                        return true;
+                    if !g.game_values.gamemode.gameover && self.iType == 1 {
+                        player.score().adjust_score(g, -10);
+                        if_sound_on_play(g, &mut gp.rm.sfx_stun);
                     }
+
+                    return true;
                 }
             }
         }

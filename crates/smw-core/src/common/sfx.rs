@@ -75,17 +75,13 @@ fn sfx_state(g: &mut Game) -> &mut SfxState {
 }
 
 fn new_id(g: &mut Game) -> u32 {
-    unsafe {
-        sfx_state(g).next_id += 1;
-        sfx_state(g).next_id
-    }
+    sfx_state(g).next_id += 1;
+    sfx_state(g).next_id
 }
 
 fn log_event(g: &mut Game, line: String) {
-    unsafe {
-        if sfx_state(g).sfx_log_events {
-            sfx_state(g).sfx_events.push(line);
-        }
+    if sfx_state(g).sfx_log_events {
+        sfx_state(g).sfx_events.push(line);
     }
 }
 
@@ -103,7 +99,7 @@ pub fn data_relative(path: &str) -> String {
     path.to_string()
 }
 
-unsafe fn mix_play_channel(g: &mut Game, chunk: Option<SoundId>, duration_ms: u32, loops: i32) -> i32 {
+fn mix_play_channel(g: &mut Game, chunk: Option<SoundId>, duration_ms: u32, loops: i32) -> i32 {
     let mut gp = g.ptr();
     let Some(id) = chunk else {
         // Mix_PlayChannel rejects NULL chunks
@@ -126,7 +122,7 @@ unsafe fn mix_play_channel(g: &mut Game, chunk: Option<SoundId>, duration_ms: u3
     -1
 }
 
-unsafe fn mix_halt_channel(g: &mut Game, channel: i32) {
+fn mix_halt_channel(g: &mut Game, channel: i32) {
     let mut gp = g.ptr();
     if sfx_state(g).sfx_audible {
         services(gp.get()).audio.halt(if channel < 0 { None } else { Some(channel as u8) });
@@ -141,22 +137,20 @@ unsafe fn mix_halt_channel(g: &mut Game, channel: i32) {
 
 pub fn sfx_virtual_advance(g: &mut Game) {
     let mut gp = g.ptr();
-    unsafe {
-        let now = (sfx_state(g).sfx_ticks)(gp.get());
-        for i in 0..sfxSound::k_channels {
-            let ch = &mut sfx_state(g).v_channels[i];
-            if ch.chunk.is_some() && !ch.forever && now.wrapping_sub(ch.end) as i32 >= 0 {
-                ch.chunk = None;
-                log_event(g, format!("S done ch={}", i));
-                sfxSound::on_channel_finished(g, i as i32);
-            }
+    let now = (sfx_state(g).sfx_ticks)(gp.get());
+    for i in 0..sfxSound::k_channels {
+        let ch = &mut sfx_state(g).v_channels[i];
+        if ch.chunk.is_some() && !ch.forever && now.wrapping_sub(ch.end) as i32 >= 0 {
+            ch.chunk = None;
+            log_event(g, format!("S done ch={}", i));
+            sfxSound::on_channel_finished(g, i as i32);
         }
+    }
 
-        if sfx_state(g).v_music.music.is_some() && !sfx_state(g).v_music.forever && !sfx_state(g).v_music.paused && now.wrapping_sub(sfx_state(g).v_music.end) as i32 >= 0 {
-            sfx_state(g).v_music.music = None;
-            log_event(g, "S musicdone".to_string());
-            (sfx_state(g).musicfinished)();
-        }
+    if sfx_state(g).v_music.music.is_some() && !sfx_state(g).v_music.forever && !sfx_state(g).v_music.paused && now.wrapping_sub(sfx_state(g).v_music.end) as i32 >= 0 {
+        sfx_state(g).v_music.music = None;
+        log_event(g, "S musicdone".to_string());
+        (sfx_state(g).musicfinished)();
     }
 }
 
@@ -169,11 +163,9 @@ impl Drop for MixChunkPtr {
     fn drop(&mut self) {
         let mut gp = self.1;
         if let Some(id) = self.0 {
-            unsafe {
-                for ch in sfx_state(gp.get()).v_channels.iter_mut() {
-                    if ch.chunk == Some(id) {
-                        ch.chunk = None;
-                    }
+            for ch in sfx_state(gp.get()).v_channels.iter_mut() {
+                if ch.chunk == Some(id) {
+                    ch.chunk = None;
                 }
             }
             services(gp.get()).audio.free_sound(id);
@@ -185,11 +177,9 @@ impl Drop for MixMusicPtr {
     fn drop(&mut self) {
         let mut gp = self.1;
         if let Some(id) = self.0 {
-            unsafe {
-                let sfx = sfx_state(gp.get());
-                if sfx.v_music.music == Some(id) {
-                    sfx.v_music.music = None;
-                }
+            let sfx = sfx_state(gp.get());
+            if sfx.v_music.music == Some(id) {
+                sfx.v_music.music = None;
             }
             services(gp.get()).audio.free_track(id);
         }
@@ -198,7 +188,7 @@ impl Drop for MixMusicPtr {
 
 pub fn sfx_init(g: &mut Game) -> bool {
     let mut gp = g.ptr();
-    unsafe { services(gp.get()).audio.open(sfx_state(g).sfx_audible) };
+    services(gp.get()).audio.open(sfx_state(g).sfx_audible);
     true
 }
 
@@ -209,7 +199,7 @@ pub fn sfx_close(g: &mut Game) {
 
 pub fn sfx_stopallsounds(g: &mut Game) {
     log_event(g, "S haltall".to_string());
-    unsafe { mix_halt_channel(g, -1) };
+    mix_halt_channel(g, -1);
 }
 
 pub fn sfx_setmusicvolume(g: &mut Game, volume: i32) {
@@ -283,31 +273,29 @@ impl sfxSound {
 
     pub fn play(&mut self, g: &mut Game) -> bool {
         let mut gp = g.ptr();
-        unsafe {
-            let current_time: u32 = (sfx_state(g).sfx_ticks)(gp.get());
-            if (current_time as usize).wrapping_sub(self.m_last_start_time) < 40 {
-                log_event(g, format!("S skip {}", self.m_name));
-                return false;
-            }
-
-            let channel = mix_play_channel(g, self.m_sfx.0, self.m_duration_ms, 0);
-            log_event(g, format!("S play {} ch={}", self.m_name, channel));
-            if channel < 0 {
-                if sfx_state(g).sfx_ignore_channel_failure {
-                    self.m_last_start_time = current_time as usize;
-                }
-                return sfx_state(g).sfx_ignore_channel_failure;
-            }
-
-            self.m_last_start_time = current_time as usize;
-            self.m_channels |= 1 << channel;
-            sfx_state(g).s_channels[channel as usize] = self as *mut sfxSound;
+        let current_time: u32 = (sfx_state(g).sfx_ticks)(gp.get());
+        if (current_time as usize).wrapping_sub(self.m_last_start_time) < 40 {
+            log_event(g, format!("S skip {}", self.m_name));
+            return false;
         }
+
+        let channel = mix_play_channel(g, self.m_sfx.0, self.m_duration_ms, 0);
+        log_event(g, format!("S play {} ch={}", self.m_name, channel));
+        if channel < 0 {
+            if sfx_state(g).sfx_ignore_channel_failure {
+                self.m_last_start_time = current_time as usize;
+            }
+            return sfx_state(g).sfx_ignore_channel_failure;
+        }
+
+        self.m_last_start_time = current_time as usize;
+        self.m_channels |= 1 << channel;
+        sfx_state(g).s_channels[channel as usize] = self as *mut sfxSound;
         true
     }
 
     pub fn play_loop(&mut self, g: &mut Game, loops: i32) {
-        let channel = unsafe { mix_play_channel(g, self.m_sfx.0, self.m_duration_ms, loops) };
+        let channel = mix_play_channel(g, self.m_sfx.0, self.m_duration_ms, loops);
         log_event(g, format!("S loop {} loops={} ch={}", self.m_name, loops, channel));
         if channel < 0 {
             return;
@@ -320,7 +308,7 @@ impl sfxSound {
         log_event(g, format!("S stop {}", self.m_name));
         for i in 0..Self::k_channels {
             if self.m_channels & (1 << i) != 0 {
-                unsafe { mix_halt_channel(g, i as i32) };
+                mix_halt_channel(g, i as i32);
             }
         }
     }
@@ -385,54 +373,48 @@ impl sfxMusic {
     pub fn play(&mut self, g: &mut Game, fPlayonce: bool, fResume: bool) {
         let mut gp = g.ptr();
         log_event(g, format!("S music {} once={} resume={}", self.m_name, fPlayonce as i32, fResume as i32));
-        unsafe {
-            let duration = self.m_duration;
-            sfx_state(g).v_music.music = self.m_music.0;
-            sfx_state(g).v_music.forever = !fPlayonce || duration <= 0.0;
-            sfx_state(g).v_music.paused = false;
-            sfx_state(g).v_music.end = (sfx_state(g).sfx_ticks)(gp.get()).wrapping_add((duration * 1000.0) as u32);
-            if sfx_state(g).sfx_audible {
-                if let Some(id) = self.m_music.0 {
-                    services(gp.get()).audio.play_track(id, fPlayonce);
-                }
+        let duration = self.m_duration;
+        sfx_state(g).v_music.music = self.m_music.0;
+        sfx_state(g).v_music.forever = !fPlayonce || duration <= 0.0;
+        sfx_state(g).v_music.paused = false;
+        sfx_state(g).v_music.end = (sfx_state(g).sfx_ticks)(gp.get()).wrapping_add((duration * 1000.0) as u32);
+        if sfx_state(g).sfx_audible {
+            if let Some(id) = self.m_music.0 {
+                services(gp.get()).audio.play_track(id, fPlayonce);
             }
-            sfx_state(g).fResumeMusic = fResume;
         }
+        sfx_state(g).fResumeMusic = fResume;
     }
 
     pub fn stop(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         log_event(g, format!("S musicstop {}", self.m_name));
-        unsafe {
-            sfx_state(g).v_music.music = None;
-            if sfx_state(g).sfx_audible {
-                services(gp.get()).audio.stop_track();
-            }
+        sfx_state(g).v_music.music = None;
+        if sfx_state(g).sfx_audible {
+            services(gp.get()).audio.stop_track();
         }
     }
 
     pub fn toggle_pause(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         log_event(g, format!("S musicpause {} paused={}", self.m_name, if self.m_paused { 0 } else { 1 }));
-        unsafe {
-            if sfx_state(g).sfx_audible {
-                services(gp.get()).audio.pause_track(!self.m_paused);
-            }
-            if sfx_state(g).v_music.music.is_some() {
-                if self.m_paused && sfx_state(g).v_music.paused {
-                    sfx_state(g).v_music.end = (sfx_state(g).sfx_ticks)(gp.get()).wrapping_add(sfx_state(g).v_music.remaining);
-                    sfx_state(g).v_music.paused = false;
-                } else if !self.m_paused && !sfx_state(g).v_music.paused {
-                    sfx_state(g).v_music.remaining = sfx_state(g).v_music.end.wrapping_sub((sfx_state(g).sfx_ticks)(gp.get()));
-                    sfx_state(g).v_music.paused = true;
-                }
+        if sfx_state(g).sfx_audible {
+            services(gp.get()).audio.pause_track(!self.m_paused);
+        }
+        if sfx_state(g).v_music.music.is_some() {
+            if self.m_paused && sfx_state(g).v_music.paused {
+                sfx_state(g).v_music.end = (sfx_state(g).sfx_ticks)(gp.get()).wrapping_add(sfx_state(g).v_music.remaining);
+                sfx_state(g).v_music.paused = false;
+            } else if !self.m_paused && !sfx_state(g).v_music.paused {
+                sfx_state(g).v_music.remaining = sfx_state(g).v_music.end.wrapping_sub((sfx_state(g).sfx_ticks)(gp.get()));
+                sfx_state(g).v_music.paused = true;
             }
         }
         self.m_paused = !self.m_paused;
     }
 
     pub fn is_playing(&self, g: &mut Game) -> bool {
-        unsafe { sfx_state(g).v_music.music.is_some() }
+        sfx_state(g).v_music.music.is_some()
     }
 }
 

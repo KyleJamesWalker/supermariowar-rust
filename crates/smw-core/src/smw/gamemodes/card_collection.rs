@@ -60,28 +60,24 @@ impl CGM_Collection {
 
             player.score().subscore[1] &= iCardMaskInverted;
 
-            unsafe {
-                let obj = Ptr::new_box(MO_CollectionCard::new(g, Ptr::from_mut(&mut gp.get().rm.spr_collectcards), 1, iValue, 30, vel, pos));
-                gp.get().objectcontainer[1].add(g, obj);
-            }
+            let obj = Ptr::new_box(MO_CollectionCard::new(g, Ptr::from_mut(&mut gp.get().rm.spr_collectcards), 1, iValue, 30, vel, pos));
+            gp.get().objectcontainer[1].add(g, obj);
         }
     }
 }
 
 fn spawn_card(g: &mut Game) {
         let mut gp = g.ptr();
-    unsafe {
-        let iRandom: i16 = RANDOM_INT(gp.get(), 5) as i16;
-        let mut iRandomCard: i16 = 0;
-        if iRandom == 4 {
-            iRandomCard = 2;
-        } else if iRandom >= 2 {
-            iRandomCard = 1;
-        }
-
-        let obj = Ptr::new_box(MO_CollectionCard::new(g, Ptr::from_mut(&mut gp.get().rm.spr_collectcards), 0, iRandomCard, 0, Vec2f::zero(), Vec2s::zero()));
-        gp.get().objectcontainer[1].add(g, obj);
+    let iRandom: i16 = RANDOM_INT(gp.get(), 5) as i16;
+    let mut iRandomCard: i16 = 0;
+    if iRandom == 4 {
+        iRandomCard = 2;
+    } else if iRandom >= 2 {
+        iRandomCard = 1;
     }
+
+    let obj = Ptr::new_box(MO_CollectionCard::new(g, Ptr::from_mut(&mut gp.get().rm.spr_collectcards), 0, iRandomCard, 0, Vec2f::zero(), Vec2s::zero()));
+    gp.get().objectcontainer[1].add(g, obj);
 }
 
 pub fn net_spawn_card(g: &mut Game) {
@@ -89,11 +85,9 @@ pub fn net_spawn_card(g: &mut Game) {
 }
 
 pub fn net_release_card(g: &mut Game, mut player: Ptr<CPlayer>, x: i16, y: i16) {
-    unsafe {
-        if let Some(this) = g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Collection>() {
-            if !player.is_null() && player.score().subscore[0] > 0 {
-                this.drop_card(g, player, Vec2s::new(x, y));
-            }
+    if let Some(this) = g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Collection>() {
+        if !player.is_null() && player.score().subscore[0] > 0 {
+            this.drop_card(g, player, Vec2s::new(x, y));
         }
     }
 }
@@ -114,67 +108,63 @@ impl CGameModeTrait for CGM_Collection {
         self.timer = 0;
 
         //Zero out the number of cards teams have
-        unsafe {
-            for iScore in 0..g.score_cnt as usize {
-                g.score[iScore].subscore[0] = 0;
-                g.score[iScore].subscore[1] = 0;
-            }
+        for iScore in 0..g.score_cnt as usize {
+            g.score[iScore].subscore[0] = 0;
+            g.score[iScore].subscore[1] = 0;
         }
     }
 
     fn think(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        unsafe {
-            self.timer += 1;
-            if self.timer >= g.game_values.gamemodesettings.collection.rate {
-                self.timer = 0;
+        self.timer += 1;
+        if self.timer >= g.game_values.gamemodesettings.collection.rate {
+            self.timer = 0;
 
-                let mut iPowerupQuantity: i16 = g.game_values.gamemodemenusettings.collection.quantity;
+            let mut iPowerupQuantity: i16 = g.game_values.gamemodemenusettings.collection.quantity;
 
-                if 5 < iPowerupQuantity {
-                    iPowerupQuantity = g.players.len().wrapping_add(iPowerupQuantity as usize).wrapping_sub(7) as i16;
-                }
-
-                if g.objectcontainer[1].count_moving_types(movingobject_collectioncard) < iPowerupQuantity as usize && !net_random::event(g, Ev::CollectionCard, &[]) {
-                    spawn_card(g);
-                }
+            if 5 < iPowerupQuantity {
+                iPowerupQuantity = g.players.len().wrapping_add(iPowerupQuantity as usize).wrapping_sub(7) as i16;
             }
 
-            if self.gameover {
-                self.displayplayertext(g);
-                return;
+            if g.objectcontainer[1].count_moving_types(movingobject_collectioncard) < iPowerupQuantity as usize && !net_random::event(g, Ev::CollectionCard, &[]) {
+                spawn_card(g);
             }
+        }
 
-            //Check if this team has collected 3 cards
-            for iScore in 0..g.score_cnt as usize {
-                if g.score[iScore].subscore[0] >= 3 {
-                    g.score[iScore].subscore[2] += 1;
-                    if g.score[iScore].subscore[2] >= g.game_values.gamemodemenusettings.collection.banktime {
-                        let mut iPoints: i16 = 1;
+        if self.gameover {
+            self.displayplayertext(g);
+            return;
+        }
 
-                        if (g.score[iScore].subscore[1] & 63) == 0 {
-                            //All Mushrooms
-                            iPoints = 2;
-                        } else if (g.score[iScore].subscore[1] & 63) == 21 {
-                            //All Flowers
-                            iPoints = 3;
-                        } else if (g.score[iScore].subscore[1] & 63) == 42 {
-                            //All Stars
-                            iPoints = 5;
-                        }
+        //Check if this team has collected 3 cards
+        for iScore in 0..g.score_cnt as usize {
+            if g.score[iScore].subscore[0] >= 3 {
+                g.score[iScore].subscore[2] += 1;
+                if g.score[iScore].subscore[2] >= g.game_values.gamemodemenusettings.collection.banktime {
+                    let mut iPoints: i16 = 1;
 
-                        gp.score[iScore].adjust_score(g, iPoints);
-
-                        g.score[iScore].subscore[0] = 0;
-                        g.score[iScore].subscore[1] = 0;
-                        g.score[iScore].subscore[2] = 0;
+                    if (g.score[iScore].subscore[1] & 63) == 0 {
+                        //All Mushrooms
+                        iPoints = 2;
+                    } else if (g.score[iScore].subscore[1] & 63) == 21 {
+                        //All Flowers
+                        iPoints = 3;
+                    } else if (g.score[iScore].subscore[1] & 63) == 42 {
+                        //All Stars
+                        iPoints = 5;
                     }
+
+                    gp.score[iScore].adjust_score(g, iPoints);
+
+                    g.score[iScore].subscore[0] = 0;
+                    g.score[iScore].subscore[1] = 0;
+                    g.score[iScore].subscore[2] = 0;
                 }
             }
+        }
 
-            for &player in gp.players.iter() {
-                self.check_winner(g, player);
-            }
+        for &player in gp.players.iter() {
+            self.check_winner(g, player);
         }
     }
 
@@ -212,12 +202,10 @@ impl CGameModeTrait for CGM_Collection {
                 show_score_board(g);
                 remove_players_but_team(g, self.winningteam);
 
-                unsafe {
-                    for iScore in 0..g.score_cnt as usize {
-                        g.score[iScore].subscore[0] = 0;
-                        g.score[iScore].subscore[1] = 0;
-                        g.score[iScore].subscore[2] = 0;
-                    }
+                for iScore in 0..g.score_cnt as usize {
+                    g.score[iScore].subscore[0] = 0;
+                    g.score[iScore].subscore[1] = 0;
+                    g.score[iScore].subscore[2] = 0;
                 }
             } else if player.score().score as f64 >= self.goal as f64 * 0.8 && !self.playedwarningsound {
                 self.playwarningsound(g);

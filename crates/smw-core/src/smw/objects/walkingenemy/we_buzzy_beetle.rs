@@ -81,9 +81,7 @@ impl IO_MovingObjectTrait for MO_BuzzyBeetle {
         }
 
         self.dead = true;
-        unsafe {
-            g.eyecandy[2].emplace(EC_FallingObject::new(Ptr::from_mut(&mut g.rm.spr_shelldead), self.ix, self.iy, 0.0f32, -VELJUMP / 2.0f32, 1, 0, 96, 0, 32, 32));
-        }
+        g.eyecandy[2].emplace(EC_FallingObject::new(Ptr::from_mut(&mut g.rm.spr_shelldead), self.ix, self.iy, 0.0f32, -VELJUMP / 2.0f32, 1, 0, 96, 0, 32, 32));
     }
 }
 
@@ -93,22 +91,20 @@ impl MO_WalkingEnemyTrait for MO_BuzzyBeetle {
     fn hittop_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         let mut gp = g.ptr();
         let mut player = player;
-        unsafe {
-            player.set_yi((self.iy as i32 - PH - 1) as i16);
-            player.bouncejump();
-            let p = player;
-            player.collisions.checktop(g, p.get());
-            player.platform = Ptr::null();
-            self.dead = true;
+        player.set_yi((self.iy as i32 - PH - 1) as i16);
+        player.bouncejump();
+        let p = player;
+        player.collisions.checktop(g, p.get());
+        player.platform = Ptr::null();
+        self.dead = true;
 
-            player.add_killer_award(g, Ptr::null(), KillStyle::BuzzyBeetle);
+        player.add_killer_award(g, Ptr::null(), KillStyle::BuzzyBeetle);
 
-            if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
-                player.score().adjust_score(g, 1);
-            }
-
-            if_sound_on_play(g, &mut gp.rm.sfx_mip);
+        if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
+            player.score().adjust_score(g, 1);
         }
+
+        if_sound_on_play(g, &mut gp.rm.sfx_mip);
 
         self.drop_shell(g, false, false);
 
@@ -125,8 +121,6 @@ impl MO_WalkingEnemyTrait for MO_BuzzyBeetle {
             shell.flip(g);
         }
 
-        unsafe {
-            gp.objectcontainer[1].add(g, shell);
-        }
+        gp.objectcontainer[1].add(g, shell);
     }
 }

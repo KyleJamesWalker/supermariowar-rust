@@ -84,16 +84,14 @@ impl MO_Coin {
         let mut x: i16 = 0;
         let mut y: i16 = 0;
         let mut iAttempts: i16 = 32;
-        unsafe {
-            while (!gp.g_map.findspawnpoint(g, 5, &mut x, &mut y, self.collisionWidth, self.collisionHeight, false)
-                || g.objectcontainer[1].get_closest_moving_object(x, y, movingobject_coin) < 150.0f32)
-                && {
-                    let a = iAttempts;
-                    iAttempts -= 1;
-                    a > 0
-                }
-            {}
-        }
+        while (!gp.g_map.findspawnpoint(g, 5, &mut x, &mut y, self.collisionWidth, self.collisionHeight, false)
+            || g.objectcontainer[1].get_closest_moving_object(x, y, movingobject_coin) < 150.0f32)
+            && {
+                let a = iAttempts;
+                iAttempts -= 1;
+                a > 0
+            }
+        {}
 
         self.set_xi(x);
         self.set_yi(y);
@@ -108,25 +106,23 @@ impl CObjectTrait for MO_Coin {
 
     fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
         let mut gp = g.ptr();
-        unsafe {
-            if self.iUncollectableTime > 0 || (self.iType == 1 && (!g.game_values.gamemodesettings.greed.owncoins && self.iTeam == player.get_team_id())) {
-                return false;
-            }
-
-            if !g.game_values.gamemode.gameover {
-                if self.iType == 2 {
-                    player.score().subscore[0] += 1;
-                } else {
-                    player.score().adjust_score(g, 1);
-                }
-
-                gp.game_values.gamemode.check_winner(g, player);
-            }
-
-            g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_coinsparkle), self.ix, self.iy, 7, 4));
-
-            if_sound_on_play(g, &mut gp.rm.sfx_coin);
+        if self.iUncollectableTime > 0 || (self.iType == 1 && (!g.game_values.gamemodesettings.greed.owncoins && self.iTeam == player.get_team_id())) {
+            return false;
         }
+
+        if !g.game_values.gamemode.gameover {
+            if self.iType == 2 {
+                player.score().subscore[0] += 1;
+            } else {
+                player.score().adjust_score(g, 1);
+            }
+
+            gp.game_values.gamemode.check_winner(g, player);
+        }
+
+        g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_coinsparkle), self.ix, self.iy, 7, 4));
+
+        if_sound_on_play(g, &mut gp.rm.sfx_coin);
 
         if self.iType == 0 {
             self.place_coin(g);
@@ -162,11 +158,9 @@ impl CObjectTrait for MO_Coin {
 
             self.iUncollectableTime -= 1;
 
-            unsafe {
-                if self.iType == 1 && (self.iUncollectableTime as i32) < -(g.game_values.gamemodesettings.greed.coinlife as i32) {
-                    g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
-                    self.dead = true;
-                }
+            if self.iType == 1 && (self.iUncollectableTime as i32) < -(g.game_values.gamemodesettings.greed.coinlife as i32) {
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
+                self.dead = true;
             }
         }
     }
@@ -177,14 +171,12 @@ impl CObjectTrait for MO_Coin {
 
         // Draw sparkles
         if self.iType != 1 {
-            unsafe {
-                gp.rm.spr_shinesparkle.draw_src(
-                    g,
-                    self.ix as i32 - self.collisionOffsetX as i32,
-                    self.iy as i32 - self.collisionOffsetY as i32,
-                    &Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },
-                );
-            }
+            gp.rm.spr_shinesparkle.draw_src(
+                g,
+                self.ix as i32 - self.collisionOffsetX as i32,
+                self.iy as i32 - self.collisionOffsetY as i32,
+                &Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },
+            );
         }
     }
 }

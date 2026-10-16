@@ -249,146 +249,144 @@ unsafe fn blit(src: *mut Surface, srcrect: *const Rect, dst: *mut Surface, dstre
 
 pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter: bool, dst: *mut Surface) {
         let mut gp = g.ptr();
-    unsafe {
-        let s = iSize as usize;
-        let iSizeShift: i16 = 5 - iSize;
-        let iTileSize: i16 = 1 << iSizeShift;
-        let dot = iPlatformPathDotSize[s] as i32;
-        let ts = iTileSize as i32;
+    let s = iSize as usize;
+    let iSizeShift: i16 = 5 - iSize;
+    let iTileSize: i16 = 1 << iSizeShift;
+    let dot = iPlatformPathDotSize[s] as i32;
+    let ts = iTileSize as i32;
 
-        let rDotSrc = Rect { x: iPlatformPathDotOffset[s] as i32 + 22, y: 0, w: dot, h: dot };
-        let mut rDotDst = ZERO_RECT;
-        let rPathSrc = Rect { x: iStandardOffset[s] as i32, y: 12, w: ts, h: ts };
+    let rDotSrc = Rect { x: iPlatformPathDotOffset[s] as i32 + 22, y: 0, w: dot, h: dot };
+    let mut rDotDst = ZERO_RECT;
+    let rPathSrc = Rect { x: iStandardOffset[s] as i32, y: 12, w: ts, h: ts };
 
-        let mut rPathDst = Rect {
-            x: (hazard.ix as i32) << (iSizeShift - 1),
-            y: (hazard.iy as i32) << (iSizeShift - 1),
-            w: ts,
-            h: ts,
-        };
+    let mut rPathDst = Rect {
+        x: (hazard.ix as i32) << (iSizeShift - 1),
+        y: (hazard.iy as i32) << (iSizeShift - 1),
+        w: ts,
+        h: ts,
+    };
 
-        if fDrawCenter && hazard.itype <= 1 {
-            g.rm.spr_platformpath.draw_src_to(&rPathSrc, dst, &rPathDst);
+    if fDrawCenter && hazard.itype <= 1 {
+        g.rm.spr_platformpath.draw_src_to(&rPathSrc, dst, &rPathDst);
+    }
+
+    if hazard.itype == 0 {
+        let iNumDots: i16 = 16;
+        let dRadius: f32 = ((hazard.iparam[0] as i32 - 1) * 24) as f32 / (1i32 << iSize) as f32 + (dot >> 1) as f32;
+        let mut dAngle: f32 = hazard.dparam[1];
+        for _iDot in 0..iNumDots {
+            rDotDst.x = (dRadius * cosf(dAngle)) as i16 as i32 + rPathDst.x + (ts >> 1) - (dot >> 1);
+            rDotDst.y = (dRadius * sinf(dAngle)) as i16 as i32 + rPathDst.y + (ts >> 1) - (dot >> 1);
+            rDotDst.w = dot;
+            rDotDst.h = dot;
+
+            gp.rm.spr_platformpath.draw_src(g, rDotDst.x, rDotDst.y, &Rect { x: rDotSrc.x, y: rDotSrc.y, w: rDotDst.w, h: rDotDst.h });
+            dAngle += TWO_PI / iNumDots as f32;
         }
 
-        if hazard.itype == 0 {
-            let iNumDots: i16 = 16;
-            let dRadius: f32 = ((hazard.iparam[0] as i32 - 1) * 24) as f32 / (1i32 << iSize) as f32 + (dot >> 1) as f32;
-            let mut dAngle: f32 = hazard.dparam[1];
-            for _iDot in 0..iNumDots {
-                rDotDst.x = (dRadius * cosf(dAngle)) as i16 as i32 + rPathDst.x + (ts >> 1) - (dot >> 1);
-                rDotDst.y = (dRadius * sinf(dAngle)) as i16 as i32 + rPathDst.y + (ts >> 1) - (dot >> 1);
-                rDotDst.w = dot;
-                rDotDst.h = dot;
+        let fb = iFireballHazardSize[s] as i32;
+        for iFireball in 0..hazard.iparam[0] {
+            let x: i16 = (((hazard.ix as i32) << (iSizeShift - 1))
+                + ((iFireball as i32 * (24 >> iSize)) as f32 * cosf(hazard.dparam[1])) as i16 as i32
+                + (ts >> 1)
+                - (fb >> 1)) as i16;
+            let y: i16 = (((hazard.iy as i32) << (iSizeShift - 1))
+                + ((iFireball as i32 * (24 >> iSize)) as f32 * sinf(hazard.dparam[1])) as i16 as i32
+                + (ts >> 1)
+                - (fb >> 1)) as i16;
 
-                gp.rm.spr_platformpath.draw_src(g, rDotDst.x, rDotDst.y, &Rect { x: rDotSrc.x, y: rDotSrc.y, w: rDotDst.w, h: rDotDst.h });
-                dAngle += TWO_PI / iNumDots as f32;
-            }
-
-            let fb = iFireballHazardSize[s] as i32;
-            for iFireball in 0..hazard.iparam[0] {
-                let x: i16 = (((hazard.ix as i32) << (iSizeShift - 1))
-                    + ((iFireball as i32 * (24 >> iSize)) as f32 * cosf(hazard.dparam[1])) as i16 as i32
-                    + (ts >> 1)
-                    - (fb >> 1)) as i16;
-                let y: i16 = (((hazard.iy as i32) << (iSizeShift - 1))
-                    + ((iFireball as i32 * (24 >> iSize)) as f32 * sinf(hazard.dparam[1])) as i16 as i32
-                    + (ts >> 1)
-                    - (fb >> 1)) as i16;
-
-                gp.rm.spr_hazard_fireball[s].draw_src(g, x as i32, y as i32, &Rect { x: 0, y: 0, w: fb, h: fb });
-            }
-        } else if hazard.itype == 1 {
-            let iNumDots: i16 = 16;
-            let mut dRadius: f32 = (hazard.dparam[2] + (ts >> 1) as f32 - (dot >> 1) as f32) / (1i32 << iSize) as f32;
-            let mut dAngle: f32 = hazard.dparam[1];
-            for _iDot in 0..iNumDots {
-                rDotDst.x = (dRadius * cosf(dAngle)) as i16 as i32 + rPathDst.x + (ts >> 1) - (dot >> 1);
-                rDotDst.y = (dRadius * sinf(dAngle)) as i16 as i32 + rPathDst.y + (ts >> 1) - (dot >> 1);
-                rDotDst.w = dot;
-                rDotDst.h = dot;
-
-                gp.rm.spr_platformpath.draw_src(g, rDotDst.x, rDotDst.y, &Rect { x: rDotSrc.x, y: rDotSrc.y, w: rDotDst.w, h: rDotDst.h });
-                dAngle += TWO_PI / iNumDots as f32;
-            }
-
-            let dSector: f32 = TWO_PI / hazard.iparam[0] as f32;
-            dAngle = hazard.dparam[1];
-            dRadius = hazard.dparam[2] / (1i32 << iSize) as f32;
-            for _iRotodisc in 0..hazard.iparam[0] {
-                let x: i16 = (rPathDst.x + (dRadius * cosf(dAngle)) as i16 as i32) as i16;
-                let y: i16 = (rPathDst.y + (dRadius * sinf(dAngle)) as i16 as i32) as i16;
-
-                gp.rm.spr_hazard_rotodisc[s].draw_src(g, x as i32, y as i32, &Rect { x: 0, y: 0, w: ts, h: ts });
-
-                dAngle += dSector;
-            }
-        } else if hazard.itype == 2 {
-            gp.rm.spr_hazard_bulletbill[s].draw_src(
-                g,
-                rPathDst.x,
-                rPathDst.y,
-                &Rect { x: 0, y: if hazard.dparam[0] < 0.0 { 0 } else { ts }, w: ts, h: ts },
-            );
-
-            let mut iBulletPathX: i16 = (rPathDst.x - dot) as i16;
-            if hazard.dparam[0] > 0.0 {
-                iBulletPathX = (rPathDst.x + ts) as i16;
-            }
-
-            let iBulletPathSpacing: i16 = (hazard.dparam[0] * dBulletBillFrequency[s]) as i16;
-            while iBulletPathX >= 0 && (iBulletPathX as i32) < get_screen_width(iSize as i32) {
-                rDotDst = Rect { x: iBulletPathX as i32, y: rPathDst.y + ((ts - dot) >> 1), w: dot, h: dot };
-                g.rm.spr_platformpath.draw_src_to(&rDotSrc, dst, &rDotDst);
-
-                iBulletPathX = (iBulletPathX as i32
-                    + if (hazard.iparam[0] as f32) < 0.0 { -(iBulletPathSpacing as i32) } else { iBulletPathSpacing as i32 })
-                    as i16;
-            }
-        } else if hazard.itype == 3 {
-            let rect = &g_rFlameRects[hazard.iparam[1] as usize][2];
-
-            let mut iOffsetX: i16 = 0;
-            let mut iOffsetY: i16 = 0;
-
-            if hazard.iparam[1] == 1 {
-                iOffsetX = -(iTileSize << 1);
-            } else if hazard.iparam[1] == 2 {
-                iOffsetY = -(iTileSize << 1);
-            }
-
-            gp.rm.spr_hazard_flame[s].draw_src(
-                g,
-                rPathDst.x + iOffsetX as i32,
-                rPathDst.y + iOffsetY as i32,
-                &Rect { x: rect.x >> iSize, y: rect.y >> iSize, w: rect.w >> iSize, h: rect.h >> iSize },
-            );
-        } else if hazard.itype >= 4 && hazard.itype <= 7 {
-            let rect = &g_rPirhanaRects[(hazard.itype - 4) as usize][hazard.iparam[1] as usize][0];
-            let mut iOffsetX: i16 = 0;
-            let mut iOffsetY: i16 = 0;
-
-            if hazard.iparam[1] == 0 {
-                if hazard.itype == 6 {
-                    iOffsetY = -iTileSize;
-                } else {
-                    iOffsetY = -(iTileSize >> 1);
-                }
-            } else if hazard.iparam[1] == 2 {
-                if hazard.itype == 6 {
-                    iOffsetX = -iTileSize;
-                } else {
-                    iOffsetX = -(iTileSize >> 1);
-                }
-            }
-
-            gp.rm.spr_hazard_pirhanaplant[s].draw_src(
-                g,
-                rPathDst.x + iOffsetX as i32,
-                rPathDst.y + iOffsetY as i32,
-                &Rect { x: rect.x >> iSize, y: rect.y >> iSize, w: rect.w >> iSize, h: rect.h >> iSize },
-            );
+            gp.rm.spr_hazard_fireball[s].draw_src(g, x as i32, y as i32, &Rect { x: 0, y: 0, w: fb, h: fb });
         }
+    } else if hazard.itype == 1 {
+        let iNumDots: i16 = 16;
+        let mut dRadius: f32 = (hazard.dparam[2] + (ts >> 1) as f32 - (dot >> 1) as f32) / (1i32 << iSize) as f32;
+        let mut dAngle: f32 = hazard.dparam[1];
+        for _iDot in 0..iNumDots {
+            rDotDst.x = (dRadius * cosf(dAngle)) as i16 as i32 + rPathDst.x + (ts >> 1) - (dot >> 1);
+            rDotDst.y = (dRadius * sinf(dAngle)) as i16 as i32 + rPathDst.y + (ts >> 1) - (dot >> 1);
+            rDotDst.w = dot;
+            rDotDst.h = dot;
+
+            gp.rm.spr_platformpath.draw_src(g, rDotDst.x, rDotDst.y, &Rect { x: rDotSrc.x, y: rDotSrc.y, w: rDotDst.w, h: rDotDst.h });
+            dAngle += TWO_PI / iNumDots as f32;
+        }
+
+        let dSector: f32 = TWO_PI / hazard.iparam[0] as f32;
+        dAngle = hazard.dparam[1];
+        dRadius = hazard.dparam[2] / (1i32 << iSize) as f32;
+        for _iRotodisc in 0..hazard.iparam[0] {
+            let x: i16 = (rPathDst.x + (dRadius * cosf(dAngle)) as i16 as i32) as i16;
+            let y: i16 = (rPathDst.y + (dRadius * sinf(dAngle)) as i16 as i32) as i16;
+
+            gp.rm.spr_hazard_rotodisc[s].draw_src(g, x as i32, y as i32, &Rect { x: 0, y: 0, w: ts, h: ts });
+
+            dAngle += dSector;
+        }
+    } else if hazard.itype == 2 {
+        gp.rm.spr_hazard_bulletbill[s].draw_src(
+            g,
+            rPathDst.x,
+            rPathDst.y,
+            &Rect { x: 0, y: if hazard.dparam[0] < 0.0 { 0 } else { ts }, w: ts, h: ts },
+        );
+
+        let mut iBulletPathX: i16 = (rPathDst.x - dot) as i16;
+        if hazard.dparam[0] > 0.0 {
+            iBulletPathX = (rPathDst.x + ts) as i16;
+        }
+
+        let iBulletPathSpacing: i16 = (hazard.dparam[0] * dBulletBillFrequency[s]) as i16;
+        while iBulletPathX >= 0 && (iBulletPathX as i32) < get_screen_width(iSize as i32) {
+            rDotDst = Rect { x: iBulletPathX as i32, y: rPathDst.y + ((ts - dot) >> 1), w: dot, h: dot };
+            g.rm.spr_platformpath.draw_src_to(&rDotSrc, dst, &rDotDst);
+
+            iBulletPathX = (iBulletPathX as i32
+                + if (hazard.iparam[0] as f32) < 0.0 { -(iBulletPathSpacing as i32) } else { iBulletPathSpacing as i32 })
+                as i16;
+        }
+    } else if hazard.itype == 3 {
+        let rect = &g_rFlameRects[hazard.iparam[1] as usize][2];
+
+        let mut iOffsetX: i16 = 0;
+        let mut iOffsetY: i16 = 0;
+
+        if hazard.iparam[1] == 1 {
+            iOffsetX = -(iTileSize << 1);
+        } else if hazard.iparam[1] == 2 {
+            iOffsetY = -(iTileSize << 1);
+        }
+
+        gp.rm.spr_hazard_flame[s].draw_src(
+            g,
+            rPathDst.x + iOffsetX as i32,
+            rPathDst.y + iOffsetY as i32,
+            &Rect { x: rect.x >> iSize, y: rect.y >> iSize, w: rect.w >> iSize, h: rect.h >> iSize },
+        );
+    } else if hazard.itype >= 4 && hazard.itype <= 7 {
+        let rect = &g_rPirhanaRects[(hazard.itype - 4) as usize][hazard.iparam[1] as usize][0];
+        let mut iOffsetX: i16 = 0;
+        let mut iOffsetY: i16 = 0;
+
+        if hazard.iparam[1] == 0 {
+            if hazard.itype == 6 {
+                iOffsetY = -iTileSize;
+            } else {
+                iOffsetY = -(iTileSize >> 1);
+            }
+        } else if hazard.iparam[1] == 2 {
+            if hazard.itype == 6 {
+                iOffsetX = -iTileSize;
+            } else {
+                iOffsetX = -(iTileSize >> 1);
+            }
+        }
+
+        gp.rm.spr_hazard_pirhanaplant[s].draw_src(
+            g,
+            rPathDst.x + iOffsetX as i32,
+            rPathDst.y + iOffsetY as i32,
+            &Rect { x: rect.x >> iSize, y: rect.y >> iSize, w: rect.w >> iSize, h: rect.h >> iSize },
+        );
     }
 }
 
@@ -1162,130 +1160,128 @@ impl CMap {
         mapfile.write_i32(self.mapitems.len() as i32);
         mapfile.write_i32(iDensity);
 
-        unsafe {
-            let iTilesetCount: i16 = g.g_tilesetmanager.count() as i16;
-            let mut fTilesetUsed = vec![false; iTilesetCount.max(0) as usize];
+        let iTilesetCount: i16 = g.g_tilesetmanager.count() as i16;
+        let mut fTilesetUsed = vec![false; iTilesetCount.max(0) as usize];
 
-            for j in 0..MH {
-                for i in 0..MW {
-                    for k in 0..ML {
-                        if self.mapdata[i][j][k].iID >= 0 {
-                            fTilesetUsed[self.mapdata[i][j][k].iID as usize] = true;
-                        }
+        for j in 0..MH {
+            for i in 0..MW {
+                for k in 0..ML {
+                    if self.mapdata[i][j][k].iID >= 0 {
+                        fTilesetUsed[self.mapdata[i][j][k].iID as usize] = true;
                     }
                 }
             }
+        }
 
-            for platform in &self.platforms {
-                for iCol in 0..platform.iTileWidth {
-                    for iRow in 0..platform.iTileHeight {
-                        let tile = platform.tile_at(iCol as usize, iRow as usize);
-                        if tile.iID >= 0 {
-                            fTilesetUsed[tile.iID as usize] = true;
-                        }
+        for platform in &self.platforms {
+            for iCol in 0..platform.iTileWidth {
+                for iRow in 0..platform.iTileHeight {
+                    let tile = platform.tile_at(iCol as usize, iRow as usize);
+                    if tile.iID >= 0 {
+                        fTilesetUsed[tile.iID as usize] = true;
                     }
                 }
             }
+        }
 
-            let iUsedTilesets: i16 = fTilesetUsed.iter().filter(|&&u| u).count() as i16;
+        let iUsedTilesets: i16 = fTilesetUsed.iter().filter(|&&u| u).count() as i16;
 
-            mapfile.write_i32(iUsedTilesets as i32);
+        mapfile.write_i32(iUsedTilesets as i32);
 
-            for iTileset in 0..iTilesetCount {
-                if fTilesetUsed[iTileset as usize] {
-                    mapfile.write_i32(iTileset as i32);
-                    let name = gp.g_tilesetmanager.tileset(g, iTileset as usize).name().to_string();
-                    mapfile.write_string_long(&name);
-                }
+        for iTileset in 0..iTilesetCount {
+            if fTilesetUsed[iTileset as usize] {
+                mapfile.write_i32(iTileset as i32);
+                let name = gp.g_tilesetmanager.tileset(g, iTileset as usize).name().to_string();
+                mapfile.write_string_long(&name);
             }
+        }
 
-            for j in 0..MH {
-                for i in 0..MW {
-                    for k in 0..ML {
-                        let tile = &mut self.mapdata[i][j][k];
+        for j in 0..MH {
+            for i in 0..MW {
+                for k in 0..ML {
+                    let tile = &mut self.mapdata[i][j][k];
 
-                        if tile.iID >= 0 {
-                            let ts = gp.g_tilesetmanager.tileset(g, tile.iID as usize);
-                            if tile.iCol < 0 || tile.iCol >= ts.width() {
-                                tile.iCol = 0;
-                            }
-
-                            if tile.iRow < 0 || tile.iRow >= ts.height() {
-                                tile.iRow = 0;
-                            }
+                    if tile.iID >= 0 {
+                        let ts = gp.g_tilesetmanager.tileset(g, tile.iID as usize);
+                        if tile.iCol < 0 || tile.iCol >= ts.width() {
+                            tile.iCol = 0;
                         }
 
-                        mapfile.write_i8(tile.iID as i8);
-                        mapfile.write_i8(tile.iCol as i8);
-                        mapfile.write_i8(tile.iRow as i8);
+                        if tile.iRow < 0 || tile.iRow >= ts.height() {
+                            tile.iRow = 0;
+                        }
                     }
 
-                    mapfile.write_i8(self.objectdata[i][j].iType as i8);
-                    mapfile.write_bool(self.objectdata[i][j].fHidden);
+                    mapfile.write_i8(tile.iID as i8);
+                    mapfile.write_i8(tile.iCol as i8);
+                    mapfile.write_i8(tile.iRow as i8);
                 }
+
+                mapfile.write_i8(self.objectdata[i][j].iType as i8);
+                mapfile.write_bool(self.objectdata[i][j].fHidden);
             }
+        }
 
-            mapfile.write_string_long(&self.szBackgroundFile);
+        mapfile.write_string_long(&self.szBackgroundFile);
 
-            for iSwitch in 0..4 {
-                mapfile.write_i32(self.iSwitches[iSwitch] as i32);
-            }
+        for iSwitch in 0..4 {
+            mapfile.write_i32(self.iSwitches[iSwitch] as i32);
+        }
 
-            mapfile.write_i32(self.platforms.len() as i32);
+        mapfile.write_i32(self.platforms.len() as i32);
 
-            for platform in &self.platforms {
-                mapfile.write_i32(platform.iTileWidth as i32);
-                mapfile.write_i32(platform.iTileHeight as i32);
+        for platform in &self.platforms {
+            mapfile.write_i32(platform.iTileWidth as i32);
+            mapfile.write_i32(platform.iTileHeight as i32);
 
-                for iCol in 0..platform.iTileWidth {
-                    for iRow in 0..platform.iTileHeight {
-                        let mut tile = *platform.tile_at(iCol as usize, iRow as usize);
+            for iCol in 0..platform.iTileWidth {
+                for iRow in 0..platform.iTileHeight {
+                    let mut tile = *platform.tile_at(iCol as usize, iRow as usize);
 
-                        if tile.iID >= 0 {
-                            let ts = gp.g_tilesetmanager.tileset(g, tile.iID as usize);
-                            if tile.iCol < 0 || tile.iCol >= ts.width() {
-                                tile.iCol = 0;
-                            }
-
-                            if tile.iRow < 0 || tile.iRow >= ts.height() {
-                                tile.iRow = 0;
-                            }
+                    if tile.iID >= 0 {
+                        let ts = gp.g_tilesetmanager.tileset(g, tile.iID as usize);
+                        if tile.iCol < 0 || tile.iCol >= ts.width() {
+                            tile.iCol = 0;
                         }
 
-                        mapfile.write_i8(tile.iID as i8);
-                        mapfile.write_i8(tile.iCol as i8);
-                        mapfile.write_i8(tile.iRow as i8);
-
-                        mapfile.write_i32(platform.tile_type_at(iCol as usize, iRow as usize).0 as i32);
+                        if tile.iRow < 0 || tile.iRow >= ts.height() {
+                            tile.iRow = 0;
+                        }
                     }
+
+                    mapfile.write_i8(tile.iID as i8);
+                    mapfile.write_i8(tile.iCol as i8);
+                    mapfile.write_i8(tile.iRow as i8);
+
+                    mapfile.write_i32(platform.tile_type_at(iCol as usize, iRow as usize).0 as i32);
                 }
+            }
 
-                mapfile.write_i32(platform.iDrawLayer as i32);
+            mapfile.write_i32(platform.iDrawLayer as i32);
 
-                let iPathType: i16 = platform.pPath.path_type_id() as i16;
-                mapfile.write_i32(iPathType as i32);
+            let iPathType: i16 = platform.pPath.path_type_id() as i16;
+            mapfile.write_i32(iPathType as i32);
 
-                let mut p = *platform;
-                let any = p.pPath.as_any();
-                if let Some(path) = any.downcast_ref::<StraightPath>() {
-                    mapfile.write_float(path.start_pos().x);
-                    mapfile.write_float(path.start_pos().y);
-                    mapfile.write_float(path.end_pos().x);
-                    mapfile.write_float(path.end_pos().y);
-                    mapfile.write_float(path.base.speed());
-                } else if let Some(path) = any.downcast_ref::<StraightPathContinuous>() {
-                    mapfile.write_float(path.start_pos().x);
-                    mapfile.write_float(path.start_pos().y);
-                    mapfile.write_float(path.angle());
-                    mapfile.write_float(path.base.speed());
-                } else if let Some(path) = any.downcast_ref::<EllipsePath>() {
-                    mapfile.write_float(path.radius().x);
-                    mapfile.write_float(path.radius().y);
-                    mapfile.write_float(path.center_pos().x);
-                    mapfile.write_float(path.center_pos().y);
-                    mapfile.write_float(path.start_angle());
-                    mapfile.write_float(path.base.speed());
-                }
+            let mut p = *platform;
+            let any = p.pPath.as_any();
+            if let Some(path) = any.downcast_ref::<StraightPath>() {
+                mapfile.write_float(path.start_pos().x);
+                mapfile.write_float(path.start_pos().y);
+                mapfile.write_float(path.end_pos().x);
+                mapfile.write_float(path.end_pos().y);
+                mapfile.write_float(path.base.speed());
+            } else if let Some(path) = any.downcast_ref::<StraightPathContinuous>() {
+                mapfile.write_float(path.start_pos().x);
+                mapfile.write_float(path.start_pos().y);
+                mapfile.write_float(path.angle());
+                mapfile.write_float(path.base.speed());
+            } else if let Some(path) = any.downcast_ref::<EllipsePath>() {
+                mapfile.write_float(path.radius().x);
+                mapfile.write_float(path.radius().y);
+                mapfile.write_float(path.center_pos().x);
+                mapfile.write_float(path.center_pos().y);
+                mapfile.write_float(path.start_angle());
+                mapfile.write_float(path.base.speed());
             }
         }
 
@@ -1580,45 +1576,43 @@ impl CMap {
     }
 
     pub fn create_thumbnail_surface(&mut self, g: &mut Game, fUseClassicPack: bool) -> gfxSprite {
-        unsafe {
-            let sThumbnail = gfxSprite::blank(g, 160, 120);
+        let sThumbnail = gfxSprite::blank(g, 160, 120);
 
-            let mut path;
+        let mut path;
 
-            if fUseClassicPack {
-                let localSzBackgroundFile = concat("gfx/packs/Classic/backgrounds/", &g.g_map.szBackgroundFile);
-                path = convert_path(g, &localSzBackgroundFile);
+        if fUseClassicPack {
+            let localSzBackgroundFile = concat("gfx/packs/Classic/backgrounds/", &g.g_map.szBackgroundFile);
+            path = convert_path(g, &localSzBackgroundFile);
 
-                if !file_exists(&path) {
-                    path = convert_path(g, "gfx/packs/Classic/backgrounds/Land_Classic.png");
-                }
-            } else {
-                let localSzBackgroundFile = concat("gfx/packs/backgrounds/", &g.g_map.szBackgroundFile);
-                let pack = g.gamegraphicspacklist.current_path().to_string_lossy().into_owned();
-                path = convert_path_pack(g, &localSzBackgroundFile, &pack);
-
-                if !file_exists(&path) {
-                    path = convert_path_pack(g, "gfx/packs/backgrounds/Land_Classic.png", &pack);
-                }
+            if !file_exists(&path) {
+                path = convert_path(g, "gfx/packs/Classic/backgrounds/Land_Classic.png");
             }
+        } else {
+            let localSzBackgroundFile = concat("gfx/packs/backgrounds/", &g.g_map.szBackgroundFile);
+            let pack = g.gamegraphicspacklist.current_path().to_string_lossy().into_owned();
+            path = convert_path_pack(g, &localSzBackgroundFile, &pack);
 
-            {
-                let sBackground = ImageLoader::new(path).without_color_key().create(g);
-                let srcRectBackground = Rect { x: 0, y: 0, w: App::screenWidth, h: App::screenHeight };
-                let dstRectBackground = Rect { x: 0, y: 0, w: 160, h: 120 };
-                sBackground.draw_stretch(&srcRectBackground, sThumbnail.get_surface(), &dstRectBackground);
+            if !file_exists(&path) {
+                path = convert_path_pack(g, "gfx/packs/backgrounds/Land_Classic.png", &pack);
             }
-
-            self.pre_draw_preview_background(g, sThumbnail.get_surface(), true);
-            self.pre_draw_preview_blocks(g, sThumbnail.get_surface(), true);
-            self.pre_draw_preview_map_items(g, sThumbnail.get_surface(), true);
-            self.draw_thumbnail_hazards(g, sThumbnail.get_surface());
-            self.draw_thumbnail_platforms(g, sThumbnail.get_surface());
-            self.pre_draw_preview_foreground(g, sThumbnail.get_surface(), true);
-            self.pre_draw_preview_warps(g, sThumbnail.get_surface(), true);
-
-            sThumbnail
         }
+
+        {
+            let sBackground = ImageLoader::new(path).without_color_key().create(g);
+            let srcRectBackground = Rect { x: 0, y: 0, w: App::screenWidth, h: App::screenHeight };
+            let dstRectBackground = Rect { x: 0, y: 0, w: 160, h: 120 };
+            sBackground.draw_stretch(&srcRectBackground, sThumbnail.get_surface(), &dstRectBackground);
+        }
+
+        self.pre_draw_preview_background(g, sThumbnail.get_surface(), true);
+        self.pre_draw_preview_blocks(g, sThumbnail.get_surface(), true);
+        self.pre_draw_preview_map_items(g, sThumbnail.get_surface(), true);
+        self.draw_thumbnail_hazards(g, sThumbnail.get_surface());
+        self.draw_thumbnail_platforms(g, sThumbnail.get_surface());
+        self.pre_draw_preview_foreground(g, sThumbnail.get_surface(), true);
+        self.pre_draw_preview_warps(g, sThumbnail.get_surface(), true);
+
+        sThumbnail
     }
 
     pub fn save_thumbnail(&mut self, g: &mut Game, sFile: &str, fUseClassicPack: bool) {
@@ -1791,26 +1785,24 @@ impl CMap {
             return;
         }
 
-        unsafe {
-            for iTile in self.iAnimatedVectorIndices[f]..self.iAnimatedVectorIndices[f + 1] {
-                let tile = &mut self.animatedtiles[iTile as usize];
-                let frame = self.iTileAnimationFrame as usize;
+        for iTile in self.iAnimatedVectorIndices[f]..self.iAnimatedVectorIndices[f + 1] {
+            let tile = &mut self.animatedtiles[iTile as usize];
+            let frame = self.iTileAnimationFrame as usize;
 
-                if tile.fBackgroundAnimated {
-                    self.animatedTilesSurface.draw_src_to(&tile.rAnimationSrc[0][frame], self.animatedBackmapSurface, &tile.rDest);
-                }
+            if tile.fBackgroundAnimated {
+                self.animatedTilesSurface.draw_src_to(&tile.rAnimationSrc[0][frame], self.animatedBackmapSurface, &tile.rDest);
+            }
 
-                if tile.fForegroundAnimated {
-                    self.animatedTilesSurface.draw_src_to(&tile.rAnimationSrc[1][frame], self.animatedFrontmapSurface, &tile.rDest);
-                }
+            if tile.fForegroundAnimated {
+                self.animatedTilesSurface.draw_src_to(&tile.rAnimationSrc[1][frame], self.animatedFrontmapSurface, &tile.rDest);
+            }
 
-                if !tile.pPlatform.is_null() {
-                    self.animatedTilesSurface.draw_src_to(
-                        &tile.rAnimationSrc[0][frame],
-                        tile.pPlatform.sprites[g.g_iCurrentDrawIndex as usize].get_surface(),
-                        &tile.rDest,
-                    );
-                }
+            if !tile.pPlatform.is_null() {
+                self.animatedTilesSurface.draw_src_to(
+                    &tile.rAnimationSrc[0][frame],
+                    tile.pPlatform.sprites[g.g_iCurrentDrawIndex as usize].get_surface(),
+                    &tile.rDest,
+                );
             }
         }
     }
@@ -1930,80 +1922,76 @@ impl CMap {
     }
 
     fn draw_thumbnail_hazards(&mut self, g: &mut Game, targetSurface: *mut Surface) {
-        unsafe {
-            for hazard in &self.maphazards {
-                draw_map_hazard(g, hazard, 2, false, targetSurface);
-            }
+        for hazard in &self.maphazards {
+            draw_map_hazard(g, hazard, 2, false, targetSurface);
         }
     }
 
     fn draw_thumbnail_platforms(&mut self, g: &mut Game, targetSurface: *mut Surface) {
-        unsafe {
-            for &platform in &self.platforms {
-                let mut p = platform;
-                let w = p.iTileWidth;
-                let h = p.iTileHeight;
-                let tiles = p.iTileData.clone();
-                let basepath = p.pPath.as_any();
+        for &platform in &self.platforms {
+            let mut p = platform;
+            let w = p.iTileWidth;
+            let h = p.iTileHeight;
+            let tiles = p.iTileData.clone();
+            let basepath = p.pPath.as_any();
 
-                if let Some(path) = basepath.downcast_ref::<StraightPath>() {
-                    draw_platform(
-                        g,
-                        path.path_type_id(),
-                        &tiles,
-                        (path.start_pos().x * 2.0) as i16,
-                        (path.start_pos().y * 2.0) as i16,
-                        (path.end_pos().x * 2.0) as i16,
-                        (path.end_pos().y * 2.0) as i16,
-                        0.0,
-                        0.0,
-                        0.0,
-                        2,
-                        w,
-                        h,
-                        true,
-                        true,
-                        targetSurface,
-                    );
-                } else if let Some(path) = basepath.downcast_ref::<StraightPathContinuous>() {
-                    draw_platform(
-                        g,
-                        path.path_type_id(),
-                        &tiles,
-                        (path.start_pos().x * 2.0) as i16,
-                        (path.start_pos().y * 2.0) as i16,
-                        0,
-                        0,
-                        path.angle(),
-                        0.0,
-                        0.0,
-                        2,
-                        w,
-                        h,
-                        true,
-                        true,
-                        targetSurface,
-                    );
-                } else if let Some(path) = basepath.downcast_ref::<EllipsePath>() {
-                    draw_platform(
-                        g,
-                        path.path_type_id(),
-                        &tiles,
-                        (path.center_pos().x * 2.0) as i16,
-                        (path.center_pos().y * 2.0) as i16,
-                        0,
-                        0,
-                        path.start_angle(),
-                        path.radius().x * 2.0,
-                        path.radius().y * 2.0,
-                        2,
-                        w,
-                        h,
-                        true,
-                        true,
-                        targetSurface,
-                    );
-                }
+            if let Some(path) = basepath.downcast_ref::<StraightPath>() {
+                draw_platform(
+                    g,
+                    path.path_type_id(),
+                    &tiles,
+                    (path.start_pos().x * 2.0) as i16,
+                    (path.start_pos().y * 2.0) as i16,
+                    (path.end_pos().x * 2.0) as i16,
+                    (path.end_pos().y * 2.0) as i16,
+                    0.0,
+                    0.0,
+                    0.0,
+                    2,
+                    w,
+                    h,
+                    true,
+                    true,
+                    targetSurface,
+                );
+            } else if let Some(path) = basepath.downcast_ref::<StraightPathContinuous>() {
+                draw_platform(
+                    g,
+                    path.path_type_id(),
+                    &tiles,
+                    (path.start_pos().x * 2.0) as i16,
+                    (path.start_pos().y * 2.0) as i16,
+                    0,
+                    0,
+                    path.angle(),
+                    0.0,
+                    0.0,
+                    2,
+                    w,
+                    h,
+                    true,
+                    true,
+                    targetSurface,
+                );
+            } else if let Some(path) = basepath.downcast_ref::<EllipsePath>() {
+                draw_platform(
+                    g,
+                    path.path_type_id(),
+                    &tiles,
+                    (path.center_pos().x * 2.0) as i16,
+                    (path.center_pos().y * 2.0) as i16,
+                    0,
+                    0,
+                    path.start_angle(),
+                    path.radius().x * 2.0,
+                    path.radius().y * 2.0,
+                    2,
+                    w,
+                    h,
+                    true,
+                    true,
+                    targetSurface,
+                );
             }
         }
     }
@@ -2017,18 +2005,16 @@ impl CMap {
             iScreenshotSize = 1;
         }
 
-        unsafe {
-            for j in 0..MH {
-                for i in 0..MW {
-                    let wWarp = g.g_map.warpdata[i][j];
+        for j in 0..MH {
+            for i in 0..MW {
+                let wWarp = g.g_map.warpdata[i][j];
 
-                    if wWarp.connection != -1 {
-                        let ts = iTileSize as i32;
-                        let rSrc = Rect { x: wWarp.connection as i32 * ts, y: wWarp.direction * ts, w: ts, h: ts };
-                        let mut rDst = Rect { x: i as i32 * ts, y: j as i32 * ts, w: ts, h: ts };
+                if wWarp.connection != -1 {
+                    let ts = iTileSize as i32;
+                    let rSrc = Rect { x: wWarp.connection as i32 * ts, y: wWarp.direction * ts, w: ts, h: ts };
+                    let mut rDst = Rect { x: i as i32 * ts, y: j as i32 * ts, w: ts, h: ts };
 
-                        g.rm.spr_thumbnail_warps[iScreenshotSize].draw_src_to(&rSrc, targetSurface, &rDst);
-                    }
+                    g.rm.spr_thumbnail_warps[iScreenshotSize].draw_src_to(&rSrc, targetSurface, &rDst);
                 }
             }
         }
@@ -2043,13 +2029,11 @@ impl CMap {
             iScreenshotSize = 1;
         }
 
-        unsafe {
-            for item in &self.mapitems {
-                let rSrc = Rect { x: item.itype as i32 * iTileSize, y: 0, w: iTileSize, h: iTileSize };
-                let mut rDst = Rect { x: item.ix as i32 * iTileSize, y: item.iy as i32 * iTileSize, w: iTileSize, h: iTileSize };
+        for item in &self.mapitems {
+            let rSrc = Rect { x: item.itype as i32 * iTileSize, y: 0, w: iTileSize, h: iTileSize };
+            let mut rDst = Rect { x: item.ix as i32 * iTileSize, y: item.iy as i32 * iTileSize, w: iTileSize, h: iTileSize };
 
-                g.rm.spr_thumbnail_mapitems[iScreenshotSize].draw_src_to(&rSrc, targetSurface, &rDst);
-            }
+            g.rm.spr_thumbnail_mapitems[iScreenshotSize].draw_src_to(&rSrc, targetSurface, &rDst);
         }
     }
 
@@ -2060,7 +2044,7 @@ impl CMap {
         self.draw_preview(g, targetSurface, 1, fThumbnail);
         small_delay(g);
 
-        if unsafe { !g.game_values.toplayer } {
+        if !g.game_values.toplayer {
             self.draw_preview(g, targetSurface, 2, fThumbnail);
             small_delay(g);
 
@@ -2110,7 +2094,7 @@ impl CMap {
             small_delay(g);
         }
 
-        if unsafe { !g.game_values.toplayer } {
+        if !g.game_values.toplayer {
             return;
         }
 
@@ -2167,65 +2151,61 @@ impl CMap {
         let mut rectDst = Rect { x: 0, y: 0, w: iBlockSize, h: iBlockSize };
         let mut rectSrc = Rect { x: 0, y: 0, w: iBlockSize, h: iBlockSize };
 
-        unsafe {
-            rectDst.x = 0;
-            for i in 0..MW {
-                rectDst.y = -iBlockSize;
+        rectDst.x = 0;
+        for i in 0..MW {
+            rectDst.y = -iBlockSize;
 
-                for j in 0..MH {
-                    rectDst.y += iBlockSize;
+            for j in 0..MH {
+                rectDst.y += iBlockSize;
 
-                    let ts = self.objectdata[i][j].iType as i32;
-                    if ts == -1 {
-                        continue;
-                    }
-
-                    if self.objectdata[i][j].fHidden {
-                        continue;
-                    }
-
-                    rectSrc.x = (ts * iBlockSize) as i16 as i32;
-                    rectSrc.y = 0;
-
-                    if (7..=10).contains(&ts) {
-                        if self.iSwitches[((ts - 7) % 4) as usize] == 0 {
-                            rectSrc.y = iBlockSize;
-                        }
-                    } else if (11..=14).contains(&ts) {
-                        if self.objectdata[i][j].iSettings[0] == 0 {
-                            rectSrc.y = iBlockSize;
-                        }
-                    } else if (15..=19).contains(&ts) {
-                        rectSrc.x = iBlockSize * (ts - 15);
-                        rectSrc.y = iBlockSize;
-                    } else if (20..=29).contains(&ts) {
-                        rectSrc.x = iBlockSize * (ts - 20);
-                        rectSrc.y = iBlockSize << 1;
-                    }
-
-                    if fThumbnail {
-                        g.rm.spr_blocks[2].draw_src_to(&rectSrc, targetSurface, &rectDst);
-                    } else {
-                        g.rm.spr_blocks[1].draw_src_to(&rectSrc, targetSurface, &rectDst);
-                    }
+                let ts = self.objectdata[i][j].iType as i32;
+                if ts == -1 {
+                    continue;
                 }
 
-                rectDst.x += iBlockSize;
+                if self.objectdata[i][j].fHidden {
+                    continue;
+                }
+
+                rectSrc.x = (ts * iBlockSize) as i16 as i32;
+                rectSrc.y = 0;
+
+                if (7..=10).contains(&ts) {
+                    if self.iSwitches[((ts - 7) % 4) as usize] == 0 {
+                        rectSrc.y = iBlockSize;
+                    }
+                } else if (11..=14).contains(&ts) {
+                    if self.objectdata[i][j].iSettings[0] == 0 {
+                        rectSrc.y = iBlockSize;
+                    }
+                } else if (15..=19).contains(&ts) {
+                    rectSrc.x = iBlockSize * (ts - 15);
+                    rectSrc.y = iBlockSize;
+                } else if (20..=29).contains(&ts) {
+                    rectSrc.x = iBlockSize * (ts - 20);
+                    rectSrc.y = iBlockSize << 1;
+                }
+
+                if fThumbnail {
+                    g.rm.spr_blocks[2].draw_src_to(&rectSrc, targetSurface, &rectDst);
+                } else {
+                    g.rm.spr_blocks[1].draw_src_to(&rectSrc, targetSurface, &rectDst);
+                }
             }
+
+            rectDst.x += iBlockSize;
         }
     }
 
     pub fn predrawbackground(&mut self, g: &mut Game, background: &gfxSprite, mapspr: &gfxSprite) {
         let mut r = Rect { x: 0, y: 0, w: App::screenWidth, h: App::screenHeight };
 
-        unsafe {
-            background.draw_to(mapspr.get_surface(), &r);
-        }
+        background.draw_to(mapspr.get_surface(), &r);
 
         self.draw(g, mapspr.get_surface(), 0);
         self.draw(g, mapspr.get_surface(), 1);
 
-        if unsafe { !g.game_values.toplayer } {
+        if !g.game_values.toplayer {
             self.draw(g, mapspr.get_surface(), 2);
             self.draw(g, mapspr.get_surface(), 3);
         }
@@ -2559,53 +2539,49 @@ impl CMap {
 
     pub fn draw_warp_locks(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        unsafe {
-            for iWarpExit in 0..self.numwarpexits as usize {
-                let we = self.warpexits[iWarpExit];
-                if self.warplocked[we.connection as usize] || we.locktimer > 0 {
-                    gp.rm.spr_warplock.draw(g, we.lockx as i32, we.locky as i32);
-                }
+        for iWarpExit in 0..self.numwarpexits as usize {
+            let we = self.warpexits[iWarpExit];
+            if self.warplocked[we.connection as usize] || we.locktimer > 0 {
+                gp.rm.spr_warplock.draw(g, we.lockx as i32, we.locky as i32);
             }
         }
     }
 
     pub fn update(&mut self, g: &mut Game) {
-        unsafe {
-            for iConnection in 0..=self.maxConnection {
-                let c = iConnection as usize;
-                if self.warplocked[c] {
-                    self.warplocktimer[c] += 1;
-                    if self.warplocktimer[c] > g.game_values.warplocktime {
-                        self.warplocked[c] = false;
-                        self.warplocktimer[c] = 0;
-                    }
+        for iConnection in 0..=self.maxConnection {
+            let c = iConnection as usize;
+            if self.warplocked[c] {
+                self.warplocktimer[c] += 1;
+                if self.warplocktimer[c] > g.game_values.warplocktime {
+                    self.warplocked[c] = false;
+                    self.warplocktimer[c] = 0;
                 }
             }
+        }
 
-            for iWarpExit in 0..self.numwarpexits as usize {
-                if self.warpexits[iWarpExit].locktimer > 0 {
-                    self.warpexits[iWarpExit].locktimer -= 1;
-                }
+        for iWarpExit in 0..self.numwarpexits as usize {
+            if self.warpexits[iWarpExit].locktimer > 0 {
+                self.warpexits[iWarpExit].locktimer -= 1;
             }
+        }
 
-            self.iTileAnimationTimer += 1;
-            if self.iTileAnimationTimer >= NUM_FRAMES_BETWEEN_TILE_ANIMATION {
-                self.iTileAnimationTimer = 0;
+        self.iTileAnimationTimer += 1;
+        if self.iTileAnimationTimer >= NUM_FRAMES_BETWEEN_TILE_ANIMATION {
+            self.iTileAnimationTimer = 0;
 
-                self.animatedFrontmapSurface = g.rm.spr_frontmap[g.g_iCurrentDrawIndex as usize].get_surface();
-                self.animatedBackmapSurface = g.rm.spr_backmap[g.g_iCurrentDrawIndex as usize].get_surface();
+            self.animatedFrontmapSurface = g.rm.spr_frontmap[g.g_iCurrentDrawIndex as usize].get_surface();
+            self.animatedBackmapSurface = g.rm.spr_backmap[g.g_iCurrentDrawIndex as usize].get_surface();
 
-                g.g_iCurrentDrawIndex = 1 - g.g_iCurrentDrawIndex;
+            g.g_iCurrentDrawIndex = 1 - g.g_iCurrentDrawIndex;
 
-                self.iTileAnimationFrame += 1;
-                if self.iTileAnimationFrame >= NUM_FRAMES_IN_TILE_ANIMATION {
-                    self.iTileAnimationFrame = 0;
-                }
+            self.iTileAnimationFrame += 1;
+            if self.iTileAnimationFrame >= NUM_FRAMES_IN_TILE_ANIMATION {
+                self.iTileAnimationFrame = 0;
             }
+        }
 
-            if self.iAnimatedTileCount > 0 {
-                self.animate_tiles(g, self.iTileAnimationTimer);
-            }
+        if self.iAnimatedTileCount > 0 {
+            self.animate_tiles(g, self.iTileAnimationTimer);
         }
     }
 
@@ -2711,11 +2687,9 @@ impl CMap {
 
     pub fn drawfrontlayer(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        unsafe {
-            for k in 0..self.numdrawareas as usize {
-                let d = self.drawareas[k];
-                gp.rm.spr_frontmap[gp.g_iCurrentDrawIndex as usize].draw_src(g, d.x, d.y, &d);
-            }
+        for k in 0..self.numdrawareas as usize {
+            let d = self.drawareas[k];
+            gp.rm.spr_frontmap[gp.g_iCurrentDrawIndex as usize].draw_src(g, d.x, d.y, &d);
         }
     }
 
@@ -2735,28 +2709,26 @@ impl CMap {
 
     pub fn optimize(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        unsafe {
-            for j in 0..MH {
-                for i in 0..MW {
-                    for m in 1..ML {
-                        let tile = self.mapdata[i][j][m];
-                        let r#type = gp.g_tilesetmanager.tileset(g, tile.iID as isize as usize).tile_type(tile.iCol as usize, tile.iRow as usize);
-                        if r#type != TileType::NonSolid && r#type != TileType::Gap && r#type != TileType::SolidOnTop {
-                            let mut k = m as i32 - 1;
-                            while k >= 0 {
-                                let ku = k as usize;
-                                if self.mapdata[i][j][ku].iID as i32 == TILESETNONE {
-                                    let fromTile = self.mapdata[i][j][ku + 1];
-                                    self.mapdata[i][j][ku] = fromTile;
+        for j in 0..MH {
+            for i in 0..MW {
+                for m in 1..ML {
+                    let tile = self.mapdata[i][j][m];
+                    let r#type = gp.g_tilesetmanager.tileset(g, tile.iID as isize as usize).tile_type(tile.iCol as usize, tile.iRow as usize);
+                    if r#type != TileType::NonSolid && r#type != TileType::Gap && r#type != TileType::SolidOnTop {
+                        let mut k = m as i32 - 1;
+                        while k >= 0 {
+                            let ku = k as usize;
+                            if self.mapdata[i][j][ku].iID as i32 == TILESETNONE {
+                                let fromTile = self.mapdata[i][j][ku + 1];
+                                self.mapdata[i][j][ku] = fromTile;
 
-                                    self.mapdata[i][j][ku + 1].iID = TILESETNONE as i16;
-                                    self.mapdata[i][j][ku + 1].iCol = 0;
-                                    self.mapdata[i][j][ku + 1].iRow = 0;
-                                } else {
-                                    break;
-                                }
-                                k -= 1;
+                                self.mapdata[i][j][ku + 1].iID = TILESETNONE as i16;
+                                self.mapdata[i][j][ku + 1].iCol = 0;
+                                self.mapdata[i][j][ku + 1].iRow = 0;
+                            } else {
+                                break;
                             }
+                            k -= 1;
                         }
                     }
                 }
@@ -2787,7 +2759,7 @@ pub(crate) mod tests {
 
     /// One game for the map tests, with the state `CMap::load_map` touches, against the repository's data/ directory.
     pub(crate) fn map_game() -> &'static mut Game {
-        INIT.call_once(|| unsafe {
+        INIT.call_once(|| {
             let g = Game::create();
             let mut gp = g.ptr();
             g.RootDataDirectory = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data").to_string();
@@ -2957,13 +2929,11 @@ pub(crate) mod tests {
         let _g = lock_globals();
         let maps = all_map_files();
         assert!(maps.len() > 400, "found {} maps", maps.len());
-        unsafe {
-            for f in &maps {
-                for rt in [read_type_summary, read_type_preview, read_type_full] {
-                    gp.g_map.load_map(g, f, rt);
-                    let mut map = g.g_map;
-                    let _ = dump(g, &mut map, rt);
-                }
+        for f in &maps {
+            for rt in [read_type_summary, read_type_preview, read_type_full] {
+                gp.g_map.load_map(g, f, rt);
+                let mut map = g.g_map;
+                let _ = dump(g, &mut map, rt);
             }
         }
     }
@@ -2973,80 +2943,78 @@ pub(crate) mod tests {
         let mut gp = g.ptr();
         use crate::common::map_list::MapList;
         use crate::common::random_number_generator::{RandomNumberGenerator, RandomNumberGeneratorType};
-        unsafe {
-            let root = g.RootDataDirectory.clone();
-            let rel = |p: &str| if p.len() > root.len() { p[root.len()..].to_string() } else { p.to_string() };
-            g.maplist = Ptr::new_box(MapList::new(g, false));
-            let mut maplist = g.maplist;
-            maplist.read_filters(g);
+        let root = g.RootDataDirectory.clone();
+        let rel = |p: &str| if p.len() > root.len() { p[root.len()..].to_string() } else { p.to_string() };
+        g.maplist = Ptr::new_box(MapList::new(g, false));
+        let mut maplist = g.maplist;
+        maplist.read_filters(g);
 
-            let mut o = String::new();
-            let cur = move |o: &mut String, what: &str| {
-                let _ = writeln!(o, "{} cur={} file={}", what, maplist.current_shortmapname(), rel(maplist.current_filename()));
-            };
-            let _ = writeln!(o, "count={} filtered={}", maplist.count(), maplist.filtered_count());
-            for i in 0..maplist.maps.len() {
-                let n = maplist.maps.node(i);
-                let _ = write!(o, "map {} {} idx={} f=", maplist.maps.key(i), rel(&n.filename), n.iIndex);
-                for b in &n.pfFilters {
-                    let _ = write!(o, "{}", *b as i32);
-                }
-                o += "\n";
+        let mut o = String::new();
+        let cur = move |o: &mut String, what: &str| {
+            let _ = writeln!(o, "{} cur={} file={}", what, maplist.current_shortmapname(), rel(maplist.current_filename()));
+        };
+        let _ = writeln!(o, "count={} filtered={}", maplist.count(), maplist.filtered_count());
+        for i in 0..maplist.maps.len() {
+            let n = maplist.maps.node(i);
+            let _ = write!(o, "map {} {} idx={} f=", maplist.maps.key(i), rel(&n.filename), n.iIndex);
+            for b in &n.pfFilters {
+                let _ = write!(o, "{}", *b as i32);
             }
-            for i in 0..maplist.worldmaps.len() {
-                let _ = writeln!(o, "world {} {}", maplist.worldmaps.key(i), rel(&maplist.worldmaps.node(i).filename));
-            }
-            for (i, v) in g.game_values.piFilterIcons.iter().enumerate() {
-                let _ = writeln!(o, "icon {} {}", i, v);
-            }
-
-            RandomNumberGenerator::generator(gp.get()).reseed(42);
-            for _ in 0..3 {
-                maplist.next(false);
-                cur(&mut o, "next");
-            }
-            maplist.prev(false);
-            cur(&mut o, "prev");
-            for _ in 0..5 {
-                maplist.random(g, false);
-                cur(&mut o, "random");
-            }
-            let _ = writeln!(o, "findexact {}", maplist.findexact("death valley", false) as i32);
-            cur(&mut o, "after findexact");
-            let _ = writeln!(o, "findexact {}", maplist.findexact("no such map", false) as i32);
-            cur(&mut o, "after miss");
-            let _ = writeln!(o, "findworld {}", maplist.findexact("special_bonushouse", true) as i32);
-            cur(&mut o, "after findworld");
-            let _ = writeln!(o, "find {}", maplist.find("matsy") as i32);
-            cur(&mut o, "after find");
-            let _ = writeln!(o, "startswith {}", maplist.startswith_char(b'm') as i32);
-            cur(&mut o, "after startswith m");
-            let _ = writeln!(o, "startswithstr {}", maplist.startswith("bo") as i32);
-            cur(&mut o, "after startswith bo");
-            let nfilters = NUM_AUTO_FILTERS as usize + g.filterslist.count();
-            for f in 0..NUM_AUTO_FILTERS as usize {
-                let mut filters = vec![false; nfilters];
-                filters[f] = true;
-                maplist.apply_filters(g, &filters);
-                let _ = write!(o, "filter {} filtered={} on={}", f, maplist.filtered_count(), g.game_values.fFiltersOn as i32);
-                cur(&mut o, "");
-                for _ in 0..4 {
-                    maplist.next(true);
-                    cur(&mut o, " next");
-                }
-                maplist.prev(true);
-                cur(&mut o, " prev");
-                maplist.random(g, true);
-                cur(&mut o, " random");
-                let it = maplist.get_iterator_at(1, true);
-                let _ = writeln!(o, " at1 {}", if it == maplist.end() { "end".to_string() } else { maplist.key_at(it).to_string() });
-            }
-            maplist.apply_filters(g, &vec![false; nfilters]);
-            for _ in 0..5 {
-                let _ = writeln!(o, "randomFilename {}", rel(&maplist.random_filename(g)));
-            }
-            o
+            o += "\n";
         }
+        for i in 0..maplist.worldmaps.len() {
+            let _ = writeln!(o, "world {} {}", maplist.worldmaps.key(i), rel(&maplist.worldmaps.node(i).filename));
+        }
+        for (i, v) in g.game_values.piFilterIcons.iter().enumerate() {
+            let _ = writeln!(o, "icon {} {}", i, v);
+        }
+
+        RandomNumberGenerator::generator(gp.get()).reseed(42);
+        for _ in 0..3 {
+            maplist.next(false);
+            cur(&mut o, "next");
+        }
+        maplist.prev(false);
+        cur(&mut o, "prev");
+        for _ in 0..5 {
+            maplist.random(g, false);
+            cur(&mut o, "random");
+        }
+        let _ = writeln!(o, "findexact {}", maplist.findexact("death valley", false) as i32);
+        cur(&mut o, "after findexact");
+        let _ = writeln!(o, "findexact {}", maplist.findexact("no such map", false) as i32);
+        cur(&mut o, "after miss");
+        let _ = writeln!(o, "findworld {}", maplist.findexact("special_bonushouse", true) as i32);
+        cur(&mut o, "after findworld");
+        let _ = writeln!(o, "find {}", maplist.find("matsy") as i32);
+        cur(&mut o, "after find");
+        let _ = writeln!(o, "startswith {}", maplist.startswith_char(b'm') as i32);
+        cur(&mut o, "after startswith m");
+        let _ = writeln!(o, "startswithstr {}", maplist.startswith("bo") as i32);
+        cur(&mut o, "after startswith bo");
+        let nfilters = NUM_AUTO_FILTERS as usize + g.filterslist.count();
+        for f in 0..NUM_AUTO_FILTERS as usize {
+            let mut filters = vec![false; nfilters];
+            filters[f] = true;
+            maplist.apply_filters(g, &filters);
+            let _ = write!(o, "filter {} filtered={} on={}", f, maplist.filtered_count(), g.game_values.fFiltersOn as i32);
+            cur(&mut o, "");
+            for _ in 0..4 {
+                maplist.next(true);
+                cur(&mut o, " next");
+            }
+            maplist.prev(true);
+            cur(&mut o, " prev");
+            maplist.random(g, true);
+            cur(&mut o, " random");
+            let it = maplist.get_iterator_at(1, true);
+            let _ = writeln!(o, " at1 {}", if it == maplist.end() { "end".to_string() } else { maplist.key_at(it).to_string() });
+        }
+        maplist.apply_filters(g, &vec![false; nfilters]);
+        for _ in 0..5 {
+            let _ = writeln!(o, "randomFilename {}", rel(&maplist.random_filename(g)));
+        }
+        o
     }
 
     /// Compares MapList against the original C++ (`tools/ref/map_list_dump.sh`); set `SMW_MAP_LIST_DUMP`.
@@ -3058,7 +3026,7 @@ pub(crate) mod tests {
             eprintln!("SMW_MAP_LIST_DUMP not set; skipping C++ comparison");
             return;
         };
-        let data = unsafe { g.RootDataDirectory.clone() };
+        let data = g.RootDataDirectory.clone();
         let out = std::process::Command::new(&bin).env("SDL_VIDEODRIVER", "dummy").arg(&data).output().unwrap();
         let text = String::from_utf8_lossy(&out.stdout);
         let expected = text.split("\n---\n").nth(1).unwrap_or("").to_string();
@@ -3083,22 +3051,20 @@ pub(crate) mod tests {
         };
         let data = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data");
         let mut mismatches = Vec::new();
-        unsafe {
-            for f in all_map_files() {
-                for rt in [read_type_summary, read_type_preview, read_type_full] {
-                    let out = std::process::Command::new(&bin).env("SDL_VIDEODRIVER", "dummy").args([data, &f, &rt.to_string()]).output().unwrap();
-                    let text = String::from_utf8_lossy(&out.stdout);
-                    let expected = text.split("\n---\n").nth(1).unwrap_or("").to_string();
+        for f in all_map_files() {
+            for rt in [read_type_summary, read_type_preview, read_type_full] {
+                let out = std::process::Command::new(&bin).env("SDL_VIDEODRIVER", "dummy").args([data, &f, &rt.to_string()]).output().unwrap();
+                let text = String::from_utf8_lossy(&out.stdout);
+                let expected = text.split("\n---\n").nth(1).unwrap_or("").to_string();
 
-                    g.g_map = Ptr::from_box(CMap::new());
-                    gp.g_map.load_map(g, &f, rt);
-                    let mut map = g.g_map;
-                    let actual = dump(g, &mut map, rt);
-                    if actual != expected {
-                        let line = actual.lines().zip(expected.lines()).position(|(a, b)| a != b);
-                        let show = line.map(|l| format!("\n  rust: {}\n  c++:  {}", actual.lines().nth(l).unwrap_or(""), expected.lines().nth(l).unwrap_or("")));
-                        mismatches.push(format!("{} rt={} first diff line {:?}{}", f, rt, line, show.unwrap_or_default()));
-                    }
+                g.g_map = Ptr::from_box(CMap::new());
+                gp.g_map.load_map(g, &f, rt);
+                let mut map = g.g_map;
+                let actual = dump(g, &mut map, rt);
+                if actual != expected {
+                    let line = actual.lines().zip(expected.lines()).position(|(a, b)| a != b);
+                    let show = line.map(|l| format!("\n  rust: {}\n  c++:  {}", actual.lines().nth(l).unwrap_or(""), expected.lines().nth(l).unwrap_or("")));
+                    mismatches.push(format!("{} rt={} first diff line {:?}{}", f, rt, line, show.unwrap_or_default()));
                 }
             }
         }

@@ -135,11 +135,9 @@ impl UI_NetEditServersMenu {
 
     fn reload_scroll(&mut self, g: &mut Game) {
         self.miServerScroll.clear_items();
-        unsafe {
-            for iServer in 0..g.netplay.savedServers.len() {
-                let host = g.netplay.savedServers[iServer].hostname.clone();
-                self.miServerScroll.add(&host);
-            }
+        for iServer in 0..g.netplay.savedServers.len() {
+            let host = g.netplay.savedServers[iServer].hostname.clone();
+            self.miServerScroll.add(&host);
         }
     }
 
@@ -184,7 +182,7 @@ impl UI_NetEditServersMenu {
     }
 
     pub fn on_press_edit(&mut self, g: &mut Game) {
-        if unsafe { g.netplay.savedServers.is_empty() } {
+        if g.netplay.savedServers.is_empty() {
             return;
         }
 
@@ -201,7 +199,7 @@ impl UI_NetEditServersMenu {
     }
 
     pub fn on_press_delete(&mut self, g: &mut Game) {
-        if unsafe { g.netplay.savedServers.is_empty() } {
+        if g.netplay.savedServers.is_empty() {
             return;
         }
 
@@ -219,44 +217,40 @@ impl UI_NetEditServersMenu {
 
     pub fn on_entry_select(&mut self, g: &mut Game) {
         let idx = self.miServerScroll.current_index() as usize;
-        unsafe {
-            match self.currentState {
-                MenuState::EDIT => {
-                    self.dialogTextData = g.netplay.savedServers[idx].hostname.clone();
-                    self.miDialogTextField.refresh(g);
-                    self.show_dialog();
-                    let f = ctl_ptr(self.miDialogTextField);
-                    self.set_initial_focus(g, f);
-                    self.set_cancel_code(MENU_CODE_TO_NET_ADDREMOVE_SERVER_MENU);
-                }
-
-                MenuState::DELETE => {
-                    g.netplay.savedServers.remove(idx);
-                    self.reload_scroll(g);
-                    self.miServerScroll.activate();
-
-                    if g.netplay.savedServers.is_empty() {
-                        self.restore(g);
-                    }
-                }
-
-                _ => {}
+        match self.currentState {
+            MenuState::EDIT => {
+                self.dialogTextData = g.netplay.savedServers[idx].hostname.clone();
+                self.miDialogTextField.refresh(g);
+                self.show_dialog();
+                let f = ctl_ptr(self.miDialogTextField);
+                self.set_initial_focus(g, f);
+                self.set_cancel_code(MENU_CODE_TO_NET_ADDREMOVE_SERVER_MENU);
             }
+
+            MenuState::DELETE => {
+                g.netplay.savedServers.remove(idx);
+                self.reload_scroll(g);
+                self.miServerScroll.activate();
+
+                if g.netplay.savedServers.is_empty() {
+                    self.restore(g);
+                }
+            }
+
+            _ => {}
         }
     }
 
     pub fn on_dialog_ok(&mut self, g: &mut Game) {
         let new_address = ServerAddress { hostname: self.dialogTextData.clone() };
 
-        unsafe {
-            match self.currentState {
-                MenuState::ADD => g.netplay.savedServers.push(new_address),
-                MenuState::EDIT => {
-                    let idx = self.miServerScroll.current_index() as usize;
-                    g.netplay.savedServers[idx] = new_address;
-                }
-                _ => {}
+        match self.currentState {
+            MenuState::ADD => g.netplay.savedServers.push(new_address),
+            MenuState::EDIT => {
+                let idx = self.miServerScroll.current_index() as usize;
+                g.netplay.savedServers[idx] = new_address;
             }
+            _ => {}
         }
 
         self.dialogTextData.clear();

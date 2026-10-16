@@ -67,18 +67,16 @@ impl MI_MapBrowser {
     pub fn reset(&mut self, g: &mut Game, type_: i16) {
         self.iType = type_;
 
-        unsafe {
-            if self.iType == 0 {
-                self.iSelectedIndex = g.maplist.node_at(g.maplist.get_current()).iIndex;
+        if self.iType == 0 {
+            self.iSelectedIndex = g.maplist.node_at(g.maplist.get_current()).iIndex;
 
-                self.iFilterTagAnimationTimer = 0;
-                self.iFilterTagAnimationFrame = 72;
+            self.iFilterTagAnimationTimer = 0;
+            self.iFilterTagAnimationFrame = 72;
 
-                self.iMapCount = g.maplist.count() as i16;
-            } else {
-                self.iSelectedIndex = g.maplist.node_at(g.maplist.get_current()).iFilteredIndex;
-                self.iMapCount = g.maplist.filtered_count() as i16;
-            }
+            self.iMapCount = g.maplist.count() as i16;
+        } else {
+            self.iSelectedIndex = g.maplist.node_at(g.maplist.get_current()).iFilteredIndex;
+            self.iMapCount = g.maplist.filtered_count() as i16;
         }
 
         self.iSelectedRow = (self.iSelectedIndex / 3) % 3;
@@ -90,44 +88,42 @@ impl MI_MapBrowser {
 
     fn load_page(&mut self, g: &mut Game, page: i16, fUseFilters: bool) {
         let mut gp = g.ptr();
-        unsafe {
-            for iMap in 0..9i16 {
-                let iIndex: i16 = (iMap as i32 + page as i32 * 9) as i16;
+        for iMap in 0..9i16 {
+            let iIndex: i16 = (iMap as i32 + page as i32 * 9) as i16;
 
-                if iIndex >= self.iMapCount {
-                    return;
-                }
-
-                let itr = g.maplist.get_iterator_at(iIndex as u16, fUseFilters);
-
-                //See if we already have a thumbnail saved for this map
-
-                let mut szThumbnail = String::from("maps/cache/");
-                szThumbnail += &get_name_from_file_name(&g.maplist.node_at(itr).filename, false);
-                szThumbnail += ".png";
-
-                let sConvertedPath = convert_path(g, &szThumbnail);
-
-                if !file_exists(&sConvertedPath) {
-                    let filename = g.maplist.node_at(itr).filename.clone();
-                    gp.g_map.load_map(g, &filename, read_type_preview);
-                    small_delay(g); //Sleeps to help the music from skipping
-                    gp.g_map.save_thumbnail(g, &sConvertedPath, false);
-                    small_delay(g);
-                }
-
-                let m = iMap as usize;
-                self.mapSurfaces[m] = ImageLoader::new(&sConvertedPath).without_color_key().create(g);
-
-                self.mapNames[m] = g.maplist.key_at(itr).to_string();
-                self.mapListItr[m] = itr;
+            if iIndex >= self.iMapCount {
+                return;
             }
+
+            let itr = g.maplist.get_iterator_at(iIndex as u16, fUseFilters);
+
+            //See if we already have a thumbnail saved for this map
+
+            let mut szThumbnail = String::from("maps/cache/");
+            szThumbnail += &get_name_from_file_name(&g.maplist.node_at(itr).filename, false);
+            szThumbnail += ".png";
+
+            let sConvertedPath = convert_path(g, &szThumbnail);
+
+            if !file_exists(&sConvertedPath) {
+                let filename = g.maplist.node_at(itr).filename.clone();
+                gp.g_map.load_map(g, &filename, read_type_preview);
+                small_delay(g); //Sleeps to help the music from skipping
+                gp.g_map.save_thumbnail(g, &sConvertedPath, false);
+                small_delay(g);
+            }
+
+            let m = iMap as usize;
+            self.mapSurfaces[m] = ImageLoader::new(&sConvertedPath).without_color_key().create(g);
+
+            self.mapNames[m] = g.maplist.key_at(itr).to_string();
+            self.mapListItr[m] = itr;
         }
     }
 
     /// `mapListNodes[i]->pfFilters[game_values.selectedmapfilter]`
     fn node_filter(&self, g: &mut Game, i: usize) -> bool {
-        unsafe { g.maplist.node_at(self.mapListItr[i]).pfFilters[g.game_values.selectedmapfilter as usize] }
+        g.maplist.node_at(self.mapListItr[i]).pfFilters[g.game_values.selectedmapfilter as usize]
     }
 }
 
@@ -162,48 +158,46 @@ impl UI_ControlTrait for MI_MapBrowser {
         let mut rDst = Rect { x: 0, y: 0, w: 160, h: 120 };
         let filterSrc = Rect { x: self.iFilterTagAnimationFrame as i32, y: 24, w: 24, h: 24 };
 
-        unsafe {
-            for iRow in 0..3i16 {
-                rDst.y = iRow as i32 * 150 + 30;
+        for iRow in 0..3i16 {
+            rDst.y = iRow as i32 * 150 + 30;
 
-                for iCol in 0..3i16 {
-                    if self.iSelectedCol != iCol || self.iSelectedRow != iRow {
-                        if iRow as i32 * 3 + iCol as i32 + self.iPage as i32 * 9 >= self.iMapCount as i32 {
-                            break;
-                        }
-
-                        rDst.x = iCol as i32 * 200 + 40;
-
-                        let i = (iRow * 3 + iCol) as usize;
-                        self.mapSurfaces[i].draw_src_to(&rSrc, g.blitdest, &rDst);
-
-                        if self.iType == 0 && self.node_filter(g, i) {
-                            gp.rm.menu_map_filter.draw_src(g, rDst.x, rDst.y, &filterSrc);
-                        }
-
-                        gp.rm.menu_font_large.draw_chop_right(g, rDst.x, rDst.y + 120, 165, &self.mapNames[i]);
+            for iCol in 0..3i16 {
+                if self.iSelectedCol != iCol || self.iSelectedRow != iRow {
+                    if iRow as i32 * 3 + iCol as i32 + self.iPage as i32 * 9 >= self.iMapCount as i32 {
+                        break;
                     }
+
+                    rDst.x = iCol as i32 * 200 + 40;
+
+                    let i = (iRow * 3 + iCol) as usize;
+                    self.mapSurfaces[i].draw_src_to(&rSrc, g.blitdest, &rDst);
+
+                    if self.iType == 0 && self.node_filter(g, i) {
+                        gp.rm.menu_map_filter.draw_src(g, rDst.x, rDst.y, &filterSrc);
+                    }
+
+                    gp.rm.menu_font_large.draw_chop_right(g, rDst.x, rDst.y + 120, 165, &self.mapNames[i]);
                 }
             }
-
-            //Draw the selected map
-            rDst.y = self.iSelectedRow as i32 * 150 + 30;
-            rDst.x = self.iSelectedCol as i32 * 200 + 40;
-
-            gp.rm.menu_dialog.draw_src(g, rDst.x - 16, rDst.y - 16, &Rect { x: 0, y: 0, w: 176, h: 148 });
-            gp.rm.menu_dialog.draw_src(g, rDst.x + 160, rDst.y - 16, &Rect { x: 496, y: 0, w: 16, h: 148 });
-            gp.rm.menu_dialog.draw_src(g, rDst.x - 16, rDst.y + 132, &Rect { x: 0, y: 464, w: 176, h: 16 });
-            gp.rm.menu_dialog.draw_src(g, rDst.x + 160, rDst.y + 132, &Rect { x: 496, y: 464, w: 16, h: 16 });
-
-            let sel = (self.iSelectedRow * 3 + self.iSelectedCol) as usize;
-            self.mapSurfaces[sel].draw_src_to(&rSrc, g.blitdest, &rDst);
-
-            if self.iType == 0 && self.node_filter(g, sel) {
-                gp.rm.menu_map_filter.draw_src(g, rDst.x, rDst.y, &filterSrc);
-            }
-
-            gp.rm.menu_font_large.draw_chop_right(g, rDst.x, rDst.y + 120, 165, &self.mapNames[sel]);
         }
+
+        //Draw the selected map
+        rDst.y = self.iSelectedRow as i32 * 150 + 30;
+        rDst.x = self.iSelectedCol as i32 * 200 + 40;
+
+        gp.rm.menu_dialog.draw_src(g, rDst.x - 16, rDst.y - 16, &Rect { x: 0, y: 0, w: 176, h: 148 });
+        gp.rm.menu_dialog.draw_src(g, rDst.x + 160, rDst.y - 16, &Rect { x: 496, y: 0, w: 16, h: 148 });
+        gp.rm.menu_dialog.draw_src(g, rDst.x - 16, rDst.y + 132, &Rect { x: 0, y: 464, w: 176, h: 16 });
+        gp.rm.menu_dialog.draw_src(g, rDst.x + 160, rDst.y + 132, &Rect { x: 496, y: 464, w: 16, h: 16 });
+
+        let sel = (self.iSelectedRow * 3 + self.iSelectedCol) as usize;
+        self.mapSurfaces[sel].draw_src_to(&rSrc, g.blitdest, &rDst);
+
+        if self.iType == 0 && self.node_filter(g, sel) {
+            gp.rm.menu_map_filter.draw_src(g, rDst.x, rDst.y, &filterSrc);
+        }
+
+        gp.rm.menu_font_large.draw_chop_right(g, rDst.x, rDst.y + 120, 165, &self.mapNames[sel]);
     }
 
     fn modify(&mut self, g: &mut Game, modify: bool) -> MenuCodeEnum {
@@ -212,133 +206,131 @@ impl UI_ControlTrait for MI_MapBrowser {
     }
 
     fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
-        unsafe {
-            for iPlayer in 0..4i16 {
-                //Only allow the controlling team to control the menu (if there is one)
-                if self.iControllingTeam != -1
-                    && (self.iControllingTeam != lookup_team_id(g, iPlayer) || g.game_values.playercontrol[iPlayer as usize] != 1)
-                {
-                    continue;
+        for iPlayer in 0..4i16 {
+            //Only allow the controlling team to control the menu (if there is one)
+            if self.iControllingTeam != -1
+                && (self.iControllingTeam != lookup_team_id(g, iPlayer) || g.game_values.playercontrol[iPlayer as usize] != 1)
+            {
+                continue;
+            }
+
+            let out = playerInput.outputControls[iPlayer as usize];
+
+            if out.menu_down().fPressed {
+                let mut iSkipRows: i16 = 1;
+                if out.menu_scrollfast().fDown {
+                    iSkipRows = 3;
                 }
 
-                let out = playerInput.outputControls[iPlayer as usize];
+                self.iSelectedIndex = ((self.iSelectedRow as i32 + iSkipRows as i32) * 3 + self.iSelectedCol as i32 + self.iPage as i32 * 9) as i16;
 
-                if out.menu_down().fPressed {
-                    let mut iSkipRows: i16 = 1;
-                    if out.menu_scrollfast().fDown {
-                        iSkipRows = 3;
-                    }
+                if self.iSelectedIndex >= self.iMapCount {
+                    self.iSelectedIndex = self.iMapCount - 1;
+                }
 
-                    self.iSelectedIndex = ((self.iSelectedRow as i32 + iSkipRows as i32) * 3 + self.iSelectedCol as i32 + self.iPage as i32 * 9) as i16;
+                self.iSelectedRow = (self.iSelectedIndex / 3) % 3;
+                self.iSelectedCol = self.iSelectedIndex % 3;
 
-                    if self.iSelectedIndex >= self.iMapCount {
-                        self.iSelectedIndex = self.iMapCount - 1;
-                    }
+                let iOldPage = self.iPage;
+                self.iPage = self.iSelectedIndex / 9;
 
-                    self.iSelectedRow = (self.iSelectedIndex / 3) % 3;
-                    self.iSelectedCol = self.iSelectedIndex % 3;
+                if iOldPage != self.iPage {
+                    self.load_page(g, self.iPage, self.iType == 1);
+                }
 
-                    let iOldPage = self.iPage;
-                    self.iPage = self.iSelectedIndex / 9;
+                return MENU_CODE_NONE;
+            }
 
-                    if iOldPage != self.iPage {
+            if out.menu_up().fPressed {
+                let mut iSkipRows: i16 = 1;
+                if out.menu_scrollfast().fDown {
+                    iSkipRows = 3;
+                }
+
+                self.iSelectedIndex = ((self.iSelectedRow as i32 - iSkipRows as i32) * 3 + self.iSelectedCol as i32 + self.iPage as i32 * 9) as i16;
+
+                if self.iSelectedIndex < 0 {
+                    self.iSelectedIndex = 0;
+                }
+
+                self.iSelectedRow = (self.iSelectedIndex / 3) % 3;
+                self.iSelectedCol = self.iSelectedIndex % 3;
+
+                let iOldPage = self.iPage;
+                self.iPage = self.iSelectedIndex / 9;
+
+                if iOldPage != self.iPage {
+                    self.load_page(g, self.iPage, self.iType == 1);
+                }
+
+                return MENU_CODE_NONE;
+            }
+
+            if out.menu_left().fPressed {
+                let iNextIndex: i16 = (self.iSelectedRow as i32 * 3 + self.iSelectedCol as i32 - 1 + self.iPage as i32 * 9) as i16;
+
+                if iNextIndex < 0 {
+                    return MENU_CODE_NONE;
+                }
+
+                self.iSelectedIndex = iNextIndex;
+
+                self.iSelectedCol -= 1;
+                if self.iSelectedCol < 0 {
+                    self.iSelectedCol = 2;
+
+                    self.iSelectedRow -= 1;
+                    if self.iSelectedRow < 0 {
+                        self.iSelectedRow = 2;
+                        self.iPage -= 1;
                         self.load_page(g, self.iPage, self.iType == 1);
                     }
+                }
 
+                return MENU_CODE_NONE;
+            }
+
+            if out.menu_right().fPressed {
+                let iNextIndex: i16 = (self.iSelectedRow as i32 * 3 + self.iSelectedCol as i32 + 1 + self.iPage as i32 * 9) as i16;
+
+                if iNextIndex >= self.iMapCount {
                     return MENU_CODE_NONE;
                 }
 
-                if out.menu_up().fPressed {
-                    let mut iSkipRows: i16 = 1;
-                    if out.menu_scrollfast().fDown {
-                        iSkipRows = 3;
-                    }
+                self.iSelectedIndex = iNextIndex;
 
-                    self.iSelectedIndex = ((self.iSelectedRow as i32 - iSkipRows as i32) * 3 + self.iSelectedCol as i32 + self.iPage as i32 * 9) as i16;
+                self.iSelectedCol += 1;
+                if self.iSelectedCol > 2 {
+                    self.iSelectedCol = 0;
 
-                    if self.iSelectedIndex < 0 {
-                        self.iSelectedIndex = 0;
-                    }
-
-                    self.iSelectedRow = (self.iSelectedIndex / 3) % 3;
-                    self.iSelectedCol = self.iSelectedIndex % 3;
-
-                    let iOldPage = self.iPage;
-                    self.iPage = self.iSelectedIndex / 9;
-
-                    if iOldPage != self.iPage {
+                    self.iSelectedRow += 1;
+                    if self.iSelectedRow > 2 {
+                        self.iSelectedRow = 0;
+                        self.iPage += 1;
                         self.load_page(g, self.iPage, self.iType == 1);
                     }
-
-                    return MENU_CODE_NONE;
                 }
 
-                if out.menu_left().fPressed {
-                    let iNextIndex: i16 = (self.iSelectedRow as i32 * 3 + self.iSelectedCol as i32 - 1 + self.iPage as i32 * 9) as i16;
+                return MENU_CODE_NONE;
+            }
 
-                    if iNextIndex < 0 {
-                        return MENU_CODE_NONE;
-                    }
-
-                    self.iSelectedIndex = iNextIndex;
-
-                    self.iSelectedCol -= 1;
-                    if self.iSelectedCol < 0 {
-                        self.iSelectedCol = 2;
-
-                        self.iSelectedRow -= 1;
-                        if self.iSelectedRow < 0 {
-                            self.iSelectedRow = 2;
-                            self.iPage -= 1;
-                            self.load_page(g, self.iPage, self.iType == 1);
-                        }
-                    }
-
-                    return MENU_CODE_NONE;
-                }
-
-                if out.menu_right().fPressed {
-                    let iNextIndex: i16 = (self.iSelectedRow as i32 * 3 + self.iSelectedCol as i32 + 1 + self.iPage as i32 * 9) as i16;
-
-                    if iNextIndex >= self.iMapCount {
-                        return MENU_CODE_NONE;
-                    }
-
-                    self.iSelectedIndex = iNextIndex;
-
-                    self.iSelectedCol += 1;
-                    if self.iSelectedCol > 2 {
-                        self.iSelectedCol = 0;
-
-                        self.iSelectedRow += 1;
-                        if self.iSelectedRow > 2 {
-                            self.iSelectedRow = 0;
-                            self.iPage += 1;
-                            self.load_page(g, self.iPage, self.iType == 1);
-                        }
-                    }
-
-                    return MENU_CODE_NONE;
-                }
-
-                if out.menu_select().fPressed {
-                    let itr = self.mapListItr[(self.iSelectedRow * 3 + self.iSelectedCol) as usize];
-                    if self.iType == 0 {
-                        let mut maplist = g.maplist;
-                        let f = &mut maplist.maps.node_mut(itr).pfFilters[g.game_values.selectedmapfilter as usize];
-                        *f = !*f;
-                        g.game_values.fNeedWriteFilters = true;
-                    } else {
-                        g.maplist.set_current(itr);
-                        return MENU_CODE_MAP_BROWSER_EXIT;
-                    }
-
-                    return MENU_CODE_NONE;
-                }
-
-                if out.menu_cancel().fPressed {
+            if out.menu_select().fPressed {
+                let itr = self.mapListItr[(self.iSelectedRow * 3 + self.iSelectedCol) as usize];
+                if self.iType == 0 {
+                    let mut maplist = g.maplist;
+                    let f = &mut maplist.maps.node_mut(itr).pfFilters[g.game_values.selectedmapfilter as usize];
+                    *f = !*f;
+                    g.game_values.fNeedWriteFilters = true;
+                } else {
+                    g.maplist.set_current(itr);
                     return MENU_CODE_MAP_BROWSER_EXIT;
                 }
+
+                return MENU_CODE_NONE;
+            }
+
+            if out.menu_cancel().fPressed {
+                return MENU_CODE_MAP_BROWSER_EXIT;
             }
         }
 

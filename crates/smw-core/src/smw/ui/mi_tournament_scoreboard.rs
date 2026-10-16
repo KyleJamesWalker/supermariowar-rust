@@ -127,132 +127,130 @@ impl MI_TournamentScoreboard {
 
         self.sprIcons = spr_icons_ref;
 
-        unsafe {
-            for iTeam in 0..4usize {
-                self.iTeamCounts[iTeam] = g.game_values.teamcounts[iTeam];
+        for iTeam in 0..4usize {
+            self.iTeamCounts[iTeam] = g.game_values.teamcounts[iTeam];
 
-                for iTeamSpot in 0..3usize {
-                    self.iTeamIDs[iTeam][iTeamSpot] = g.game_values.teamids[iTeam][iTeamSpot];
-                }
+            for iTeamSpot in 0..3usize {
+                self.iTeamIDs[iTeam][iTeamSpot] = g.game_values.teamids[iTeam][iTeamSpot];
+            }
+        }
+
+        self.iTournamentWinner = -1;
+        self.iGameWinner = -1;
+
+        self.iSwirlIconTeam = -1;
+        self.iSwirlIconGame = -1;
+
+        self.iExplosionCounter = 0;
+        self.iFireworksCounter = 0;
+        self.iWinnerTextCounter = 0;
+
+        self.iNumTeams = numTeams;
+        self.iNumGames = numGames;
+
+        self.miTeamImages = Vec::with_capacity(self.iNumTeams as usize);
+        self.miIconImages = Vec::with_capacity(self.iNumTeams as usize);
+        self.miPlayerImages = Vec::with_capacity(self.iNumTeams as usize);
+
+        let fTour = g.game_values.matchtype == MatchType::Tour;
+        let fNotTournament = g.game_values.matchtype != MatchType::Tournament;
+
+        let x = self.m_pos.x as i32;
+
+        for iTeam in 0..self.iNumTeams {
+            let t = iTeam as usize;
+            let mut iTeamY = self.get_y_from_place(iTeam);
+
+            if fTour {
+                iTeamY += 28; //shift down 28 pxls for extra tour points bar
             }
 
-            self.iTournamentWinner = -1;
-            self.iGameWinner = -1;
+            self.miTeamImages.push(Box::new(MI_Image::new(
+                self.sprBackground,
+                (x - if fNotTournament { 40 } else { 0 }) as i16,
+                iTeamY,
+                0,
+                if g.game_values.matchtype == MatchType::World { 160 } else { 0 },
+                if fNotTournament { 580 } else { 500 },
+                64,
+                1,
+                2,
+                0,
+            )));
+            self.miIconImages.push(Vec::with_capacity(self.iNumGames.max(0) as usize));
+            self.miPlayerImages.push(Vec::with_capacity(self.iTeamCounts[t].max(0) as usize));
 
-            self.iSwirlIconTeam = -1;
-            self.iSwirlIconGame = -1;
+            if g.game_values.matchtype != MatchType::World {
+                for iGame in 0..self.iNumGames {
+                    let dSpacing = self.get_icon_spacing();
 
-            self.iExplosionCounter = 0;
-            self.iFireworksCounter = 0;
-            self.iWinnerTextCounter = 0;
-
-            self.iNumTeams = numTeams;
-            self.iNumGames = numGames;
-
-            self.miTeamImages = Vec::with_capacity(self.iNumTeams as usize);
-            self.miIconImages = Vec::with_capacity(self.iNumTeams as usize);
-            self.miPlayerImages = Vec::with_capacity(self.iNumTeams as usize);
-
-            let fTour = g.game_values.matchtype == MatchType::Tour;
-            let fNotTournament = g.game_values.matchtype != MatchType::Tournament;
-
-            let x = self.m_pos.x as i32;
-
-            for iTeam in 0..self.iNumTeams {
-                let t = iTeam as usize;
-                let mut iTeamY = self.get_y_from_place(iTeam);
-
-                if fTour {
-                    iTeamY += 28; //shift down 28 pxls for extra tour points bar
-                }
-
-                self.miTeamImages.push(Box::new(MI_Image::new(
-                    self.sprBackground,
-                    (x - if fNotTournament { 40 } else { 0 }) as i16,
-                    iTeamY,
-                    0,
-                    if g.game_values.matchtype == MatchType::World { 160 } else { 0 },
-                    if fNotTournament { 580 } else { 500 },
-                    64,
-                    1,
-                    2,
-                    0,
-                )));
-                self.miIconImages.push(Vec::with_capacity(self.iNumGames.max(0) as usize));
-                self.miPlayerImages.push(Vec::with_capacity(self.iTeamCounts[t].max(0) as usize));
-
-                if g.game_values.matchtype != MatchType::World {
-                    for iGame in 0..self.iNumGames {
-                        let dSpacing = self.get_icon_spacing();
-
-                        let mut icon = Box::new(MI_Image::new(
-                            self.sprIcons,
-                            (x + 128 + dSpacing as i16 as i32 + (iGame as f32 * (32.0f32 + dSpacing)) as i16 as i32 - if fTour { 40 } else { 0 }) as i16,
-                            iTeamY + 16,
-                            0,
-                            0,
-                            32,
-                            32,
-                            if fTour { 4 } else { 1 },
-                            1,
-                            if fTour { 8 } else { 0 },
-                        ));
-                        icon.set_visible(false);
-                        self.miIconImages[t].push(icon);
-                    }
-                }
-
-                for iPlayer in 0..self.iTeamCounts[t] {
-                    let p = iPlayer as usize;
-                    self.miPlayerImages[t].push(Box::new(MI_Image::new(
-                        Ptr::from_mut(&mut g.rm.spr_player[self.iTeamIDs[t][p] as usize][PGFX_STANDING_R as usize]),
-                        (x + iScoreboardPlayerOffsetsX[(self.iTeamCounts[t] - 1) as usize][p] as i32 - if fTour { 40 } else { 0 }) as i16,
+                    let mut icon = Box::new(MI_Image::new(
+                        self.sprIcons,
+                        (x + 128 + dSpacing as i16 as i32 + (iGame as f32 * (32.0f32 + dSpacing)) as i16 as i32 - if fTour { 40 } else { 0 }) as i16,
                         iTeamY + 16,
                         0,
                         0,
                         32,
                         32,
-                        2,
+                        if fTour { 4 } else { 1 },
                         1,
-                        0,
-                    )));
+                        if fTour { 8 } else { 0 },
+                    ));
+                    icon.set_visible(false);
+                    self.miIconImages[t].push(icon);
                 }
+            }
 
-                if fNotTournament {
-                    self.tourScores[t] = Some(Box::new(MI_ScoreText::new(0, 0)));
-                }
+            for iPlayer in 0..self.iTeamCounts[t] {
+                let p = iPlayer as usize;
+                self.miPlayerImages[t].push(Box::new(MI_Image::new(
+                    Ptr::from_mut(&mut g.rm.spr_player[self.iTeamIDs[t][p] as usize][PGFX_STANDING_R as usize]),
+                    (x + iScoreboardPlayerOffsetsX[(self.iTeamCounts[t] - 1) as usize][p] as i32 - if fTour { 40 } else { 0 }) as i16,
+                    iTeamY + 16,
+                    0,
+                    0,
+                    32,
+                    32,
+                    2,
+                    1,
+                    0,
+                )));
+            }
 
-                if g.game_values.matchtype == MatchType::World {
-                    self.worldPointsBackground[t] = Some(Box::new(MI_Image::new(self.sprBackground, (x + 476) as i16, iTeamY, 516, 160, 64, 64, 1, 2, 0)));
-                    self.worldPlace[t] = Some(Box::new(MI_Image::new(self.sprIcons, (x + 102) as i16, iTeamY + 14, 0, 0, 32, 32, 4, 1, 8)));
-
-                    for iBonus in 0..MWB {
-                        let mut bonus = Box::new(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_worlditems), (x + 180 + 38 * iBonus as i32) as i16, iTeamY + 14, 0, 0, 32, 32, 1, 1, 0));
-                        bonus.set_visible(false);
-                        self.worldBonus[t][iBonus] = Some(bonus);
-                    }
-                }
+            if fNotTournament {
+                self.tourScores[t] = Some(Box::new(MI_ScoreText::new(0, 0)));
             }
 
             if g.game_values.matchtype == MatchType::World {
-                self.worldScoreModifier = Some(Box::new(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_worlditems), 0, 0, 0, 0, 32, 32, 1, 1, 0)));
-                self.worldScore = Some(Box::new(MI_ScoreText::new(0, 0)));
-            }
+                self.worldPointsBackground[t] = Some(Box::new(MI_Image::new(self.sprBackground, (x + 476) as i16, iTeamY, 516, 160, 64, 64, 1, 2, 0)));
+                self.worldPlace[t] = Some(Box::new(MI_Image::new(self.sprIcons, (x + 102) as i16, iTeamY + 14, 0, 0, 32, 32, 4, 1, 8)));
 
-            if fTour {
-                for iGame in 0..self.iNumGames {
-                    let dSpacing = self.get_icon_spacing();
-                    let iTourPointX = (x + 105 + dSpacing as i16 as i32 + (iGame as f32 * (32.0f32 + dSpacing)) as i16 as i32) as i16;
-                    let mut points = Box::new(MI_ScoreText::new(iTourPointX, self.get_y_from_place(0)));
-                    // TODO(world_tour_stop): tourPoints[iGame]->SetScore(game_values.tourstops[iGame]->iPoints); and create tourBonus[iGame] when game_values.tourstops[iGame]->iBonusType
-                    let _ = &mut points;
-                    self.tourPoints[iGame as usize] = Some(points);
-                    //else
-                    //	tourBonus[iGame] = new MI_Image(sprBackground, iTourPointX - 11, GetYFromPlace(0) - 3, 448, 128, 22, 22, 1, 1, 0);
+                for iBonus in 0..MWB {
+                    let mut bonus = Box::new(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_worlditems), (x + 180 + 38 * iBonus as i32) as i16, iTeamY + 14, 0, 0, 32, 32, 1, 1, 0));
+                    bonus.set_visible(false);
+                    self.worldBonus[t][iBonus] = Some(bonus);
                 }
-
-                self.miTourPointBar = Some(Box::new(MI_Image::new(self.sprBackground, (x + 88) as i16, self.get_y_from_place(0) - 8, 0, 128, 372, 32, 1, 1, 0)));
             }
+        }
+
+        if g.game_values.matchtype == MatchType::World {
+            self.worldScoreModifier = Some(Box::new(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_worlditems), 0, 0, 0, 0, 32, 32, 1, 1, 0)));
+            self.worldScore = Some(Box::new(MI_ScoreText::new(0, 0)));
+        }
+
+        if fTour {
+            for iGame in 0..self.iNumGames {
+                let dSpacing = self.get_icon_spacing();
+                let iTourPointX = (x + 105 + dSpacing as i16 as i32 + (iGame as f32 * (32.0f32 + dSpacing)) as i16 as i32) as i16;
+                let mut points = Box::new(MI_ScoreText::new(iTourPointX, self.get_y_from_place(0)));
+                // TODO(world_tour_stop): tourPoints[iGame]->SetScore(game_values.tourstops[iGame]->iPoints); and create tourBonus[iGame] when game_values.tourstops[iGame]->iBonusType
+                let _ = &mut points;
+                self.tourPoints[iGame as usize] = Some(points);
+                //else
+                //	tourBonus[iGame] = new MI_Image(sprBackground, iTourPointX - 11, GetYFromPlace(0) - 3, 448, 128, 22, 22, 1, 1, 0);
+            }
+
+            self.miTourPointBar = Some(Box::new(MI_Image::new(self.sprBackground, (x + 88) as i16, self.get_y_from_place(0) - 8, 0, 128, 372, 32, 1, 1, 0)));
         }
 
         self.fCreated = true;
@@ -264,75 +262,73 @@ impl MI_TournamentScoreboard {
 
         // TODO(world_tour_stop): TourStop * tourStop = game_values.tourstops[game_values.tourstopcurrent];
 
-        unsafe {
-            let x = self.m_pos.x as i32;
-            for iTeam in 0..self.iNumTeams {
-                let t = iTeam as usize;
-                let iTeamY = self.get_y_from_place(g.game_values.tournament_scores[t].wins);
+        let x = self.m_pos.x as i32;
+        for iTeam in 0..self.iNumTeams {
+            let t = iTeam as usize;
+            let iTeamY = self.get_y_from_place(g.game_values.tournament_scores[t].wins);
 
-                self.miTeamImages[t].set_position((x - 40) as i16, iTeamY);
-                self.worldPointsBackground[t].as_mut().unwrap().set_position((x + 476) as i16, iTeamY);
+            self.miTeamImages[t].set_position((x - 40) as i16, iTeamY);
+            self.worldPointsBackground[t].as_mut().unwrap().set_position((x + 476) as i16, iTeamY);
 
-                for iPlayer in 0..self.iTeamCounts[t] {
-                    const iPlaceSprite: [i16; 4] = [4, 0, 8, 9];
-                    let p = iPlayer as usize;
-                    let img = &mut self.miPlayerImages[t][p];
-                    img.set_position((x + iScoreboardPlayerOffsetsX[(self.iTeamCounts[t] - 1) as usize][p] as i32 - 40) as i16, iTeamY + 16);
-                    img.set_image_source(Ptr::from_mut(
-                        &mut g.rm.spr_player[self.iTeamIDs[t][p] as usize][iPlaceSprite[g.game_values.tournament_scores[t].wins as usize] as usize],
-                    ));
-                }
+            for iPlayer in 0..self.iTeamCounts[t] {
+                const iPlaceSprite: [i16; 4] = [4, 0, 8, 9];
+                let p = iPlayer as usize;
+                let img = &mut self.miPlayerImages[t][p];
+                img.set_position((x + iScoreboardPlayerOffsetsX[(self.iTeamCounts[t] - 1) as usize][p] as i32 - 40) as i16, iTeamY + 16);
+                img.set_image_source(Ptr::from_mut(
+                    &mut g.rm.spr_player[self.iTeamIDs[t][p] as usize][iPlaceSprite[g.game_values.tournament_scores[t].wins as usize] as usize],
+                ));
+            }
 
-                let ts = self.tourScores[t].as_mut().unwrap();
-                ts.set_position((x + 508) as i16, iTeamY + 24);
-                ts.set_score(g.game_values.tournament_scores[t].total);
+            let ts = self.tourScores[t].as_mut().unwrap();
+            ts.set_position((x + 508) as i16, iTeamY + 24);
+            ts.set_score(g.game_values.tournament_scores[t].total);
 
-                if self.iGameWinner == -1 {
-                    self.worldScore.as_mut().unwrap().set_visible(false);
-                    self.worldScoreModifier.as_mut().unwrap().set_visible(false);
-                }
+            if self.iGameWinner == -1 {
+                self.worldScore.as_mut().unwrap().set_visible(false);
+                self.worldScoreModifier.as_mut().unwrap().set_visible(false);
+            }
 
-                if self.iGameWinner == iTeam {
-                    let ws = self.worldScore.as_mut().unwrap();
-                    ws.set_position((x + 350) as i16, iTeamY + 24);
-                    // TODO(world_tour_stop): worldScore->SetScore(tourStop->iPoints);
-                    ws.set_visible(true);
+            if self.iGameWinner == iTeam {
+                let ws = self.worldScore.as_mut().unwrap();
+                ws.set_position((x + 350) as i16, iTeamY + 24);
+                // TODO(world_tour_stop): worldScore->SetScore(tourStop->iPoints);
+                ws.set_visible(true);
 
-                    self.miTeamImages[t].set_image(0, 160, 496, 64);
+                self.miTeamImages[t].set_image(0, 160, 496, 64);
 
-                    let wsm = self.worldScoreModifier.as_mut().unwrap();
-                    if g.game_values.worldpointsbonus >= 0 {
-                        wsm.set_image((g.game_values.worldpointsbonus + 9) << 5, 0, 32, 32);
-                        wsm.set_position((x + 410) as i16, iTeamY + 14);
-                        wsm.set_visible(true);
-                    } else {
-                        wsm.set_visible(false);
-                    }
+                let wsm = self.worldScoreModifier.as_mut().unwrap();
+                if g.game_values.worldpointsbonus >= 0 {
+                    wsm.set_image((g.game_values.worldpointsbonus + 9) << 5, 0, 32, 32);
+                    wsm.set_position((x + 410) as i16, iTeamY + 14);
+                    wsm.set_visible(true);
                 } else {
-                    self.miTeamImages[t].set_image(0, 160, 344, 64);
+                    wsm.set_visible(false);
                 }
-
-                let wp = self.worldPlace[t].as_mut().unwrap();
-                wp.set_position((x + 102) as i16, iTeamY + 14);
-                wp.set_image(0, g.score[t].place << 5, 32, 32);
-                wp.set_visible(gameWinner >= 0);
+            } else {
+                self.miTeamImages[t].set_image(0, 160, 344, 64);
             }
 
-            let iBonusCounts: [i16; 4] = [0, 0, 0, 0];
+            let wp = self.worldPlace[t].as_mut().unwrap();
+            wp.set_position((x + 102) as i16, iTeamY + 14);
+            wp.set_image(0, g.score[t].place << 5, 32, 32);
+            wp.set_visible(gameWinner >= 0);
+        }
 
-            if gameWinner >= 0 {
-                // TODO(world_tour_stop): award loop over tourStop->wsbBonuses[0..iNumBonuses] (shows worldBonus images, increments iBonusCounts).
-            }
+        let iBonusCounts: [i16; 4] = [0, 0, 0, 0];
 
-            for iTeam in 0..self.iNumTeams as usize {
-                for iBonus in iBonusCounts[iTeam] as usize..MWB {
-                    self.worldBonus[iTeam][iBonus].as_mut().unwrap().set_visible(false);
-                }
-            }
+        if gameWinner >= 0 {
+            // TODO(world_tour_stop): award loop over tourStop->wsbBonuses[0..iNumBonuses] (shows worldBonus images, increments iBonusCounts).
+        }
 
-            if gameWinner >= 0 {
-                g.game_values.worldpointsbonus = -1;
+        for iTeam in 0..self.iNumTeams as usize {
+            for iBonus in iBonusCounts[iTeam] as usize..MWB {
+                self.worldBonus[iTeam][iBonus].as_mut().unwrap().set_visible(false);
             }
+        }
+
+        if gameWinner >= 0 {
+            g.game_values.worldpointsbonus = -1;
         }
     }
 
@@ -340,97 +336,93 @@ impl MI_TournamentScoreboard {
     pub fn refresh_tour_scores(&mut self, g: &mut Game) {
         self.determine_scoreboard_winners(g);
 
-        unsafe {
-            let x = self.m_pos.x as i32;
-            for iTeam in 0..self.iNumTeams {
-                let t = iTeam as usize;
-                let mut iTeamY = self.get_y_from_place(g.game_values.tournament_scores[t].wins);
-                iTeamY += 28; //shift down 28 pxls for extra tour points bar
+        let x = self.m_pos.x as i32;
+        for iTeam in 0..self.iNumTeams {
+            let t = iTeam as usize;
+            let mut iTeamY = self.get_y_from_place(g.game_values.tournament_scores[t].wins);
+            iTeamY += 28; //shift down 28 pxls for extra tour points bar
 
-                let dSpacing = self.get_icon_spacing();
+            let dSpacing = self.get_icon_spacing();
 
-                self.miTeamImages[t].set_position((x - 40) as i16, iTeamY);
+            self.miTeamImages[t].set_position((x - 40) as i16, iTeamY);
 
-                for iPlayer in 0..self.iTeamCounts[t] {
-                    const iPlaceSprite: [i16; 4] = [4, 0, 8, 9];
-                    let p = iPlayer as usize;
-                    let img = &mut self.miPlayerImages[t][p];
-                    img.set_position((x + iScoreboardPlayerOffsetsX[(self.iTeamCounts[t] - 1) as usize][p] as i32 - 40) as i16, iTeamY + 16);
-                    img.set_image_source(Ptr::from_mut(
-                        &mut g.rm.spr_player[self.iTeamIDs[t][p] as usize][iPlaceSprite[g.game_values.tournament_scores[t].wins as usize] as usize],
-                    ));
-                }
-
-                for iGame in 0..g.game_values.tourstopcurrent {
-                    let icon = &mut self.miIconImages[t][iGame];
-                    icon.set_image(0, g.game_values.tournament_scores[t].type_[iGame] * 32, 32, 32);
-
-                    icon.set_position(
-                        (x + 128 + dSpacing as i16 as i32 + (iGame as i16 as f32 * (32.0f32 + dSpacing)) as i16 as i32 - 40) as i16,
-                        iTeamY + 16,
-                    );
-
-                    icon.set_swirl(false, 0.0, 0.0, 0.0, 0.0);
-                    icon.set_pulse(false);
-                    icon.set_visible(true);
-                }
-
-                // TODO(world_tour_stop): C++ upper bound is game_values.tourstops.size(); CreateScoreboard sized the row with it.
-                for iGame in g.game_values.tourstopcurrent..self.iNumGames as usize {
-                    self.miIconImages[t][iGame].set_visible(false);
-                }
-
-                let ts = self.tourScores[t].as_mut().unwrap();
-                ts.set_position((x + 508) as i16, iTeamY + 24);
-                ts.set_score(g.game_values.tournament_scores[t].total);
+            for iPlayer in 0..self.iTeamCounts[t] {
+                const iPlaceSprite: [i16; 4] = [4, 0, 8, 9];
+                let p = iPlayer as usize;
+                let img = &mut self.miPlayerImages[t][p];
+                img.set_position((x + iScoreboardPlayerOffsetsX[(self.iTeamCounts[t] - 1) as usize][p] as i32 - 40) as i16, iTeamY + 16);
+                img.set_image_source(Ptr::from_mut(
+                    &mut g.rm.spr_player[self.iTeamIDs[t][p] as usize][iPlaceSprite[g.game_values.tournament_scores[t].wins as usize] as usize],
+                ));
             }
+
+            for iGame in 0..g.game_values.tourstopcurrent {
+                let icon = &mut self.miIconImages[t][iGame];
+                icon.set_image(0, g.game_values.tournament_scores[t].type_[iGame] * 32, 32, 32);
+
+                icon.set_position(
+                    (x + 128 + dSpacing as i16 as i32 + (iGame as i16 as f32 * (32.0f32 + dSpacing)) as i16 as i32 - 40) as i16,
+                    iTeamY + 16,
+                );
+
+                icon.set_swirl(false, 0.0, 0.0, 0.0, 0.0);
+                icon.set_pulse(false);
+                icon.set_visible(true);
+            }
+
+            // TODO(world_tour_stop): C++ upper bound is game_values.tourstops.size(); CreateScoreboard sized the row with it.
+            for iGame in g.game_values.tourstopcurrent..self.iNumGames as usize {
+                self.miIconImages[t][iGame].set_visible(false);
+            }
+
+            let ts = self.tourScores[t].as_mut().unwrap();
+            ts.set_position((x + 508) as i16, iTeamY + 24);
+            ts.set_score(g.game_values.tournament_scores[t].total);
         }
     }
 
     pub fn determine_scoreboard_winners(&mut self, g: &mut Game) {
-        unsafe {
-            //Detect a Tie
-            let mut iNumWinningTeams: i16 = 0;
-            let mut iWinningTeams: [i16; 4] = [-1, -1, -1, -1];
+        //Detect a Tie
+        let mut iNumWinningTeams: i16 = 0;
+        let mut iWinningTeams: [i16; 4] = [-1, -1, -1, -1];
 
-            for iTeam in 0..self.iNumTeams {
-                if g.game_values.tournament_scores[iTeam as usize].wins == 0 {
-                    iWinningTeams[iNumWinningTeams as usize] = iTeam;
-                    iNumWinningTeams += 1;
+        for iTeam in 0..self.iNumTeams {
+            if g.game_values.tournament_scores[iTeam as usize].wins == 0 {
+                iWinningTeams[iNumWinningTeams as usize] = iTeam;
+                iNumWinningTeams += 1;
+            }
+        }
+
+        //Adjust tied scores so display is right
+        for iMyTeam in 0..self.iNumTeams as usize {
+            for iTheirTeam in 0..self.iNumTeams as usize {
+                if iMyTeam == iTheirTeam {
+                    continue;
+                }
+
+                if g.game_values.tournament_scores[iMyTeam].wins == g.game_values.tournament_scores[iTheirTeam].wins {
+                    g.game_values.tournament_scores[iTheirTeam].wins += 1;
                 }
             }
+        }
 
-            //Adjust tied scores so display is right
-            for iMyTeam in 0..self.iNumTeams as usize {
-                for iTheirTeam in 0..self.iNumTeams as usize {
-                    if iMyTeam == iTheirTeam {
-                        continue;
-                    }
-
-                    if g.game_values.tournament_scores[iMyTeam].wins == g.game_values.tournament_scores[iTheirTeam].wins {
-                        g.game_values.tournament_scores[iTheirTeam].wins += 1;
-                    }
-                }
+        //There was a single team winner
+        if g.game_values.tournamentwinner != -1 {
+            if iNumWinningTeams == 1 {
+                self.iTournamentWinner = iWinningTeams[0];
+            } else {
+                self.iTournamentWinner = -2;
             }
 
-            //There was a single team winner
-            if g.game_values.tournamentwinner != -1 {
-                if iNumWinningTeams == 1 {
-                    self.iTournamentWinner = iWinningTeams[0];
-                } else {
-                    self.iTournamentWinner = -2;
-                }
+            g.game_values.tournamentwinner = self.iTournamentWinner;
 
-                g.game_values.tournamentwinner = self.iTournamentWinner;
+            //Flash the background of the winning teams
+            for iTeam in 0..iNumWinningTeams as usize {
+                let w = iWinningTeams[iTeam] as usize;
+                self.miTeamImages[w].set_animation_speed(20);
 
-                //Flash the background of the winning teams
-                for iTeam in 0..iNumWinningTeams as usize {
-                    let w = iWinningTeams[iTeam] as usize;
-                    self.miTeamImages[w].set_animation_speed(20);
-
-                    if let Some(bg) = self.worldPointsBackground[w].as_mut() {
-                        bg.set_animation_speed(20);
-                    }
+                if let Some(bg) = self.worldPointsBackground[w].as_mut() {
+                    bg.set_animation_speed(20);
                 }
             }
         }
@@ -443,38 +435,36 @@ impl MI_TournamentScoreboard {
         self.iSwirlIconTeam = -1;
         self.iSwirlIconGame = -1;
 
-        unsafe {
-            if g.game_values.tournament_scores[self.iGameWinner as usize].wins == self.iNumGames {
-                self.iTournamentWinner = self.iGameWinner;
-                let w = self.iTournamentWinner as usize;
-                self.miTeamImages[w].set_animation_speed(20);
+        if g.game_values.tournament_scores[self.iGameWinner as usize].wins == self.iNumGames {
+            self.iTournamentWinner = self.iGameWinner;
+            let w = self.iTournamentWinner as usize;
+            self.miTeamImages[w].set_animation_speed(20);
 
-                if let Some(bg) = self.worldPointsBackground[w].as_mut() {
-                    bg.set_animation_speed(20);
+            if let Some(bg) = self.worldPointsBackground[w].as_mut() {
+                bg.set_animation_speed(20);
+            }
+        }
+
+        for iTeam in 0..self.iNumTeams {
+            let t = iTeam as usize;
+            for iGame in 0..g.game_values.tournament_scores[t].wins {
+                let g = iGame as usize;
+                self.miIconImages[t][g].set_image(gp.game_values.tournament_scores[t].type_[g] * 32, 0, 32, 32);
+
+                if self.iTournamentWinner < 0 && self.iGameWinner == iTeam && iGame == gp.game_values.tournament_scores[t].wins - 1 {
+                    self.iSwirlIconTeam = iTeam;
+                    self.iSwirlIconGame = iGame;
+
+                    let angle = RANDOM_INT(gp.get(), 1000) as f32 * TWO_PI / 1000.0f32;
+                    self.miIconImages[t][g].set_swirl(true, 250.0, angle, 3.0, 0.1);
                 }
+
+                self.miIconImages[t][g].set_pulse(false);
+                self.miIconImages[t][g].set_visible(true);
             }
 
-            for iTeam in 0..self.iNumTeams {
-                let t = iTeam as usize;
-                for iGame in 0..g.game_values.tournament_scores[t].wins {
-                    let g = iGame as usize;
-                    self.miIconImages[t][g].set_image(gp.game_values.tournament_scores[t].type_[g] * 32, 0, 32, 32);
-
-                    if self.iTournamentWinner < 0 && self.iGameWinner == iTeam && iGame == gp.game_values.tournament_scores[t].wins - 1 {
-                        self.iSwirlIconTeam = iTeam;
-                        self.iSwirlIconGame = iGame;
-
-                        let angle = RANDOM_INT(gp.get(), 1000) as f32 * TWO_PI / 1000.0f32;
-                        self.miIconImages[t][g].set_swirl(true, 250.0, angle, 3.0, 0.1);
-                    }
-
-                    self.miIconImages[t][g].set_pulse(false);
-                    self.miIconImages[t][g].set_visible(true);
-                }
-
-                for iGame in g.game_values.tournament_scores[t].wins..self.iNumGames {
-                    self.miIconImages[t][iGame as usize].set_visible(false);
-                }
+            for iGame in g.game_values.tournament_scores[t].wins..self.iNumGames {
+                self.miIconImages[t][iGame as usize].set_visible(false);
             }
         }
     }
@@ -493,91 +483,89 @@ impl UI_ControlTrait for MI_TournamentScoreboard {
 
     fn update(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        unsafe {
-            for iTeam in 0..self.iNumTeams as usize {
-                self.miTeamImages[iTeam].update(g);
+        for iTeam in 0..self.iNumTeams as usize {
+            self.miTeamImages[iTeam].update(g);
 
-                for iGame in 0..self.iNumGames as usize {
-                    self.miIconImages[iTeam][iGame].update(g);
-                }
-
-                for iPlayer in 0..self.iTeamCounts[iTeam] as usize {
-                    self.miPlayerImages[iTeam][iPlayer].update(g);
-                }
-
-                if let Some(bg) = self.worldPointsBackground[iTeam].as_mut() {
-                    bg.update(g);
-                }
+            for iGame in 0..self.iNumGames as usize {
+                self.miIconImages[iTeam][iGame].update(g);
             }
 
-            if g.game_values.matchtype == MatchType::Tour {
-                for iGame in 0..self.iNumGames as usize {
-                    if let Some(b) = self.tourBonus[iGame].as_mut() {
-                        b.update(g);
-                    }
-                }
+            for iPlayer in 0..self.iTeamCounts[iTeam] as usize {
+                self.miPlayerImages[iTeam][iPlayer].update(g);
             }
 
-            if !self.m_parentMenu.is_null() {
-                if self.iTournamentWinner != -1 {
-                    //Single tournament winning team
-                    self.iFireworksCounter -= 1;
-                    if self.iFireworksCounter < 0 && self.iTournamentWinner >= 0 {
-                        self.iFireworksCounter = (RANDOM_INT(gp.get(), 30) + 10) as i16;
+            if let Some(bg) = self.worldPointsBackground[iTeam].as_mut() {
+                bg.update(g);
+            }
+        }
 
-                        let w = self.iTournamentWinner as usize;
-                        self.iExplosionCounter -= 1;
-                        if self.iExplosionCounter < 0 {
-                            self.iExplosionCounter = (RANDOM_INT(gp.get(), 6) + 5) as i16;
+        if g.game_values.matchtype == MatchType::Tour {
+            for iGame in 0..self.iNumGames as usize {
+                if let Some(b) = self.tourBonus[iGame].as_mut() {
+                    b.update(g);
+                }
+            }
+        }
 
-                            if_sound_on_play(g, &mut gp.rm.sfx_bobombsound);
+        if !self.m_parentMenu.is_null() {
+            if self.iTournamentWinner != -1 {
+                //Single tournament winning team
+                self.iFireworksCounter -= 1;
+                if self.iFireworksCounter < 0 && self.iTournamentWinner >= 0 {
+                    self.iFireworksCounter = (RANDOM_INT(gp.get(), 30) + 10) as i16;
 
-                            let mut dAngle: f32 = 0.0;
-                            let iRandX = (RANDOM_INT(gp.get(), 440) + 100) as i16;
-                            let iRandY = (RANDOM_INT(gp.get(), 280) + 100) as i16;
+                    let w = self.iTournamentWinner as usize;
+                    self.iExplosionCounter -= 1;
+                    if self.iExplosionCounter < 0 {
+                        self.iExplosionCounter = (RANDOM_INT(gp.get(), 6) + 5) as i16;
 
-                            for iBlock in 0..28i16 {
-                                let dVel: f32 = 7.0f32 + ((iBlock % 2) as f32 * 5.0f32);
-                                let dVelX = dVel * cosf(dAngle);
-                                let dVelY = dVel * sinf(dAngle);
+                        if_sound_on_play(g, &mut gp.rm.sfx_bobombsound);
 
-                                let iRandomColor = RANDOM_INT(gp.get(), self.iTeamCounts[w] as i32) as i16;
-                                let _ = (iRandX, iRandY, dVelX, dVelY, g.game_values.colorids[self.iTeamIDs[w][iRandomColor as usize] as usize] << 4);
-                                // TODO(eyecandy): m_parentMenu->AddEyeCandy<EC_FallingObject>(&rm->spr_bonus, iRandX, iRandY, dVelX, dVelY, 4, 2, 0, game_values.colorids[iTeamIDs[iTournamentWinner][iRandomColor]] << 4, 16, 16);
-                                dAngle -= PI / 14.0f32;
-                            }
-                        } else {
-                            if_sound_on_play(g, &mut gp.rm.sfx_cannon);
+                        let mut dAngle: f32 = 0.0;
+                        let iRandX = (RANDOM_INT(gp.get(), 440) + 100) as i16;
+                        let iRandY = (RANDOM_INT(gp.get(), 280) + 100) as i16;
 
-                            let iRandX = RANDOM_INT(gp.get(), 576) as i16;
-                            let iRandY = RANDOM_INT(gp.get(), 416) as i16;
+                        for iBlock in 0..28i16 {
+                            let dVel: f32 = 7.0f32 + ((iBlock % 2) as f32 * 5.0f32);
+                            let dVelX = dVel * cosf(dAngle);
+                            let dVelY = dVel * sinf(dAngle);
+
                             let iRandomColor = RANDOM_INT(gp.get(), self.iTeamCounts[w] as i32) as i16;
-
-                            let _ = (iRandX, iRandY, g.game_values.colorids[self.iTeamIDs[w][iRandomColor as usize] as usize] << 6);
-                            // TODO(eyecandy): m_parentMenu->AddEyeCandy<EC_SingleAnimation>(&rm->spr_fireworks, iRandX, iRandY, 8, 4, 0, game_values.colorids[iTeamIDs[iTournamentWinner][iRandomColor]] << 6, 64, 64);
+                            let _ = (iRandX, iRandY, dVelX, dVelY, g.game_values.colorids[self.iTeamIDs[w][iRandomColor as usize] as usize] << 4);
+                            // TODO(eyecandy): m_parentMenu->AddEyeCandy<EC_FallingObject>(&rm->spr_bonus, iRandX, iRandY, dVelX, dVelY, 4, 2, 0, game_values.colorids[iTeamIDs[iTournamentWinner][iRandomColor]] << 4, 16, 16);
+                            dAngle -= PI / 14.0f32;
                         }
+                    } else {
+                        if_sound_on_play(g, &mut gp.rm.sfx_cannon);
+
+                        let iRandX = RANDOM_INT(gp.get(), 576) as i16;
+                        let iRandY = RANDOM_INT(gp.get(), 416) as i16;
+                        let iRandomColor = RANDOM_INT(gp.get(), self.iTeamCounts[w] as i32) as i16;
+
+                        let _ = (iRandX, iRandY, g.game_values.colorids[self.iTeamIDs[w][iRandomColor as usize] as usize] << 6);
+                        // TODO(eyecandy): m_parentMenu->AddEyeCandy<EC_SingleAnimation>(&rm->spr_fireworks, iRandX, iRandY, 8, 4, 0, game_values.colorids[iTeamIDs[iTournamentWinner][iRandomColor]] << 6, 64, 64);
+                    }
+                }
+
+                self.iWinnerTextCounter -= 1;
+                if self.iWinnerTextCounter < 0 {
+                    self.iWinnerTextCounter = (RANDOM_INT(gp.get(), 35) + 15) as i16;
+
+                    let mut szWinnerText = String::new();
+                    if self.iTournamentWinner == -2 {
+                        szWinnerText = "Tied Game!".to_string();
+                    } else if self.iTeamCounts[self.iTournamentWinner as usize] == 1 {
+                        szWinnerText = format!("Player {} Wins!", self.iTeamIDs[self.iTournamentWinner as usize][0] + 1);
+                    } else if self.iTeamCounts[self.iTournamentWinner as usize] > 1 {
+                        szWinnerText = format!("Team {} Wins!", self.iTournamentWinner + 1);
                     }
 
-                    self.iWinnerTextCounter -= 1;
-                    if self.iWinnerTextCounter < 0 {
-                        self.iWinnerTextCounter = (RANDOM_INT(gp.get(), 35) + 15) as i16;
+                    let iStringWidth = g.rm.menu_font_large.get_width(&szWinnerText) as i16;
+                    let iRandX = (RANDOM_INT(gp.get(), App::screenWidth - iStringWidth as i32) + (iStringWidth >> 1) as i32) as i16;
+                    let iRandY = (RANDOM_INT(gp.get(), App::screenHeight - 100) + 100) as i16;
 
-                        let mut szWinnerText = String::new();
-                        if self.iTournamentWinner == -2 {
-                            szWinnerText = "Tied Game!".to_string();
-                        } else if self.iTeamCounts[self.iTournamentWinner as usize] == 1 {
-                            szWinnerText = format!("Player {} Wins!", self.iTeamIDs[self.iTournamentWinner as usize][0] + 1);
-                        } else if self.iTeamCounts[self.iTournamentWinner as usize] > 1 {
-                            szWinnerText = format!("Team {} Wins!", self.iTournamentWinner + 1);
-                        }
-
-                        let iStringWidth = g.rm.menu_font_large.get_width(&szWinnerText) as i16;
-                        let iRandX = (RANDOM_INT(gp.get(), App::screenWidth - iStringWidth as i32) + (iStringWidth >> 1) as i32) as i16;
-                        let iRandY = (RANDOM_INT(gp.get(), App::screenHeight - 100) + 100) as i16;
-
-                        let _ = (iRandX, iRandY, -VELJUMP);
-                        // TODO(eyecandy): m_parentMenu->AddEyeCandy<EC_GravText>(&rm->menu_font_large, iRandX, iRandY, szWinnerText, -VELJUMP);
-                    }
+                    let _ = (iRandX, iRandY, -VELJUMP);
+                    // TODO(eyecandy): m_parentMenu->AddEyeCandy<EC_GravText>(&rm->menu_font_large, iRandX, iRandY, szWinnerText, -VELJUMP);
                 }
             }
         }
@@ -607,41 +595,39 @@ impl UI_ControlTrait for MI_TournamentScoreboard {
             self.miIconImages[self.iSwirlIconTeam as usize][self.iSwirlIconGame as usize].draw(g);
         }
 
-        unsafe {
-            //Draw tour totals
-            if g.game_values.matchtype == MatchType::Tour {
-                for iTeam in 0..self.iNumTeams as usize {
-                    self.tourScores[iTeam].as_mut().unwrap().draw(g);
+        //Draw tour totals
+        if g.game_values.matchtype == MatchType::Tour {
+            for iTeam in 0..self.iNumTeams as usize {
+                self.tourScores[iTeam].as_mut().unwrap().draw(g);
+            }
+
+            self.miTourPointBar.as_mut().unwrap().draw(g);
+
+            for iGame in 0..self.iNumGames as usize {
+                if let Some(b) = self.tourBonus[iGame].as_mut() {
+                    b.draw(g);
                 }
 
-                self.miTourPointBar.as_mut().unwrap().draw(g);
+                self.tourPoints[iGame].as_mut().unwrap().draw(g);
+            }
+        }
 
-                for iGame in 0..self.iNumGames as usize {
-                    if let Some(b) = self.tourBonus[iGame].as_mut() {
-                        b.draw(g);
-                    }
+        if g.game_values.matchtype == MatchType::World {
+            for iTeam in 0..self.iNumTeams as usize {
+                self.worldPointsBackground[iTeam].as_mut().unwrap().draw(g);
+            }
 
-                    self.tourPoints[iGame].as_mut().unwrap().draw(g);
+            for iTeam in 0..self.iNumTeams as usize {
+                self.tourScores[iTeam].as_mut().unwrap().draw(g);
+                self.worldPlace[iTeam].as_mut().unwrap().draw(g);
+
+                for iBonus in 0..MWB {
+                    self.worldBonus[iTeam][iBonus].as_mut().unwrap().draw(g);
                 }
             }
 
-            if g.game_values.matchtype == MatchType::World {
-                for iTeam in 0..self.iNumTeams as usize {
-                    self.worldPointsBackground[iTeam].as_mut().unwrap().draw(g);
-                }
-
-                for iTeam in 0..self.iNumTeams as usize {
-                    self.tourScores[iTeam].as_mut().unwrap().draw(g);
-                    self.worldPlace[iTeam].as_mut().unwrap().draw(g);
-
-                    for iBonus in 0..MWB {
-                        self.worldBonus[iTeam][iBonus].as_mut().unwrap().draw(g);
-                    }
-                }
-
-                self.worldScoreModifier.as_mut().unwrap().draw(g);
-                self.worldScore.as_mut().unwrap().draw(g);
-            }
+            self.worldScoreModifier.as_mut().unwrap().draw(g);
+            self.worldScore.as_mut().unwrap().draw(g);
         }
     }
 }

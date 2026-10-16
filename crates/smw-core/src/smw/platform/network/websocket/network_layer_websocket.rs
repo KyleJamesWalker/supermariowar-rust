@@ -183,7 +183,7 @@ impl Relay {
                 break;
             }
             if len >= 0 {
-                let message = unsafe { g.recv_buffer[..len as usize].to_vec() };
+                let message = g.recv_buffer[..len as usize].to_vec();
                 self.dispatch(&message);
             }
         }

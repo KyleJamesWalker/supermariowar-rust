@@ -45,12 +45,10 @@ impl OMO_PipeCoin {
 
         this.velx = vel.x;
 
-        unsafe {
-            if g.pipegamemode.is_slowdown() {
-                this.vely = vel.y / 2.0f32;
-            } else {
-                this.vely = vel.y;
-            }
+        if g.pipegamemode.is_slowdown() {
+            this.vely = vel.y / 2.0f32;
+        } else {
+            this.vely = vel.y;
         }
 
         this.iUncollectableTime = uncollectabletime;
@@ -83,12 +81,10 @@ impl CObjectTrait for OMO_PipeCoin {
             self.dead = true;
         }
 
-        unsafe {
-            if g.pipegamemode.is_slowdown() {
-                self.vely += GRAVITATION / 1.5f32;
-            } else {
-                self.vely += GRAVITATION;
-            }
+        if g.pipegamemode.is_slowdown() {
+            self.vely += GRAVITATION / 1.5f32;
+        } else {
+            self.vely += GRAVITATION;
         }
 
         self.sparkleanimationtimer += 1;
@@ -112,21 +108,19 @@ impl CObjectTrait for OMO_PipeCoin {
         let srcRect = Rect { x: self.drawframe as i32, y: self.animationOffsetY as i32, w: self.iw as i32, h: self.ih as i32 };
         let sparkleRect = Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 };
 
-        unsafe {
-            if self.iUncollectableTime > 0 {
-                self.spr.draw_clip(g, x, y, &srcRect, ClipEdge::Bottom, 256);
+        if self.iUncollectableTime > 0 {
+            self.spr.draw_clip(g, x, y, &srcRect, ClipEdge::Bottom, 256);
 
-                // Draw sparkles
-                if self.iTeamID == -1 {
-                    gp.rm.spr_shinesparkle.draw_clip(g, x, y, &sparkleRect, ClipEdge::Bottom, 256);
-                }
-            } else {
-                self.spr.draw_src(g, x, y, &srcRect);
+            // Draw sparkles
+            if self.iTeamID == -1 {
+                gp.rm.spr_shinesparkle.draw_clip(g, x, y, &sparkleRect, ClipEdge::Bottom, 256);
+            }
+        } else {
+            self.spr.draw_src(g, x, y, &srcRect);
 
-                // Draw sparkles
-                if self.iTeamID == -1 {
-                    gp.rm.spr_shinesparkle.draw_src(g, x, y, &sparkleRect);
-                }
+            // Draw sparkles
+            if self.iTeamID == -1 {
+                gp.rm.spr_shinesparkle.draw_src(g, x, y, &sparkleRect);
             }
         }
     }
@@ -137,29 +131,27 @@ impl CObjectTrait for OMO_PipeCoin {
             return false;
         }
 
-        unsafe {
-            if !g.game_values.gamemode.gameover {
-                if self.iTeamID != -1 {
-                    if player.teamID == self.iTeamID {
-                        player.score().adjust_score(g, 1);
-                        if_sound_on_play(g, &mut gp.rm.sfx_coin);
-                    }
-                } else if self.iColorID == 2 {
+        if !g.game_values.gamemode.gameover {
+            if self.iTeamID != -1 {
+                if player.teamID == self.iTeamID {
                     player.score().adjust_score(g, 1);
                     if_sound_on_play(g, &mut gp.rm.sfx_coin);
-                } else if self.iColorID == 0 {
-                    player.score().adjust_score(g, -1);
-                    if_sound_on_play(g, &mut gp.rm.sfx_stun);
-                } else if self.iColorID == 1 {
-                    player.score().adjust_score(g, 5);
-                    if_sound_on_play(g, &mut gp.rm.sfx_extraguysound);
                 }
-
-                gp.game_values.gamemode.check_winner(g, player);
+            } else if self.iColorID == 2 {
+                player.score().adjust_score(g, 1);
+                if_sound_on_play(g, &mut gp.rm.sfx_coin);
+            } else if self.iColorID == 0 {
+                player.score().adjust_score(g, -1);
+                if_sound_on_play(g, &mut gp.rm.sfx_stun);
+            } else if self.iColorID == 1 {
+                player.score().adjust_score(g, 5);
+                if_sound_on_play(g, &mut gp.rm.sfx_extraguysound);
             }
 
-            g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_coinsparkle), self.ix, self.iy, 7, 4));
+            gp.game_values.gamemode.check_winner(g, player);
         }
+
+        g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_coinsparkle), self.ix, self.iy, 7, 4));
 
         self.dead = true;
         false

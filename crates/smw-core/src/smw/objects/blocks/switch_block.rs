@@ -36,9 +36,7 @@ impl B_SwitchBlock {
 
     pub fn flip_state(&mut self, g: &mut Game, playerID: i16) {
         self.state = (1 - self.state as i32) as i16;
-        unsafe {
-            g.g_map.update_tile_gap(self.col, self.row);
-        }
+        g.g_map.update_tile_gap(self.col, self.row);
 
         if self.state == 0 {
             io_block_kill_players_and_objects_inside_block(g, self, playerID);

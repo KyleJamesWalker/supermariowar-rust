@@ -19,23 +19,21 @@ impl MapReader {
 
     pub(super) fn read_tiles_1500(&mut self, g: &mut Game, map: &mut CMap, mapfile: &mut BinaryFile) {
         let mut gp = g.ptr();
-        unsafe {
-            for j in 0..MAPHEIGHT as usize {
-                for i in 0..MAPWIDTH as usize {
-                    let iTileID: i16 = mapfile.read_i32() as i16;
+        for j in 0..MAPHEIGHT as usize {
+            for i in 0..MAPWIDTH as usize {
+                let iTileID: i16 = mapfile.read_i32() as i16;
 
-                    let tile = &mut map.mapdata[i][j][1];
-                    tile.iID = g.g_tilesetmanager.classic_tileset_index() as i16;
-                    tile.iCol = iTileID % 32;
-                    tile.iRow = iTileID / 32;
+                let tile = &mut map.mapdata[i][j][1];
+                tile.iID = g.g_tilesetmanager.classic_tileset_index() as i16;
+                tile.iCol = iTileID % 32;
+                tile.iRow = iTileID / 32;
 
-                    let iType = gp.g_tilesetmanager.classic_tileset(g).tile_type(tile.iCol as isize as usize, tile.iRow as isize as usize);
-                    map.mapdatatop[i][j] = iType;
+                let iType = gp.g_tilesetmanager.classic_tileset(g).tile_type(tile.iCol as isize as usize, tile.iRow as isize as usize);
+                map.mapdatatop[i][j] = iType;
 
-                    map.mapdata[i][j][0].iID = TILESETNONE as i16;
-                    map.mapdata[i][j][2].iID = TILESETNONE as i16;
-                    map.mapdata[i][j][3].iID = TILESETNONE as i16;
-                }
+                map.mapdata[i][j][0].iID = TILESETNONE as i16;
+                map.mapdata[i][j][2].iID = TILESETNONE as i16;
+                map.mapdata[i][j][3].iID = TILESETNONE as i16;
             }
         }
 

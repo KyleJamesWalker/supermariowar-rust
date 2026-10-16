@@ -163,7 +163,7 @@ pub fn mo_carried_object_kick<T: MO_CarriedObjectTrait + ?Sized>(g: &mut Game, t
             let owner = o.owner;
             o.velx = owner.velx + if owner.is_facing_right(g) { o.dKickX } else { -o.dKickX };
             o.vely = -o.dKickY;
-            unsafe { if_sound_on_play(g, &mut gp.rm.sfx_kicksound) };
+            if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
         }
     }
 

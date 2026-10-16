@@ -39,54 +39,50 @@ impl FPSLimiter {
     #[cfg(not(target_os = "emscripten"))]
     pub fn before_flip(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        unsafe {
-            self.ticks = crate::services::ticks(gp.get()).wrapping_sub(self.framestart);
-            if self.ticks == 0 {
-                self.ticks = 1;
-            }
+        self.ticks = crate::services::ticks(gp.get()).wrapping_sub(self.framestart);
+        if self.ticks == 0 {
+            self.ticks = 1;
+        }
 
-            // `#if !_DEBUG`: the reference build is Release.
-            if g.game_values.showfps {
-                let potentialFps = 1000.0f32 / (if g.game_values.framelimiter == 0 { 1 } else { g.game_values.framelimiter }) as f32;
-                // TODO(resource_manager): rm->menu_font_large.drawf(0, 480 - rm->menu_font_large.getHeight(),
-                //     "Actual:%.1f/%.1f, Flip:%.1f, Potential:%.1f", realfps, potentialFps, flipfps, 1000.0f / (float)ticks);
-            }
+        // `#if !_DEBUG`: the reference build is Release.
+        if g.game_values.showfps {
+            let potentialFps = 1000.0f32 / (if g.game_values.framelimiter == 0 { 1 } else { g.game_values.framelimiter }) as f32;
+            // TODO(resource_manager): rm->menu_font_large.drawf(0, 480 - rm->menu_font_large.getHeight(),
+            //     "Actual:%.1f/%.1f, Flip:%.1f, Potential:%.1f", realfps, potentialFps, flipfps, 1000.0f / (float)ticks);
         }
     }
 
     #[cfg(not(target_os = "emscripten"))]
     pub fn after_flip(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        unsafe {
-            self.flipfps = 1000.0f32 / self.ticks as f32;
+        self.flipfps = 1000.0f32 / self.ticks as f32;
 
-            if harness::no_limit(g) {
-                return;
-            }
-
-            //Sleep for time just under what we need
-            let framelimiter = if harness::speed(g) == 1.0 { g.game_values.framelimiter as i32 } else { (g.game_values.framelimiter as f32 / harness::speed(g)) as i32 };
-            let mut delay: i16 = (framelimiter as u32).wrapping_sub(crate::services::ticks(gp.get())).wrapping_add(self.framestart).wrapping_sub(2) as i16;
-
-            if delay > 0 {
-                if delay as i32 > framelimiter {
-                    delay = framelimiter as i16;
-                }
-
-                crate::services::delay(gp.get(), delay as u32);
-            }
-
-            //Fine tune wait here
-            while crate::services::ticks(gp.get()).wrapping_sub(self.framestart) < (framelimiter as u16) as u32 {
-                crate::services::delay(gp.get(), 0); //keep framerate constant at 1000/game_values.framelimiter fps
-            }
-
-            self.ticks = crate::services::ticks(gp.get()).wrapping_sub(self.framestart);
-            if self.ticks == 0 {
-                self.ticks = framelimiter as u32;
-            }
-
-            self.realfps = 1000.0f32 / self.ticks as f32;
+        if harness::no_limit(g) {
+            return;
         }
+
+        //Sleep for time just under what we need
+        let framelimiter = if harness::speed(g) == 1.0 { g.game_values.framelimiter as i32 } else { (g.game_values.framelimiter as f32 / harness::speed(g)) as i32 };
+        let mut delay: i16 = (framelimiter as u32).wrapping_sub(crate::services::ticks(gp.get())).wrapping_add(self.framestart).wrapping_sub(2) as i16;
+
+        if delay > 0 {
+            if delay as i32 > framelimiter {
+                delay = framelimiter as i16;
+            }
+
+            crate::services::delay(gp.get(), delay as u32);
+        }
+
+        //Fine tune wait here
+        while crate::services::ticks(gp.get()).wrapping_sub(self.framestart) < (framelimiter as u16) as u32 {
+            crate::services::delay(gp.get(), 0); //keep framerate constant at 1000/game_values.framelimiter fps
+        }
+
+        self.ticks = crate::services::ticks(gp.get()).wrapping_sub(self.framestart);
+        if self.ticks == 0 {
+            self.ticks = framelimiter as u32;
+        }
+
+        self.realfps = 1000.0f32 / self.ticks as f32;
     }
 }

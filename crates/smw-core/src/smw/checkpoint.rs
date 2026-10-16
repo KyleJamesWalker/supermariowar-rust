@@ -215,7 +215,7 @@ pub fn local_path(g: &mut Game, path: &str) -> String {
 }
 
 pub fn note_match_map(g: &mut Game, path: &str) {
-    unsafe { g.match_map = data_relative(path) };
+    g.match_map = data_relative(path);
 }
 
 fn data_path(g: &mut Game, name: &str) -> String {
@@ -229,12 +229,10 @@ fn data_path(g: &mut Game, name: &str) -> String {
 /// Matches a checkpoint cannot start: a World's bonus house, which no replay covers yet.
 pub fn unsupported_reason(g: &mut Game) -> Option<&'static str> {
     let mut gp = g.ptr();
-    unsafe {
-        let g = gp;
-        let stop = g.game_values.tourstops.get(g.game_values.tourstopcurrent);
-        if g.game_values.matchtype == MatchType::World && stop.is_some_and(|s| s.iStageType == 1) {
-            return Some("bonus_house");
-        }
+    let g = gp;
+    let stop = g.game_values.tourstops.get(g.game_values.tourstopcurrent);
+    if g.game_values.matchtype == MatchType::World && stop.is_some_and(|s| s.iStageType == 1) {
+        return Some("bonus_house");
     }
     None
 }
@@ -242,7 +240,7 @@ pub fn unsupported_reason(g: &mut Game) -> Option<&'static str> {
 /// The checkpoint at the current point of `MenuState::enter_gameplay`.
 pub fn capture(g: &mut Game) -> Vec<u8> {
     let mut gp = g.ptr();
-    let online = unsafe { gp.netplay.active };
+    let online = gp.netplay.active;
     let mut s = Snap::saver();
     s.put(MAGIC);
     s.put(&[if online { ONLINE_VERSION } else { VERSION }]);
@@ -521,86 +519,82 @@ fn slug(text: &str) -> String {
 /// The fields of a match's start marker: what was played, where, by whom.
 pub fn start_fields(g: &mut Game) -> String {
         let mut gp = g.ptr();
-    unsafe {
-        let gv = &mut *gp.game_values;
-        let mut f: Vec<String> = Vec::new();
-        f.push(kv("type", match gv.matchtype {
-            MatchType::SingleGame => "single",
-            MatchType::Tournament => "tournament",
-            MatchType::Tour => "tour",
-            MatchType::MiniGame => "minigame",
-            MatchType::World => "world",
-            MatchType::QuickGame => "quick",
-            MatchType::NetGame => "online",
+    let gv = &mut *gp.game_values;
+    let mut f: Vec<String> = Vec::new();
+    f.push(kv("type", match gv.matchtype {
+        MatchType::SingleGame => "single",
+        MatchType::Tournament => "tournament",
+        MatchType::Tour => "tour",
+        MatchType::MiniGame => "minigame",
+        MatchType::World => "world",
+        MatchType::QuickGame => "quick",
+        MatchType::NetGame => "online",
+    }));
+    let gm = gv.gamemode;
+    f.push(kv("mode", &slug(gm.get_mode_name())));
+    if gm.gamemode == crate::common::game_mode::game_mode_star {
+        f.push(kv("style", match gv.gamemodesettings.star.shine {
+            StarStyle::Ztar => "ztar",
+            StarStyle::Shine => "shine",
+            StarStyle::Multi => "multi",
+            _ => "random",
         }));
-        let gm = gv.gamemode;
-        f.push(kv("mode", &slug(gm.get_mode_name())));
-        if gm.gamemode == crate::common::game_mode::game_mode_star {
-            f.push(kv("style", match gv.gamemodesettings.star.shine {
-                StarStyle::Ztar => "ztar",
-                StarStyle::Shine => "shine",
-                StarStyle::Multi => "multi",
-                _ => "random",
-            }));
-        }
-        f.push(kv("goal", &gm.goal.to_string()));
-        let map = g.match_map.clone();
-        let short = Path::new(&map).file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
-        let short = short.split_once('_').map(|(_, rest)| rest.to_string()).unwrap_or(short);
-        f.push(kv("map", &short));
-        f.push(kv("file", &portable_path(g, &map)));
-        match gv.matchtype {
-            MatchType::Tournament => {
-                let played: i16 = gv.tournament_scores.iter().map(|t| t.wins).sum();
-                f.push(kv("game", &format!("{}", played + 1)));
-                f.push(kv("wins_needed", &gv.tournamentgames.to_string()));
-            }
-            MatchType::Tour | MatchType::World => {
-                let name = if gv.matchtype == MatchType::World { g.g_worldmap.get_world_name().to_string() } else {
-                    g.tourlist.current_path().file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default()
-                };
-                f.push(kv(if gv.matchtype == MatchType::World { "world" } else { "tour" }, &name));
-                f.push(kv("stop", &format!("{}/{}", gv.tourstopcurrent + 1, gv.tourstops.len())));
-            }
-            _ => {}
-        }
-        let difficulty = ["very_easy", "easy", "moderate", "hard", "very_hard"];
-        f.push(kv("players", &gv.playercontrol.iter().filter(|&&c| c > 0).count().to_string()));
-        for p in 0..4usize {
-            let control = gv.playercontrol[p];
-            if control <= 0 {
-                continue;
-            }
-            let who = if control == 2 {
-                format!("cpu-{}", difficulty.get(gv.cpudifficulty as usize).unwrap_or(&"?"))
-            } else {
-                let input = gv.playerInput.inputControls[p];
-                if input.iDevice >= 0 {
-                    format!("pad{}", input.iDevice)
-                } else {
-                    let set = (0..4).find(|&i| std::ptr::eq(input.as_ptr(), &gv.inputConfiguration[i][0])).unwrap_or(p);
-                    format!("keys{}", set + 1)
-                }
-            };
-            let skin = g.skinlist.at(gv.skinids[p].max(0) as usize).name.clone();
-            f.push(kv(&format!("p{}", p + 1), &format!("{},team{},{}", who, lookup_team_id(g, p as i16) + 1, skin)));
-        }
-        f.join(" ")
     }
+    f.push(kv("goal", &gm.goal.to_string()));
+    let map = g.match_map.clone();
+    let short = Path::new(&map).file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+    let short = short.split_once('_').map(|(_, rest)| rest.to_string()).unwrap_or(short);
+    f.push(kv("map", &short));
+    f.push(kv("file", &portable_path(g, &map)));
+    match gv.matchtype {
+        MatchType::Tournament => {
+            let played: i16 = gv.tournament_scores.iter().map(|t| t.wins).sum();
+            f.push(kv("game", &format!("{}", played + 1)));
+            f.push(kv("wins_needed", &gv.tournamentgames.to_string()));
+        }
+        MatchType::Tour | MatchType::World => {
+            let name = if gv.matchtype == MatchType::World { g.g_worldmap.get_world_name().to_string() } else {
+                g.tourlist.current_path().file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default()
+            };
+            f.push(kv(if gv.matchtype == MatchType::World { "world" } else { "tour" }, &name));
+            f.push(kv("stop", &format!("{}/{}", gv.tourstopcurrent + 1, gv.tourstops.len())));
+        }
+        _ => {}
+    }
+    let difficulty = ["very_easy", "easy", "moderate", "hard", "very_hard"];
+    f.push(kv("players", &gv.playercontrol.iter().filter(|&&c| c > 0).count().to_string()));
+    for p in 0..4usize {
+        let control = gv.playercontrol[p];
+        if control <= 0 {
+            continue;
+        }
+        let who = if control == 2 {
+            format!("cpu-{}", difficulty.get(gv.cpudifficulty as usize).unwrap_or(&"?"))
+        } else {
+            let input = gv.playerInput.inputControls[p];
+            if input.iDevice >= 0 {
+                format!("pad{}", input.iDevice)
+            } else {
+                let set = (0..4).find(|&i| std::ptr::eq(input.as_ptr(), &gv.inputConfiguration[i][0])).unwrap_or(p);
+                format!("keys{}", set + 1)
+            }
+        };
+        let skin = g.skinlist.at(gv.skinids[p].max(0) as usize).name.clone();
+        f.push(kv(&format!("p{}", p + 1), &format!("{},team{},{}", who, lookup_team_id(g, p as i16) + 1, skin)));
+    }
+    f.join(" ")
 }
 
 /// The result fields of a match's later markers.
 pub fn result_fields(g: &mut Game) -> String {
     let mut gp = g.ptr();
-    unsafe {
-        let gm = g.game_values.gamemode;
-        let scores: Vec<String> = (0..gp.score_cnt.max(0) as usize).map(|k| g.score[k].score.to_string()).collect();
-        let mut f = vec![kv("scores", &scores.join(","))];
-        if gm.gameover {
-            f.push(kv("winner", &if gm.winningteam >= 0 { format!("team{}", gm.winningteam + 1) } else { "tie".to_string() }));
-        }
-        f.join(" ")
+    let gm = g.game_values.gamemode;
+    let scores: Vec<String> = (0..gp.score_cnt.max(0) as usize).map(|k| g.score[k].score.to_string()).collect();
+    let mut f = vec![kv("scores", &scores.join(","))];
+    if gm.gameover {
+        f.push(kv("winner", &if gm.winningteam >= 0 { format!("team{}", gm.winningteam + 1) } else { "tie".to_string() }));
     }
+    f.join(" ")
 }
 
 /// A segment replay's first frame: what the splash and the menu set up, then the checkpoint.
@@ -611,14 +605,12 @@ pub struct SegmentState {
 
 impl GameState for SegmentState {
     fn update(&mut self, g: &mut Game) {
-        unsafe {
-            crate::smw::gs_splash_screen::load_game_data(g);
-            g.eyecandy[2].clean();
-            g.game_values.playerInput.reset_keys();
-            g.game_values.appstate = AppState::Menu;
-            MenuState::instance(g).init(g);
-            GameplayState::instance(g).init(g);
-        }
+        crate::smw::gs_splash_screen::load_game_data(g);
+        g.eyecandy[2].clean();
+        g.game_values.playerInput.reset_keys();
+        g.game_values.appstate = AppState::Menu;
+        MenuState::instance(g).init(g);
+        GameplayState::instance(g).init(g);
         if let Err(e) = restore(g, std::mem::take(&mut self.checkpoint)) {
             eprintln!("[harness] {}", e);
             std::process::exit(2);

@@ -180,40 +180,36 @@ const PENDING_FRAMES: u32 = 180;
 /// From the net game's sync until its first gameplay frame the clients draw in step and number objects alike.
 pub fn begin_setup(g: &mut Game) {
     let mut gp = g.ptr();
-    unsafe {
-        random_state(gp.get()).g_inSetup = true;
-        random_state(gp.get()).g_inGame = false;
-        random_state(gp.get()).g_sent = 0;
-        random_state(gp.get()).g_frame = 0;
-        random_state(gp.get()).g_pending.clear();
-        random_state(gp.get()).g_waits.clear();
-    }
+    random_state(gp.get()).g_inSetup = true;
+    random_state(gp.get()).g_inGame = false;
+    random_state(gp.get()).g_sent = 0;
+    random_state(gp.get()).g_frame = 0;
+    random_state(gp.get()).g_pending.clear();
+    random_state(gp.get()).g_waits.clear();
     crate::smw::net_outcomes::begin_game(g);
 }
 
 /// Called at the start of every gameplay frame.
 pub fn gameplay_frame(g: &mut Game) {
     let mut gp = g.ptr();
-    unsafe {
-        random_state(gp.get()).g_frame += 1;
-        crate::smw::net_outcomes::frame_start(g);
-        random_state(gp.get()).g_pending.retain(|(p, at)| p.kind != Ev::WarpExit as u8 || random_state(gp.get()).g_frame - at < PENDING_FRAMES);
-        if random_state(gp.get()).g_inSetup {
-            random_state(gp.get()).g_inSetup = false;
-            random_state(gp.get()).g_inGame = true;
-            set_network_id_context(g, 0);
-            // Menus may make objects during setup on one client only; the game's own objects are made alike.
-            let mut n = 0;
-            for container in [&g.noncolcontainer, &g.objectcontainer[0], &g.objectcontainer[1], &g.objectcontainer[2]] {
-                for &obj in container.list() {
-                    let mut o = obj;
-                    n += 1;
-                    o.iNetworkID = (1 << 16 | n) as i32;
-                }
+    random_state(gp.get()).g_frame += 1;
+    crate::smw::net_outcomes::frame_start(g);
+    random_state(gp.get()).g_pending.retain(|(p, at)| p.kind != Ev::WarpExit as u8 || random_state(gp.get()).g_frame - at < PENDING_FRAMES);
+    if random_state(gp.get()).g_inSetup {
+        random_state(gp.get()).g_inSetup = false;
+        random_state(gp.get()).g_inGame = true;
+        set_network_id_context(g, 0);
+        // Menus may make objects during setup on one client only; the game's own objects are made alike.
+        let mut n = 0;
+        for container in [&g.noncolcontainer, &g.objectcontainer[0], &g.objectcontainer[1], &g.objectcontainer[2]] {
+            for &obj in container.list() {
+                let mut o = obj;
+                n += 1;
+                o.iNetworkID = (1 << 16 | n) as i32;
             }
-            for (pkg, _) in std::mem::take(&mut random_state(gp.get()).g_pending) {
-                deliver(g, pkg);
-            }
+        }
+        for (pkg, _) in std::mem::take(&mut random_state(gp.get()).g_pending) {
+            deliver(g, pkg);
         }
     }
 }
@@ -221,86 +217,82 @@ pub fn gameplay_frame(g: &mut Game) {
 /// Leaving gameplay: menus (map previews) roll for themselves again.
 pub fn end_game(g: &mut Game) {
     let mut gp = g.ptr();
-    unsafe {
-        random_state(gp.get()).g_inSetup = false;
-        random_state(gp.get()).g_inGame = false;
-        set_network_id_context(g, 0);
-    }
+    random_state(gp.get()).g_inSetup = false;
+    random_state(gp.get()).g_inGame = false;
+    set_network_id_context(g, 0);
 }
 
 /// True when the caller must not run the site's own code: this function ran it, or the game host decides it.
 pub fn event(g: &mut Game, ev: Ev, args: &[i32]) -> bool {
     let mut gp = g.ptr();
-    unsafe {
-        if !g.netplay.active || !random_state(gp.get()).g_inGame || random_state(gp.get()).g_added.is_some() || RandomNumberGenerator::tape_active(gp.get()) {
-            return false;
-        }
-
-        if g.netplay.theHostIsMe {
-            random_state(gp.get()).g_sent = random_state(gp.get()).g_sent.wrapping_add(1);
-            let context = context_of(random_state(gp.get()).g_sent);
-            set_network_id_context(g, context as u32);
-            RandomNumberGenerator::start_recording(gp.get());
-            let line = run_logged(g, ev, args);
-            let draws = RandomNumberGenerator::stop_tape(gp.get());
-            set_network_id_context(g, 0);
-            if ev == Ev::Kill && !crate::smw::net_outcomes::kill_had_effect(g) {
-                return true;
-            }
-            harness::note_net(g, line);
-            let mut args = args.to_vec();
-            if ev == Ev::Place {
-                // Placements also test the spots against other objects, which a joiner may have elsewhere.
-                let o = find_object(g, args[0]);
-                args.extend([o.ix as i32, o.iy as i32]);
-            } else if ev == Ev::Kill {
-                args.push(crate::smw::net_outcomes::kill_result(g) as i32);
-            } else if matches!(ev, Ev::FrenzyCard | Ev::CollectionCard) {
-                // A new card keeps away from the other cards, which a joiner may have elsewhere or not at all.
-                let card = find_object(g, (context as i32) << 16 | 1);
-                if !card.is_null() {
-                    args.extend([card.ix as i32, card.iy as i32]);
-                }
-            }
-            let pkg = RandomEvent { kind: ev as u8, context, args, draws };
-            gp.netplay.client.local_gamehost.send_message_to_my_peers(g, &pkg.to_bytes());
-        } else if let Some(i) = random_state(gp.get()).g_pending.iter().position(|(p, _)| p.kind == ev as u8 && same_target(ev, &p.args, args)) {
-            let (pkg, _) = random_state(gp.get()).g_pending.remove(i);
-            replay(g, &pkg);
-        } else if matches!(ev, Ev::Respawn | Ev::WarpExit) && waited(g, ev, args[0]) > FALLBACK_FRAMES {
-            stop_waiting(g, ev, args[0]);
-            return false;
-        }
-        true
+    if !g.netplay.active || !random_state(gp.get()).g_inGame || random_state(gp.get()).g_added.is_some() || RandomNumberGenerator::tape_active(gp.get()) {
+        return false;
     }
+
+    if g.netplay.theHostIsMe {
+        random_state(gp.get()).g_sent = random_state(gp.get()).g_sent.wrapping_add(1);
+        let context = context_of(random_state(gp.get()).g_sent);
+        set_network_id_context(g, context as u32);
+        RandomNumberGenerator::start_recording(gp.get());
+        let line = run_logged(g, ev, args);
+        let draws = RandomNumberGenerator::stop_tape(gp.get());
+        set_network_id_context(g, 0);
+        if ev == Ev::Kill && !crate::smw::net_outcomes::kill_had_effect(g) {
+            return true;
+        }
+        harness::note_net(g, line);
+        let mut args = args.to_vec();
+        if ev == Ev::Place {
+            // Placements also test the spots against other objects, which a joiner may have elsewhere.
+            let o = find_object(g, args[0]);
+            args.extend([o.ix as i32, o.iy as i32]);
+        } else if ev == Ev::Kill {
+            args.push(crate::smw::net_outcomes::kill_result(g) as i32);
+        } else if matches!(ev, Ev::FrenzyCard | Ev::CollectionCard) {
+            // A new card keeps away from the other cards, which a joiner may have elsewhere or not at all.
+            let card = find_object(g, (context as i32) << 16 | 1);
+            if !card.is_null() {
+                args.extend([card.ix as i32, card.iy as i32]);
+            }
+        }
+        let pkg = RandomEvent { kind: ev as u8, context, args, draws };
+        gp.netplay.client.local_gamehost.send_message_to_my_peers(g, &pkg.to_bytes());
+    } else if let Some(i) = random_state(gp.get()).g_pending.iter().position(|(p, _)| p.kind == ev as u8 && same_target(ev, &p.args, args)) {
+        let (pkg, _) = random_state(gp.get()).g_pending.remove(i);
+        replay(g, &pkg);
+    } else if matches!(ev, Ev::Respawn | Ev::WarpExit) && waited(g, ev, args[0]) > FALLBACK_FRAMES {
+        stop_waiting(g, ev, args[0]);
+        return false;
+    }
+    true
 }
 
 /// The game host's position for the card a replayed spawn makes, which the card takes after its own search.
 pub fn spawn_position(g: &mut Game) -> Option<(i16, i16)> {
     let mut gp = g.ptr();
-    unsafe { random_state(gp.get()).g_spawnAt }
+    random_state(gp.get()).g_spawnAt
 }
 
 pub fn in_game(g: &mut Game) -> bool {
     let mut gp = g.ptr();
-    unsafe { random_state(gp.get()).g_inGame }
+    random_state(gp.get()).g_inGame
 }
 
 /// Inside an event the host runs or a joiner replays.
 pub fn in_event(g: &mut Game) -> bool {
     let mut gp = g.ptr();
-    unsafe { random_state(gp.get()).g_added.is_some() || RandomNumberGenerator::tape_active(gp.get()) }
+    random_state(gp.get()).g_added.is_some() || RandomNumberGenerator::tape_active(gp.get())
 }
 
 /// A joiner whose game host decides random outcomes, deaths and scores.
 pub fn host_decides(g: &mut Game) -> bool {
-    unsafe { g.netplay.active && !g.netplay.theHostIsMe }
+    g.netplay.active && !g.netplay.theHostIsMe
 }
 
 /// While true, a joiner leaves its hazard timers waiting for the game host's.
 pub fn awaiting_host(g: &mut Game) -> bool {
     let mut gp = g.ptr();
-    unsafe { g.netplay.active && !g.netplay.theHostIsMe && random_state(gp.get()).g_inGame }
+    g.netplay.active && !g.netplay.theHostIsMe && random_state(gp.get()).g_inGame
 }
 
 /// Contexts 0 and 1 number untracked objects and setup objects.
@@ -314,14 +306,12 @@ pub fn receive(g: &mut Game, data: &[u8]) {
     let Some(pkg) = RandomEvent::from_bytes(data) else {
         return;
     };
-    unsafe {
-        if g.netplay.theHostIsMe || Ev::from_u8(pkg.kind).is_none() {
-            return;
-        }
-        if !random_state(gp.get()).g_inGame {
-            random_state(gp.get()).g_pending.push((pkg, random_state(gp.get()).g_frame));
-            return;
-        }
+    if g.netplay.theHostIsMe || Ev::from_u8(pkg.kind).is_none() {
+        return;
+    }
+    if !random_state(gp.get()).g_inGame {
+        random_state(gp.get()).g_pending.push((pkg, random_state(gp.get()).g_frame));
+        return;
     }
     deliver(g, pkg);
 }
@@ -332,29 +322,27 @@ fn deliver(g: &mut Game, pkg: RandomEvent) {
     if ready(g, ev, &pkg.args) {
         replay(g, &pkg);
     } else {
-        unsafe { random_state(gp.get()).g_pending.push((pkg, random_state(gp.get()).g_frame)) };
+        random_state(gp.get()).g_pending.push((pkg, random_state(gp.get()).g_frame));
     }
 }
 
 fn waited(g: &mut Game, ev: Ev, key: i32) -> u32 {
     let mut gp = g.ptr();
-    unsafe {
-        match random_state(gp.get()).g_waits.iter_mut().find(|w| w.0 == ev && w.1 == key) {
-            Some(w) => {
-                w.2 += 1;
-                w.2
-            }
-            None => {
-                random_state(gp.get()).g_waits.push((ev, key, 1));
-                1
-            }
+    match random_state(gp.get()).g_waits.iter_mut().find(|w| w.0 == ev && w.1 == key) {
+        Some(w) => {
+            w.2 += 1;
+            w.2
+        }
+        None => {
+            random_state(gp.get()).g_waits.push((ev, key, 1));
+            1
         }
     }
 }
 
 fn stop_waiting(g: &mut Game, ev: Ev, key: i32) {
     let mut gp = g.ptr();
-    unsafe { random_state(gp.get()).g_waits.retain(|w| w.0 != ev || w.1 != key) };
+    random_state(gp.get()).g_waits.retain(|w| w.0 != ev || w.1 != key);
 }
 
 fn replay(g: &mut Game, pkg: &RandomEvent) {
@@ -415,57 +403,49 @@ pub fn object_event(g: &mut Game, ev: Ev, args: &[i32]) -> bool {
 /// Runs the event and returns its `C` record.
 fn run_logged(g: &mut Game, ev: Ev, args: &[i32]) -> String {
     let mut gp = g.ptr();
-    unsafe {
-        random_state(gp.get()).g_added = Some(Vec::new());
-        run(g, ev, args);
-        let mut out = random_state(gp.get()).g_added.take().unwrap_or_default();
-        out.extend(outcome(g, ev, args));
-        let args: Vec<String> = args.iter().map(|a| a.to_string()).collect();
-        let shown = match ev {
-            Ev::Place => &args[..2.min(args.len())],
-            Ev::Kill => &args[..8.min(args.len())],
-            Ev::FrenzyCard | Ev::CollectionCard => &args[..0],
-            _ => &args[..],
-        };
-        format!("{} args={} out={}", ev.name(), shown.join(","), out.join(";"))
-    }
+    random_state(gp.get()).g_added = Some(Vec::new());
+    run(g, ev, args);
+    let mut out = random_state(gp.get()).g_added.take().unwrap_or_default();
+    out.extend(outcome(g, ev, args));
+    let args: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    let shown = match ev {
+        Ev::Place => &args[..2.min(args.len())],
+        Ev::Kill => &args[..8.min(args.len())],
+        Ev::FrenzyCard | Ev::CollectionCard => &args[..0],
+        _ => &args[..],
+    };
+    format!("{} args={} out={}", ev.name(), shown.join(","), out.join(";"))
 }
 
 /// Called by `CObjectContainer::add_dyn`.
 pub fn note_added(g: &mut Game, obj: Ptr<dyn CObjectTrait>) {
     let mut gp = g.ptr();
-    unsafe {
-        if let Some(added) = random_state(gp.get()).g_added.as_mut() {
-            let mut o = obj;
-            let moving = o.as_io_moving_object().map(|m| m.get_moving_object_type() as i32).unwrap_or(-1);
-            added.push(format!("{}/{}@{},{}", o.get_object_type() as i32, moving, o.ix, o.iy));
-        }
+    if let Some(added) = random_state(gp.get()).g_added.as_mut() {
+        let mut o = obj;
+        let moving = o.as_io_moving_object().map(|m| m.get_moving_object_type() as i32).unwrap_or(-1);
+        added.push(format!("{}/{}@{},{}", o.get_object_type() as i32, moving, o.ix, o.iy));
     }
 }
 
 pub fn note_powerup(g: &mut Game, iType: i16) {
     let mut gp = g.ptr();
-    unsafe {
-        if let Some(added) = random_state(gp.get()).g_added.as_mut() {
-            added.push(format!("powerup{}", iType));
-        }
+    if let Some(added) = random_state(gp.get()).g_added.as_mut() {
+        added.push(format!("powerup{}", iType));
     }
 }
 
 pub fn find_object(g: &mut Game, id: i32) -> Ptr<dyn CObjectTrait> {
-    unsafe {
-        if id == 0 {
-            return Ptr::null();
-        }
-        for container in [&g.noncolcontainer, &g.objectcontainer[0], &g.objectcontainer[1], &g.objectcontainer[2]] {
-            for &obj in container.list() {
-                if obj.iNetworkID == id && !obj.dead {
-                    return obj;
-                }
+    if id == 0 {
+        return Ptr::null();
+    }
+    for container in [&g.noncolcontainer, &g.objectcontainer[0], &g.objectcontainer[1], &g.objectcontainer[2]] {
+        for &obj in container.list() {
+            if obj.iNetworkID == id && !obj.dead {
+                return obj;
             }
         }
-        Ptr::null()
     }
+    Ptr::null()
 }
 
 pub fn wander_args(id: i32, fx: f32, fy: f32, angle: f32) -> [i32; 4] {
@@ -481,10 +461,8 @@ pub fn arg_f32(v: i32) -> f32 {
 }
 
 fn player(g: &mut Game, args: &[i32]) -> Ptr<crate::smw::player::CPlayer> {
-    unsafe {
-        let id = args[0];
-        g.players.iter().copied().find(|p| p.globalID as i32 == id).unwrap_or(Ptr::null())
-    }
+    let id = args[0];
+    g.players.iter().copied().find(|p| p.globalID as i32 == id).unwrap_or(Ptr::null())
 }
 
 fn run(g: &mut Game, ev: Ev, args: &[i32]) {
@@ -492,7 +470,7 @@ fn run(g: &mut Game, ev: Ev, args: &[i32]) {
     use crate::smw::gamemodes as gm;
     use crate::smw::objects as obj;
     match ev {
-        Ev::FrenzyCard | Ev::CollectionCard => unsafe {
+        Ev::FrenzyCard | Ev::CollectionCard => {
             random_state(gp.get()).g_spawnAt = args.get(..2).map(|a| (a[0] as i16, a[1] as i16));
             if ev == Ev::FrenzyCard {
                 gm::frenzy::net_spawn_card(g);

@@ -64,22 +64,20 @@ impl gfxPalette {
 
         let sprite = ImageLoader::new(path).without_color_key().without_optimization().create(gp.get());
 
-        unsafe {
-            let surf = sprite.get_surface();
-            for x in 0..sprite.get_width() {
-                let key = get_rgb(surf, x, 0);
+        let surf = sprite.get_surface();
+        for x in 0..sprite.get_width() {
+            let key = get_rgb(surf, x, 0);
 
-                let mut sheet = ColorSheet::default();
-                for team in 0..MAX_PLAYERS as usize {
-                    for playerState in 0..COUNT as usize {
-                        let relativeY = team * COUNT as usize + playerState;
-                        sheet.replacements[relativeY] = get_rgb(surf, x, 1 + relativeY as i32);
-                    }
+            let mut sheet = ColorSheet::default();
+            for team in 0..MAX_PLAYERS as usize {
+                for playerState in 0..COUNT as usize {
+                    let relativeY = team * COUNT as usize + playerState;
+                    sheet.replacements[relativeY] = get_rgb(surf, x, 1 + relativeY as i32);
                 }
-
-                // unordered_map::emplace keeps the first entry for a duplicate key
-                self.m_colorsheets.entry(key).or_insert(sheet);
             }
+
+            // unordered_map::emplace keeps the first entry for a duplicate key
+            self.m_colorsheets.entry(key).or_insert(sheet);
         }
         true
     }

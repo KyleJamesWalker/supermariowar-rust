@@ -66,79 +66,77 @@ crate::impl_base!(UI_GameSettingsMenu => ui_menu: UI_Menu);
 impl UI_GameSettingsMenu {
     pub fn new(g: &mut Game) -> Box<Self> {
         let mut this = Box::<Self>::default();
-        unsafe {
-            let spr_selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
-            let menu_plain_field = Ptr::from_mut(&mut g.rm.menu_plain_field);
+        let spr_selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
+        let menu_plain_field = Ptr::from_mut(&mut g.rm.menu_plain_field);
 
-            this.miSettingsStartButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 70, 45, "Start", 500, TextAlign::LEFT));
-            this.miSettingsStartButton.set_code(MENU_CODE_START_GAME);
+        this.miSettingsStartButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 70, 45, "Start", 500, TextAlign::LEFT));
+        this.miSettingsStartButton.set_code(MENU_CODE_START_GAME);
 
-            this.miModeField = Ptr::new_box(MI_ImageSelectField::new(spr_selectfield, Ptr::from_mut(&mut g.rm.menu_mode_small), 70, 85, "Mode", 500, 120, 16, 16));
+        this.miModeField = Ptr::new_box(MI_ImageSelectField::new(spr_selectfield, Ptr::from_mut(&mut g.rm.menu_mode_small), 70, 85, "Mode", 500, 120, 16, 16));
 
-            for iGameMode in 0..GAMEMODE_LAST as i16 {
-                let name = g.gamemodes[iGameMode as usize].gm().get_mode_name().to_string();
-                this.miModeField.add(name, iGameMode);
-            }
-            this.miModeField.set_output_ptr(&mut g.currentgamemode);
-            this.miModeField.set_current_value(0);
-            this.miModeField.set_item_changed_code(MENU_CODE_MODE_CHANGED);
-
-            for iGameMode in 0..GM_LAST {
-                let mut mode = g.gamemodes[iGameMode];
-                let mut field = Ptr::new_box(MI_SelectField::<i16>::new(spr_selectfield, 70, 125, mode.gm().get_goal_name(), 352, 120));
-                this.miGoalField[iGameMode] = field;
-                // miGoalField[iGameMode]->SetKey(gamemodes[iGameMode]->goal);
-                field.set_visible(iGameMode == 0);
-
-                for iGameModeOption in 0..GAMEMODE_NUM_OPTIONS {
-                    let option = &mode.gm_mut().get_options()[iGameModeOption];
-                    field.add(option.szName.clone(), option.iValue);
-                }
-
-                field.set_output_ptr(&mut mode.gm_mut().goal);
-                field.set_current_value(mode.gm().goal);
-            }
-
-            this.miModeSettingsButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 430, 125, "Settings", 140, TextAlign::LEFT));
-            this.miModeSettingsButton.set_code(MENU_CODE_TO_MODE_SETTINGS_MENU);
-
-            this.miMapField = Ptr::new_box(MI_MapField::new(g, spr_selectfield, 70, 165, "Map", 500, 120, true));
-
-            this.miMapFiltersButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 430, 205, "Filters", 140, TextAlign::LEFT));
-            this.miMapFiltersButton.set_code(MENU_CODE_TO_MAP_FILTERS);
-
-            this.miMapFiltersOnImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_map_filter), 530, 213, 0, 48, 16, 16, 1, 1, 0));
-            this.miMapFiltersOnImage.set_visible(false);
-
-            this.miMapThumbnailsButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 430, 245, "Thumbs", 140, TextAlign::LEFT));
-            this.miMapThumbnailsButton.set_code(MENU_CODE_TO_MAP_BROWSER_THUMBNAILS);
-
-            this.miMapFilterScroll = Ptr::new_box(MI_MapFilterScroll::new(menu_plain_field, 120, 72, 400, 9));
-            this.miMapFilterScroll.set_auto_modify(true);
-            this.miMapFilterScroll.set_visible(false);
-
-            // Add auto map filters
-            for iFilter in 0..NUM_AUTO_FILTERS as usize {
-                this.miMapFilterScroll.add(g_szAutoFilterNames[iFilter].to_string(), g_iAutoFilterIcons[iFilter]);
-            }
-
-            // Add user defined filters
-            for iFilter in 0..g.filterslist.count() {
-                let szTemp = get_name_from_file_name(&g.filterslist.at(iFilter).to_string_lossy(), true);
-                this.miMapFilterScroll.add(szTemp, g.game_values.piFilterIcons[NUM_AUTO_FILTERS as usize + iFilter]);
-            }
-
-            this.miGameSettingsLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-            this.miGameSettingsMenuRightHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miGameSettingsMenuHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Single Game Menu", 320, 5));
-
-            // Exit tournament dialog box
-            this.miGameSettingsExitDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
-            this.miGameSettingsExitDialogExitText = Ptr::new_box(MI_HeaderText::new(g, "Exit", 320, 195));
-            this.miGameSettingsExitDialogTournamentText = Ptr::new_box(MI_HeaderText::new(g, "Tournament", 320, 220));
-            this.miGameSettingsExitDialogYesButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 235, 250, "Yes", 80, TextAlign::CENTER));
-            this.miGameSettingsExitDialogNoButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 325, 250, "No", 80, TextAlign::CENTER));
+        for iGameMode in 0..GAMEMODE_LAST as i16 {
+            let name = g.gamemodes[iGameMode as usize].gm().get_mode_name().to_string();
+            this.miModeField.add(name, iGameMode);
         }
+        this.miModeField.set_output_ptr(&mut g.currentgamemode);
+        this.miModeField.set_current_value(0);
+        this.miModeField.set_item_changed_code(MENU_CODE_MODE_CHANGED);
+
+        for iGameMode in 0..GM_LAST {
+            let mut mode = g.gamemodes[iGameMode];
+            let mut field = Ptr::new_box(MI_SelectField::<i16>::new(spr_selectfield, 70, 125, mode.gm().get_goal_name(), 352, 120));
+            this.miGoalField[iGameMode] = field;
+            // miGoalField[iGameMode]->SetKey(gamemodes[iGameMode]->goal);
+            field.set_visible(iGameMode == 0);
+
+            for iGameModeOption in 0..GAMEMODE_NUM_OPTIONS {
+                let option = &mode.gm_mut().get_options()[iGameModeOption];
+                field.add(option.szName.clone(), option.iValue);
+            }
+
+            field.set_output_ptr(&mut mode.gm_mut().goal);
+            field.set_current_value(mode.gm().goal);
+        }
+
+        this.miModeSettingsButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 430, 125, "Settings", 140, TextAlign::LEFT));
+        this.miModeSettingsButton.set_code(MENU_CODE_TO_MODE_SETTINGS_MENU);
+
+        this.miMapField = Ptr::new_box(MI_MapField::new(g, spr_selectfield, 70, 165, "Map", 500, 120, true));
+
+        this.miMapFiltersButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 430, 205, "Filters", 140, TextAlign::LEFT));
+        this.miMapFiltersButton.set_code(MENU_CODE_TO_MAP_FILTERS);
+
+        this.miMapFiltersOnImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_map_filter), 530, 213, 0, 48, 16, 16, 1, 1, 0));
+        this.miMapFiltersOnImage.set_visible(false);
+
+        this.miMapThumbnailsButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 430, 245, "Thumbs", 140, TextAlign::LEFT));
+        this.miMapThumbnailsButton.set_code(MENU_CODE_TO_MAP_BROWSER_THUMBNAILS);
+
+        this.miMapFilterScroll = Ptr::new_box(MI_MapFilterScroll::new(menu_plain_field, 120, 72, 400, 9));
+        this.miMapFilterScroll.set_auto_modify(true);
+        this.miMapFilterScroll.set_visible(false);
+
+        // Add auto map filters
+        for iFilter in 0..NUM_AUTO_FILTERS as usize {
+            this.miMapFilterScroll.add(g_szAutoFilterNames[iFilter].to_string(), g_iAutoFilterIcons[iFilter]);
+        }
+
+        // Add user defined filters
+        for iFilter in 0..g.filterslist.count() {
+            let szTemp = get_name_from_file_name(&g.filterslist.at(iFilter).to_string_lossy(), true);
+            this.miMapFilterScroll.add(szTemp, g.game_values.piFilterIcons[NUM_AUTO_FILTERS as usize + iFilter]);
+        }
+
+        this.miGameSettingsLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
+        this.miGameSettingsMenuRightHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
+        this.miGameSettingsMenuHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Single Game Menu", 320, 5));
+
+        // Exit tournament dialog box
+        this.miGameSettingsExitDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
+        this.miGameSettingsExitDialogExitText = Ptr::new_box(MI_HeaderText::new(g, "Exit", 320, 195));
+        this.miGameSettingsExitDialogTournamentText = Ptr::new_box(MI_HeaderText::new(g, "Tournament", 320, 220));
+        this.miGameSettingsExitDialogYesButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 235, 250, "Yes", 80, TextAlign::CENTER));
+        this.miGameSettingsExitDialogNoButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 325, 250, "No", 80, TextAlign::CENTER));
 
         this.miGameSettingsExitDialogYesButton.set_code(MENU_CODE_EXIT_TOURNAMENT_YES);
         this.miGameSettingsExitDialogNoButton.set_code(MENU_CODE_EXIT_TOURNAMENT_NO);
@@ -235,9 +233,7 @@ impl UI_GameSettingsMenu {
 
         self.restore_current(g);
 
-        unsafe {
-            self.miMapFiltersOnImage.set_visible(g.game_values.fFiltersOn);
-        }
+        self.miMapFiltersOnImage.set_visible(g.game_values.fFiltersOn);
     }
 
     pub fn open_exit_dialog(&mut self, g: &mut Game) {

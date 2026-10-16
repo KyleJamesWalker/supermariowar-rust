@@ -88,7 +88,7 @@ fn read_playername(g: &mut Game, config: &toml::Table) {
             return Err(format!("player name must be less than {} letters", NET_MAX_PLAYER_NAME_LENGTH));
         }
 
-        unsafe { g.netplay.myPlayerName = net_player_name.to_string() };
+        g.netplay.myPlayerName = net_player_name.to_string();
         Ok(())
     })();
 
@@ -103,7 +103,7 @@ fn read_roomname(g: &mut Game, config: &toml::Table) {
     };
 
     if (3..NET_MAX_ROOM_NAME_LENGTH).contains(&room_name.len()) {
-        unsafe { g.netplay.newroom_name = room_name.to_string() };
+        g.netplay.newroom_name = room_name.to_string();
     }
 }
 
@@ -128,7 +128,7 @@ fn read_servers(g: &mut Game, config: &toml::Table) {
                 continue;
             }
 
-            unsafe { g.netplay.savedServers.push(ServerAddress { hostname: address_str.to_string() }) };
+            g.netplay.savedServers.push(ServerAddress { hostname: address_str.to_string() });
         }
         Ok(())
     })();
@@ -143,20 +143,18 @@ pub struct NetConfigManager;
 
 impl NetConfigManager {
     pub fn save(&mut self, g: &mut Game) {
-        unsafe {
-            debug_assert!(!g.netplay.myPlayerName.is_empty());
+        debug_assert!(!g.netplay.myPlayerName.is_empty());
 
-            // Remove `(none)`
-            if g.netplay.savedServers.len() == 1 && g.netplay.savedServers[0].hostname == "(none)" {
-                g.netplay.savedServers.clear();
-            }
+        // Remove `(none)`
+        if g.netplay.savedServers.len() == 1 && g.netplay.savedServers[0].hostname == "(none)" {
+            g.netplay.savedServers.clear();
+        }
 
-            let servers: Vec<String> = g.netplay.savedServers.iter().map(|s| s.hostname.clone()).collect();
-            let content = format_config(&g.netplay.myPlayerName, &g.netplay.newroom_name, &servers);
+        let servers: Vec<String> = g.netplay.savedServers.iter().map(|s| s.hostname.clone()).collect();
+        let content = format_config(&g.netplay.myPlayerName, &g.netplay.newroom_name, &servers);
 
-            if std::fs::write(get_home_directory(g) + CONFIG_FILENAME, content).is_err() {
-                println!("[net][error] Could not save network settings");
-            }
+        if std::fs::write(get_home_directory(g) + CONFIG_FILENAME, content).is_err() {
+            println!("[net][error] Could not save network settings");
         }
     }
 

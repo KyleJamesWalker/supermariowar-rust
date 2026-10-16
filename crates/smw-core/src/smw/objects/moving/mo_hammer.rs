@@ -57,7 +57,7 @@ impl MO_Hammer {
 
         o.velx = vel.x;
         o.vely = vel.y;
-        o.ttl = unsafe { g.game_values.hammerttl };
+        o.ttl = g.game_values.hammerttl;
 
         o.fSuper = superHammer;
 
@@ -82,95 +82,91 @@ impl CObjectTrait for MO_Hammer {
 
     fn update(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        unsafe {
-            self.animationtimer += 1;
-            if self.animationtimer == self.animationspeed {
-                self.animationtimer = 0;
+        self.animationtimer += 1;
+        if self.animationtimer == self.animationspeed {
+            self.animationtimer = 0;
 
-                if self.velx > 0.0 {
-                    self.drawframe += self.iw;
-                    if self.drawframe >= self.animationWidth {
-                        self.drawframe = 0;
-                    }
-                } else {
-                    self.drawframe -= self.iw;
-                    if self.drawframe < 0 {
-                        self.drawframe = self.animationWidth - self.iw;
-                    }
+            if self.velx > 0.0 {
+                self.drawframe += self.iw;
+                if self.drawframe >= self.animationWidth {
+                    self.drawframe = 0;
+                }
+            } else {
+                self.drawframe -= self.iw;
+                if self.drawframe < 0 {
+                    self.drawframe = self.animationWidth - self.iw;
                 }
             }
+        }
 
-            let (fx, velx) = (self.fx, self.velx);
-            self.set_xf(fx + velx);
-            let (fy, vely) = (self.fy, self.vely);
-            self.set_yf(fy + vely);
+        let (fx, velx) = (self.fx, self.velx);
+        self.set_xf(fx + velx);
+        let (fy, vely) = (self.fy, self.vely);
+        self.set_yf(fy + vely);
 
-            if !self.fSuper {
-                self.vely += GRAVITATION;
+        if !self.fSuper {
+            self.vely += GRAVITATION;
+        }
+
+        if self.ix < 0 {
+            let ix = (self.ix as i32 + App::screenWidth) as i16;
+            self.set_xi(ix);
+        } else if self.ix as i32 > App::screenWidth - 1 {
+            let ix = (self.ix as i32 - App::screenWidth) as i16;
+            self.set_xi(ix);
+        }
+
+        if self.iy as i32 > App::screenHeight
+            || {
+                self.ttl -= 1;
+                self.ttl <= 0
+            }
+            || (self.fSuper && (self.iy as i32) < -(self.ih as i32))
+        {
+            removeifprojectile(g, self.as_mo_ptr(), false, true);
+        } else if g.game_values.spotlights {
+            let sx = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
+            let sy = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
+            if self.sSpotlight.is_null() {
+                self.sSpotlight = gp.spotlightManager.add_spotlight(g, sx, sy, 3);
             }
 
-            if self.ix < 0 {
-                let ix = (self.ix as i32 + App::screenWidth) as i16;
-                self.set_xi(ix);
-            } else if self.ix as i32 > App::screenWidth - 1 {
-                let ix = (self.ix as i32 - App::screenWidth) as i16;
-                self.set_xi(ix);
+            if !self.sSpotlight.is_null() {
+                self.sSpotlight.update_position(sx, sy);
             }
+        }
 
-            if self.iy as i32 > App::screenHeight
-                || {
-                    self.ttl -= 1;
-                    self.ttl <= 0
-                }
-                || (self.fSuper && (self.iy as i32) < -(self.ih as i32))
-            {
-                removeifprojectile(g, self.as_mo_ptr(), false, true);
-            } else if g.game_values.spotlights {
-                let sx = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
-                let sy = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
-                if self.sSpotlight.is_null() {
-                    self.sSpotlight = gp.spotlightManager.add_spotlight(g, sx, sy, 3);
-                }
-
-                if !self.sSpotlight.is_null() {
-                    self.sSpotlight.update_position(sx, sy);
-                }
+        // Detection collision with hammer breakable blocks
+        let blocks = self.get_collision_blocks(g);
+        for iBlock in 0..4usize {
+            let mut block = blocks[iBlock];
+            if block.is_null() {
+                continue;
             }
-
-            // Detection collision with hammer breakable blocks
-            let blocks = self.get_collision_blocks(g);
-            for iBlock in 0..4usize {
-                let mut block = blocks[iBlock];
-                if block.is_null() {
-                    continue;
-                }
-                if let Some(weaponbreakableblock) = block.as_any().downcast_mut::<B_WeaponBreakableBlock>() {
-                    if weaponbreakableblock.r#type() == WeaponDamageType::Hammer {
-                        weaponbreakableblock.trigger_behavior_player(g, self.iPlayerID, self.iTeamID);
-                        removeifprojectile(g, self.as_mo_ptr(), false, false);
-                        return;
-                    }
+            if let Some(weaponbreakableblock) = block.as_any().downcast_mut::<B_WeaponBreakableBlock>() {
+                if weaponbreakableblock.r#type() == WeaponDamageType::Hammer {
+                    weaponbreakableblock.trigger_behavior_player(g, self.iPlayerID, self.iTeamID);
+                    removeifprojectile(g, self.as_mo_ptr(), false, false);
+                    return;
                 }
             }
         }
     }
 
     fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
-        unsafe {
-            if self.iPlayerID != player.globalID && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID) {
-                if !player.is_shielded() {
-                    removeifprojectile(g, self.as_mo_ptr(), false, false);
+        if self.iPlayerID != player.globalID && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID) {
+            if !player.is_shielded() {
+                removeifprojectile(g, self.as_mo_ptr(), false, false);
 
-                    if !player.is_invincible() && !player.shyguy {
-                        // Find the player that shot this hammer so we can attribute a kill
-                        player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Hammer, false, false);
-                        return true;
-                    }
+                if !player.is_invincible() && !player.shyguy {
+                    // Find the player that shot this hammer so we can attribute a kill
+                    player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Hammer, false, false);
+                    return true;
                 }
             }
-
-            false
         }
+
+        false
     }
 
     fn draw(&mut self, g: &mut Game) {

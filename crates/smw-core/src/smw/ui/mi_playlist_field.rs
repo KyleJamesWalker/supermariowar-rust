@@ -25,7 +25,7 @@ pub struct MI_PlaylistField {
 crate::impl_base!(MI_PlaylistField => ui_control: UI_Control);
 
 /// The music switch shared by every scroll direction.
-unsafe fn restart_menu_music(g: &mut Game) {
+fn restart_menu_music(g: &mut Game) {
     let mut gp = g.ptr();
     gp.rm.backgroundmusic[2].stop(g);
     g.rm.backgroundmusic[2] = sfxMusic::from_file(g, gp.musiclist.music(1)).unwrap_or_else(|e| std::panic::panic_any(e));
@@ -62,35 +62,33 @@ impl UI_ControlTrait for MI_PlaylistField {
 
     fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         let mut gp = g.ptr();
-        unsafe {
-            for iPlayer in 0..4usize {
-                let out = &playerInput.outputControls[iPlayer];
-                if out.menu_right().fPressed || out.menu_down().fPressed {
-                    g.musiclist.next();
-                    restart_menu_music(g);
-                    return MENU_CODE_NONE;
-                }
+        for iPlayer in 0..4usize {
+            let out = &playerInput.outputControls[iPlayer];
+            if out.menu_right().fPressed || out.menu_down().fPressed {
+                g.musiclist.next();
+                restart_menu_music(g);
+                return MENU_CODE_NONE;
+            }
 
-                if out.menu_left().fPressed || out.menu_up().fPressed {
-                    g.musiclist.prev();
-                    restart_menu_music(g);
-                    return MENU_CODE_NONE;
-                }
+            if out.menu_left().fPressed || out.menu_up().fPressed {
+                g.musiclist.prev();
+                restart_menu_music(g);
+                return MENU_CODE_NONE;
+            }
 
-                if out.menu_random().fPressed {
-                    gp.musiclist.random(g);
-                    restart_menu_music(g);
-                    return MENU_CODE_NONE;
-                }
+            if out.menu_random().fPressed {
+                gp.musiclist.random(g);
+                restart_menu_music(g);
+                return MENU_CODE_NONE;
+            }
 
-                if out.menu_select().fPressed || out.menu_cancel().fPressed {
-                    self.miModifyImageLeft.set_visible(false);
-                    self.miModifyImageRight.set_visible(false);
+            if out.menu_select().fPressed || out.menu_cancel().fPressed {
+                self.miModifyImageLeft.set_visible(false);
+                self.miModifyImageRight.set_visible(false);
 
-                    self.fModifying = false;
+                self.fModifying = false;
 
-                    return MENU_CODE_UNSELECT_ITEM;
-                }
+                return MENU_CODE_UNSELECT_ITEM;
             }
         }
 
@@ -113,15 +111,13 @@ impl UI_ControlTrait for MI_PlaylistField {
         let iIndent = self.iIndent as i32;
         let iWidth = self.iWidth as i32;
 
-        unsafe {
-            //Draw the select field background
-            self.spr.draw_src(g, x, y, &Rect { x: 0, y: if self.fSelected { 32 } else { 0 }, w: iIndent - 16, h: 32 });
-            self.spr.draw_src(g, x + iIndent - 16, y, &Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
-            self.spr.draw_src(g, x + iIndent + 16, y, &Rect { x: 528 - iWidth + iIndent, y: if self.fSelected { 32 } else { 0 }, w: iWidth - iIndent - 16, h: 32 });
+        //Draw the select field background
+        self.spr.draw_src(g, x, y, &Rect { x: 0, y: if self.fSelected { 32 } else { 0 }, w: iIndent - 16, h: 32 });
+        self.spr.draw_src(g, x + iIndent - 16, y, &Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
+        self.spr.draw_src(g, x + iIndent + 16, y, &Rect { x: 528 - iWidth + iIndent, y: if self.fSelected { 32 } else { 0 }, w: iWidth - iIndent - 16, h: 32 });
 
-            gp.rm.menu_font_large.draw_chop_right(g, x + 16, y + 5, iIndent - 8, &self.szName);
-            gp.rm.menu_font_large.draw_chop_right(g, x + iIndent + 8, y + 5, iWidth - iIndent - 24, gp.musiclist.current_name());
-        }
+        gp.rm.menu_font_large.draw_chop_right(g, x + 16, y + 5, iIndent - 8, &self.szName);
+        gp.rm.menu_font_large.draw_chop_right(g, x + iIndent + 8, y + 5, iWidth - iIndent - 24, gp.musiclist.current_name());
 
         self.miModifyImageLeft.draw(g);
         self.miModifyImageRight.draw(g);

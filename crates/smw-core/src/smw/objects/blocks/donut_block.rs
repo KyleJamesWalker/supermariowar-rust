@@ -31,23 +31,21 @@ impl B_DonutBlock {
 
     pub fn trigger_behavior_player(&mut self, g: &mut Game, iPlayerId: i16) {
         //The falling block uses this block's own graphic instead of a tileset tile
-        unsafe {
-            let tile = TilesetTile { iID: TILESETNONE as i16, iCol: 0, iRow: 0 };
+        let tile = TilesetTile { iID: TILESETNONE as i16, iCol: 0, iRow: 0 };
 
-            let r#type = TileType::Solid;
+        let r#type = TileType::Solid;
 
-            let path = Box::new(FallingPath::new(Vec2f::new(self.ix as f32 + 16.0f32, self.iy as f32 + 15.8f32)));
-            let mut platform = MovingPlatform::new(g, vec![tile], vec![r#type], 1, 1, 2, path, false);
-            platform.set_player_id(iPlayerId);
-            let spr = self.spr;
-            platform.paint_sprite_at(&*spr, 0, 0);
+        let path = Box::new(FallingPath::new(Vec2f::new(self.ix as f32 + 16.0f32, self.iy as f32 + 15.8f32)));
+        let mut platform = MovingPlatform::new(g, vec![tile], vec![r#type], 1, 1, 2, path, false);
+        platform.set_player_id(iPlayerId);
+        let spr = self.spr;
+        platform.paint_sprite_at(&*spr, 0, 0);
 
-            g.g_map.add_temporary_platform(platform);
+        g.g_map.add_temporary_platform(platform);
 
-            self.dead = true;
-            g.g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
-            g.g_map.update_tile_gap(self.col, self.row);
-        }
+        self.dead = true;
+        g.g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
+        g.g_map.update_tile_gap(self.col, self.row);
     }
 }
 

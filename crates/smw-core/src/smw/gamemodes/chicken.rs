@@ -80,13 +80,11 @@ impl CGameModeTrait for CGM_Chicken {
             }
 
             if chicken.isready() && !chicken.is_tanooki_statue() {
-                unsafe {
-                    self.counter += 1;
-                    if self.counter >= g.game_values.pointspeed {
-                        self.counter = 0;
-                        chicken.score().adjust_score(g, 1);
-                        self.check_winner(g, chicken);
-                    }
+                self.counter += 1;
+                if self.counter >= g.game_values.pointspeed {
+                    self.counter = 0;
+                    chicken.score().adjust_score(g, 1);
+                    self.check_winner(g, chicken);
                 }
             }
         }
@@ -94,56 +92,52 @@ impl CGameModeTrait for CGM_Chicken {
 
     fn draw_foreground(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        unsafe {
-            //Draw the chicken indicator around the chicken
-            if g.game_values.gamemodesettings.chicken.usetarget && !self.gameover && !self.m_chicken.is_null() {
-                let chicken = self.m_chicken;
-                if chicken.iswarping() {
-                    gp.rm.spr_chicken.draw_clip(
-                        g,
-                        chicken.left_x() as i32 - PWOFFSET - 16,
-                        chicken.top_y() as i32 - PHOFFSET - 16,
-                        &Rect { x: 0, y: 0, w: 64, h: 64 },
-                        clip_edge_from(chicken.get_warp_state()),
-                        chicken.get_warp_plane() as i32,
-                    );
-                } else if chicken.isready() {
-                    gp.rm.spr_chicken.draw(g, chicken.center_x() as i32 - 32, chicken.center_y() as i32 - 32);
-                }
+        //Draw the chicken indicator around the chicken
+        if g.game_values.gamemodesettings.chicken.usetarget && !self.gameover && !self.m_chicken.is_null() {
+            let chicken = self.m_chicken;
+            if chicken.iswarping() {
+                gp.rm.spr_chicken.draw_clip(
+                    g,
+                    chicken.left_x() as i32 - PWOFFSET - 16,
+                    chicken.top_y() as i32 - PHOFFSET - 16,
+                    &Rect { x: 0, y: 0, w: 64, h: 64 },
+                    clip_edge_from(chicken.get_warp_state()),
+                    chicken.get_warp_plane() as i32,
+                );
+            } else if chicken.isready() {
+                gp.rm.spr_chicken.draw(g, chicken.center_x() as i32 - 32, chicken.center_y() as i32 - 32);
             }
         }
     }
 
     fn playerkilledplayer(&mut self, g: &mut Game, mut inflictor: Ptr<CPlayer>, mut other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
         let mut gp = g.ptr();
-        unsafe {
-            if self.m_chicken.is_null() || other == self.m_chicken {
-                self.m_chicken = inflictor;
-                g.eyecandy[2].emplace(EC_GravText::new(
-                    Ptr::from_mut(&mut g.rm.game_font_large),
-                    inflictor.center_x(),
-                    inflictor.bottom_y(),
-                    "Chicken!".to_string(),
-                    (-(VELJUMP as f64) * 1.5) as f32,
-                ));
-                //eyecandy[2].emplace<EC_SingleAnimation>(&rm->spr_fireballexplosion, inflictor.centerX() - 16, inflictor.centerY() - 16, 3, 8));
-                g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut g.rm.spr_poof),
-                    (inflictor.center_x() as i32 - 24) as i16,
-                    (inflictor.center_y() as i32 - 24) as i16,
-                    4,
-                    5,
-                ));
-                if_sound_on_play(g, &mut gp.rm.sfx_transform);
+        if self.m_chicken.is_null() || other == self.m_chicken {
+            self.m_chicken = inflictor;
+            g.eyecandy[2].emplace(EC_GravText::new(
+                Ptr::from_mut(&mut g.rm.game_font_large),
+                inflictor.center_x(),
+                inflictor.bottom_y(),
+                "Chicken!".to_string(),
+                (-(VELJUMP as f64) * 1.5) as f32,
+            ));
+            //eyecandy[2].emplace<EC_SingleAnimation>(&rm->spr_fireballexplosion, inflictor.centerX() - 16, inflictor.centerY() - 16, 3, 8));
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                Ptr::from_mut(&mut g.rm.spr_poof),
+                (inflictor.center_x() as i32 - 24) as i16,
+                (inflictor.center_y() as i32 - 24) as i16,
+                4,
+                5,
+            ));
+            if_sound_on_play(g, &mut gp.rm.sfx_transform);
 
-                if other == self.m_chicken {
-                    other.set_corpse_type(1); //flag to use chicken corpse sprite
-                }
-            } else if inflictor == self.m_chicken {
-                if !self.gameover {
-                    inflictor.score().adjust_score(g, 5);
-                    return self.check_winner(g, inflictor);
-                }
+            if other == self.m_chicken {
+                other.set_corpse_type(1); //flag to use chicken corpse sprite
+            }
+        } else if inflictor == self.m_chicken {
+            if !self.gameover {
+                inflictor.score().adjust_score(g, 5);
+                return self.check_winner(g, inflictor);
             }
         }
 

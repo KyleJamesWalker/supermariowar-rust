@@ -131,12 +131,12 @@ impl gfxSprite {
 
     /// Draw the whole sprite at the given coordinate.
     pub fn draw(&self, g: &mut Game, x: i32, y: i32) {
-        unsafe { self.blit(null(), g.blitdest, x + g.x_shake as i32, y + g.y_shake as i32) };
+        self.blit(null(), g.blitdest, x + g.x_shake as i32, y + g.y_shake as i32);
     }
 
     /// Draw part of the sprite at the given coordinate.
     pub fn draw_src(&self, g: &mut Game, x: i32, y: i32, srcRect: &Rect) {
-        unsafe { self.blit(srcRect, g.blitdest, x + g.x_shake as i32, y + g.y_shake as i32) };
+        self.blit(srcRect, g.blitdest, x + g.x_shake as i32, y + g.y_shake as i32);
     }
 
     /// `draw(x, y, srcx, srcy, w, h)` convenience used all over the C++ via `Rect{...}` temporaries.

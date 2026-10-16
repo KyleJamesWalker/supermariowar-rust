@@ -86,16 +86,14 @@ impl CO_SpringTrait for CO_KuriboShoe {
         if !player.kuriboshoe.is_on() && player.tanookisuit.not_statue() {
             self.dead = true;
             player.set_kuribo_shoe(g, if self.fSticky { STICKY } else { NORMAL });
-            unsafe {
-                if_sound_on_play(g, &mut gp.rm.sfx_transform);
-                g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
-                    (player.ix as i32 + HALFPW - 16) as i16,
-                    (player.iy as i32 + HALFPH - 16) as i16,
-                    3,
-                    8,
-                ));
-            }
+            if_sound_on_play(g, &mut gp.rm.sfx_transform);
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+                (player.ix as i32 + HALFPW - 16) as i16,
+                (player.iy as i32 + HALFPH - 16) as i16,
+                3,
+                8,
+            ));
         }
     }
 }

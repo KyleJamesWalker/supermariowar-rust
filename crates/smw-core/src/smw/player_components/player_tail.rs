@@ -39,10 +39,8 @@ impl PlayerTail {
 
     pub fn shake(&mut self, g: &mut Game, player: &mut CPlayer) {
         let mut gp = g.ptr();
-        unsafe {
-            gp.rm.sfx_tailspin.stop(g);
-            if_sound_on_play(g, &mut gp.rm.sfx_tailspin);
-        }
+        gp.rm.sfx_tailspin.stop(g);
+        if_sound_on_play(g, &mut gp.rm.sfx_tailspin);
         player.lockjump = true;
 
         self.iTailState = TAIL_SHAKE; //cause tail to shake
@@ -52,9 +50,7 @@ impl PlayerTail {
 
     pub fn spin(&mut self, g: &mut Game, player: &mut CPlayer) {
         let mut gp = g.ptr();
-        unsafe {
-            if_sound_on_play(g, &mut gp.rm.sfx_tailspin);
-        }
+        if_sound_on_play(g, &mut gp.rm.sfx_tailspin);
 
         self.iTailState = TAIL_SPIN_AND_SHAKE; //cause tail to shake
         self.iTailTimer = -1; //Add one extra frame to sync with spinning player sprite
@@ -63,18 +59,16 @@ impl PlayerTail {
         let pp = Ptr::from_mut(player);
         player.spin.spin(g, pp.get());
 
-        unsafe {
-            let facing_right = player.is_facing_right(g);
-            let obj = Ptr::new_box(MO_SpinAttack::new(
-                g,
-                player.get_global_id(),
-                player.get_team_id(),
-                KillStyle::Leaf,
-                facing_right,
-                13,
-            ));
-            gp.objectcontainer[1].add(g, obj);
-        }
+        let facing_right = player.is_facing_right(g);
+        let obj = Ptr::new_box(MO_SpinAttack::new(
+            g,
+            player.get_global_id(),
+            player.get_team_id(),
+            KillStyle::Leaf,
+            facing_right,
+            13,
+        ));
+        gp.objectcontainer[1].add(g, obj);
     }
 
     //If player is shaking tail, slow decent

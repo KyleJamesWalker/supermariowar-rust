@@ -53,13 +53,11 @@ pub fn cgm_classic_init(g: &mut Game, this: &mut CGM_Classic) {
 
     this.fReverseScoring = this.goal == -1;
 
-    unsafe {
-        for iScore in 0..g.score_cnt {
-            if this.fReverseScoring {
-                gp.score[iScore as usize].set_score(g, 0);
-            } else {
-                gp.score[iScore as usize].set_score(g, this.goal);
-            }
+    for iScore in 0..g.score_cnt {
+        if this.fReverseScoring {
+            gp.score[iScore as usize].set_score(g, 0);
+        } else {
+            gp.score[iScore as usize].set_score(g, this.goal);
         }
     }
 }
@@ -70,41 +68,39 @@ pub fn cgm_classic_playerkilledplayer(g: &mut Game, this: &mut CGM_Classic, mut 
         return PlayerKillType::Normal;
     }
 
-    unsafe {
-        //If we are playing classic "sumo" mode, then only score hazard kills
-        if g.game_values.gamemode.gamemode != game_mode_classic || g.game_values.gamemodesettings.classic.scoring == ScoringStyle::AllKills || style == KillStyle::Push {
-            if this.fReverseScoring {
-                other.score().adjust_score(g, 1);
-            } else {
-                other.score().adjust_score(g, -1);
+    //If we are playing classic "sumo" mode, then only score hazard kills
+    if g.game_values.gamemode.gamemode != game_mode_classic || g.game_values.gamemodesettings.classic.scoring == ScoringStyle::AllKills || style == KillStyle::Push {
+        if this.fReverseScoring {
+            other.score().adjust_score(g, 1);
+        } else {
+            other.score().adjust_score(g, -1);
 
-                if !this.playedwarningsound {
-                    let mut countscore: i16 = 0;
-                    for k in 0..g.score_cnt {
-                        if Ptr::from_mut(inflictor.score()) == g.score[k as usize] {
-                            continue;
-                        }
-
-                        countscore = (countscore as i32 + g.score[k as usize].score as i32) as i16;
+            if !this.playedwarningsound {
+                let mut countscore: i16 = 0;
+                for k in 0..g.score_cnt {
+                    if Ptr::from_mut(inflictor.score()) == g.score[k as usize] {
+                        continue;
                     }
 
-                    if countscore <= 2 {
-                        this.playwarningsound(g);
-                    }
+                    countscore = (countscore as i32 + g.score[k as usize].score as i32) as i16;
                 }
 
-                if other.score().score <= 0 {
-                    remove_team(g, other.get_team_id());
-                    return PlayerKillType::Removed;
+                if countscore <= 2 {
+                    this.playwarningsound(g);
                 }
             }
-        }
 
-        if g.game_values.gamemode.gamemode == game_mode_classic && g.game_values.gamemodesettings.classic.style == DeathStyle::Shield {
-            if_sound_on_play(g, &mut gp.rm.sfx_powerdown);
-            other.shield().reset(g);
-            return PlayerKillType::NonKill;
+            if other.score().score <= 0 {
+                remove_team(g, other.get_team_id());
+                return PlayerKillType::Removed;
+            }
         }
+    }
+
+    if g.game_values.gamemode.gamemode == game_mode_classic && g.game_values.gamemodesettings.classic.style == DeathStyle::Shield {
+        if_sound_on_play(g, &mut gp.rm.sfx_powerdown);
+        other.shield().reset(g);
+        return PlayerKillType::NonKill;
     }
 
     PlayerKillType::Normal
@@ -115,48 +111,46 @@ pub fn cgm_classic_playerkilledself(g: &mut Game, this: &mut CGM_Classic, mut pl
     cgamemode_playerkilledself(this, player, style);
 
     if !this.gameover {
-        unsafe {
-            if this.fReverseScoring {
-                player.score().adjust_score(g, 1);
-            } else {
-                player.score().adjust_score(g, -1);
+        if this.fReverseScoring {
+            player.score().adjust_score(g, 1);
+        } else {
+            player.score().adjust_score(g, -1);
 
-                if !this.playedwarningsound {
-                    let mut countscore: i16 = 0;
-                    let mut playwarning = false;
-                    for j in 0..g.score_cnt {
-                        for k in 0..g.score_cnt {
-                            if j == k {
-                                continue;
-                            }
-
-                            countscore = (countscore as i32 + g.score[k as usize].score as i32) as i16;
+            if !this.playedwarningsound {
+                let mut countscore: i16 = 0;
+                let mut playwarning = false;
+                for j in 0..g.score_cnt {
+                    for k in 0..g.score_cnt {
+                        if j == k {
+                            continue;
                         }
 
-                        if countscore <= 2 {
-                            playwarning = true;
-                            break;
-                        }
-
-                        countscore = 0;
+                        countscore = (countscore as i32 + g.score[k as usize].score as i32) as i16;
                     }
 
-                    if playwarning {
-                        this.playwarningsound(g);
+                    if countscore <= 2 {
+                        playwarning = true;
+                        break;
                     }
+
+                    countscore = 0;
                 }
 
-                if player.score().score <= 0 {
-                    remove_team(g, player.get_team_id());
-                    return PlayerKillType::Removed;
+                if playwarning {
+                    this.playwarningsound(g);
                 }
             }
 
-            if g.game_values.gamemode.gamemode == game_mode_classic && g.game_values.gamemodesettings.classic.style == DeathStyle::Shield {
-                if_sound_on_play(g, &mut gp.rm.sfx_powerdown);
-                player.shield().reset(g);
-                return PlayerKillType::NonKill;
+            if player.score().score <= 0 {
+                remove_team(g, player.get_team_id());
+                return PlayerKillType::Removed;
             }
+        }
+
+        if g.game_values.gamemode.gamemode == game_mode_classic && g.game_values.gamemodesettings.classic.style == DeathStyle::Shield {
+            if_sound_on_play(g, &mut gp.rm.sfx_powerdown);
+            player.shield().reset(g);
+            return PlayerKillType::NonKill;
         }
     }
 

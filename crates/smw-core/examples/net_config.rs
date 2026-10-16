@@ -9,9 +9,7 @@ fn main() {
     let g = smw::game::Game::create();
 
     let mut gp = g.ptr();    smw::globals::init_globals(gp.get());
-    unsafe {
-        gp.netplay.myPlayerName = "Player".to_string();
-    }
+    gp.netplay.myPlayerName = "Player".to_string();
     NetConfigManager.load(gp.get());
     NetConfigManager.save(gp.get());
 }

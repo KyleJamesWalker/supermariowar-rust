@@ -53,73 +53,71 @@ impl MO_Yoshi {
             return;
         }
 
-        unsafe {
-            self.timer = 0;
+        self.timer = 0;
 
-            for _tries in 0..64 {
-                self.ix = RANDOM_INT(gp.get(), App::screenWidth - self.iw as i32) as i16;
-                self.iy = RANDOM_INT(gp.get(), App::screenHeight - self.ih as i32 - TILESIZE) as i16; // don't spawn too low
+        for _tries in 0..64 {
+            self.ix = RANDOM_INT(gp.get(), App::screenWidth - self.iw as i32) as i16;
+            self.iy = RANDOM_INT(gp.get(), App::screenHeight - self.ih as i32 - TILESIZE) as i16; // don't spawn too low
 
-                let (ix, iy, iw, ih) = (self.ix as i32, self.iy as i32, self.iw as i32, self.ih as i32);
-                let ixl: i16 = (ix / TILESIZE) as i16;
-                let ixr: i16 = ((ix + iw) / TILESIZE) as i16;
-                let iyt: i16 = (iy / TILESIZE) as i16;
-                let iyb: i16 = ((iy + ih) / TILESIZE) as i16;
+            let (ix, iy, iw, ih) = (self.ix as i32, self.iy as i32, self.iw as i32, self.ih as i32);
+            let ixl: i16 = (ix / TILESIZE) as i16;
+            let ixr: i16 = ((ix + iw) / TILESIZE) as i16;
+            let iyt: i16 = (iy / TILESIZE) as i16;
+            let iyb: i16 = ((iy + ih) / TILESIZE) as i16;
 
-                let upperLeft: i32 = g.g_map.map(ixl as i32, iyt as i32);
-                let upperRight: i32 = g.g_map.map(ixr as i32, iyt as i32);
-                let lowerLeft: i32 = g.g_map.map(ixl as i32, iyb as i32);
-                let lowerRight: i32 = g.g_map.map(ixr as i32, iyb as i32);
+            let upperLeft: i32 = g.g_map.map(ixl as i32, iyt as i32);
+            let upperRight: i32 = g.g_map.map(ixr as i32, iyt as i32);
+            let lowerLeft: i32 = g.g_map.map(ixl as i32, iyb as i32);
+            let lowerRight: i32 = g.g_map.map(ixr as i32, iyb as i32);
 
-                if (upperLeft & tile_flag_solid) == 0
-                    && (upperRight & tile_flag_solid) == 0
-                    && (lowerLeft & tile_flag_solid) == 0
-                    && (lowerRight & tile_flag_solid) == 0
-                    && g.g_map.block(ixl, iyt).is_null()
-                    && g.g_map.block(ixr, iyt).is_null()
-                    && g.g_map.block(ixl, iyb).is_null()
-                    && g.g_map.block(ixr, iyb).is_null()
-                {
-                    // spawn on ground, but not on spikes
-                    let mut iDeathY: i16 = ((iy + ih) / TILESIZE) as i16;
-                    let iDeathX1: i16 = (ix / TILESIZE) as i16;
-                    let iDeathX2: i16 = ((ix + iw) / TILESIZE) as i16;
+            if (upperLeft & tile_flag_solid) == 0
+                && (upperRight & tile_flag_solid) == 0
+                && (lowerLeft & tile_flag_solid) == 0
+                && (lowerRight & tile_flag_solid) == 0
+                && g.g_map.block(ixl, iyt).is_null()
+                && g.g_map.block(ixr, iyt).is_null()
+                && g.g_map.block(ixl, iyb).is_null()
+                && g.g_map.block(ixr, iyb).is_null()
+            {
+                // spawn on ground, but not on spikes
+                let mut iDeathY: i16 = ((iy + ih) / TILESIZE) as i16;
+                let iDeathX1: i16 = (ix / TILESIZE) as i16;
+                let iDeathX2: i16 = ((ix + iw) / TILESIZE) as i16;
 
-                    while (iDeathY as i32) < MAPHEIGHT {
-                        let ttLeftTile: i32 = g.g_map.map(iDeathX1 as i32, iDeathY as i32);
-                        let ttRightTile: i32 = g.g_map.map(iDeathX2 as i32, iDeathY as i32);
+                while (iDeathY as i32) < MAPHEIGHT {
+                    let ttLeftTile: i32 = g.g_map.map(iDeathX1 as i32, iDeathY as i32);
+                    let ttRightTile: i32 = g.g_map.map(iDeathX2 as i32, iDeathY as i32);
 
-                        if (((ttLeftTile & tile_flag_solid) != 0 || (ttLeftTile & tile_flag_solid_on_top) != 0) && (ttLeftTile & tile_flag_death_on_top) == 0)
-                            || (((ttRightTile & tile_flag_solid) != 0 || (ttRightTile & tile_flag_solid_on_top) != 0) && (ttRightTile & tile_flag_death_on_top) == 0)
-                            || !g.g_map.block(iDeathX1, iDeathY).is_null()
-                            || !g.g_map.block(iDeathX2, iDeathY).is_null()
+                    if (((ttLeftTile & tile_flag_solid) != 0 || (ttLeftTile & tile_flag_solid_on_top) != 0) && (ttLeftTile & tile_flag_death_on_top) == 0)
+                        || (((ttRightTile & tile_flag_solid) != 0 || (ttRightTile & tile_flag_solid_on_top) != 0) && (ttRightTile & tile_flag_death_on_top) == 0)
+                        || !g.g_map.block(iDeathX1, iDeathY).is_null()
+                        || !g.g_map.block(iDeathX2, iDeathY).is_null()
+                    {
+                        let top: i16 = ((((iDeathY as i32) << 5) - ih) / TILESIZE) as i16;
+
+                        if g.g_map.spawn(1, iDeathX1, top)
+                            && g.g_map.spawn(1, iDeathX2, top)
+                            && g.g_map.spawn(1, iDeathX1, iDeathY - 1)
+                            && g.g_map.spawn(1, iDeathX2, iDeathY - 1)
                         {
-                            let top: i16 = ((((iDeathY as i32) << 5) - ih) / TILESIZE) as i16;
-
-                            if g.g_map.spawn(1, iDeathX1, top)
-                                && g.g_map.spawn(1, iDeathX2, top)
-                                && g.g_map.spawn(1, iDeathX1, iDeathY - 1)
-                                && g.g_map.spawn(1, iDeathX2, iDeathY - 1)
-                            {
-                                let ix = self.ix;
-                                self.set_xi(ix);
-                                self.set_yi((((iDeathY as i32) << 5) - ih) as i16);
-                                return;
-                            }
-
-                            break;
-                        } else if (ttLeftTile & tile_flag_death_on_top) != 0 || (ttRightTile & tile_flag_death_on_top) != 0 {
-                            break;
+                            let ix = self.ix;
+                            self.set_xi(ix);
+                            self.set_yi((((iDeathY as i32) << 5) - ih) as i16);
+                            return;
                         }
 
-                        iDeathY += 1;
+                        break;
+                    } else if (ttLeftTile & tile_flag_death_on_top) != 0 || (ttRightTile & tile_flag_death_on_top) != 0 {
+                        break;
                     }
+
+                    iDeathY += 1;
                 }
             }
-
-            self.ix = 320;
-            self.iy = 240;
         }
+
+        self.ix = 320;
+        self.iy = 240;
     }
 
     pub fn get_color(&self) -> i16 {
@@ -139,26 +137,24 @@ impl CObjectTrait for MO_Yoshi {
 
     fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
         let mut gp = g.ptr();
-        unsafe {
-            if !player.carriedItem.is_null() && player.carriedItem.get_moving_object_type() == movingobject_egg {
-                let mut egg: Ptr<CO_Egg> = Ptr::from_mut(player.carriedItem.as_any().downcast_mut::<CO_Egg>().unwrap());
+        if !player.carriedItem.is_null() && player.carriedItem.get_moving_object_type() == movingobject_egg {
+            let mut egg: Ptr<CO_Egg> = Ptr::from_mut(player.carriedItem.as_any().downcast_mut::<CO_Egg>().unwrap());
 
-                if egg.color == self.color {
-                    if !g.game_values.gamemode.gameover {
-                        player.score().adjust_score(g, 1);
-                        gp.game_values.gamemode.check_winner(g, player);
-                    }
-
-                    self.place_yoshi(g);
-
-                    egg.place_egg(g);
-
-                    if_sound_on_play(g, &mut gp.rm.sfx_yoshi);
+            if egg.color == self.color {
+                if !g.game_values.gamemode.gameover {
+                    player.score().adjust_score(g, 1);
+                    gp.game_values.gamemode.check_winner(g, player);
                 }
-            }
 
-            false
+                self.place_yoshi(g);
+
+                egg.place_egg(g);
+
+                if_sound_on_play(g, &mut gp.rm.sfx_yoshi);
+            }
         }
+
+        false
     }
 
     fn update(&mut self, g: &mut Game) {
@@ -172,23 +168,21 @@ impl CObjectTrait for MO_Yoshi {
 
     fn collide_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) {
         let mut gp = g.ptr();
-        unsafe {
-            if object.get_moving_object_type() == movingobject_egg {
-                let mut egg: Ptr<CO_Egg> = Ptr::from_mut(object.as_any().downcast_mut::<CO_Egg>().unwrap());
+        if object.get_moving_object_type() == movingobject_egg {
+            let mut egg: Ptr<CO_Egg> = Ptr::from_mut(object.as_any().downcast_mut::<CO_Egg>().unwrap());
 
-                if egg.color == self.color && !egg.owner_throw.is_null() {
-                    let mut player: Ptr<CPlayer> = egg.owner_throw;
+            if egg.color == self.color && !egg.owner_throw.is_null() {
+                let mut player: Ptr<CPlayer> = egg.owner_throw;
 
-                    if !g.game_values.gamemode.gameover {
-                        player.score().adjust_score(g, 1);
-                        gp.game_values.gamemode.check_winner(g, player);
-                    }
-
-                    self.place_yoshi(g);
-                    egg.place_egg(g);
-
-                    if_sound_on_play(g, &mut gp.rm.sfx_yoshi);
+                if !g.game_values.gamemode.gameover {
+                    player.score().adjust_score(g, 1);
+                    gp.game_values.gamemode.check_winner(g, player);
                 }
+
+                self.place_yoshi(g);
+                egg.place_egg(g);
+
+                if_sound_on_play(g, &mut gp.rm.sfx_yoshi);
             }
         }
     }

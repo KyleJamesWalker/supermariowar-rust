@@ -80,87 +80,85 @@ impl CObjectTrait for MO_SpinAttack {
             self.state = 1;
         }
 
-        unsafe {
-            let owner = get_player_from_global_id(g, self.iPlayerID);
+        let owner = get_player_from_global_id(g, self.iPlayerID);
 
-            if !owner.is_null() {
-                // Move to the owner
-                let xi = (owner.ix as i32 - PWOFFSET + if self.fDirection { 24 } else { -16 }) as i16;
-                self.set_xi(xi);
-                let yi = (owner.iy as i32 + PH - self.iOffsetY as i32) as i16;
-                self.set_yi(yi);
+        if !owner.is_null() {
+            // Move to the owner
+            let xi = (owner.ix as i32 - PWOFFSET + if self.fDirection { 24 } else { -16 }) as i16;
+            self.set_xi(xi);
+            let yi = (owner.iy as i32 + PH - self.iOffsetY as i32) as i16;
+            self.set_yi(yi);
 
-                if self.iTimer < 5 || self.iy as i32 + (self.collisionHeight as i32) < 0 {
-                    return;
-                }
+            if self.iTimer < 5 || self.iy as i32 + (self.collisionHeight as i32) < 0 {
+                return;
+            }
 
-                // Check block collisions
-                let iTop: i16 = (self.iy as i32 / TILESIZE) as i16;
-                let iBottom: i16 = ((self.iy as i32 + self.collisionHeight as i32) / TILESIZE) as i16;
+            // Check block collisions
+            let iTop: i16 = (self.iy as i32 / TILESIZE) as i16;
+            let iBottom: i16 = ((self.iy as i32 + self.collisionHeight as i32) / TILESIZE) as i16;
 
-                let mut iLeft: i16;
-                if self.ix < 0 {
-                    iLeft = ((self.ix as i32 + App::screenWidth) / TILESIZE) as i16;
-                } else {
-                    iLeft = (self.ix as i32 / TILESIZE) as i16;
-                }
-
-                let mut iRight: i16 = ((self.ix as i32 + self.collisionWidth as i32) / TILESIZE) as i16;
-
-                if iLeft < 0 {
-                    iLeft += 20;
-                }
-
-                if iLeft >= 20 {
-                    iLeft -= 20;
-                }
-
-                if iRight < 0 {
-                    iRight += 20;
-                }
-
-                if iRight >= 20 {
-                    iRight -= 20;
-                }
-
-                let mut topleftblock: Ptr<dyn IO_BlockTrait> = Ptr::null();
-                let mut toprightblock: Ptr<dyn IO_BlockTrait> = Ptr::null();
-                let mut bottomleftblock: Ptr<dyn IO_BlockTrait> = Ptr::null();
-                let mut bottomrightblock: Ptr<dyn IO_BlockTrait> = Ptr::null();
-
-                if iTop >= 0 && iTop < 15 {
-                    topleftblock = g.g_map.block(iLeft, iTop);
-                    toprightblock = g.g_map.block(iRight, iTop);
-                }
-
-                if iBottom >= 0 && iBottom < 15 {
-                    bottomleftblock = g.g_map.block(iLeft, iBottom);
-                    bottomrightblock = g.g_map.block(iRight, iBottom);
-                }
-
-                let mut fHitBlock = false;
-                if !topleftblock.is_null() && !topleftblock.is_transparent() && !topleftblock.is_hidden() {
-                    fHitBlock = topleftblock.collide_object_dir(g, self.as_mo_ptr(), 3);
-                }
-
-                if !fHitBlock && !toprightblock.is_null() && !toprightblock.is_transparent() && !toprightblock.is_hidden() {
-                    fHitBlock = toprightblock.collide_object_dir(g, self.as_mo_ptr(), 1);
-                }
-
-                if !fHitBlock && !bottomleftblock.is_null() && !bottomleftblock.is_transparent() && !bottomleftblock.is_hidden() {
-                    fHitBlock = bottomleftblock.collide_object_dir(g, self.as_mo_ptr(), 3);
-                }
-
-                if !fHitBlock && !bottomrightblock.is_null() && !bottomrightblock.is_transparent() && !bottomrightblock.is_hidden() {
-                    fHitBlock = bottomrightblock.collide_object_dir(g, self.as_mo_ptr(), 1);
-                }
-
-                if fHitBlock {
-                    self.dead = true;
-                }
+            let mut iLeft: i16;
+            if self.ix < 0 {
+                iLeft = ((self.ix as i32 + App::screenWidth) / TILESIZE) as i16;
             } else {
+                iLeft = (self.ix as i32 / TILESIZE) as i16;
+            }
+
+            let mut iRight: i16 = ((self.ix as i32 + self.collisionWidth as i32) / TILESIZE) as i16;
+
+            if iLeft < 0 {
+                iLeft += 20;
+            }
+
+            if iLeft >= 20 {
+                iLeft -= 20;
+            }
+
+            if iRight < 0 {
+                iRight += 20;
+            }
+
+            if iRight >= 20 {
+                iRight -= 20;
+            }
+
+            let mut topleftblock: Ptr<dyn IO_BlockTrait> = Ptr::null();
+            let mut toprightblock: Ptr<dyn IO_BlockTrait> = Ptr::null();
+            let mut bottomleftblock: Ptr<dyn IO_BlockTrait> = Ptr::null();
+            let mut bottomrightblock: Ptr<dyn IO_BlockTrait> = Ptr::null();
+
+            if iTop >= 0 && iTop < 15 {
+                topleftblock = g.g_map.block(iLeft, iTop);
+                toprightblock = g.g_map.block(iRight, iTop);
+            }
+
+            if iBottom >= 0 && iBottom < 15 {
+                bottomleftblock = g.g_map.block(iLeft, iBottom);
+                bottomrightblock = g.g_map.block(iRight, iBottom);
+            }
+
+            let mut fHitBlock = false;
+            if !topleftblock.is_null() && !topleftblock.is_transparent() && !topleftblock.is_hidden() {
+                fHitBlock = topleftblock.collide_object_dir(g, self.as_mo_ptr(), 3);
+            }
+
+            if !fHitBlock && !toprightblock.is_null() && !toprightblock.is_transparent() && !toprightblock.is_hidden() {
+                fHitBlock = toprightblock.collide_object_dir(g, self.as_mo_ptr(), 1);
+            }
+
+            if !fHitBlock && !bottomleftblock.is_null() && !bottomleftblock.is_transparent() && !bottomleftblock.is_hidden() {
+                fHitBlock = bottomleftblock.collide_object_dir(g, self.as_mo_ptr(), 3);
+            }
+
+            if !fHitBlock && !bottomrightblock.is_null() && !bottomrightblock.is_transparent() && !bottomrightblock.is_hidden() {
+                fHitBlock = bottomrightblock.collide_object_dir(g, self.as_mo_ptr(), 1);
+            }
+
+            if fHitBlock {
                 self.dead = true;
             }
+        } else {
+            self.dead = true;
         }
     }
 
@@ -170,41 +168,39 @@ impl CObjectTrait for MO_SpinAttack {
             return;
         }
 
-        unsafe {
-            let r#type: MovingObjectType = object.get_moving_object_type();
+        let r#type: MovingObjectType = object.get_moving_object_type();
 
-            if r#type == movingobject_shell || r#type == movingobject_throwblock || r#type == movingobject_throwbox {
-                if r#type == movingobject_shell {
-                    let shell = object.as_any().downcast_mut::<CO_Shell>().unwrap();
+        if r#type == movingobject_shell || r#type == movingobject_throwblock || r#type == movingobject_throwbox {
+            if r#type == movingobject_shell {
+                let shell = object.as_any().downcast_mut::<CO_Shell>().unwrap();
 
-                    if shell.frozen {
-                        shell.shatter_die(g);
-                    } else {
-                        shell.flip(g);
-                        if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
-                    }
+                if shell.frozen {
+                    shell.shatter_die(g);
+                } else {
+                    shell.flip(g);
+                    if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
+                }
 
+                self.die(g);
+            } else if r#type == movingobject_throwblock {
+                let block = object.as_any().downcast_mut::<CO_ThrowBlock>().unwrap();
+
+                if block.frozen {
+                    block.shatter_die(g);
+                } else if block.owner.is_null() || block.owner.globalID != self.iPlayerID {
+                    block.die(g);
+                    if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
                     self.die(g);
-                } else if r#type == movingobject_throwblock {
-                    let block = object.as_any().downcast_mut::<CO_ThrowBlock>().unwrap();
+                }
+            } else if r#type == movingobject_throwbox {
+                let r#box = object.as_any().downcast_mut::<CO_ThrowBox>().unwrap();
 
-                    if block.frozen {
-                        block.shatter_die(g);
-                    } else if block.owner.is_null() || block.owner.globalID != self.iPlayerID {
-                        block.die(g);
-                        if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
-                        self.die(g);
-                    }
-                } else if r#type == movingobject_throwbox {
-                    let r#box = object.as_any().downcast_mut::<CO_ThrowBox>().unwrap();
-
-                    if r#box.frozen {
-                        r#box.shatter_die(g);
-                    } else if r#box.owner.is_null() || r#box.owner.globalID != self.iPlayerID {
-                        r#box.die(g);
-                        if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
-                        self.die(g);
-                    }
+                if r#box.frozen {
+                    r#box.shatter_die(g);
+                } else if r#box.owner.is_null() || r#box.owner.globalID != self.iPlayerID {
+                    r#box.die(g);
+                    if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
+                    self.die(g);
                 }
             }
         }

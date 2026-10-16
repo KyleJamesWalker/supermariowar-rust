@@ -94,20 +94,18 @@ impl CObjectTrait for MO_Podobo {
     }
 
     fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
-        unsafe {
-            if player.globalID != self.iPlayerID
-                && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID)
-                && !player.is_invincible()
-                && !player.is_shielded()
-                && !player.shyguy
-            {
-                // Find the player that made this explosion so we can attribute a kill
-                player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Podobo, false, false);
-                return true;
-            }
-
-            false
+        if player.globalID != self.iPlayerID
+            && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID)
+            && !player.is_invincible()
+            && !player.is_shielded()
+            && !player.shyguy
+        {
+            // Find the player that made this explosion so we can attribute a kill
+            player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Podobo, false, false);
+            return true;
         }
+
+        false
     }
 
     fn collide_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) {
@@ -127,7 +125,7 @@ impl CObjectTrait for MO_Podobo {
             // ((CO_Shell*)object)->Die() / ((CO_ThrowBlock*)object)->Die() / ((MO_BulletBill*)object)->Die() are all virtual calls
             object.die(g);
 
-            unsafe { if_sound_on_play(g, &mut gp.rm.sfx_kicksound) };
+            if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
         }
     }
 }

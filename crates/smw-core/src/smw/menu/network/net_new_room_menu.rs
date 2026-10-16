@@ -33,22 +33,20 @@ impl UI_NetNewRoomMenu {
     pub fn new(g: &mut Game) -> Box<Self> {
         let mut gp = g.ptr();
         let mut this = Box::<Self>::default();
-        unsafe {
-            let selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
-            let plain = Ptr::from_mut(&mut g.rm.menu_plain_field);
+        let selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
+        let plain = Ptr::from_mut(&mut g.rm.menu_plain_field);
 
-            this.miNetNewRoomNameField = Ptr::new_box(MI_TextField::new(plain, 70, 160, "Room name", 640 - 2 * 70, 230));
-            this.miNetNewRoomNameField.set_data(g, &mut gp.netplay.newroom_name, NET_MAX_ROOM_NAME_LENGTH as i16);
+        this.miNetNewRoomNameField = Ptr::new_box(MI_TextField::new(plain, 70, 160, "Room name", 640 - 2 * 70, 230));
+        this.miNetNewRoomNameField.set_data(g, &mut gp.netplay.newroom_name, NET_MAX_ROOM_NAME_LENGTH as i16);
 
-            this.miNetNewRoomPasswordField = Ptr::new_box(MI_TextField::new(plain, 70, 200, "Password (optional)", 640 - 2 * 70, 230));
-            this.miNetNewRoomPasswordField.set_data(g, &mut gp.netplay.newroom_password, NET_MAX_ROOM_PASSWORD_LENGTH as i16);
+        this.miNetNewRoomPasswordField = Ptr::new_box(MI_TextField::new(plain, 70, 200, "Password (optional)", 640 - 2 * 70, 230));
+        this.miNetNewRoomPasswordField.set_data(g, &mut gp.netplay.newroom_password, NET_MAX_ROOM_PASSWORD_LENGTH as i16);
 
-            this.miNetNewRoomCreateButton = Ptr::new_box(MI_Button::new(g, selectfield, 70, 240, "Create!", 640 - 2 * 70, TextAlign::CENTER));
-            this.miNetNewRoomCreateButton.set_code(MENU_CODE_TO_NET_NEW_ROOM_CREATE_IN_PROGRESS);
+        this.miNetNewRoomCreateButton = Ptr::new_box(MI_Button::new(g, selectfield, 70, 240, "Create!", 640 - 2 * 70, TextAlign::CENTER));
+        this.miNetNewRoomCreateButton.set_code(MENU_CODE_TO_NET_NEW_ROOM_CREATE_IN_PROGRESS);
 
-            this.miNetNewRoomBackButton = Ptr::new_box(MI_Button::new(g, selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
-            this.miNetNewRoomBackButton.set_code(MENU_CODE_TO_NET_NEW_ROOM_LEVEL_SELECT_MENU);
-        }
+        this.miNetNewRoomBackButton = Ptr::new_box(MI_Button::new(g, selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
+        this.miNetNewRoomBackButton.set_code(MENU_CODE_TO_NET_NEW_ROOM_LEVEL_SELECT_MENU);
 
         let name = ctl_ptr(this.miNetNewRoomNameField);
         let pass = ctl_ptr(this.miNetNewRoomPasswordField);
@@ -61,10 +59,8 @@ impl UI_NetNewRoomMenu {
         this.add_control(create, pass, back, null, null);
         this.add_control(back, create, name, null, null);
 
-        unsafe {
-            this.miNetNewRoomCreatingDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
-            this.miNetNewRoomCreatingDialogText = Ptr::new_box(MI_HeaderText::new(g, "Creating...", 320, 240 - 12));
-        }
+        this.miNetNewRoomCreatingDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
+        this.miNetNewRoomCreatingDialogText = Ptr::new_box(MI_HeaderText::new(g, "Creating...", 320, 240 - 12));
 
         this.miNetNewRoomCreatingDialogImage.set_visible(false);
         this.miNetNewRoomCreatingDialogText.set_visible(false);
@@ -73,12 +69,10 @@ impl UI_NetNewRoomMenu {
         this.add_non_control(di);
         this.add_non_control(dt);
 
-        unsafe {
-            let plain = Ptr::from_mut(&mut g.rm.menu_plain_field);
-            this.miNetNewRoomLeftHeaderBar = Ptr::new_box(MI_Image::new(plain, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-            this.miNetNewRoomRightHeaderBar = Ptr::new_box(MI_Image::new(plain, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miNetNewRoomHeaderText = Ptr::new_box(MI_HeaderText::new(g, "New Room Settings Menu", 320, 5));
-        }
+        let plain = Ptr::from_mut(&mut g.rm.menu_plain_field);
+        this.miNetNewRoomLeftHeaderBar = Ptr::new_box(MI_Image::new(plain, 0, 0, 0, 0, 320, 32, 1, 1, 0));
+        this.miNetNewRoomRightHeaderBar = Ptr::new_box(MI_Image::new(plain, 320, 0, 192, 0, 320, 32, 1, 1, 0));
+        this.miNetNewRoomHeaderText = Ptr::new_box(MI_HeaderText::new(g, "New Room Settings Menu", 320, 5));
 
         let (l, r, h) = (ctl_ptr(this.miNetNewRoomLeftHeaderBar), ctl_ptr(this.miNetNewRoomRightHeaderBar), ctl_ptr(this.miNetNewRoomHeaderText));
         this.add_non_control(l);
@@ -92,28 +86,26 @@ impl UI_NetNewRoomMenu {
 
     pub fn create_in_progress(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        unsafe {
-            if g.netplay.newroom_name.len() > 2 {
-                gp.netplay.client.send_create_room_message(g);
-                g.netplay.operationInProgress = true;
-                net_save_server_list(g);
+        if g.netplay.newroom_name.len() > 2 {
+            gp.netplay.client.send_create_room_message(g);
+            g.netplay.operationInProgress = true;
+            net_save_server_list(g);
 
-                self.miNetNewRoomCreatingDialogImage.set_visible(true);
-                self.miNetNewRoomCreatingDialogText.set_visible(true);
-                self.remember_current();
+            self.miNetNewRoomCreatingDialogImage.set_visible(true);
+            self.miNetNewRoomCreatingDialogText.set_visible(true);
+            self.remember_current();
 
-                let t = ctl_ptr(self.miNetNewRoomCreatingDialogText);
-                self.set_initial_focus(g, t);
-                self.set_cancel_code(MENU_CODE_TO_NET_NEW_ROOM_CREATE_ABORT);
-                self.reset_menu(g);
-            } else {
-                println!("[net] Room name is too short!");
-            }
+            let t = ctl_ptr(self.miNetNewRoomCreatingDialogText);
+            self.set_initial_focus(g, t);
+            self.set_cancel_code(MENU_CODE_TO_NET_NEW_ROOM_CREATE_ABORT);
+            self.reset_menu(g);
+        } else {
+            println!("[net] Room name is too short!");
         }
     }
 
     pub fn abort_create(&mut self, g: &mut Game) {
-        unsafe { g.netplay.operationInProgress = false };
+        g.netplay.operationInProgress = false;
         self.restore(g);
     }
 

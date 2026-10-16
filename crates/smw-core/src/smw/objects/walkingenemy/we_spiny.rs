@@ -82,9 +82,7 @@ impl IO_MovingObjectTrait for MO_Spiny {
         }
 
         self.dead = true;
-        unsafe {
-            g.eyecandy[2].emplace(EC_FallingObject::new(Ptr::from_mut(&mut g.rm.spr_shelldead), self.ix, self.iy, 0.0f32, -VELJUMP / 2.0f32, 1, 0, 64, 0, 32, 32));
-        }
+        g.eyecandy[2].emplace(EC_FallingObject::new(Ptr::from_mut(&mut g.rm.spr_shelldead), self.ix, self.iy, 0.0f32, -VELJUMP / 2.0f32, 1, 0, 64, 0, 32, 32));
     }
 }
 
@@ -100,25 +98,23 @@ impl MO_WalkingEnemyTrait for MO_Spiny {
         }
 
         if player.kuriboshoe.is_on() {
-            unsafe {
-                player.set_yi((self.iy as i32 - PH - 1) as i16);
-                player.bouncejump();
-                let p = player;
-                player.collisions.checktop(g, p.get());
-                player.platform = Ptr::null();
+            player.set_yi((self.iy as i32 - PH - 1) as i16);
+            player.bouncejump();
+            let p = player;
+            player.collisions.checktop(g, p.get());
+            player.platform = Ptr::null();
 
-                self.dead = true;
+            self.dead = true;
 
-                player.add_killer_award(g, Ptr::null(), KillStyle::Spiny);
+            player.add_killer_award(g, Ptr::null(), KillStyle::Spiny);
 
-                if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
-                    player.score().adjust_score(g, 1);
-                }
-
-                self.drop_shell(g, false, false);
-
-                if_sound_on_play(g, &mut gp.rm.sfx_mip);
+            if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
+                player.score().adjust_score(g, 1);
             }
+
+            self.drop_shell(g, false, false);
+
+            if_sound_on_play(g, &mut gp.rm.sfx_mip);
         }
 
         false
@@ -134,8 +130,6 @@ impl MO_WalkingEnemyTrait for MO_Spiny {
             shell.flip(g);
         }
 
-        unsafe {
-            gp.objectcontainer[1].add(g, shell);
-        }
+        gp.objectcontainer[1].add(g, shell);
     }
 }

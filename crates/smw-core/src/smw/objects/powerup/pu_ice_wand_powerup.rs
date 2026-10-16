@@ -61,14 +61,12 @@ impl CObjectTrait for PU_IceWandPowerup {
 
         // Draw sparkles
         if self.state == 1 {
-            unsafe {
-                gp.rm.spr_shinesparkle.draw_src(
-                    g,
-                    self.ix as i32 - self.collisionOffsetX as i32,
-                    self.iy as i32 - self.collisionOffsetY as i32,
-                    &Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },
-                );
-            }
+            gp.rm.spr_shinesparkle.draw_src(
+                g,
+                self.ix as i32 - self.collisionOffsetX as i32,
+                self.iy as i32 - self.collisionOffsetY as i32,
+                &Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },
+            );
         }
     }
 

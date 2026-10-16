@@ -49,27 +49,25 @@ impl CObjectTrait for PU_ExtraGuyPowerup {
     }
     fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         let mut gp = g.ptr();
-        unsafe {
-            if self.state > 0 {
-                gp.game_values.gamemode.playerextraguy(g, player, self.iType);
-                if_sound_on_play(g, &mut gp.rm.sfx_extraguysound);
+        if self.state > 0 {
+            gp.game_values.gamemode.playerextraguy(g, player, self.iType);
+            if_sound_on_play(g, &mut gp.rm.sfx_extraguysound);
 
-                let iSrcY = ((if self.iType == 5 { 3 } else { self.iType as i32 - 1 }) * 16) as i16;
-                g.eyecandy[2].emplace(EC_FloatingObject::new(
-                    Ptr::from_mut(&mut g.rm.spr_extralife),
-                    (player.ix as i32 + HALFPW - 19) as i16,
-                    (player.iy as i32 - 16) as i16,
-                    0.0f32,
-                    -1.5f32,
-                    62,
-                    (player.colorID as i32 * 38) as i16,
-                    iSrcY,
-                    38,
-                    16,
-                ));
+            let iSrcY = ((if self.iType == 5 { 3 } else { self.iType as i32 - 1 }) * 16) as i16;
+            g.eyecandy[2].emplace(EC_FloatingObject::new(
+                Ptr::from_mut(&mut g.rm.spr_extralife),
+                (player.ix as i32 + HALFPW - 19) as i16,
+                (player.iy as i32 - 16) as i16,
+                0.0f32,
+                -1.5f32,
+                62,
+                (player.colorID as i32 * 38) as i16,
+                iSrcY,
+                38,
+                16,
+            ));
 
-                self.dead = true;
-            }
+            self.dead = true;
         }
 
         false

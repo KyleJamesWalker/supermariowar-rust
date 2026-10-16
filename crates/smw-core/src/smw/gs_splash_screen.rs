@@ -51,13 +51,11 @@ impl GameState for SplashScreenState {
 
     fn init(&mut self, g: &mut Game) -> bool {
         let mut gp = g.ptr();
-        unsafe {
-            gp.rm.load_start_graphics(g);
+        gp.rm.load_start_graphics(g);
 
-            self.menu_credits = Ptr::new_box(gfxSprite::new());
-            *self.menu_credits =
-                ImageLoader::new(convert_path_pack(g, "gfx/packs/menu/splash_credits.png", &gp.menugraphicspacklist.current_path().to_string_lossy())).create(g);
-        }
+        self.menu_credits = Ptr::new_box(gfxSprite::new());
+        *self.menu_credits =
+            ImageLoader::new(convert_path_pack(g, "gfx/packs/menu/splash_credits.png", &gp.menugraphicspacklist.current_path().to_string_lossy())).create(g);
 
         true
     }
@@ -167,22 +165,20 @@ impl GameState for SplashScreenState {
 /// The splash screen's second-frame load; a segment replay (smw/checkpoint.rs) runs it before restoring a match.
 pub fn load_game_data(g: &mut Game) {
         let mut gp = g.ptr();
-    unsafe {
-        // load initial coin sound
-        g.rm.backgroundmusic[2] = sfxMusic::from_file(g, gp.musiclist.music(1)).unwrap_or_else(|e| std::panic::panic_any(e));
+    // load initial coin sound
+    g.rm.backgroundmusic[2] = sfxMusic::from_file(g, gp.musiclist.music(1)).unwrap_or_else(|e| std::panic::panic_any(e));
 
-        gp.rm.load_all_graphics(g);
-        gp.rm.load_game_sounds(g);
+    gp.rm.load_all_graphics(g);
+    gp.rm.load_game_sounds(g);
 
-        if !g.game_values.soundcapable {
-            g.game_values.sound = false;
-            g.game_values.music = false;
-            g.game_values.soundvolume = 0;
-            g.game_values.musicvolume = 0;
-        }
-
-        //Read the map filter lists
-        gp.maplist.read_filters(g);
-        gp.get().maplist.apply_filters(g, &gp.get().game_values.pfFilters.clone());
+    if !g.game_values.soundcapable {
+        g.game_values.sound = false;
+        g.game_values.music = false;
+        g.game_values.soundvolume = 0;
+        g.game_values.musicvolume = 0;
     }
+
+    //Read the map filter lists
+    gp.maplist.read_filters(g);
+    gp.get().maplist.apply_filters(g, &gp.get().game_values.pfFilters.clone());
 }

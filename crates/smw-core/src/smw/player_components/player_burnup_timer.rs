@@ -22,33 +22,31 @@ impl PlayerBurnupTimer {
 
     pub fn update(&mut self, g: &mut Game, player: &mut CPlayer) {
         let mut gp = g.ptr();
-        unsafe {
-            if player.vely >= MAXVELY {
-                if !player.is_invincible() && !player.is_shielded() {
-                    self.starttimer += 1;
-                    if self.starttimer >= 20 {
-                        if self.starttimer == 20 {
-                            if_sound_on_play(g, &mut gp.rm.sfx_burnup);
-                        }
+        if player.vely >= MAXVELY {
+            if !player.is_invincible() && !player.is_shielded() {
+                self.starttimer += 1;
+                if self.starttimer >= 20 {
+                    if self.starttimer == 20 {
+                        if_sound_on_play(g, &mut gp.rm.sfx_burnup);
+                    }
 
-                        self.timer += 1;
-                        if self.timer > 80 {
-                            player.kill_player_map_hazard(g, true, KillStyle::Environment, false, -1);
-                        } else {
-                            g.eyecandy[0].emplace(EC_SingleAnimation::new(
-                                Ptr::from_mut(&mut g.rm.spr_burnup),
-                                (player.center_x() as i32 - 16) as i16,
-                                (player.center_y() as i32 - 16) as i16,
-                                5,
-                                4,
-                            ));
-                        }
+                    self.timer += 1;
+                    if self.timer > 80 {
+                        player.kill_player_map_hazard(g, true, KillStyle::Environment, false, -1);
+                    } else {
+                        g.eyecandy[0].emplace(EC_SingleAnimation::new(
+                            Ptr::from_mut(&mut g.rm.spr_burnup),
+                            (player.center_x() as i32 - 16) as i16,
+                            (player.center_y() as i32 - 16) as i16,
+                            5,
+                            4,
+                        ));
                     }
                 }
-            } else {
-                self.timer = 0;
-                self.starttimer = 0;
             }
+        } else {
+            self.timer = 0;
+            self.starttimer = 0;
         }
     }
 }

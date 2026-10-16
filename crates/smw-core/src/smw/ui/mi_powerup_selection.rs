@@ -80,134 +80,132 @@ impl MI_PowerupSelection {
             miDownArrow: Ptr::null(),
         };
 
-        unsafe {
-            let spr_selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
+        let spr_selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
 
-            this.miOverride = Ptr::new_box(MI_SelectField::<i16>::new(spr_selectfield, 70, this.m_pos.y, "Use Settings From", 500, 250));
-            this.miOverride.add("Map Only", 0);
-            this.miOverride.add("Game Only", 1);
-            this.miOverride.add("Basic Average", 2);
-            this.miOverride.add("Weighted Average", 3);
-            this.miOverride.set_output_ptr(&mut g.game_values.overridepowerupsettings as *mut i16);
-            this.miOverride.set_current_value(g.game_values.overridepowerupsettings);
-            //miOverride->SetItemChangedCode(MENU_CODE_POWERUP_OVERRIDE_CHANGED);
+        this.miOverride = Ptr::new_box(MI_SelectField::<i16>::new(spr_selectfield, 70, this.m_pos.y, "Use Settings From", 500, 250));
+        this.miOverride.add("Map Only", 0);
+        this.miOverride.add("Game Only", 1);
+        this.miOverride.add("Basic Average", 2);
+        this.miOverride.add("Weighted Average", 3);
+        this.miOverride.set_output_ptr(&mut g.game_values.overridepowerupsettings as *mut i16);
+        this.miOverride.set_current_value(g.game_values.overridepowerupsettings);
+        //miOverride->SetItemChangedCode(MENU_CODE_POWERUP_OVERRIDE_CHANGED);
 
-            this.miPreset = Ptr::new_box(MI_SelectField::<i16>::new(spr_selectfield, 70, this.m_pos.y + 40, "Item Set", 500, 250));
-            this.miPreset.add("Custom Set 1", 0);
-            this.miPreset.add("Custom Set 2", 1);
-            this.miPreset.add("Custom Set 3", 2);
-            this.miPreset.add("Custom Set 4", 3);
-            this.miPreset.add("Custom Set 5", 4);
-            this.miPreset.add("Balanced Set", 5);
-            this.miPreset.add("Weapons Only", 6);
-            this.miPreset.add("Koopa Bros Weapons", 7);
-            this.miPreset.add("Support Items", 8);
-            this.miPreset.add("Booms and Shakes", 9);
-            this.miPreset.add("Fly and Glide", 10);
-            this.miPreset.add("Shells Only", 11);
-            this.miPreset.add("Mushrooms Only", 12);
-            this.miPreset.add("Super Mario Bros 1", 13);
-            this.miPreset.add("Super Mario Bros 2", 14);
-            this.miPreset.add("Super Mario Bros 3", 15);
-            this.miPreset.add("Super Mario World", 16);
-            this.miPreset.set_output_ptr(&mut g.game_values.poweruppreset as *mut i16);
-            this.miPreset.set_current_value(g.game_values.poweruppreset);
-            this.miPreset.set_item_changed_code(MENU_CODE_POWERUP_PRESET_CHANGED);
+        this.miPreset = Ptr::new_box(MI_SelectField::<i16>::new(spr_selectfield, 70, this.m_pos.y + 40, "Item Set", 500, 250));
+        this.miPreset.add("Custom Set 1", 0);
+        this.miPreset.add("Custom Set 2", 1);
+        this.miPreset.add("Custom Set 3", 2);
+        this.miPreset.add("Custom Set 4", 3);
+        this.miPreset.add("Custom Set 5", 4);
+        this.miPreset.add("Balanced Set", 5);
+        this.miPreset.add("Weapons Only", 6);
+        this.miPreset.add("Koopa Bros Weapons", 7);
+        this.miPreset.add("Support Items", 8);
+        this.miPreset.add("Booms and Shakes", 9);
+        this.miPreset.add("Fly and Glide", 10);
+        this.miPreset.add("Shells Only", 11);
+        this.miPreset.add("Mushrooms Only", 12);
+        this.miPreset.add("Super Mario Bros 1", 13);
+        this.miPreset.add("Super Mario Bros 2", 14);
+        this.miPreset.add("Super Mario Bros 3", 15);
+        this.miPreset.add("Super Mario World", 16);
+        this.miPreset.set_output_ptr(&mut g.game_values.poweruppreset as *mut i16);
+        this.miPreset.set_current_value(g.game_values.poweruppreset);
+        this.miPreset.set_item_changed_code(MENU_CODE_POWERUP_PRESET_CHANGED);
 
-            for iPowerup in 0..NP {
-                let pos = iPowerupPositionMap[iPowerup] as usize;
-                let mut slider = Ptr::new_box(MI_PowerupSlider::new(
-                    spr_selectfield,
-                    Ptr::from_mut(&mut g.rm.menu_slider_bar),
-                    Ptr::from_mut(&mut g.rm.spr_storedpoweruplarge),
-                    0,
-                    0,
-                    245,
-                    iPowerupPositionMap[iPowerup],
-                ));
-                for v in 0..=10i16 {
-                    slider.add("", v);
-                }
-                slider.allow_wrap(false);
-                slider.set_output_ptr(&mut g.game_values.powerupweights[pos] as *mut i16);
-                slider.set_current_value(g.game_values.powerupweights[pos]);
-                slider.set_item_changed_code(MENU_CODE_POWERUP_SETTING_CHANGED);
-                this.miPowerupSlider[iPowerup] = slider;
+        for iPowerup in 0..NP {
+            let pos = iPowerupPositionMap[iPowerup] as usize;
+            let mut slider = Ptr::new_box(MI_PowerupSlider::new(
+                spr_selectfield,
+                Ptr::from_mut(&mut g.rm.menu_slider_bar),
+                Ptr::from_mut(&mut g.rm.spr_storedpoweruplarge),
+                0,
+                0,
+                245,
+                iPowerupPositionMap[iPowerup],
+            ));
+            for v in 0..=10i16 {
+                slider.add("", v);
             }
-
-            this.miRestoreDefaultsButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 160, 432, "Defaults", 150, TextAlign::CENTER));
-            this.miRestoreDefaultsButton.set_code(MENU_CODE_RESTORE_DEFAULT_POWERUP_WEIGHTS);
-
-            this.miClearButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 330, 432, "Clear", 150, TextAlign::CENTER));
-            this.miClearButton.set_code(MENU_CODE_CLEAR_POWERUP_WEIGHTS);
-
-            //Are You Sure dialog box
-            this.miDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
-            this.miDialogAreYouText = Ptr::new_box(MI_HeaderText::new(g, "Are You", 320, 195));
-            this.miDialogSureText = Ptr::new_box(MI_HeaderText::new(g, "Sure?", 320, 220));
-            this.miDialogYesButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 235, 250, "Yes", 80, TextAlign::CENTER));
-            this.miDialogNoButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 325, 250, "No", 80, TextAlign::CENTER));
-
-            this.miDialogYesButton.set_code(MENU_CODE_POWERUP_RESET_YES);
-            this.miDialogNoButton.set_code(MENU_CODE_POWERUP_RESET_NO);
-
-            this.miDialogImage.set_visible(false);
-            this.miDialogAreYouText.set_visible(false);
-            this.miDialogSureText.set_visible(false);
-            this.miDialogYesButton.set_visible(false);
-            this.miDialogNoButton.set_visible(false);
-
-            let null: ControlPtr = Ptr::null();
-            let sliders: [ControlPtr; NP] = std::array::from_fn(|i| ctl_ptr(this.miPowerupSlider[i]));
-
-            this.mMenu.add_control(ctl_ptr(this.miOverride), null, ctl_ptr(this.miPreset), null, null);
-            this.mMenu.add_control(ctl_ptr(this.miPreset), ctl_ptr(this.miOverride), sliders[0], null, null);
-
-            this.miUpArrow = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_verticalarrows), 310, 128, 20, 0, 20, 20, 1, 4, 8));
-            this.miDownArrow = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_verticalarrows), 310, 406, 0, 0, 20, 20, 1, 4, 8));
-            this.miUpArrow.set_visible(false);
-
-            let mut iPowerup = 0usize;
-            while iPowerup < NP {
-                let upcontrol = if iPowerup == 0 { ctl_ptr(this.miPreset) } else { sliders[iPowerup - 2] };
-
-                let downcontrol = if iPowerup >= NP - 2 { ctl_ptr(this.miRestoreDefaultsButton) } else { sliders[iPowerup + 2] };
-
-                this.mMenu.add_control(sliders[iPowerup], upcontrol, downcontrol, null, sliders[iPowerup + 1]);
-
-                iPowerup += 1;
-                if iPowerup < NP {
-                    let upcontrol = if iPowerup == 1 { ctl_ptr(this.miPreset) } else { sliders[iPowerup - 2] };
-
-                    let downcontrol = if iPowerup >= NP - 2 { ctl_ptr(this.miClearButton) } else { sliders[iPowerup + 2] };
-
-                    this.mMenu.add_control(sliders[iPowerup], upcontrol, downcontrol, sliders[iPowerup - 1], null);
-                }
-                iPowerup += 1;
-            }
-
-            this.mMenu.add_control(ctl_ptr(this.miRestoreDefaultsButton), sliders[NP - 2], null, null, ctl_ptr(this.miClearButton));
-            this.mMenu.add_control(ctl_ptr(this.miClearButton), sliders[NP - 1], null, ctl_ptr(this.miRestoreDefaultsButton), null);
-
-            //Setup positions and visible powerups
-            this.setup_powerup_fields();
-
-            //Set enabled based on if we are overriding or not
-            //EnablePowerupFields();
-
-            this.mMenu.add_non_control(ctl_ptr(this.miDialogImage));
-            this.mMenu.add_non_control(ctl_ptr(this.miDialogAreYouText));
-            this.mMenu.add_non_control(ctl_ptr(this.miDialogSureText));
-
-            this.mMenu.add_control(ctl_ptr(this.miDialogYesButton), null, null, null, ctl_ptr(this.miDialogNoButton));
-            this.mMenu.add_control(ctl_ptr(this.miDialogNoButton), null, null, ctl_ptr(this.miDialogYesButton), null);
-
-            this.mMenu.add_non_control(ctl_ptr(this.miUpArrow));
-            this.mMenu.add_non_control(ctl_ptr(this.miDownArrow));
-
-            this.mMenu.set_initial_focus(g, ctl_ptr(this.miOverride));
-            this.mMenu.set_cancel_code(MENU_CODE_BACK_TO_OPTIONS_MENU);
+            slider.allow_wrap(false);
+            slider.set_output_ptr(&mut g.game_values.powerupweights[pos] as *mut i16);
+            slider.set_current_value(g.game_values.powerupweights[pos]);
+            slider.set_item_changed_code(MENU_CODE_POWERUP_SETTING_CHANGED);
+            this.miPowerupSlider[iPowerup] = slider;
         }
+
+        this.miRestoreDefaultsButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 160, 432, "Defaults", 150, TextAlign::CENTER));
+        this.miRestoreDefaultsButton.set_code(MENU_CODE_RESTORE_DEFAULT_POWERUP_WEIGHTS);
+
+        this.miClearButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 330, 432, "Clear", 150, TextAlign::CENTER));
+        this.miClearButton.set_code(MENU_CODE_CLEAR_POWERUP_WEIGHTS);
+
+        //Are You Sure dialog box
+        this.miDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
+        this.miDialogAreYouText = Ptr::new_box(MI_HeaderText::new(g, "Are You", 320, 195));
+        this.miDialogSureText = Ptr::new_box(MI_HeaderText::new(g, "Sure?", 320, 220));
+        this.miDialogYesButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 235, 250, "Yes", 80, TextAlign::CENTER));
+        this.miDialogNoButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 325, 250, "No", 80, TextAlign::CENTER));
+
+        this.miDialogYesButton.set_code(MENU_CODE_POWERUP_RESET_YES);
+        this.miDialogNoButton.set_code(MENU_CODE_POWERUP_RESET_NO);
+
+        this.miDialogImage.set_visible(false);
+        this.miDialogAreYouText.set_visible(false);
+        this.miDialogSureText.set_visible(false);
+        this.miDialogYesButton.set_visible(false);
+        this.miDialogNoButton.set_visible(false);
+
+        let null: ControlPtr = Ptr::null();
+        let sliders: [ControlPtr; NP] = std::array::from_fn(|i| ctl_ptr(this.miPowerupSlider[i]));
+
+        this.mMenu.add_control(ctl_ptr(this.miOverride), null, ctl_ptr(this.miPreset), null, null);
+        this.mMenu.add_control(ctl_ptr(this.miPreset), ctl_ptr(this.miOverride), sliders[0], null, null);
+
+        this.miUpArrow = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_verticalarrows), 310, 128, 20, 0, 20, 20, 1, 4, 8));
+        this.miDownArrow = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_verticalarrows), 310, 406, 0, 0, 20, 20, 1, 4, 8));
+        this.miUpArrow.set_visible(false);
+
+        let mut iPowerup = 0usize;
+        while iPowerup < NP {
+            let upcontrol = if iPowerup == 0 { ctl_ptr(this.miPreset) } else { sliders[iPowerup - 2] };
+
+            let downcontrol = if iPowerup >= NP - 2 { ctl_ptr(this.miRestoreDefaultsButton) } else { sliders[iPowerup + 2] };
+
+            this.mMenu.add_control(sliders[iPowerup], upcontrol, downcontrol, null, sliders[iPowerup + 1]);
+
+            iPowerup += 1;
+            if iPowerup < NP {
+                let upcontrol = if iPowerup == 1 { ctl_ptr(this.miPreset) } else { sliders[iPowerup - 2] };
+
+                let downcontrol = if iPowerup >= NP - 2 { ctl_ptr(this.miClearButton) } else { sliders[iPowerup + 2] };
+
+                this.mMenu.add_control(sliders[iPowerup], upcontrol, downcontrol, sliders[iPowerup - 1], null);
+            }
+            iPowerup += 1;
+        }
+
+        this.mMenu.add_control(ctl_ptr(this.miRestoreDefaultsButton), sliders[NP - 2], null, null, ctl_ptr(this.miClearButton));
+        this.mMenu.add_control(ctl_ptr(this.miClearButton), sliders[NP - 1], null, ctl_ptr(this.miRestoreDefaultsButton), null);
+
+        //Setup positions and visible powerups
+        this.setup_powerup_fields();
+
+        //Set enabled based on if we are overriding or not
+        //EnablePowerupFields();
+
+        this.mMenu.add_non_control(ctl_ptr(this.miDialogImage));
+        this.mMenu.add_non_control(ctl_ptr(this.miDialogAreYouText));
+        this.mMenu.add_non_control(ctl_ptr(this.miDialogSureText));
+
+        this.mMenu.add_control(ctl_ptr(this.miDialogYesButton), null, null, null, ctl_ptr(this.miDialogNoButton));
+        this.mMenu.add_control(ctl_ptr(this.miDialogNoButton), null, null, ctl_ptr(this.miDialogYesButton), null);
+
+        this.mMenu.add_non_control(ctl_ptr(this.miUpArrow));
+        this.mMenu.add_non_control(ctl_ptr(this.miDownArrow));
+
+        this.mMenu.set_initial_focus(g, ctl_ptr(this.miOverride));
+        this.mMenu.set_cancel_code(MENU_CODE_BACK_TO_OPTIONS_MENU);
 
         this
     }
@@ -294,80 +292,78 @@ impl UI_ControlTrait for MI_PowerupSelection {
         let mut gp = g.ptr();
         let ret = self.mMenu.send_input(g, playerInput);
 
-        unsafe {
-            if MENU_CODE_CANCEL_INPUT == ret {
-                self.fModifying = false;
-                return MENU_CODE_UNSELECT_ITEM;
-            } else if MENU_CODE_POWERUP_PRESET_CHANGED == ret {
-                for iPowerup in 0..NP {
-                    let pos = iPowerupPositionMap[iPowerup] as usize;
-                    let iCurrentValue = g.game_values.allPowerupPresets[g.game_values.poweruppreset as usize][pos];
-                    self.miPowerupSlider[iPowerup].set_current_value(iCurrentValue);
-                    g.game_values.powerupweights[pos] = iCurrentValue;
-                }
-
-                //If it is a custom preset, then allow modification
-                //EnablePowerupFields(game_values.poweruppreset >= 1 && game_values.poweruppreset <= 3);
-            } else if MENU_CODE_POWERUP_SETTING_CHANGED == ret {
-                //Update the custom presets
-                for iPowerup in 0..NP {
-                    let pos = iPowerupPositionMap[iPowerup] as usize;
-                    gp.get().game_values.allPowerupPresets[gp.get().game_values.poweruppreset as usize][pos] = gp.get().game_values.powerupweights[pos];
-                }
-            } else if MENU_CODE_RESTORE_DEFAULT_POWERUP_WEIGHTS == ret || MENU_CODE_CLEAR_POWERUP_WEIGHTS == ret {
-                self.miDialogImage.set_visible(true);
-                self.miDialogAreYouText.set_visible(true);
-                self.miDialogSureText.set_visible(true);
-                self.miDialogYesButton.set_visible(true);
-                self.miDialogNoButton.set_visible(true);
-
-                self.mMenu.remember_current();
-
-                self.mMenu.set_initial_focus(g, ctl_ptr(self.miDialogNoButton));
-                self.mMenu.set_cancel_code(MENU_CODE_POWERUP_RESET_NO);
-                self.mMenu.reset_menu(g);
-
-                if MENU_CODE_CLEAR_POWERUP_WEIGHTS == ret {
-                    self.miDialogYesButton.set_code(MENU_CODE_POWERUP_CLEAR_YES);
-                } else {
-                    self.miDialogYesButton.set_code(MENU_CODE_POWERUP_RESET_YES);
-                }
-            } else if MENU_CODE_POWERUP_RESET_YES == ret || MENU_CODE_POWERUP_RESET_NO == ret || MENU_CODE_POWERUP_CLEAR_YES == ret {
-                self.miDialogImage.set_visible(false);
-                self.miDialogAreYouText.set_visible(false);
-                self.miDialogSureText.set_visible(false);
-                self.miDialogYesButton.set_visible(false);
-                self.miDialogNoButton.set_visible(false);
-
-                self.mMenu.set_initial_focus(g, ctl_ptr(self.miOverride));
-                self.mMenu.set_cancel_code(MENU_CODE_BACK_TO_OPTIONS_MENU);
-
-                self.mMenu.restore_current(g);
-
-                if MENU_CODE_POWERUP_RESET_YES == ret {
-                    //restore default powerup weights for powerup selection menu
-                    for iPowerup in 0..NP {
-                        let pos = iPowerupPositionMap[iPowerup] as usize;
-                        let iDefaultValue = default_powerup_setting(g.game_values.poweruppreset as usize, pos);
-                        self.miPowerupSlider[iPowerup].set_current_value(iDefaultValue);
-                        g.game_values.powerupweights[pos] = iDefaultValue;
-
-                        gp.get().game_values.allPowerupPresets[gp.get().game_values.poweruppreset as usize][pos] = iDefaultValue;
-                    }
-                } else if MENU_CODE_POWERUP_CLEAR_YES == ret {
-                    //restore default powerup weights for powerup selection menu
-                    for iPowerup in 0..NP {
-                        self.miPowerupSlider[iPowerup].set_current_value(0);
-                        g.game_values.powerupweights[iPowerup] = 0;
-
-                        gp.get().game_values.allPowerupPresets[gp.get().game_values.poweruppreset as usize][iPowerup] = 0;
-                    }
-                }
-            } else if MENU_CODE_NEIGHBOR_UP == ret {
-                self.move_prev();
-            } else if MENU_CODE_NEIGHBOR_DOWN == ret {
-                self.move_next();
+        if MENU_CODE_CANCEL_INPUT == ret {
+            self.fModifying = false;
+            return MENU_CODE_UNSELECT_ITEM;
+        } else if MENU_CODE_POWERUP_PRESET_CHANGED == ret {
+            for iPowerup in 0..NP {
+                let pos = iPowerupPositionMap[iPowerup] as usize;
+                let iCurrentValue = g.game_values.allPowerupPresets[g.game_values.poweruppreset as usize][pos];
+                self.miPowerupSlider[iPowerup].set_current_value(iCurrentValue);
+                g.game_values.powerupweights[pos] = iCurrentValue;
             }
+
+            //If it is a custom preset, then allow modification
+            //EnablePowerupFields(game_values.poweruppreset >= 1 && game_values.poweruppreset <= 3);
+        } else if MENU_CODE_POWERUP_SETTING_CHANGED == ret {
+            //Update the custom presets
+            for iPowerup in 0..NP {
+                let pos = iPowerupPositionMap[iPowerup] as usize;
+                gp.get().game_values.allPowerupPresets[gp.get().game_values.poweruppreset as usize][pos] = gp.get().game_values.powerupweights[pos];
+            }
+        } else if MENU_CODE_RESTORE_DEFAULT_POWERUP_WEIGHTS == ret || MENU_CODE_CLEAR_POWERUP_WEIGHTS == ret {
+            self.miDialogImage.set_visible(true);
+            self.miDialogAreYouText.set_visible(true);
+            self.miDialogSureText.set_visible(true);
+            self.miDialogYesButton.set_visible(true);
+            self.miDialogNoButton.set_visible(true);
+
+            self.mMenu.remember_current();
+
+            self.mMenu.set_initial_focus(g, ctl_ptr(self.miDialogNoButton));
+            self.mMenu.set_cancel_code(MENU_CODE_POWERUP_RESET_NO);
+            self.mMenu.reset_menu(g);
+
+            if MENU_CODE_CLEAR_POWERUP_WEIGHTS == ret {
+                self.miDialogYesButton.set_code(MENU_CODE_POWERUP_CLEAR_YES);
+            } else {
+                self.miDialogYesButton.set_code(MENU_CODE_POWERUP_RESET_YES);
+            }
+        } else if MENU_CODE_POWERUP_RESET_YES == ret || MENU_CODE_POWERUP_RESET_NO == ret || MENU_CODE_POWERUP_CLEAR_YES == ret {
+            self.miDialogImage.set_visible(false);
+            self.miDialogAreYouText.set_visible(false);
+            self.miDialogSureText.set_visible(false);
+            self.miDialogYesButton.set_visible(false);
+            self.miDialogNoButton.set_visible(false);
+
+            self.mMenu.set_initial_focus(g, ctl_ptr(self.miOverride));
+            self.mMenu.set_cancel_code(MENU_CODE_BACK_TO_OPTIONS_MENU);
+
+            self.mMenu.restore_current(g);
+
+            if MENU_CODE_POWERUP_RESET_YES == ret {
+                //restore default powerup weights for powerup selection menu
+                for iPowerup in 0..NP {
+                    let pos = iPowerupPositionMap[iPowerup] as usize;
+                    let iDefaultValue = default_powerup_setting(g.game_values.poweruppreset as usize, pos);
+                    self.miPowerupSlider[iPowerup].set_current_value(iDefaultValue);
+                    g.game_values.powerupweights[pos] = iDefaultValue;
+
+                    gp.get().game_values.allPowerupPresets[gp.get().game_values.poweruppreset as usize][pos] = iDefaultValue;
+                }
+            } else if MENU_CODE_POWERUP_CLEAR_YES == ret {
+                //restore default powerup weights for powerup selection menu
+                for iPowerup in 0..NP {
+                    self.miPowerupSlider[iPowerup].set_current_value(0);
+                    g.game_values.powerupweights[iPowerup] = 0;
+
+                    gp.get().game_values.allPowerupPresets[gp.get().game_values.poweruppreset as usize][iPowerup] = 0;
+                }
+            }
+        } else if MENU_CODE_NEIGHBOR_UP == ret {
+            self.move_prev();
+        } else if MENU_CODE_NEIGHBOR_DOWN == ret {
+            self.move_next();
         }
 
         ret

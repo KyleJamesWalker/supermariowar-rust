@@ -72,43 +72,41 @@ impl MO_SledgeHammer {
     pub fn explode(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         let mut rm = g.rm;
-        unsafe {
-            if self.fSuper {
-                let pos = Vec2s::new((self.ix as i32 + (self.iw as i32 >> 2) - 96) as i16, (self.iy as i32 + (self.ih as i32 >> 2) - 64) as i16);
-                let obj = Ptr::new_box(MO_Explosion::new(g, Ptr::from_mut(&mut rm.spr_explosion), pos, 2, 4, -1, -1, KillStyle::Hammer));
-                gp.objectcontainer[2].add(g, obj);
-                if_sound_on_play(g, &mut gp.rm.sfx_bobombsound);
-            } else {
-                let iCenterX: i16 = (self.ix as i32 + (self.iw as i32 >> 1) - 14) as i16;
-                let iCenterY: i16 = (self.iy as i32 + (self.ih as i32 >> 1) - 14) as i16;
-                let iColorID: i16 = (self.colorOffset as i32 / 32 - 1) as i16;
+        if self.fSuper {
+            let pos = Vec2s::new((self.ix as i32 + (self.iw as i32 >> 2) - 96) as i16, (self.iy as i32 + (self.ih as i32 >> 2) - 64) as i16);
+            let obj = Ptr::new_box(MO_Explosion::new(g, Ptr::from_mut(&mut rm.spr_explosion), pos, 2, 4, -1, -1, KillStyle::Hammer));
+            gp.objectcontainer[2].add(g, obj);
+            if_sound_on_play(g, &mut gp.rm.sfx_bobombsound);
+        } else {
+            let iCenterX: i16 = (self.ix as i32 + (self.iw as i32 >> 1) - 14) as i16;
+            let iCenterY: i16 = (self.iy as i32 + (self.ih as i32 >> 1) - 14) as i16;
+            let iColorID: i16 = (self.colorOffset as i32 / 32 - 1) as i16;
 
-                for _iHammer in 0..3 {
-                    let dAngle: f32 = RANDOM_INT(gp.get(), 628) as f32 / 100.0f32;
-                    let dVel: f32 = RANDOM_INT(gp.get(), 5) as f32 / 2.0f32 + 3.0f32;
-                    let dVelX: f32 = dVel * cosf(dAngle);
-                    let dVelY: f32 = dVel * sinf(dAngle);
-                    let obj = Ptr::new_box(MO_Hammer::new(
-                        g,
-                        Ptr::from_mut(&mut gp.get().rm.spr_hammer),
-                        Vec2s::new(iCenterX, iCenterY),
-                        6,
-                        Vec2f::new(dVelX, dVelY),
-                        5,
-                        self.playerID,
-                        self.teamID,
-                        iColorID,
-                        true,
-                    ));
-                    gp.get().objectcontainer[2].add(g, obj);
-                }
-
-                let mut player: Ptr<CPlayer> = get_player_from_global_id(g, self.playerID);
-
-                player.increase_projectiles_count(3);
-
-                if_sound_on_play(g, &mut gp.rm.sfx_cannon);
+            for _iHammer in 0..3 {
+                let dAngle: f32 = RANDOM_INT(gp.get(), 628) as f32 / 100.0f32;
+                let dVel: f32 = RANDOM_INT(gp.get(), 5) as f32 / 2.0f32 + 3.0f32;
+                let dVelX: f32 = dVel * cosf(dAngle);
+                let dVelY: f32 = dVel * sinf(dAngle);
+                let obj = Ptr::new_box(MO_Hammer::new(
+                    g,
+                    Ptr::from_mut(&mut gp.get().rm.spr_hammer),
+                    Vec2s::new(iCenterX, iCenterY),
+                    6,
+                    Vec2f::new(dVelX, dVelY),
+                    5,
+                    self.playerID,
+                    self.teamID,
+                    iColorID,
+                    true,
+                ));
+                gp.get().objectcontainer[2].add(g, obj);
             }
+
+            let mut player: Ptr<CPlayer> = get_player_from_global_id(g, self.playerID);
+
+            player.increase_projectiles_count(3);
+
+            if_sound_on_play(g, &mut gp.rm.sfx_cannon);
         }
     }
 }
@@ -161,12 +159,10 @@ impl CObjectTrait for MO_SledgeHammer {
         let mut gp = g.ptr();
         if !player.is_shielded() {
             self.dead = true;
-            unsafe {
-                let x = (self.ix as i32 + (self.iw as i32 >> 1) - 16) as i16;
-                let y = (self.iy as i32 + (self.ih as i32 >> 1) - 16) as i16;
-                g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), x, y, 3, 4));
-                if_sound_on_play(g, &mut gp.rm.sfx_hit);
-            }
+            let x = (self.ix as i32 + (self.iw as i32 >> 1) - 16) as i16;
+            let y = (self.iy as i32 + (self.ih as i32 >> 1) - 16) as i16;
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), x, y, 3, 4));
+            if_sound_on_play(g, &mut gp.rm.sfx_hit);
 
             if !player.is_invincible() && !player.shyguy {
                 return player.kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill;

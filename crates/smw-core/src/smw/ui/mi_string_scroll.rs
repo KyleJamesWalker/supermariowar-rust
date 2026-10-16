@@ -21,7 +21,7 @@ impl StringScrollElement {
 
     pub fn draw(&self, g: &mut Game, x: i32, y: i32, max_w: u32) {
         let mut gp = g.ptr();
-        unsafe { gp.rm.menu_font_large.draw_chop_right(g, x + 28, y + 5, max_w as i32, &self.str) };
+        gp.rm.menu_font_large.draw_chop_right(g, x + 28, y + 5, max_w as i32, &self.str);
     }
 }
 
@@ -160,47 +160,45 @@ impl UI_ControlTrait for MI_StringScroll {
     }
 
     fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
-        unsafe {
-            for iPlayer in 0..4i16 {
-                //Only allow the controlling team to control the menu (if there is one)
-                if self.iControllingTeam != -1 && (self.iControllingTeam != lookup_team_id(g, iPlayer) || g.game_values.playercontrol[iPlayer as usize] != 1) {
-                    continue;
+        for iPlayer in 0..4i16 {
+            //Only allow the controlling team to control the menu (if there is one)
+            if self.iControllingTeam != -1 && (self.iControllingTeam != lookup_team_id(g, iPlayer) || g.game_values.playercontrol[iPlayer as usize] != 1) {
+                continue;
+            }
+
+            let out = &playerInput.outputControls[iPlayer as usize];
+            if out.menu_down().fPressed {
+                self.move_next();
+                return MENU_CODE_NONE;
+            }
+
+            if out.menu_up().fPressed {
+                self.move_prev();
+                return MENU_CODE_NONE;
+            }
+
+            if out.menu_left().fPressed {
+                if !self.neighbor(MenuNavDirection::Left).is_null() {
+                    return MENU_CODE_UNSELECT_ITEM;
                 }
 
-                let out = &playerInput.outputControls[iPlayer as usize];
-                if out.menu_down().fPressed {
-                    self.move_next();
-                    return MENU_CODE_NONE;
+                return MENU_CODE_NONE;
+            }
+
+            if out.menu_right().fPressed {
+                if !self.neighbor(MenuNavDirection::Right).is_null() {
+                    return MENU_CODE_UNSELECT_ITEM;
                 }
 
-                if out.menu_up().fPressed {
-                    self.move_prev();
-                    return MENU_CODE_NONE;
-                }
+                return MENU_CODE_NONE;
+            }
 
-                if out.menu_left().fPressed {
-                    if !self.neighbor(MenuNavDirection::Left).is_null() {
-                        return MENU_CODE_UNSELECT_ITEM;
-                    }
+            if out.menu_select().fPressed {
+                return self.iAcceptCode;
+            }
 
-                    return MENU_CODE_NONE;
-                }
-
-                if out.menu_right().fPressed {
-                    if !self.neighbor(MenuNavDirection::Right).is_null() {
-                        return MENU_CODE_UNSELECT_ITEM;
-                    }
-
-                    return MENU_CODE_NONE;
-                }
-
-                if out.menu_select().fPressed {
-                    return self.iAcceptCode;
-                }
-
-                if out.menu_cancel().fPressed {
-                    return self.iCancelCode;
-                }
+            if out.menu_cancel().fPressed {
+                return self.iCancelCode;
             }
         }
 
@@ -220,27 +218,25 @@ impl UI_ControlTrait for MI_StringScroll {
         let iWidth = self.iWidth as i32;
         let iNumLines = self.iNumLines as i32;
 
-        unsafe {
-            gp.rm.menu_dialog.draw_src(g, x, y, &Rect { x: 0, y: 0, w: iWidth - 16, h: iNumLines * 32 + 32 });
-            gp.rm.menu_dialog.draw_src(g, x + iWidth - 16, y, &Rect { x: 496, y: 0, w: 16, h: iNumLines * 32 + 32 });
-            gp.rm.menu_dialog.draw_src(g, x, y + iNumLines * 32 + 32, &Rect { x: 0, y: 464, w: iWidth - 16, h: 16 });
-            gp.rm.menu_dialog.draw_src(g, x + iWidth - 16, y + iNumLines * 32 + 32, &Rect { x: 496, y: 464, w: 16, h: 16 });
+        gp.rm.menu_dialog.draw_src(g, x, y, &Rect { x: 0, y: 0, w: iWidth - 16, h: iNumLines * 32 + 32 });
+        gp.rm.menu_dialog.draw_src(g, x + iWidth - 16, y, &Rect { x: 496, y: 0, w: 16, h: iNumLines * 32 + 32 });
+        gp.rm.menu_dialog.draw_src(g, x, y + iNumLines * 32 + 32, &Rect { x: 0, y: 464, w: iWidth - 16, h: 16 });
+        gp.rm.menu_dialog.draw_src(g, x + iWidth - 16, y + iNumLines * 32 + 32, &Rect { x: 496, y: 464, w: 16, h: 16 });
 
-            gp.rm.menu_font_large.draw_centered(g, x + (iWidth >> 1), y + 5, &self.sTitle);
+        gp.rm.menu_font_large.draw_centered(g, x + (iWidth >> 1), y + 5, &self.sTitle);
 
-            //Draw each filter field
-            let mut iLine: i16 = 0;
-            while iLine < self.iNumLines && (iLine as u16 as usize) < self.items.len() {
-                let iLineWidth: i16 = (iWidth - 32) as i16;
-                let iHalfLineWidth: i16 = iLineWidth >> 1;
-                let (lw, hlw, l) = (iLineWidth as i32, iHalfLineWidth as i32, iLine as i32);
-                let selY = if self.iSelectedLine == iLine { 32 } else { 0 };
-                self.spr.draw_src(g, x + 16, y + 32 + l * 32, &Rect { x: 0, y: selY, w: hlw, h: 32 });
-                self.spr.draw_src(g, x + 16 + hlw, y + 32 + l * 32, &Rect { x: 512 - lw + hlw, y: selY, w: lw - hlw, h: 32 });
+        //Draw each filter field
+        let mut iLine: i16 = 0;
+        while iLine < self.iNumLines && (iLine as u16 as usize) < self.items.len() {
+            let iLineWidth: i16 = (iWidth - 32) as i16;
+            let iHalfLineWidth: i16 = iLineWidth >> 1;
+            let (lw, hlw, l) = (iLineWidth as i32, iHalfLineWidth as i32, iLine as i32);
+            let selY = if self.iSelectedLine == iLine { 32 } else { 0 };
+            self.spr.draw_src(g, x + 16, y + 32 + l * 32, &Rect { x: 0, y: selY, w: hlw, h: 32 });
+            self.spr.draw_src(g, x + 16 + hlw, y + 32 + l * 32, &Rect { x: 512 - lw + hlw, y: selY, w: lw - hlw, h: 32 });
 
-                self.items[(self.iOffset as i32 + l) as usize].draw(g, x, 32 + y + l * 32, (iWidth - 104) as u32);
-                iLine += 1;
-            }
+            self.items[(self.iOffset as i32 + l) as usize].draw(g, x, 32 + y + l * 32, (iWidth - 104) as u32);
+            iLine += 1;
         }
     }
 }

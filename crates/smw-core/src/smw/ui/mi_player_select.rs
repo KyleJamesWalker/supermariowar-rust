@@ -89,57 +89,55 @@ impl UI_ControlTrait for MI_PlayerSelect {
     }
 
     fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
-        unsafe {
-            for iPlayer in 0..4usize {
-                let out = &playerInput.outputControls[iPlayer];
-                if out.menu_right().fPressed {
-                    self.iSelectedPlayer += 1;
-                    if self.iSelectedPlayer > 3 {
-                        self.iSelectedPlayer = 0;
-                    }
-
-                    self.set_image_position();
+        for iPlayer in 0..4usize {
+            let out = &playerInput.outputControls[iPlayer];
+            if out.menu_right().fPressed {
+                self.iSelectedPlayer += 1;
+                if self.iSelectedPlayer > 3 {
+                    self.iSelectedPlayer = 0;
                 }
 
-                if out.menu_left().fPressed {
-                    self.iSelectedPlayer -= 1;
-                    if self.iSelectedPlayer < 0 {
-                        self.iSelectedPlayer = 3;
+                self.set_image_position();
+            }
+
+            if out.menu_left().fPressed {
+                self.iSelectedPlayer -= 1;
+                if self.iSelectedPlayer < 0 {
+                    self.iSelectedPlayer = 3;
+                }
+
+                self.set_image_position();
+            }
+            let sel = self.iSelectedPlayer as usize;
+
+            if out.menu_up().fPressed {
+                g.game_values.playercontrol[sel] -= 1;
+                if g.game_values.playercontrol[sel] < 0 {
+                    g.game_values.playercontrol[sel] = 2;
+                }
+
+                if g.game_values.playercontrol[sel] == 0 {
+                    let mut iCountPlayers = 0;
+                    for iPlayer in 0..4usize {
+                        if g.game_values.playercontrol[iPlayer] > 0 {
+                            iCountPlayers += 1;
+                        }
                     }
 
-                    self.set_image_position();
-                }
-                let sel = self.iSelectedPlayer as usize;
-
-                if out.menu_up().fPressed {
-                    g.game_values.playercontrol[sel] -= 1;
-                    if g.game_values.playercontrol[sel] < 0 {
+                    if iCountPlayers < 2 {
                         g.game_values.playercontrol[sel] = 2;
                     }
-
-                    if g.game_values.playercontrol[sel] == 0 {
-                        let mut iCountPlayers = 0;
-                        for iPlayer in 0..4usize {
-                            if g.game_values.playercontrol[iPlayer] > 0 {
-                                iCountPlayers += 1;
-                            }
-                        }
-
-                        if iCountPlayers < 2 {
-                            g.game_values.playercontrol[sel] = 2;
-                        }
-                    }
                 }
+            }
 
-                if out.menu_down().fPressed {
-                    next_control(g, sel);
-                }
+            if out.menu_down().fPressed {
+                next_control(g, sel);
+            }
 
-                if out.menu_select().fPressed || out.menu_cancel().fPressed {
-                    self.miModifyImage.set_visible(false);
-                    self.fModifying = false;
-                    return MENU_CODE_UNSELECT_ITEM;
-                }
+            if out.menu_select().fPressed || out.menu_cancel().fPressed {
+                self.miModifyImage.set_visible(false);
+                self.fModifying = false;
+                return MENU_CODE_UNSELECT_ITEM;
             }
         }
 
@@ -186,23 +184,21 @@ impl UI_ControlTrait for MI_PlayerSelect {
         let iIndent = self.iIndent as i32;
         let iWidth = self.iWidth as i32;
 
-        unsafe {
-            self.spr.draw_src(g, x, y, &Rect { x: 0, y: if self.fSelected { 64 } else { 0 }, w: iIndent - 16, h: 64 });
-            self.spr.draw_src(g, x + iIndent - 16, y, &Rect { x: 0, y: if self.fSelected { 192 } else { 128 }, w: 32, h: 64 });
-            self.spr.draw_src(g, x + iIndent + 16, y, &Rect { x: 528 - iWidth + iIndent, y: if self.fSelected { 64 } else { 0 }, w: iWidth - iIndent - 16, h: 64 });
+        self.spr.draw_src(g, x, y, &Rect { x: 0, y: if self.fSelected { 64 } else { 0 }, w: iIndent - 16, h: 64 });
+        self.spr.draw_src(g, x + iIndent - 16, y, &Rect { x: 0, y: if self.fSelected { 192 } else { 128 }, w: 32, h: 64 });
+        self.spr.draw_src(g, x + iIndent + 16, y, &Rect { x: 528 - iWidth + iIndent, y: if self.fSelected { 64 } else { 0 }, w: iWidth - iIndent - 16, h: 64 });
 
-            gp.rm.menu_font_large.draw_chop_right(g, x + 16, y + 20, iIndent - 8, &self.szName);
+        gp.rm.menu_font_large.draw_chop_right(g, x + 16, y + 20, iIndent - 8, &self.szName);
 
-            self.miModifyImage.draw(g);
+        self.miModifyImage.draw(g);
 
-            for iPlayer in 0..4usize {
-                self.spr.draw_src(
-                    g,
-                    x + self.iPlayerPosition[iPlayer] as i32,
-                    y + 16,
-                    &Rect { x: g.game_values.playercontrol[iPlayer] as i32 * 34 + 32, y: 206, w: 34, h: 32 },
-                );
-            }
+        for iPlayer in 0..4usize {
+            self.spr.draw_src(
+                g,
+                x + self.iPlayerPosition[iPlayer] as i32,
+                y + 16,
+                &Rect { x: g.game_values.playercontrol[iPlayer] as i32 * 34 + 32, y: 206, w: 34, h: 32 },
+            );
         }
     }
 }

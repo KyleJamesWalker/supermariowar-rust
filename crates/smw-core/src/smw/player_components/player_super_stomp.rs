@@ -52,34 +52,32 @@ impl PlayerSuperStomp {
         //If they were super stomping and they are not in the air anymore (i.e. on the ground), then create the
         //super stomp attack zone, play the sound and show the stomp gfx
         if self.is_stomping {
-            unsafe {
-                g.eyecandy[2].emplace(EC_SuperStompExplosion::new(Ptr::from_mut(&mut g.rm.spr_superstomp), player.center_x(), player.bottom_y(), 4));
-                if_sound_on_play(g, &mut gp.rm.sfx_bobombsound);
-                self.is_stomping = false;
+            g.eyecandy[2].emplace(EC_SuperStompExplosion::new(Ptr::from_mut(&mut g.rm.spr_superstomp), player.center_x(), player.bottom_y(), 4));
+            if_sound_on_play(g, &mut gp.rm.sfx_bobombsound);
+            self.is_stomping = false;
 
-                let obj = Ptr::new_box(MO_AttackZone::new(
-                    g,
-                    player.get_global_id(),
-                    player.get_team_id(),
-                    Vec2s::new((player.left_x() as i32 - 32) as i16, (player.top_y() as i32 + 10) as i16),
-                    Vec2s::new(32, 15),
-                    8,
-                    KillStyle::KuriboShoe,
-                    false,
-                ));
-                gp.objectcontainer[1].add(g, obj);
-                let obj = Ptr::new_box(MO_AttackZone::new(
-                    g,
-                    player.get_global_id(),
-                    player.get_team_id(),
-                    Vec2s::new(player.right_x(), (player.top_y() as i32 + 10) as i16),
-                    Vec2s::new(32, 15),
-                    8,
-                    KillStyle::KuriboShoe,
-                    false,
-                ));
-                gp.objectcontainer[1].add(g, obj);
-            }
+            let obj = Ptr::new_box(MO_AttackZone::new(
+                g,
+                player.get_global_id(),
+                player.get_team_id(),
+                Vec2s::new((player.left_x() as i32 - 32) as i16, (player.top_y() as i32 + 10) as i16),
+                Vec2s::new(32, 15),
+                8,
+                KillStyle::KuriboShoe,
+                false,
+            ));
+            gp.objectcontainer[1].add(g, obj);
+            let obj = Ptr::new_box(MO_AttackZone::new(
+                g,
+                player.get_global_id(),
+                player.get_team_id(),
+                Vec2s::new(player.right_x(), (player.top_y() as i32 + 10) as i16),
+                Vec2s::new(32, 15),
+                8,
+                KillStyle::KuriboShoe,
+                false,
+            ));
+            gp.objectcontainer[1].add(g, obj);
         }
     }
 

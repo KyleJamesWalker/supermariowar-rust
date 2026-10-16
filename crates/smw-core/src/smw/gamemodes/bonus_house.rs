@@ -50,79 +50,75 @@ impl CGameModeTrait for CGM_Bonus {
         let mut rm = g.rm;
         gm::cgamemode_init(g, self);
 
-        unsafe {
-            //Unlock the chests
-            g.game_values.flags.noexit = true;
+        //Unlock the chests
+        g.game_values.flags.noexit = true;
 
-            //Will cause the flow to skip the scoreboard screen and go straight back to the world map
-            g.game_values.worldskipscoreboard = true;
+        //Will cause the flow to skip the scoreboard screen and go straight back to the world map
+        g.game_values.worldskipscoreboard = true;
 
-            //Add number of treasure chests to the bonus house
-            self.tsTourStop = g.game_values.tourstops[g.game_values.tourstopcurrent];
-            let iNumBonuses: i16 = self.tsTourStop.iNumBonuses;
+        //Add number of treasure chests to the bonus house
+        self.tsTourStop = g.game_values.tourstops[g.game_values.tourstopcurrent];
+        let iNumBonuses: i16 = self.tsTourStop.iNumBonuses;
 
-            let mut fChestUsed: [bool; MAX_BONUS_CHESTS as usize] = [false; MAX_BONUS_CHESTS as usize];
-            let mut iChestOrder: [i16; MAX_BONUS_CHESTS as usize] = [0; MAX_BONUS_CHESTS as usize];
-            let mut iNumChests: i16 = 0;
+        let mut fChestUsed: [bool; MAX_BONUS_CHESTS as usize] = [false; MAX_BONUS_CHESTS as usize];
+        let mut iChestOrder: [i16; MAX_BONUS_CHESTS as usize] = [0; MAX_BONUS_CHESTS as usize];
+        let mut iNumChests: i16 = 0;
 
-            if self.tsTourStop.iBonusType == 0 {
-                for iChest in 0..iNumBonuses {
-                    iChestOrder[iNumChests as usize] = iChest;
-                    iNumChests += 1;
-                }
-            } else {
-                for iChest in 0..iNumBonuses {
-                    fChestUsed[iChest as usize] = false;
-                }
-
-                for _iChest in 0..iNumBonuses {
-                    let mut iRandChest: i16 = RANDOM_INT(gp.get(), iNumBonuses as i32) as i16;
-
-                    while fChestUsed[iRandChest as usize] {
-                        iRandChest += 1;
-                        if iRandChest >= iNumBonuses {
-                            iRandChest = 0;
-                        }
-                    }
-
-                    fChestUsed[iRandChest as usize] = true;
-                    iChestOrder[iNumChests as usize] = iRandChest;
-                    iNumChests += 1;
-                }
-            }
-
-            let dSpacing: f32 = (384.0f32 - (iNumBonuses as i32 * 64) as f32) / (iNumBonuses as i32 + 1) as f32;
-
-            let mut dx: f32 = 128.0f32 + dSpacing;
-
-            //float dx = 288.0f - (dSpacing * (float)(iNumBonuses - 1) / 2.0f);
+        if self.tsTourStop.iBonusType == 0 {
             for iChest in 0..iNumBonuses {
-                let iBonus = self.tsTourStop.wsbBonuses[iChestOrder[iChest as usize] as usize].iBonus;
-                let obj = Ptr::new_box(MO_BonusHouseChest::new(g, Ptr::from_mut(&mut rm.spr_worldbonushouse), Vec2s::new(dx as i16, 384), iBonus));
-                gp.objectcontainer[0].add(g, obj);
-                dx += dSpacing + 64.0f32;
+                iChestOrder[iNumChests as usize] = iChest;
+                iNumChests += 1;
             }
+        } else {
+            for iChest in 0..iNumBonuses {
+                fChestUsed[iChest as usize] = false;
+            }
+
+            for _iChest in 0..iNumBonuses {
+                let mut iRandChest: i16 = RANDOM_INT(gp.get(), iNumBonuses as i32) as i16;
+
+                while fChestUsed[iRandChest as usize] {
+                    iRandChest += 1;
+                    if iRandChest >= iNumBonuses {
+                        iRandChest = 0;
+                    }
+                }
+
+                fChestUsed[iRandChest as usize] = true;
+                iChestOrder[iNumChests as usize] = iRandChest;
+                iNumChests += 1;
+            }
+        }
+
+        let dSpacing: f32 = (384.0f32 - (iNumBonuses as i32 * 64) as f32) / (iNumBonuses as i32 + 1) as f32;
+
+        let mut dx: f32 = 128.0f32 + dSpacing;
+
+        //float dx = 288.0f - (dSpacing * (float)(iNumBonuses - 1) / 2.0f);
+        for iChest in 0..iNumBonuses {
+            let iBonus = self.tsTourStop.wsbBonuses[iChestOrder[iChest as usize] as usize].iBonus;
+            let obj = Ptr::new_box(MO_BonusHouseChest::new(g, Ptr::from_mut(&mut rm.spr_worldbonushouse), Vec2s::new(dx as i16, 384), iBonus));
+            gp.objectcontainer[0].add(g, obj);
+            dx += dSpacing + 64.0f32;
         }
     }
 
     fn draw_background(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        unsafe {
-            //Draw Toad
-            gp.rm.spr_worldbonushouse.draw_src(g, 544, 256, &Rect { x: if gp.players[0].left_x() > 544 { 224 } else { 192 }, y: 0, w: 32, h: 64 });
+        //Draw Toad
+        gp.rm.spr_worldbonushouse.draw_src(g, 544, 256, &Rect { x: if gp.players[0].left_x() > 544 { 224 } else { 192 }, y: 0, w: 32, h: 64 });
 
-            //Draw Bonus House Title
-            gp.rm.menu_plain_field.draw_src(g, 0, 0, &Rect { x: 0, y: 0, w: App::screenWidth / 2, h: 32 });
-            gp.rm.menu_plain_field.draw_src(g, App::screenWidth / 2, 0, &Rect { x: 192, y: 0, w: App::screenWidth / 2, h: 32 });
-            gp.rm.game_font_large.draw_centered(g, App::screenWidth / 2, 5, &self.tsTourStop.szName);
+        //Draw Bonus House Title
+        gp.rm.menu_plain_field.draw_src(g, 0, 0, &Rect { x: 0, y: 0, w: App::screenWidth / 2, h: 32 });
+        gp.rm.menu_plain_field.draw_src(g, App::screenWidth / 2, 0, &Rect { x: 192, y: 0, w: App::screenWidth / 2, h: 32 });
+        gp.rm.game_font_large.draw_centered(g, App::screenWidth / 2, 5, &self.tsTourStop.szName);
 
-            //Draw Bonus House Text
-            if self.tsTourStop.iBonusTextLines > 0 {
-                gp.rm.spr_worldbonushouse.draw_src(g, 128, 128, &Rect { x: 0, y: 64, w: 384, h: 128 });
+        //Draw Bonus House Text
+        if self.tsTourStop.iBonusTextLines > 0 {
+            gp.rm.spr_worldbonushouse.draw_src(g, 128, 128, &Rect { x: 0, y: 64, w: 384, h: 128 });
 
-                for iTextLine in 0..self.tsTourStop.iBonusTextLines {
-                    gp.rm.game_font_large.draw_chop_centered(g, App::screenWidth / 2, 132 + 24 * iTextLine as i32, 372, &self.tsTourStop.szBonusText[iTextLine as usize]);
-                }
+            for iTextLine in 0..self.tsTourStop.iBonusTextLines {
+                gp.rm.game_font_large.draw_chop_centered(g, App::screenWidth / 2, 132 + 24 * iTextLine as i32, 372, &self.tsTourStop.szBonusText[iTextLine as usize]);
             }
         }
     }

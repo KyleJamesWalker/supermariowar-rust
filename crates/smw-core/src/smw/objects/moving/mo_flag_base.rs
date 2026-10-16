@@ -73,7 +73,7 @@ impl MO_FlagBase {
 
         o.place_flag_base(g, true);
 
-        o.speed = unsafe { g.game_values.gamemodesettings.flag.speed } as f32 / 4.0f32;
+        o.speed = g.game_values.gamemodesettings.flag.speed as f32 / 4.0f32;
 
         o.timer = 0;
 
@@ -87,53 +87,49 @@ impl MO_FlagBase {
             return;
         }
 
-        unsafe {
-            self.timer = 0;
-            let mut x: i16 = 0;
-            let mut y: i16 = 0;
+        self.timer = 0;
+        let mut x: i16 = 0;
+        let mut y: i16 = 0;
 
-            if fInit && self.teamID < g.g_map.iNumFlagBases {
-                x = g.g_map.flagbaselocations[self.teamID as usize].x;
-                y = g.g_map.flagbaselocations[self.teamID as usize].y;
-            } else {
-                let mut iAttempts: i16 = 32;
-                let (cw, ch) = (self.collisionWidth, self.collisionHeight);
-                while (!gp.g_map.findspawnpoint(g, 5, &mut x, &mut y, cw, ch, false)
-                    || g.objectcontainer[1].get_closest_moving_object(x, y, movingobject_flagbase) < 200.0f32)
-                    && {
-                        let a = iAttempts;
-                        iAttempts -= 1;
-                        a > 0
-                    }
-                {}
-            }
-
-            self.set_xi(x);
-            self.set_yi(y);
+        if fInit && self.teamID < g.g_map.iNumFlagBases {
+            x = g.g_map.flagbaselocations[self.teamID as usize].x;
+            y = g.g_map.flagbaselocations[self.teamID as usize].y;
+        } else {
+            let mut iAttempts: i16 = 32;
+            let (cw, ch) = (self.collisionWidth, self.collisionHeight);
+            while (!gp.g_map.findspawnpoint(g, 5, &mut x, &mut y, cw, ch, false)
+                || g.objectcontainer[1].get_closest_moving_object(x, y, movingobject_flagbase) < 200.0f32)
+                && {
+                    let a = iAttempts;
+                    iAttempts -= 1;
+                    a > 0
+                }
+            {}
         }
+
+        self.set_xi(x);
+        self.set_yi(y);
     }
 
     pub fn score_flag(&mut self, g: &mut Game, mut flag: Ptr<CO_Flag>, mut player: Ptr<CPlayer>) {
         let mut gp = g.ptr();
-        unsafe {
-            if flag.teamID == self.teamID {
-                flag.place_flag(g);
-                if_sound_on_play(g, &mut gp.rm.sfx_areatag);
-            } else if !g.game_values.gamemodesettings.flag.homescore || !self.homeflag.is_null() || g.game_values.gamemodesettings.flag.centerflag {
-                flag.place_flag(g);
-                if !g.game_values.gamemode.gameover {
-                    player.score().adjust_score(g, 1);
-                    gp.game_values.gamemode.check_winner(g, player);
-                }
+        if flag.teamID == self.teamID {
+            flag.place_flag(g);
+            if_sound_on_play(g, &mut gp.rm.sfx_areatag);
+        } else if !g.game_values.gamemodesettings.flag.homescore || !self.homeflag.is_null() || g.game_values.gamemodesettings.flag.centerflag {
+            flag.place_flag(g);
+            if !g.game_values.gamemode.gameover {
+                player.score().adjust_score(g, 1);
+                gp.game_values.gamemode.check_winner(g, player);
+            }
 
-                if_sound_on_play(g, &mut gp.rm.sfx_racesound);
+            if_sound_on_play(g, &mut gp.rm.sfx_racesound);
 
-                if g.game_values.gamemodesettings.flag.pointmove {
-                    // Set the values way outside the map so it will place the base correctly
-                    self.ix = 1280;
-                    self.iy = 960;
-                    self.place_flag_base(g, false);
-                }
+            if g.game_values.gamemodesettings.flag.pointmove {
+                // Set the values way outside the map so it will place the base correctly
+                self.ix = 1280;
+                self.iy = 960;
+                self.place_flag_base(g, false);
             }
         }
     }
@@ -179,59 +175,57 @@ impl CObjectTrait for MO_FlagBase {
     }
 
     fn update(&mut self, g: &mut Game) {
-        unsafe {
-            if g.game_values.gamemodesettings.flag.speed > 0 {
-                self.anglechangetimer -= 1;
-                if self.anglechangetimer <= 0 && !net_random::object_event(g, Ev::Wander, &net_random::wander_args(self.iNetworkID, self.fx, self.fy, self.angle)) {
-                    self.change_angle(g);
-                }
-
-                self.angle += self.anglechange;
-
-                self.velx = self.speed * sinf(self.angle);
-                self.vely = self.speed * cosf(self.angle);
-
-                let (fx, velx) = (self.fx, self.velx);
-                self.set_xf(fx + velx);
-                let (fy, vely) = (self.fy, self.vely);
-                self.set_yf(fy + vely);
-
-                if self.ix < 0 {
-                    self.velx = -self.velx;
-                    self.ix = 0;
-                    self.fx = self.ix as f32;
-
-                    self.angle = atan2f(self.velx, self.vely);
-                } else if self.ix as i32 + self.collisionWidth as i32 >= App::screenWidth {
-                    self.velx = -self.velx;
-                    self.ix = (App::screenWidth - 1 - self.collisionWidth as i32) as i16;
-                    self.fx = self.ix as f32;
-
-                    self.angle = atan2f(self.velx, self.vely);
-                }
-
-                if self.iy < 0 {
-                    self.vely = -self.vely;
-                    self.iy = 0;
-                    self.fy = self.iy as f32;
-
-                    self.angle = atan2f(self.velx, self.vely);
-                } else if self.iy as i32 + self.collisionHeight as i32 >= App::screenHeight {
-                    self.vely = -self.vely;
-                    self.iy = (App::screenHeight - 1 - self.collisionHeight as i32) as i16;
-                    self.fy = self.iy as f32;
-
-                    self.angle = atan2f(self.velx, self.vely);
-                }
+        if g.game_values.gamemodesettings.flag.speed > 0 {
+            self.anglechangetimer -= 1;
+            if self.anglechangetimer <= 0 && !net_random::object_event(g, Ev::Wander, &net_random::wander_args(self.iNetworkID, self.fx, self.fy, self.angle)) {
+                self.change_angle(g);
             }
 
-            if g.game_values.gamemodesettings.flag.speed == 0 && {
-                let t = self.timer;
-                self.timer += 1;
-                t > 1000
-            } {
-                self.place_flag_base(g, false);
+            self.angle += self.anglechange;
+
+            self.velx = self.speed * sinf(self.angle);
+            self.vely = self.speed * cosf(self.angle);
+
+            let (fx, velx) = (self.fx, self.velx);
+            self.set_xf(fx + velx);
+            let (fy, vely) = (self.fy, self.vely);
+            self.set_yf(fy + vely);
+
+            if self.ix < 0 {
+                self.velx = -self.velx;
+                self.ix = 0;
+                self.fx = self.ix as f32;
+
+                self.angle = atan2f(self.velx, self.vely);
+            } else if self.ix as i32 + self.collisionWidth as i32 >= App::screenWidth {
+                self.velx = -self.velx;
+                self.ix = (App::screenWidth - 1 - self.collisionWidth as i32) as i16;
+                self.fx = self.ix as f32;
+
+                self.angle = atan2f(self.velx, self.vely);
             }
+
+            if self.iy < 0 {
+                self.vely = -self.vely;
+                self.iy = 0;
+                self.fy = self.iy as f32;
+
+                self.angle = atan2f(self.velx, self.vely);
+            } else if self.iy as i32 + self.collisionHeight as i32 >= App::screenHeight {
+                self.vely = -self.vely;
+                self.iy = (App::screenHeight - 1 - self.collisionHeight as i32) as i16;
+                self.fy = self.iy as f32;
+
+                self.angle = atan2f(self.velx, self.vely);
+            }
+        }
+
+        if g.game_values.gamemodesettings.flag.speed == 0 && {
+            let t = self.timer;
+            self.timer += 1;
+            t > 1000
+        } {
+            self.place_flag_base(g, false);
         }
     }
 

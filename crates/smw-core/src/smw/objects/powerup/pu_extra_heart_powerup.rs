@@ -43,21 +43,19 @@ impl CObjectTrait for PU_ExtraHeartPowerup {
     fn collide_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
         let mut gp = g.ptr();
         let mut player = player;
-        unsafe {
-            if self.state > 0 {
-                if g.game_values.gamemode.gamemode == game_mode_health {
-                    if player.score().subscore[1] < g.game_values.gamemodesettings.health.maxlife {
-                        player.score().subscore[1] += 1;
-                    }
-
-                    if player.score().subscore[0] < g.game_values.gamemodesettings.health.maxlife {
-                        player.score().subscore[0] += 1;
-                    }
+        if self.state > 0 {
+            if g.game_values.gamemode.gamemode == game_mode_health {
+                if player.score().subscore[1] < g.game_values.gamemodesettings.health.maxlife {
+                    player.score().subscore[1] += 1;
                 }
 
-                if_sound_on_play(g, &mut gp.rm.sfx_collectpowerup);
-                self.dead = true;
+                if player.score().subscore[0] < g.game_values.gamemodesettings.health.maxlife {
+                    player.score().subscore[0] += 1;
+                }
             }
+
+            if_sound_on_play(g, &mut gp.rm.sfx_collectpowerup);
+            self.dead = true;
         }
 
         false

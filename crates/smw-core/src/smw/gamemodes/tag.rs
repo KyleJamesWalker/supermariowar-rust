@@ -23,7 +23,7 @@ pub struct CGM_Tag {
 impl_base!(CGM_Tag => cgame_mode: CGameMode);
 
 /// The `j`/`k` loop shared by `think` and `playerkilledself`.
-unsafe fn tag_warning_needed(g: &mut Game, goal: i16) -> bool {
+fn tag_warning_needed(g: &mut Game, goal: i16) -> bool {
     let mut countscore: i16 = 0;
     let mut playwarning = false;
     for j in 0..g.score_cnt {
@@ -83,13 +83,11 @@ impl CGameModeTrait for CGM_Tag {
         cgamemode_init(g, self);
         self.fReverseScoring = self.goal == -1;
 
-        unsafe {
-            for iScore in 0..g.score_cnt {
-                if self.fReverseScoring {
-                    gp.score[iScore as usize].set_score(g, 0);
-                } else {
-                    gp.score[iScore as usize].set_score(g, self.goal);
-                }
+        for iScore in 0..g.score_cnt {
+            if self.fReverseScoring {
+                gp.score[iScore as usize].set_score(g, 0);
+            } else {
+                gp.score[iScore as usize].set_score(g, self.goal);
             }
         }
 
@@ -109,16 +107,14 @@ impl CGameModeTrait for CGM_Tag {
 
             let mut tagged = self.m_tagged;
             if tagged.isready() {
-                unsafe {
-                    self.counter += 1;
-                    if self.counter >= g.game_values.pointspeed {
-                        self.counter = 0;
+                self.counter += 1;
+                if self.counter >= g.game_values.pointspeed {
+                    self.counter = 0;
 
-                        if self.fReverseScoring {
-                            tagged.score().adjust_score(g, 1);
-                        } else {
-                            tagged.score().adjust_score(g, -1);
-                        }
+                    if self.fReverseScoring {
+                        tagged.score().adjust_score(g, 1);
+                    } else {
+                        tagged.score().adjust_score(g, -1);
                     }
                 }
             }
@@ -127,7 +123,7 @@ impl CGameModeTrait for CGM_Tag {
                 return;
             }
 
-            let playwarning = unsafe { tag_warning_needed(g, self.goal) };
+            let playwarning = tag_warning_needed(g, self.goal);
 
             if playwarning && !self.playedwarningsound {
                 self.playwarningsound(g);
@@ -143,54 +139,52 @@ impl CGameModeTrait for CGM_Tag {
 
     fn playerkilledplayer(&mut self, g: &mut Game, mut inflictor: Ptr<CPlayer>, mut other: Ptr<CPlayer>, _style: KillStyle) -> PlayerKillType {
         let mut gp = g.ptr();
-        unsafe {
-            if inflictor == self.m_tagged {
-                self.m_tagged = other;
-                inflictor.shield().reset(g);
-                g.eyecandy[2].emplace(EC_GravText::new(
-                    Ptr::from_mut(&mut g.rm.game_font_large),
-                    other.center_x(),
-                    other.bottom_y(),
-                    "Tagged!".to_string(),
-                    (-(VELJUMP as f64) * 1.5) as f32,
-                ));
-                g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
-                    (other.center_x() as i32 - 16) as i16,
-                    (other.center_y() as i32 - 16) as i16,
-                    3,
-                    8,
-                ));
-                if_sound_on_play(g, &mut gp.rm.sfx_transform);
+        if inflictor == self.m_tagged {
+            self.m_tagged = other;
+            inflictor.shield().reset(g);
+            g.eyecandy[2].emplace(EC_GravText::new(
+                Ptr::from_mut(&mut g.rm.game_font_large),
+                other.center_x(),
+                other.bottom_y(),
+                "Tagged!".to_string(),
+                (-(VELJUMP as f64) * 1.5) as f32,
+            ));
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(
+                Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+                (other.center_x() as i32 - 16) as i16,
+                (other.center_y() as i32 - 16) as i16,
+                3,
+                8,
+            ));
+            if_sound_on_play(g, &mut gp.rm.sfx_transform);
+        }
+
+        if !self.gameover {
+            if self.fReverseScoring {
+                other.score().adjust_score(g, 5);
+                return PlayerKillType::Normal;
+            } else {
+                other.score().adjust_score(g, -5);
             }
 
-            if !self.gameover {
-                if self.fReverseScoring {
-                    other.score().adjust_score(g, 5);
-                    return PlayerKillType::Normal;
-                } else {
-                    other.score().adjust_score(g, -5);
+            let mut countscore: i16 = 0;
+            for k in 0..g.score_cnt {
+                if Ptr::from_mut(inflictor.score()) == g.score[k as usize] {
+                    continue;
                 }
 
-                let mut countscore: i16 = 0;
-                for k in 0..g.score_cnt {
-                    if Ptr::from_mut(inflictor.score()) == g.score[k as usize] {
-                        continue;
-                    }
+                countscore = (countscore as i32 + g.score[k as usize].score as i32) as i16;
+            }
 
-                    countscore = (countscore as i32 + g.score[k as usize].score as i32) as i16;
-                }
+            if countscore as f64 <= self.goal as f64 * 0.2 && !self.playedwarningsound {
+                self.playwarningsound(g);
+            }
 
-                if countscore as f64 <= self.goal as f64 * 0.2 && !self.playedwarningsound {
-                    self.playwarningsound(g);
-                }
+            if other.score().score <= 0 {
+                other.score().set_score(g, 0);
 
-                if other.score().score <= 0 {
-                    other.score().set_score(g, 0);
-
-                    remove_team(g, other.get_team_id());
-                    return PlayerKillType::Removed;
-                }
+                remove_team(g, other.get_team_id());
+                return PlayerKillType::Removed;
             }
         }
 
@@ -208,7 +202,7 @@ impl CGameModeTrait for CGM_Tag {
                 player.score().adjust_score(g, -5);
             }
 
-            let playwarning = unsafe { tag_warning_needed(g, self.goal) };
+            let playwarning = tag_warning_needed(g, self.goal);
 
             if playwarning && !self.playedwarningsound {
                 self.playwarningsound(g);
@@ -237,7 +231,7 @@ impl CGameModeTrait for CGM_Tag {
 
 fn tag_mode(g: &mut Game) -> Option<&'static mut CGM_Tag> {
     let mut gp = g.ptr();
-    unsafe { gp.game_values.gamemode.get().as_any().downcast_mut::<CGM_Tag>() }
+    gp.game_values.gamemode.get().as_any().downcast_mut::<CGM_Tag>()
 }
 
 pub fn net_reassign(g: &mut Game) {

@@ -41,28 +41,26 @@ impl CGameModeTrait for CGM_CaptureTheFlag {
 
         let mut fTeamUsed: [bool; 4] = [false, false, false, false];
 
-        unsafe {
-            for i in 0..g.players.len() {
-                let player = g.players[i];
-                let iTeamID: i16 = player.get_team_id();
-                if !fTeamUsed[iTeamID as usize] {
-                    fTeamUsed[iTeamID as usize] = true;
+        for i in 0..g.players.len() {
+            let player = g.players[i];
+            let iTeamID: i16 = player.get_team_id();
+            if !fTeamUsed[iTeamID as usize] {
+                fTeamUsed[iTeamID as usize] = true;
 
-                    let iColorID: i16 = player.get_color_id();
-                    let base: Ptr<MO_FlagBase> = Ptr::new_box(MO_FlagBase::new(g, Ptr::from_mut(&mut gp.rm.spr_flagbases), iTeamID, iColorID));
-                    gp.objectcontainer[0].add(g, base);
+                let iColorID: i16 = player.get_color_id();
+                let base: Ptr<MO_FlagBase> = Ptr::new_box(MO_FlagBase::new(g, Ptr::from_mut(&mut gp.rm.spr_flagbases), iTeamID, iColorID));
+                gp.objectcontainer[0].add(g, base);
 
-                    if !g.game_values.gamemodesettings.flag.centerflag {
-                        let flag: Ptr<CO_Flag> = CO_Flag::new(g, Ptr::from_mut(&mut gp.rm.spr_flags), base, iTeamID, iColorID);
-                        gp.objectcontainer[1].add(g, flag);
-                    }
+                if !g.game_values.gamemodesettings.flag.centerflag {
+                    let flag: Ptr<CO_Flag> = CO_Flag::new(g, Ptr::from_mut(&mut gp.rm.spr_flags), base, iTeamID, iColorID);
+                    gp.objectcontainer[1].add(g, flag);
                 }
             }
+        }
 
-            if g.game_values.gamemodesettings.flag.centerflag {
-                let centerflag: Ptr<CO_Flag> = CO_Flag::new(g, Ptr::from_mut(&mut gp.rm.spr_flags), Ptr::null(), -1, -1);
-                gp.objectcontainer[1].add(g, centerflag);
-            }
+        if g.game_values.gamemodesettings.flag.centerflag {
+            let centerflag: Ptr<CO_Flag> = CO_Flag::new(g, Ptr::from_mut(&mut gp.rm.spr_flags), Ptr::null(), -1, -1);
+            gp.objectcontainer[1].add(g, centerflag);
         }
     }
 
@@ -77,9 +75,7 @@ impl CGameModeTrait for CGM_CaptureTheFlag {
         let mut item = player.carriedItem;
         if !item.is_null() && item.get_moving_object_type() == movingobject_flag {
             item.as_any().downcast_mut::<CO_Flag>().expect("carried flag").place_flag(g);
-            unsafe {
-                if_sound_on_play(g, &mut gp.rm.sfx_transform);
-            }
+            if_sound_on_play(g, &mut gp.rm.sfx_transform);
         }
 
         PlayerKillType::Normal

@@ -395,31 +395,29 @@ fn save_mode(g: &mut Game, mode: Mode) {
 /// After `init_joysticks`, which `touch_first` depends on.
 pub fn init(g: &mut Game) {
     let mut gp = g.ptr();
-    unsafe {
-        let pads = gp.joystickcount > 0;
-        let live = std::env::var_os("SMW_TOUCH").is_some() && !crate::smw::harness::replaying(g);
-        st(gp.get()).debug = std::env::var_os("SMW_DEBUG_INPUT").is_some();
-        st(gp.get()).session_on = live || crate::smw::harness::replay_touch(g);
-        st(gp.get()).first = st(gp.get()).session_on && !pads;
-        if live {
-            crate::smw::harness::record_touch(g);
-            st(gp.get()).touch = Some(Touch { controls: Controls::new(load_mode(g), Layout::default()), visible: !pads, alpha: if pads { 0.0 } else { 1.0 }, cutouts: Vec::new(), images: None, generation: 0 });
-            println!("[touch] on, {}", if pads { "hidden while a pad is connected" } else { "player 1" });
-        }
+    let pads = gp.joystickcount > 0;
+    let live = std::env::var_os("SMW_TOUCH").is_some() && !crate::smw::harness::replaying(g);
+    st(gp.get()).debug = std::env::var_os("SMW_DEBUG_INPUT").is_some();
+    st(gp.get()).session_on = live || crate::smw::harness::replay_touch(g);
+    st(gp.get()).first = st(gp.get()).session_on && !pads;
+    if live {
+        crate::smw::harness::record_touch(g);
+        st(gp.get()).touch = Some(Touch { controls: Controls::new(load_mode(g), Layout::default()), visible: !pads, alpha: if pads { 0.0 } else { 1.0 }, cutouts: Vec::new(), images: None, generation: 0 });
+        println!("[touch] on, {}", if pads { "hidden while a pad is connected" } else { "player 1" });
     }
 }
 
 /// Whether this session has the touch controls, live or in the recording being replayed.
 pub fn session(g: &mut Game) -> bool {
     let mut gp = g.ptr();
-    unsafe { st(gp.get()).session_on }
+    st(gp.get()).session_on
 }
 
 /// Whether the touch keys (the right keyboard set) go to player 1 ahead of the pads: touch is on and no pad was
 /// connected at launch. Replays read it from the recording, so it must not depend on anything later.
 pub fn touch_first(g: &mut Game) -> bool {
     let mut gp = g.ptr();
-    unsafe { st(gp.get()).first }
+    st(gp.get()).first
 }
 
 /// False: drop the event. Called before the recorder sees the event.
@@ -464,52 +462,48 @@ pub fn filter(g: &mut Game, event: &SDL_Event) -> bool {
 /// Pushes the keys the fingers changed. Not from inside an event filter.
 pub fn flush(g: &mut Game) {
     let mut gp = g.ptr();
-    unsafe {
-        let Some(t) = st(gp.get()).touch.as_mut() else { return };
-        if !crate::services::services(gp.get()).keyboard.has_focus() {
-            t.controls.release_all();
-        }
-        st(gp.get()).pushing = true;
-        for (key, down) in std::mem::take(&mut t.controls.queue) {
-            let scancode = crate::services::services(gp.get()).keyboard.scancode_from_key(key.sym());
-            let event = InputEvent::Key { key: smw_platform::Keycode(key.sym()), scancode, mods: 0, down, repeat: false, window: 0 };
-            crate::services::services(gp.get()).events.push(&Input { timestamp: 0, event });
-        }
-        st(gp.get()).pushing = false;
-        for (x, y) in std::mem::take(&mut t.controls.taps) {
-            crate::services::services(gp.get()).events.push(&Input { timestamp: 0, event: InputEvent::Tap { x, y } });
-        }
+    let Some(t) = st(gp.get()).touch.as_mut() else { return };
+    if !crate::services::services(gp.get()).keyboard.has_focus() {
+        t.controls.release_all();
+    }
+    st(gp.get()).pushing = true;
+    for (key, down) in std::mem::take(&mut t.controls.queue) {
+        let scancode = crate::services::services(gp.get()).keyboard.scancode_from_key(key.sym());
+        let event = InputEvent::Key { key: smw_platform::Keycode(key.sym()), scancode, mods: 0, down, repeat: false, window: 0 };
+        crate::services::services(gp.get()).events.push(&Input { timestamp: 0, event });
+    }
+    st(gp.get()).pushing = false;
+    for (x, y) in std::mem::take(&mut t.controls.taps) {
+        crate::services::services(gp.get()).events.push(&Input { timestamp: 0, event: InputEvent::Tap { x, y } });
     }
 }
 
 /// What to draw over the presented frame, outside the game's 640x480 logical viewport.
 pub fn overlay(g: &mut Game) -> Option<Overlay> {
     let mut gp = g.ptr();
-    unsafe {
-        let t = st(gp.get()).touch.as_mut()?;
-        let video = &crate::services::services(gp.get()).video;
-        let (w, h) = video.output_size();
-        if w <= 0 || h <= 0 {
-            return None;
-        }
-        let cutouts = CUTOUTS.lock().unwrap_or_else(|e| e.into_inner()).clone();
-        if t.controls.layout.w != w as f32 || t.controls.layout.h != h as f32 || t.cutouts != cutouts {
-            t.cutouts = cutouts.clone();
-            let dp = match video.display_dpi() {
-                Some(dpi) => dpi / 160.0,
-                None => h as f32 / 400.0,
-            };
-            t.controls.release_all();
-            t.controls.layout = layout(w as f32, h as f32, dp, &cutouts);
-            t.images = Some(build_images(&t.controls.layout).into());
-            t.generation += 1;
-        }
-        t.alpha = if t.visible { (t.alpha + 0.2).min(1.0) } else { (t.alpha - 0.08).max(0.0) };
-        if t.alpha <= 0.0 {
-            return None;
-        }
-        Some(Overlay { generation: t.generation, images: t.images.clone()?, quads: quads(t) })
+    let t = st(gp.get()).touch.as_mut()?;
+    let video = &crate::services::services(gp.get()).video;
+    let (w, h) = video.output_size();
+    if w <= 0 || h <= 0 {
+        return None;
     }
+    let cutouts = CUTOUTS.lock().unwrap_or_else(|e| e.into_inner()).clone();
+    if t.controls.layout.w != w as f32 || t.controls.layout.h != h as f32 || t.cutouts != cutouts {
+        t.cutouts = cutouts.clone();
+        let dp = match video.display_dpi() {
+            Some(dpi) => dpi / 160.0,
+            None => h as f32 / 400.0,
+        };
+        t.controls.release_all();
+        t.controls.layout = layout(w as f32, h as f32, dp, &cutouts);
+        t.images = Some(build_images(&t.controls.layout).into());
+        t.generation += 1;
+    }
+    t.alpha = if t.visible { (t.alpha + 0.2).min(1.0) } else { (t.alpha - 0.08).max(0.0) };
+    if t.alpha <= 0.0 {
+        return None;
+    }
+    Some(Overlay { generation: t.generation, images: t.images.clone()?, quads: quads(t) })
 }
 
 const DPAD_BASE: usize = 0;

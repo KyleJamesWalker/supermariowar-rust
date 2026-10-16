@@ -30,21 +30,19 @@ impl PlayerInvincibility {
 
     pub fn turn_on(&mut self, g: &mut Game, player: &mut CPlayer) {
         let mut gp = g.ptr();
-        unsafe {
-            self.invincible = true;
-            self.timer = 0;
-            player.shield.abort();
+        self.invincible = true;
+        self.timer = 0;
+        player.shield.abort();
 
-            //Stop the invincible music if a player is already invincible
-            //(we don't want two invincible music sounds playing at the same time)
-            gp.rm.sfx_invinciblemusic.stop(g);
+        //Stop the invincible music if a player is already invincible
+        //(we don't want two invincible music sounds playing at the same time)
+        gp.rm.sfx_invinciblemusic.stop(g);
 
-            if !g.game_values.gamemode.gameover {
-                g.game_values.flags.playinvinciblesound = true;
+        if !g.game_values.gamemode.gameover {
+            g.game_values.flags.playinvinciblesound = true;
 
-                if g.game_values.music && g.game_values.sound {
-                    gp.rm.backgroundmusic[0].stop(g);
-                }
+            if g.game_values.music && g.game_values.sound {
+                gp.rm.backgroundmusic[0].stop(g);
             }
         }
     }

@@ -93,33 +93,31 @@ impl CO_Egg {
         }
 
         self.relocatetimer = 0;
-        unsafe {
-            if g.game_values.gamemodesettings.egg.explode > 0 {
-                self.explosiondrawframe = g.game_values.gamemodesettings.egg.explode - 1;
-                self.explosiondrawtimer = 62;
+        if g.game_values.gamemodesettings.egg.explode > 0 {
+            self.explosiondrawframe = g.game_values.gamemodesettings.egg.explode - 1;
+            self.explosiondrawtimer = 62;
 
-                if self.explosiondrawframe < 5 {
-                    self.animationspeed = self.egganimationrates[self.explosiondrawframe as usize];
-                } else {
-                    self.animationspeed = self.egganimationrates[5];
-                }
+            if self.explosiondrawframe < 5 {
+                self.animationspeed = self.egganimationrates[self.explosiondrawframe as usize];
             } else {
                 self.animationspeed = self.egganimationrates[5];
             }
-
-            let mut x: i16 = 0;
-            let mut y: i16 = 0;
-            let mut iAttempts: i16 = 32;
-            let (w, h) = (self.collisionWidth, self.collisionHeight);
-            while (!gp.g_map.findspawnpoint(g, 5, &mut x, &mut y, w, h, false) || g.objectcontainer[1].get_closest_moving_object(x, y, movingobject_yoshi) < 250.0) && {
-                let t = iAttempts;
-                iAttempts -= 1;
-                t > 0
-            } {}
-
-            self.set_xi(x);
-            self.set_yi(y);
+        } else {
+            self.animationspeed = self.egganimationrates[5];
         }
+
+        let mut x: i16 = 0;
+        let mut y: i16 = 0;
+        let mut iAttempts: i16 = 32;
+        let (w, h) = (self.collisionWidth, self.collisionHeight);
+        while (!gp.g_map.findspawnpoint(g, 5, &mut x, &mut y, w, h, false) || g.objectcontainer[1].get_closest_moving_object(x, y, movingobject_yoshi) < 250.0) && {
+            let t = iAttempts;
+            iAttempts -= 1;
+            t > 0
+        } {}
+
+        self.set_xi(x);
+        self.set_yi(y);
 
         self.vely = GRAVITATION;
         self.velx = 0.0;
@@ -191,32 +189,30 @@ impl CObjectTrait for CO_Egg {
         }
 
         // Explode
-        unsafe {
-            if g.game_values.gamemodesettings.egg.explode > 0 {
-                self.explosiondrawtimer -= 1;
-                if self.explosiondrawtimer <= 0 {
-                    self.explosiondrawtimer = 62;
-                    self.explosiondrawframe -= 1;
-                    if self.explosiondrawframe < 0 {
-                        let obj = Ptr::new_box(MO_Explosion::new(
-                            g,
-                            Ptr::from_mut(&mut rm.spr_explosion),
-                            Vec2s::new((self.ix as i32 + (self.iw as i32 >> 1) - 96) as i16, (self.iy as i32 + (self.ih as i32 >> 1) - 64) as i16),
-                            2,
-                            4,
-                            -1,
-                            -1,
-                            KillStyle::Bomb,
-                        ));
-                        gp.objectcontainer[2].add(g, obj);
-                        self.place_egg(g);
+        if g.game_values.gamemodesettings.egg.explode > 0 {
+            self.explosiondrawtimer -= 1;
+            if self.explosiondrawtimer <= 0 {
+                self.explosiondrawtimer = 62;
+                self.explosiondrawframe -= 1;
+                if self.explosiondrawframe < 0 {
+                    let obj = Ptr::new_box(MO_Explosion::new(
+                        g,
+                        Ptr::from_mut(&mut rm.spr_explosion),
+                        Vec2s::new((self.ix as i32 + (self.iw as i32 >> 1) - 96) as i16, (self.iy as i32 + (self.ih as i32 >> 1) - 64) as i16),
+                        2,
+                        4,
+                        -1,
+                        -1,
+                        KillStyle::Bomb,
+                    ));
+                    gp.objectcontainer[2].add(g, obj);
+                    self.place_egg(g);
 
-                        if_sound_on_play(g, &mut gp.rm.sfx_bobombsound);
-                    } else if self.explosiondrawframe < 5 {
-                        self.animationspeed = self.egganimationrates[self.explosiondrawframe as usize];
-                    } else {
-                        self.animationspeed = self.egganimationrates[5];
-                    }
+                    if_sound_on_play(g, &mut gp.rm.sfx_bobombsound);
+                } else if self.explosiondrawframe < 5 {
+                    self.animationspeed = self.egganimationrates[self.explosiondrawframe as usize];
+                } else {
+                    self.animationspeed = self.egganimationrates[5];
                 }
             }
         }

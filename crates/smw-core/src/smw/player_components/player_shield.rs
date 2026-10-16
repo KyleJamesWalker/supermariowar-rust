@@ -26,23 +26,19 @@ impl PlayerShield {
     pub fn reset(&mut self, g: &mut Game) {
         self.abort();
 
-        unsafe {
-            if g.game_values.gamemode.getgamemode() == game_mode_survival {
-                if g.game_values.gamemodesettings.survival.shield {
-                    self.timer = g.game_values.shieldtime;
-                    self.r#type = g.game_values.shieldstyle as PlayerShieldType;
-                }
-            } else if g.game_values.shieldstyle != ShieldStyle::NoShield {
+        if g.game_values.gamemode.getgamemode() == game_mode_survival {
+            if g.game_values.gamemodesettings.survival.shield {
                 self.timer = g.game_values.shieldtime;
                 self.r#type = g.game_values.shieldstyle as PlayerShieldType;
             }
+        } else if g.game_values.shieldstyle != ShieldStyle::NoShield {
+            self.timer = g.game_values.shieldtime;
+            self.r#type = g.game_values.shieldstyle as PlayerShieldType;
         }
     }
 
     pub fn turn_on(&mut self, g: &mut Game) {
-        unsafe {
-            self.r#type = if g.game_values.shieldstyle != ShieldStyle::NoShield { g.game_values.shieldstyle as PlayerShieldType } else { SOFT };
-        }
+        self.r#type = if g.game_values.shieldstyle != ShieldStyle::NoShield { g.game_values.shieldstyle as PlayerShieldType } else { SOFT };
         self.timer = 60;
     }
 

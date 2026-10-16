@@ -37,15 +37,13 @@ impl CGameModeTrait for CGM_Coins {
         let mut gp = g.ptr();
         cgamemode_init(g, self);
 
-        unsafe {
-            if g.game_values.gamemodesettings.coins.quantity < 1 {
-                g.game_values.gamemodesettings.coins.quantity = 1;
-            }
+        if g.game_values.gamemodesettings.coins.quantity < 1 {
+            g.game_values.gamemodesettings.coins.quantity = 1;
+        }
 
-            for _iCoin in 0..g.game_values.gamemodesettings.coins.quantity {
-                let obj = Ptr::new_box(MO_Coin::new(g, Ptr::from_mut(&mut gp.get().rm.spr_coin), Vec2f::zero(), Vec2s::zero(), 2, 0, 0, 0, true));
-                gp.get().objectcontainer[1].add(g, obj);
-            }
+        for _iCoin in 0..g.game_values.gamemodesettings.coins.quantity {
+            let obj = Ptr::new_box(MO_Coin::new(g, Ptr::from_mut(&mut gp.get().rm.spr_coin), Vec2f::zero(), Vec2s::zero(), 2, 0, 0, 0, true));
+            gp.get().objectcontainer[1].add(g, obj);
         }
     }
 
@@ -54,10 +52,8 @@ impl CGameModeTrait for CGM_Coins {
             return PlayerKillType::Normal;
         }
 
-        unsafe {
-            if g.game_values.gamemodesettings.coins.penalty {
-                other.score().adjust_score(g, -1);
-            }
+        if g.game_values.gamemodesettings.coins.penalty {
+            other.score().adjust_score(g, -1);
         }
 
         PlayerKillType::Normal
@@ -68,10 +64,8 @@ impl CGameModeTrait for CGM_Coins {
             return PlayerKillType::Normal;
         }
 
-        unsafe {
-            if g.game_values.gamemodesettings.coins.penalty {
-                player.score().adjust_score(g, -1);
-            }
+        if g.game_values.gamemodesettings.coins.penalty {
+            player.score().adjust_score(g, -1);
         }
 
         PlayerKillType::Normal

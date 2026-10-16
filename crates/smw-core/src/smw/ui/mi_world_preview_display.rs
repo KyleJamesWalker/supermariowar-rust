@@ -85,7 +85,7 @@ impl MI_WorldPreviewDisplay {
         self.iAnimationTimer = 0;
         self.iAnimationFrame = 0;
 
-        let (iWidth, iHeight): (i16, i16) = unsafe { (g.g_worldmap.iWidth, g.g_worldmap.iHeight) };
+        let (iWidth, iHeight): (i16, i16) = (g.g_worldmap.iWidth, g.g_worldmap.iHeight);
 
         if iWidth > 20 {
             self.rectSrcSurface.w = 320;
@@ -124,10 +124,8 @@ impl MI_WorldPreviewDisplay {
     pub fn set_world(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         let (mut w, mut h): (i16, i16) = (0, 0);
-        unsafe {
-            gp.get().g_worldmap.init(WorldMap::new_path(g, &gp.get().worldlist.at(gp.get().game_values.worldindex as usize).to_string_lossy(), PREVIEWTILESIZE as i16));
-            g.g_worldmap.get_world_size(&mut w, &mut h);
-        }
+        gp.get().g_worldmap.init(WorldMap::new_path(g, &gp.get().worldlist.at(gp.get().game_values.worldindex as usize).to_string_lossy(), PREVIEWTILESIZE as i16));
+        g.g_worldmap.get_world_size(&mut w, &mut h);
 
         self.iScrollCols = if w > 20 { w - 20 } else { 0 };
         self.iScrollRows = if h > 15 { h - 15 } else { 0 };
@@ -139,16 +137,12 @@ impl MI_WorldPreviewDisplay {
 
     fn update_map_surface(&mut self, g: &mut Game, fFullRefresh: bool) {
         let mut gp = g.ptr();
-        unsafe {
-            gp.g_worldmap.draw_map_to_surface(g, -1, fFullRefresh, self.map_sprite.get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
-        }
+        gp.g_worldmap.draw_map_to_surface(g, -1, fFullRefresh, self.map_sprite.get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
 
-        unsafe {
-            let olddest = g.blitdest;
-            g.blitdest = self.map_sprite.get_surface();
-            gp.g_worldmap.draw(g, self.iMapGlobalOffsetX, self.iMapGlobalOffsetY, false, false);
-            g.blitdest = olddest;
-        }
+        let olddest = g.blitdest;
+        g.blitdest = self.map_sprite.get_surface();
+        gp.g_worldmap.draw(g, self.iMapGlobalOffsetX, self.iMapGlobalOffsetY, false, false);
+        g.blitdest = olddest;
     }
 }
 
@@ -294,6 +288,6 @@ impl UI_ControlTrait for MI_WorldPreviewDisplay {
         self.rectSrcSurface.x = self.iMapOffsetX as i32;
         self.rectSrcSurface.y = self.iMapOffsetY as i32;
 
-        self.map_sprite.draw_src_to(&self.rectSrcSurface, unsafe { g.blitdest }, &self.rectDstSurface);
+        self.map_sprite.draw_src_to(&self.rectSrcSurface, g.blitdest, &self.rectDstSurface);
     }
 }

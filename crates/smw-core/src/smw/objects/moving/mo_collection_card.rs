@@ -88,16 +88,14 @@ impl MO_CollectionCard {
         let mut x: i16 = 0;
         let mut y: i16 = 0;
         let mut iAttempts: i16 = 32;
-        unsafe {
-            while (!gp.g_map.findspawnpoint(g, 5, &mut x, &mut y, self.collisionWidth, self.collisionHeight, false)
-                || g.objectcontainer[1].get_closest_moving_object(x, y, movingobject_collectioncard) <= 150.0f32)
-                && {
-                    let a = iAttempts;
-                    iAttempts -= 1;
-                    a > 0
-                }
-            {}
-        }
+        while (!gp.g_map.findspawnpoint(g, 5, &mut x, &mut y, self.collisionWidth, self.collisionHeight, false)
+            || g.objectcontainer[1].get_closest_moving_object(x, y, movingobject_collectioncard) <= 150.0f32)
+            && {
+                let a = iAttempts;
+                iAttempts -= 1;
+                a > 0
+            }
+        {}
         if let Some((hx, hy)) = crate::smw::net_random::spawn_position(g) {
             (x, y) = (hx, hy);
         }
@@ -120,9 +118,7 @@ impl CObjectTrait for MO_CollectionCard {
             return false;
         }
 
-        unsafe {
-            if_sound_on_play(g, &mut gp.rm.sfx_areatag);
-        }
+        if_sound_on_play(g, &mut gp.rm.sfx_areatag);
 
         let value = self.value as i32;
 
@@ -166,9 +162,7 @@ impl CObjectTrait for MO_CollectionCard {
             self.timer += 1;
             if self.timer > 200 {
                 self.dead = true;
-                unsafe {
-                    g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
-                }
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
             }
         }
 
@@ -191,11 +185,9 @@ impl CObjectTrait for MO_CollectionCard {
             io_moving_object_update(g, self);
 
             self.uncollectabletime -= 1;
-            unsafe {
-                if (self.uncollectabletime as i32) < -(g.game_values.gamemodesettings.collection.cardlife as i32) {
-                    g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
-                    self.dead = true;
-                }
+            if (self.uncollectabletime as i32) < -(g.game_values.gamemodesettings.collection.cardlife as i32) {
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
+                self.dead = true;
             }
         }
     }
@@ -205,14 +197,12 @@ impl CObjectTrait for MO_CollectionCard {
         io_moving_object_draw(g, self);
 
         // Draw sparkles
-        unsafe {
-            gp.rm.spr_shinesparkle.draw_src(
-                g,
-                self.ix as i32 - self.collisionOffsetX as i32,
-                self.iy as i32 - self.collisionOffsetY as i32,
-                &Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },
-            );
-        }
+        gp.rm.spr_shinesparkle.draw_src(
+            g,
+            self.ix as i32 - self.collisionOffsetX as i32,
+            self.iy as i32 - self.collisionOffsetY as i32,
+            &Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },
+        );
     }
 }
 

@@ -934,9 +934,7 @@ mod tests {
 
     fn set_data_root(g: &mut Game) {
         let mut gp = g.ptr();
-        unsafe {
-            gp.RootDataDirectory = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data").to_string();
-        }
+        gp.RootDataDirectory = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data").to_string();
     }
 
     #[test]

@@ -87,7 +87,7 @@ impl CO_Flag {
             let mut iAttempts: i16 = 10;
             let (mut ix, mut iy) = (self.ix, self.iy);
             let (w, h) = (self.collisionWidth, self.collisionHeight);
-            while !unsafe { gp.g_map.findspawnpoint(g, 5, &mut ix, &mut iy, w, h, false) } && {
+            while !gp.g_map.findspawnpoint(g, 5, &mut ix, &mut iy, w, h, false) && {
                 let t = iAttempts;
                 iAttempts -= 1;
                 t > 0
@@ -128,9 +128,9 @@ impl CObjectTrait for CO_Flag {
         let mut gp = g.ptr();
         let mut player = player;
         if self.owner.is_null() && player.isready() && (!self.fInBase || self.teamID != player.teamID) {
-            if unsafe { g.game_values.gamemodesettings.flag.touchreturn } && self.teamID == player.teamID {
+            if g.game_values.gamemodesettings.flag.touchreturn && self.teamID == player.teamID {
                 self.place_flag(g);
-                unsafe { if_sound_on_play(g, &mut gp.rm.sfx_areatag) };
+                if_sound_on_play(g, &mut gp.rm.sfx_areatag);
             } else if player.accept_item(self.as_carried_ptr()) {
                 self.owner = player;
                 self.owner_throw = player;
@@ -145,7 +145,7 @@ impl CObjectTrait for CO_Flag {
     }
 
     fn update(&mut self, g: &mut Game) {
-        let autoreturn = unsafe { g.game_values.gamemodesettings.flag.autoreturn };
+        let autoreturn = g.game_values.gamemodesettings.flag.autoreturn;
         if !self.owner.is_null() {
             self.move_to_owner(g);
             self.timer = 0;

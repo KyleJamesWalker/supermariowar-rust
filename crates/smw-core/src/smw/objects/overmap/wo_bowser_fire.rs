@@ -80,12 +80,10 @@ impl CObjectTrait for OMO_BowserFire {
             return false;
         }
 
-        unsafe {
-            if player.globalID != self.iPlayerID && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID) && !player.is_invincible() && !player.is_shielded() {
-                // Find the player that made this explosion so we can attribute a kill
-                player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Fireball, false, false);
-                return true;
-            }
+        if player.globalID != self.iPlayerID && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != player.teamID) && !player.is_invincible() && !player.is_shielded() {
+            // Find the player that made this explosion so we can attribute a kill
+            player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Fireball, false, false);
+            return true;
         }
 
         false

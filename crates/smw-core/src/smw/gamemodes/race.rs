@@ -13,21 +13,19 @@ use crate::smw::player::CPlayer;
 use std::any::Any;
 
 fn remove_player_race_goals(g: &mut Game, container: &CObjectContainer, id: i16, iGoal: i16) {
-    unsafe {
-        if g.game_values.gamemodesettings.race.penalty == 0 && iGoal != -1 {
-            return;
-        }
+    if g.game_values.gamemodesettings.race.penalty == 0 && iGoal != -1 {
+        return;
+    }
 
-        let n = container.list().len();
-        for i in 0..n {
-            let obj = container.list()[i];
-            let Some(goal) = obj.get().as_any().downcast_mut::<OMO_RaceGoal>() else {
-                continue;
-            };
+    let n = container.list().len();
+    for i in 0..n {
+        let obj = container.list()[i];
+        let Some(goal) = obj.get().as_any().downcast_mut::<OMO_RaceGoal>() else {
+            continue;
+        };
 
-            if iGoal == -1 || 2 == g.game_values.gamemodesettings.race.penalty || (1 == g.game_values.gamemodesettings.race.penalty && goal.get_goal_id() == iGoal) {
-                goal.reset(id);
-            }
+        if iGoal == -1 || 2 == g.game_values.gamemodesettings.race.penalty || (1 == g.game_values.gamemodesettings.race.penalty && goal.get_goal_id() == iGoal) {
+            goal.reset(id);
         }
     }
 }
@@ -63,31 +61,29 @@ impl CGM_Race {
 
     pub fn set_next_goal(&mut self, g: &mut Game, teamID: i16) {
         let mut gp = g.ptr();
-        unsafe {
-            self.nextGoal[teamID as usize] += 1;
-            if self.nextGoal[teamID as usize] >= self.quantity {
-                self.nextGoal[teamID as usize] = 0;
-                remove_player_race_goals(g, &gp.objectcontainer[2], teamID, -1);
+        self.nextGoal[teamID as usize] += 1;
+        if self.nextGoal[teamID as usize] >= self.quantity {
+            self.nextGoal[teamID as usize] = 0;
+            remove_player_race_goals(g, &gp.objectcontainer[2], teamID, -1);
 
-                if !self.gameover {
-                    gp.score[teamID as usize].adjust_score(g, 1);
+            if !self.gameover {
+                gp.score[teamID as usize].adjust_score(g, 1);
 
-                    //Don't end the game if the goal is infinite
-                    if self.goal == -1 {
-                        return;
-                    }
+                //Don't end the game if the goal is infinite
+                if self.goal == -1 {
+                    return;
+                }
 
-                    if g.score[teamID as usize].score >= self.goal {
-                        gp.score[teamID as usize].set_score(g, self.goal);
-                        self.winningteam = teamID;
-                        self.gameover = true;
+                if g.score[teamID as usize].score >= self.goal {
+                    gp.score[teamID as usize].set_score(g, self.goal);
+                    self.winningteam = teamID;
+                    self.gameover = true;
 
-                        remove_players_but_team(g, self.winningteam);
-                        setup_score_board(g, false);
-                        show_score_board(g);
-                    } else if g.score[teamID as usize].score as i32 >= self.goal as i32 - 1 && !self.playedwarningsound {
-                        self.playwarningsound(g);
-                    }
+                    remove_players_but_team(g, self.winningteam);
+                    setup_score_board(g, false);
+                    show_score_board(g);
+                } else if g.score[teamID as usize].score as i32 >= self.goal as i32 - 1 && !self.playedwarningsound {
+                    self.playwarningsound(g);
                 }
             }
         }
@@ -96,9 +92,7 @@ impl CGM_Race {
     //Player loses control of his areas
     pub fn penalize_race_goals(&mut self, g: &mut Game, player: Ptr<CPlayer>) {
         let mut gp = g.ptr();
-        unsafe {
-            remove_player_race_goals(g, &gp.objectcontainer[2], player.get_team_id(), (self.nextGoal[player.get_team_id() as usize] as i32 - 1) as i16);
-        }
+        remove_player_race_goals(g, &gp.objectcontainer[2], player.get_team_id(), (self.nextGoal[player.get_team_id() as usize] as i32 - 1) as i16);
 
         if 2 == self.penalty {
             self.nextGoal[player.get_team_id() as usize] = 0;
@@ -125,23 +119,21 @@ impl CGameModeTrait for CGM_Race {
         let mut gp = g.ptr();
         gm::cgamemode_init(g, self);
 
-        unsafe {
-            self.quantity = g.game_values.gamemodesettings.race.quantity;
-            if self.quantity < 2 {
-                self.quantity = 2;
-                g.game_values.gamemodesettings.race.quantity = self.quantity;
-            }
+        self.quantity = g.game_values.gamemodesettings.race.quantity;
+        if self.quantity < 2 {
+            self.quantity = 2;
+            g.game_values.gamemodesettings.race.quantity = self.quantity;
+        }
 
-            self.penalty = g.game_values.gamemodesettings.race.penalty;
-            if self.penalty < 0 || self.penalty > 2 {
-                self.penalty = 0;
-                g.game_values.gamemodesettings.race.penalty = self.penalty;
-            }
+        self.penalty = g.game_values.gamemodesettings.race.penalty;
+        if self.penalty < 0 || self.penalty > 2 {
+            self.penalty = 0;
+            g.game_values.gamemodesettings.race.penalty = self.penalty;
+        }
 
-            for iRaceGoal in 0..self.quantity {
-                let obj = Ptr::new_box(OMO_RaceGoal::new(g, Ptr::from_mut(&mut gp.get().rm.spr_racegoal), iRaceGoal));
-                gp.get().objectcontainer[2].add(g, obj);
-            }
+        for iRaceGoal in 0..self.quantity {
+            let obj = Ptr::new_box(OMO_RaceGoal::new(g, Ptr::from_mut(&mut gp.get().rm.spr_racegoal), iRaceGoal));
+            gp.get().objectcontainer[2].add(g, obj);
         }
 
         for iPlayer in 0..4 {

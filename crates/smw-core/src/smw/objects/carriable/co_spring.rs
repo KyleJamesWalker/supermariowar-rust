@@ -81,7 +81,7 @@ pub fn co_spring_hittop<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T, 
     player.superjumptype = if fSuper { 2 } else { 1 };
     player.vely = -VELNOTEBLOCKREPEL;
 
-    unsafe { if_sound_on_play(g, &mut gp.rm.sfx_bump) };
+    if_sound_on_play(g, &mut gp.rm.sfx_bump);
 }
 
 pub fn co_spring_hitother<T: CO_SpringTrait + ?Sized>(this: &mut T, player: Ptr<CPlayer>) {
@@ -149,7 +149,7 @@ pub fn co_spring_place<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T) {
         let mut iAttempts: i16 = 10;
         let (mut ix, mut iy) = (o.ix, o.iy);
         let (w, h) = (o.collisionWidth, o.collisionHeight);
-        while !unsafe { gp.g_map.findspawnpoint(g, 5, &mut ix, &mut iy, w, h, false) } && {
+        while !gp.g_map.findspawnpoint(g, 5, &mut ix, &mut iy, w, h, false) && {
             let t = iAttempts;
             iAttempts -= 1;
             t > 0

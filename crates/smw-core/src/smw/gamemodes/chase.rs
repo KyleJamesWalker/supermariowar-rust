@@ -55,23 +55,21 @@ impl CGameModeTrait for CGM_Chase {
         let mut gp = g.ptr();
         gm::cgamemode_init(g, self);
 
-        unsafe {
-            //Add phantos based on settings
-            for iPhanto in 0..3i16 {
-                let mut iNumPhantos: i16 = 0;
-                while iNumPhantos < g.game_values.gamemodesettings.chase.phantoquantity[iPhanto as usize] {
-                    let x = RANDOM_INT(gp.get(), App::screenWidth);
-                    let y = if RANDOM_BOOL(gp.get()) { -32 - CRUNCHMAX } else { App::screenHeight };
-                    let obj = Ptr::new_box(OMO_Phanto::new(g, Ptr::from_mut(&mut gp.get().rm.spr_phanto), Vec2s::new(x as i16, y as i16), 0.0f32, 0.0f32, iPhanto));
-                    gp.get().objectcontainer[1].add(g, obj);
-                    iNumPhantos += 1;
-                }
+        //Add phantos based on settings
+        for iPhanto in 0..3i16 {
+            let mut iNumPhantos: i16 = 0;
+            while iNumPhantos < g.game_values.gamemodesettings.chase.phantoquantity[iPhanto as usize] {
+                let x = RANDOM_INT(gp.get(), App::screenWidth);
+                let y = if RANDOM_BOOL(gp.get()) { -32 - CRUNCHMAX } else { App::screenHeight };
+                let obj = Ptr::new_box(OMO_Phanto::new(g, Ptr::from_mut(&mut gp.get().rm.spr_phanto), Vec2s::new(x as i16, y as i16), 0.0f32, 0.0f32, iPhanto));
+                gp.get().objectcontainer[1].add(g, obj);
+                iNumPhantos += 1;
             }
-
-            //Add a key
-            self.key = Ptr::new_box(CO_PhantoKey::new(g, Ptr::from_mut(&mut gp.rm.spr_phantokey)));
-            gp.objectcontainer[1].add(g, self.key);
         }
+
+        //Add a key
+        self.key = Ptr::new_box(CO_PhantoKey::new(g, Ptr::from_mut(&mut gp.rm.spr_phantokey)));
+        gp.objectcontainer[1].add(g, self.key);
     }
 
     fn think(&mut self, g: &mut Game) {
@@ -83,13 +81,11 @@ impl CGameModeTrait for CGM_Chase {
         let mut keyholder: Ptr<CPlayer> = self.key.owner;
         if !keyholder.is_null() {
             if keyholder.isready() && !keyholder.is_tanooki_statue() {
-                unsafe {
-                    self.counter += 1;
-                    if self.counter >= g.game_values.pointspeed {
-                        self.counter = 0;
-                        keyholder.score().adjust_score(g, 1);
-                        self.check_winner(g, keyholder);
-                    }
+                self.counter += 1;
+                if self.counter >= g.game_values.pointspeed {
+                    self.counter = 0;
+                    keyholder.score().adjust_score(g, 1);
+                    self.check_winner(g, keyholder);
                 }
             }
         }
