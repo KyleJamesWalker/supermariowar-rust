@@ -44,7 +44,7 @@ impl_base!(MO_BulletBill => io_moving_object: IO_MovingObject);
 impl MO_BulletBill {
     pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, nsprdead: Ptr<gfxSprite>, pos: Vec2s, nspeed: f32, playerID: i16, isspawned: bool) -> Self {
         let mut o = MO_BulletBill {
-            io_moving_object: IO_MovingObject::new(nspr, pos, 4, 8, 30, 28, 1, 2, -1, -1, -1, -1),
+            io_moving_object: IO_MovingObject::new(g, nspr, pos, 4, 8, 30, 28, 1, 2, -1, -1, -1, -1),
             spr_dead: Ptr::null(),
             iColorID: 0,
             iColorOffsetY: 0,
@@ -232,6 +232,7 @@ impl CObjectTrait for MO_BulletBill {
 
     fn collide_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) {
         let mut gp = g.ptr();
+        let mut rm = g.rm;
         unsafe {
             removeifprojectile(g, object, true, false);
 
@@ -263,8 +264,9 @@ impl CObjectTrait for MO_BulletBill {
                 let iCenterX: i16 = (((ix + iOffsetX as i32 - bix) >> 1) + (bix + (bulletbill.iw as i32 >> 1))) as i16;
                 let iCenterY: i16 = (((iy - biy) >> 1) + (biy + (bulletbill.ih as i32 >> 1))) as i16;
 
-                g.objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(
-                    Ptr::from_mut(&mut g.rm.spr_explosion),
+                gp.objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(
+                    g,
+                    Ptr::from_mut(&mut rm.spr_explosion),
                     Vec2s::new((iCenterX as i32 - 96) as i16, (iCenterY as i32 - 64) as i16),
                     2,
                     4,

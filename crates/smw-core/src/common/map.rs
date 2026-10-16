@@ -328,7 +328,8 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
                 dAngle += dSector;
             }
         } else if hazard.itype == 2 {
-            gp.rm.spr_hazard_bulletbill[s].draw_src(g, 
+            gp.rm.spr_hazard_bulletbill[s].draw_src(
+                g,
                 rPathDst.x,
                 rPathDst.y,
                 &SDL_Rect { x: 0, y: if hazard.dparam[0] < 0.0 { 0 } else { ts }, w: ts, h: ts },
@@ -360,7 +361,8 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
                 iOffsetY = -(iTileSize << 1);
             }
 
-            gp.rm.spr_hazard_flame[s].draw_src(g, 
+            gp.rm.spr_hazard_flame[s].draw_src(
+                g,
                 rPathDst.x + iOffsetX as i32,
                 rPathDst.y + iOffsetY as i32,
                 &SDL_Rect { x: rect.x >> iSize, y: rect.y >> iSize, w: rect.w >> iSize, h: rect.h >> iSize },
@@ -384,7 +386,8 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
                 }
             }
 
-            gp.rm.spr_hazard_pirhanaplant[s].draw_src(g, 
+            gp.rm.spr_hazard_pirhanaplant[s].draw_src(
+                g,
                 rPathDst.x + iOffsetX as i32,
                 rPathDst.y + iOffsetY as i32,
                 &SDL_Rect { x: rect.x >> iSize, y: rect.y >> iSize, w: rect.w >> iSize, h: rect.h >> iSize },
@@ -394,9 +397,10 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
 }
 
 unsafe fn blit_platform_tile(g: &mut Game, tile: &TilesetTile, iSize: i16, bltrect: &mut SDL_Rect, dst: *mut SDL_Surface) {
+    let mut gp = g.ptr();
     if tile.iID >= 0 {
         blit(
-            g.g_tilesetmanager.tileset(tile.iID as usize).surface(iSize as usize),
+            gp.g_tilesetmanager.tileset(g, tile.iID as usize).surface(iSize as usize),
             g.g_tilesetmanager.rect(iSize, tile.iCol, tile.iRow),
             dst,
             bltrect,
@@ -492,7 +496,8 @@ pub fn draw_platform(g: &mut Game,
             for iCol in 0..iPlatformWidth {
                 for iRow in 0..iPlatformHeight {
                     if tiles[(iCol as i32 * ph + iRow as i32) as usize].iID != -2 {
-                        spr.draw_src(g, 
+                        spr.draw_src(
+                            g,
                             x0 + ((iCol as i32) << iSizeShift),
                             y0 + ((iRow as i32) << iSizeShift),
                             &SDL_Rect { x: 0, y: 0, w: iTileSize, h: iTileSize },
@@ -874,7 +879,8 @@ impl CMap {
         self.animatedtiles.clear();
     }
 
-    pub fn load_map(&mut self, file: &str, iReadType: ReadType) {
+    pub fn load_map(&mut self, g: &mut Game, file: &str, iReadType: ReadType) {
+        let mut gp = g.ptr();
         self.iTileAnimationTimer = 0;
         self.iTileAnimationFrame = 0;
 
@@ -915,7 +921,7 @@ impl CMap {
         }
 
         let mut reader = get_loader_by_version(&version);
-        reader.load(game().get(), self, &mut mapfile, iReadType);
+        reader.load(gp.get(), self, &mut mapfile, iReadType);
         drop(reader);
 
         if iReadType == read_type_summary {
@@ -1011,6 +1017,7 @@ impl CMap {
     }
 
     pub fn save_map(&mut self, g: &mut Game, file: &str) {
+        let mut gp = g.ptr();
         print!("saving map {} ... ", file);
 
         let mut mapfile = BinaryFile::new(file, "wb");
@@ -1191,7 +1198,7 @@ impl CMap {
             for iTileset in 0..iTilesetCount {
                 if fTilesetUsed[iTileset as usize] {
                     mapfile.write_i32(iTileset as i32);
-                    let name = g.g_tilesetmanager.tileset(iTileset as usize).name().to_string();
+                    let name = gp.g_tilesetmanager.tileset(g, iTileset as usize).name().to_string();
                     mapfile.write_string_long(&name);
                 }
             }
@@ -1202,7 +1209,7 @@ impl CMap {
                         let tile = &mut self.mapdata[i][j][k];
 
                         if tile.iID >= 0 {
-                            let ts = g.g_tilesetmanager.tileset(tile.iID as usize);
+                            let ts = gp.g_tilesetmanager.tileset(g, tile.iID as usize);
                             if tile.iCol < 0 || tile.iCol >= ts.width() {
                                 tile.iCol = 0;
                             }
@@ -1239,7 +1246,7 @@ impl CMap {
                         let mut tile = *platform.tile_at(iCol as usize, iRow as usize);
 
                         if tile.iID >= 0 {
-                            let ts = g.g_tilesetmanager.tileset(tile.iID as usize);
+                            let ts = gp.g_tilesetmanager.tileset(g, tile.iID as usize);
                             if tile.iCol < 0 || tile.iCol >= ts.width() {
                                 tile.iCol = 0;
                             }
@@ -1814,6 +1821,7 @@ impl CMap {
     }
 
     fn draw(&mut self, g: &mut Game, targetSurface: *mut SDL_Surface, layer: i32) {
+        let mut gp = g.ptr();
         unsafe {
             self.bltrect.x = 0;
             for i in 0..MW {
@@ -1829,7 +1837,7 @@ impl CMap {
                     }
 
                     if tile.iID >= 0 {
-                        g.g_tilesetmanager.draw(targetSurface, tile.iID, 0, tile.iCol, tile.iRow, i as i16, j as i16);
+                        gp.g_tilesetmanager.draw(g, targetSurface, tile.iID, 0, tile.iCol, tile.iRow, i as i16, j as i16);
                     } else if tile.iID as i32 == TILESETANIMATED {
                         let iNewTileId: i16 = (j * MW + i) as i16;
                         let fNeedNewAnimatedTile = !self.animatedtiles.iter().any(|t| t.id == iNewTileId);
@@ -1944,7 +1952,8 @@ impl CMap {
                 let basepath = p.pPath.as_any();
 
                 if let Some(path) = basepath.downcast_ref::<StraightPath>() {
-                    draw_platform(g, 
+                    draw_platform(
+                        g,
                         path.path_type_id(),
                         &tiles,
                         (path.start_pos().x * 2.0) as i16,
@@ -1962,7 +1971,8 @@ impl CMap {
                         targetSurface,
                     );
                 } else if let Some(path) = basepath.downcast_ref::<StraightPathContinuous>() {
-                    draw_platform(g, 
+                    draw_platform(
+                        g,
                         path.path_type_id(),
                         &tiles,
                         (path.start_pos().x * 2.0) as i16,
@@ -1980,7 +1990,8 @@ impl CMap {
                         targetSurface,
                     );
                 } else if let Some(path) = basepath.downcast_ref::<EllipsePath>() {
-                    draw_platform(g, 
+                    draw_platform(
+                        g,
                         path.path_type_id(),
                         &tiles,
                         (path.center_pos().x * 2.0) as i16,
@@ -2114,6 +2125,7 @@ impl CMap {
     }
 
     fn draw_preview(&mut self, g: &mut Game, targetSurface: *mut SDL_Surface, layer: i32, fThumbnail: bool) {
+        let mut gp = g.ptr();
         let mut iTilesetSize: i16 = 1;
 
         if fThumbnail {
@@ -2129,7 +2141,7 @@ impl CMap {
                     }
 
                     if tile.iID >= 0 {
-                        g.g_tilesetmanager.draw(targetSurface, tile.iID, iTilesetSize, tile.iCol, tile.iRow, i as i16, j as i16);
+                        gp.g_tilesetmanager.draw(g, targetSurface, tile.iID, iTilesetSize, tile.iCol, tile.iRow, i as i16, j as i16);
                     } else if tile.iID as i32 == TILESETANIMATED {
                         blit(
                             g.rm.spr_tileanimation[iTilesetSize as usize].get_surface(),
@@ -2246,6 +2258,7 @@ impl CMap {
     }
 
     pub fn setup_animated_tiles(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             self.iAnimatedBackgroundLayers = 2;
             if !g.game_values.toplayer {
@@ -2286,7 +2299,7 @@ impl CMap {
                                 let tilesetTile = tile.layers[iLayer];
                                 if tilesetTile.iID >= 0 {
                                     blit(
-                                        g.g_tilesetmanager.tileset(tilesetTile.iID as usize).surface(0),
+                                        gp.g_tilesetmanager.tileset(g, tilesetTile.iID as usize).surface(0),
                                         &tile.rSrc[iLayer][0],
                                         ats,
                                         &mut rDst,
@@ -2326,7 +2339,7 @@ impl CMap {
                                 let tilesetTile = tile.layers[iLayer];
                                 if tilesetTile.iID >= 0 {
                                     blit(
-                                        g.g_tilesetmanager.tileset(tilesetTile.iID as usize).surface(0),
+                                        gp.g_tilesetmanager.tileset(g, tilesetTile.iID as usize).surface(0),
                                         &tile.rSrc[iLayer][0],
                                         ats,
                                         &mut rDst,
@@ -2411,10 +2424,10 @@ impl CMap {
         }
     }
 
-    pub fn update_platforms(&mut self) {
+    pub fn update_platforms(&mut self, g: &mut Game) {
         for &platform in &self.platforms.clone() {
             let mut p = platform;
-            p.update();
+            p.update(g);
         }
 
         let mut iter = 0usize;
@@ -2424,7 +2437,7 @@ impl CMap {
                 p.delete();
                 self.tempPlatforms.remove(iter);
             } else {
-                p.update();
+                p.update(g);
                 iter += 1;
             }
         }
@@ -2499,10 +2512,10 @@ impl CMap {
         fRet
     }
 
-    pub fn reset_platforms(&mut self) {
+    pub fn reset_platforms(&mut self, g: &mut Game) {
         for &platform in &self.platforms.clone() {
             let mut p = platform;
-            p.reset_path();
+            p.reset_path(g);
         }
 
         for platform in self.tempPlatforms.drain(..) {
@@ -2731,12 +2744,13 @@ impl CMap {
     }
 
     pub fn optimize(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             for j in 0..MH {
                 for i in 0..MW {
                     for m in 1..ML {
                         let tile = self.mapdata[i][j][m];
-                        let r#type = g.g_tilesetmanager.tileset(tile.iID as isize as usize).tile_type(tile.iCol as usize, tile.iRow as usize);
+                        let r#type = gp.g_tilesetmanager.tileset(g, tile.iID as isize as usize).tile_type(tile.iCol as usize, tile.iRow as usize);
                         if r#type != TileType::NonSolid && r#type != TileType::Gap && r#type != TileType::SolidOnTop {
                             let mut k = m as i32 - 1;
                             while k >= 0 {
@@ -2807,7 +2821,7 @@ pub(crate) mod tests {
     }
 
     /// Same text as tools/ref/map_dump.cpp prints after `---`.
-    pub(crate) fn dump(m: &mut CMap, readtype: ReadType) -> String {
+    pub(crate) fn dump(g: &mut Game, m: &mut CMap, readtype: ReadType) -> String {
         let mut o = String::new();
         let _ = writeln!(
             o,
@@ -2879,7 +2893,7 @@ pub(crate) mod tests {
             }
             o += "\n";
             for _ in 0..120 {
-                p.update();
+                p.update(g);
             }
             let s1 = *p.pPath.current_pos1();
             let _ = writeln!(o, " after120 x={:.6} y={:.6} vx={:.6} vy={:.6} s1={:.6},{:.6}", p.fx, p.fy, p.fVelX, p.fVelY, s1.x, s1.y);
@@ -2947,6 +2961,7 @@ pub(crate) mod tests {
     #[test]
     fn loads_every_map_without_panicking() {
         let g = crate::game::game().get();
+        let mut gp = g.ptr();
         let _g = lock_globals();
         init_map_globals(g);
         let maps = all_map_files();
@@ -2954,8 +2969,9 @@ pub(crate) mod tests {
         unsafe {
             for f in &maps {
                 for rt in [read_type_summary, read_type_preview, read_type_full] {
-                    g.g_map.load_map(f, rt);
-                    let _ = dump(&mut g.g_map, rt);
+                    gp.g_map.load_map(g, f, rt);
+                    let mut map = g.g_map;
+                    let _ = dump(g, &mut map, rt);
                 }
             }
         }
@@ -3068,6 +3084,7 @@ pub(crate) mod tests {
     #[test]
     fn matches_cpp_map_dump() {
         let g = crate::game::game().get();
+        let mut gp = g.ptr();
         let _g = lock_globals();
         let Ok(bin) = std::env::var("SMW_MAP_DUMP") else {
             eprintln!("SMW_MAP_DUMP not set; skipping C++ comparison");
@@ -3084,8 +3101,9 @@ pub(crate) mod tests {
                     let expected = text.split("\n---\n").nth(1).unwrap_or("").to_string();
 
                     g.g_map = Ptr::from_box(CMap::new());
-                    g.g_map.load_map(&f, rt);
-                    let actual = dump(&mut g.g_map, rt);
+                    gp.g_map.load_map(g, &f, rt);
+                    let mut map = g.g_map;
+                    let actual = dump(g, &mut map, rt);
                     if actual != expected {
                         let line = actual.lines().zip(expected.lines()).position(|(a, b)| a != b);
                         let show = line.map(|l| format!("\n  rust: {}\n  c++:  {}", actual.lines().nth(l).unwrap_or(""), expected.lines().nth(l).unwrap_or("")));

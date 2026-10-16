@@ -81,7 +81,8 @@ impl CObjectTrait for B_ViewBlock {
         //Draw powerup behind block
         if self.state == 0 && !self.fNoPowerupsSelected {
             unsafe {
-                gp.rm.spr_storedpoweruplarge.draw_src(g, 
+                gp.rm.spr_storedpoweruplarge.draw_src(
+                    g,
                     self.ix as i32,
                     self.iy as i32,
                     &SDL_Rect { x: self.powerupindex as i32 * 32, y: 0, w: 32, h: 32 },

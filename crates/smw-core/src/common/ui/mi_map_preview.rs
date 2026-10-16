@@ -88,7 +88,7 @@ impl MI_MapPreview {
             gp.objectcontainer[1].update(g);
             g.objectcontainer[1].clean_dead_objects();
 
-            g.g_map.update_platforms();
+            gp.g_map.update_platforms(g);
         }
     }
 
@@ -161,7 +161,7 @@ impl MI_MapPreview {
     pub fn load_map(&mut self, g: &mut Game, szMapPath: &str) {
         let mut gp = g.ptr();
         unsafe {
-            g.g_map.load_map(szMapPath, read_type_preview);
+            gp.g_map.load_map(g, szMapPath, read_type_preview);
             small_delay(); //Sleeps to help the music from skipping
 
             load_current_map_background(g);

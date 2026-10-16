@@ -19,6 +19,7 @@ impl MapReader {
     }
 
     pub(super) fn read_tiles_1500(&mut self, g: &mut Game, map: &mut CMap, mapfile: &mut BinaryFile) {
+        let mut gp = g.ptr();
         unsafe {
             for j in 0..MAPHEIGHT as usize {
                 for i in 0..MAPWIDTH as usize {
@@ -29,7 +30,7 @@ impl MapReader {
                     tile.iCol = iTileID % 32;
                     tile.iRow = iTileID / 32;
 
-                    let iType = g.g_tilesetmanager.classic_tileset().tile_type(tile.iCol as isize as usize, tile.iRow as isize as usize);
+                    let iType = gp.g_tilesetmanager.classic_tileset(g).tile_type(tile.iCol as isize as usize, tile.iRow as isize as usize);
                     map.mapdatatop[i][j] = iType;
 
                     map.mapdata[i][j][0].iID = TILESETNONE as i16;

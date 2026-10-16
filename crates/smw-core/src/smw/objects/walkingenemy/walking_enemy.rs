@@ -69,6 +69,7 @@ impl MO_WalkingEnemy {
     ) -> Self {
         let mut o = MO_WalkingEnemy {
             io_moving_object: IO_MovingObject::new(
+                g,
                 nspr,
                 Vec2s::zero(),
                 iNumSpr,
@@ -162,7 +163,8 @@ pub fn mo_walking_enemy_draw<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, thi
         let o = this.we();
         if o.frozen {
             unsafe {
-                gp.rm.spr_iceblock.draw_src(g, 
+                gp.rm.spr_iceblock.draw_src(
+                    g,
                     o.ix as i32 - o.collisionOffsetX as i32 + o.iw as i32 - 32,
                     o.iy as i32 - o.collisionOffsetY as i32 + o.ih as i32 - 32,
                     &SDL_Rect { x: 0, y: 0, w: 32, h: 32 },
@@ -326,7 +328,7 @@ pub fn mo_walking_enemy_collide_player<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut
             if player.fOldY + PH as f32 <= o.fOldY && player.iy as i32 + PH >= o.iy as i32 {
                 return this.hittop_player(g, player);
             } else {
-                return this.hitother(player);
+                return this.hitother(g, player);
             }
         }
     }
@@ -484,8 +486,9 @@ pub trait MO_WalkingEnemyTrait: IO_MovingObjectTrait {
     }
 
     fn hittop_player(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool;
-    fn hitother(&mut self, player: Ptr<CPlayer>) -> bool {
-        mo_walking_enemy_hitother(game().get(), self, player)
+    fn hitother(&mut self, g: &mut Game, player: Ptr<CPlayer>) -> bool {
+        let mut gp = g.ptr();
+        mo_walking_enemy_hitother(gp.get(), self, player)
     }
 
     fn shatter_die(&mut self, g: &mut Game) {

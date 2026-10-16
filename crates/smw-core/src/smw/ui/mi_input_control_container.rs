@@ -138,7 +138,7 @@ impl UI_ControlTrait for MI_InputControlField {
                 #[cfg(not(target_os = "emscripten"))]
                 let input = {
                     let mut event: SDL_Event = std::mem::zeroed();
-                    harness::wait_event(&mut event);
+                    harness::wait_event(g, &mut event);
                     smw_sdl2::input::from_sdl(&event)
                 };
                 #[cfg(target_os = "emscripten")]

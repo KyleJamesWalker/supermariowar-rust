@@ -165,7 +165,7 @@ impl UI_ControlTrait for MI_NetworkListScroll {
             gp.rm.menu_dialog.draw_src(g, x, y + n * 32 + 32, &SDL_Rect { x: 0, y: 464, w: w - 16, h: 16 });
             gp.rm.menu_dialog.draw_src(g, x + w - 16, y + n * 32 + 32, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
 
-            g.rm.menu_font_large.draw_centered(x + (w >> 1), y + 5, &self.sTitle);
+            gp.rm.menu_font_large.draw_centered(g, x + (w >> 1), y + 5, &self.sTitle);
 
             let mut iLine: i16 = 0;
             while iLine < self.iNumLines && (iLine as u16 as usize) < self.items.len() {
@@ -174,7 +174,8 @@ impl UI_ControlTrait for MI_NetworkListScroll {
                 let sel = if self.iSelectedLine == iLine { 32 } else { 0 };
                 let ly = y + 32 + iLine as i32 * 32;
                 self.spr.draw_src(g, x + 16, ly, &SDL_Rect { x: 0, y: sel, w: iHalfLineWidth as i32, h: 32 });
-                self.spr.draw_src(g, 
+                self.spr.draw_src(
+                    g,
                     x + 16 + iHalfLineWidth as i32,
                     ly,
                     &SDL_Rect { x: 512 - iLineWidth as i32 + iHalfLineWidth as i32, y: sel, w: (iLineWidth - iHalfLineWidth) as i32, h: 32 },
@@ -182,7 +183,7 @@ impl UI_ControlTrait for MI_NetworkListScroll {
 
                 let item = &self.items[(self.iOffset + iLine) as usize];
                 gp.rm.menu_font_large.draw_chop_right(g, x + 28, y + 5 + iLine as i32 * 32 + 32, w - 104, &item.sLeft);
-                g.rm.menu_font_large.draw_right_justified(x + 28 + w - 64, y + 5 + iLine as i32 * 32 + 32, &item.sRight);
+                gp.rm.menu_font_large.draw_right_justified(g, x + 28 + w - 64, y + 5 + iLine as i32 * 32 + 32, &item.sRight);
                 iLine += 1;
             }
         }

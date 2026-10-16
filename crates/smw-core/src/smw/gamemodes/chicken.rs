@@ -99,7 +99,8 @@ impl CGameModeTrait for CGM_Chicken {
             if g.game_values.gamemodesettings.chicken.usetarget && !self.gameover && !self.m_chicken.is_null() {
                 let chicken = self.m_chicken;
                 if chicken.iswarping() {
-                    gp.rm.spr_chicken.draw_clip(g, 
+                    gp.rm.spr_chicken.draw_clip(
+                        g,
                         chicken.left_x() as i32 - PWOFFSET - 16,
                         chicken.top_y() as i32 - PHOFFSET - 16,
                         &SDL_Rect { x: 0, y: 0, w: 64, h: 64 },

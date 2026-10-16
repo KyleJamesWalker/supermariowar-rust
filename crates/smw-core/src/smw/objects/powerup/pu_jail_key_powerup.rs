@@ -21,8 +21,8 @@ impl_base!(PU_JailKeyPowerup => mo_powerup: MO_Powerup);
 
 impl PU_JailKeyPowerup {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(nspr: Ptr<gfxSprite>, pos: Vec2s) -> Self {
-        let mut o = PU_JailKeyPowerup { mo_powerup: MO_Powerup::new(nspr, pos, 1, 0, 30, 30, 1, 1) };
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s) -> Self {
+        let mut o = PU_JailKeyPowerup { mo_powerup: MO_Powerup::new(g, nspr, pos, 1, 0, 30, 30, 1, 1) };
         o.velx = 0.0;
         o
     }

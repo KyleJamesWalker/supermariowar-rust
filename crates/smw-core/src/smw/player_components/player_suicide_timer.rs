@@ -57,7 +57,8 @@ impl PlayerSuicideTimer {
         let mut gp = g.ptr();
         unsafe {
             if self.timer > g.game_values.suicidetime {
-                gp.rm.spr_awardkillsinrow.draw_src(g, 
+                gp.rm.spr_awardkillsinrow.draw_src(
+                    g,
                     player.left_x() as i32 - PWOFFSET + 8,
                     player.top_y() as i32 - PHOFFSET + 8,
                     &SDL_Rect { x: (self.displaytimer as i32) << 4, y: (player.get_color_id() as i32) << 4, w: 16, h: 16 },

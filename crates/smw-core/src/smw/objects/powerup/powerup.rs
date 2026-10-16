@@ -26,8 +26,7 @@ impl_base!(MO_Powerup => io_moving_object: IO_MovingObject);
 impl MO_Powerup {
     /// Pass `-1` for the C++ default arguments.
     #[allow(clippy::too_many_arguments)]
-    pub fn new(
-        nspr: Ptr<gfxSprite>,
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>,
         pos: Vec2s,
         iNumSpr: i16,
         aniSpeed: i16,
@@ -37,7 +36,7 @@ impl MO_Powerup {
         iCollisionOffsetY: i16,
     ) -> Self {
         let mut o = MO_Powerup {
-            io_moving_object: IO_MovingObject::new(nspr, pos, iNumSpr, aniSpeed, iCollisionWidth, iCollisionHeight, iCollisionOffsetX, iCollisionOffsetY, -1, -1, -1, -1),
+            io_moving_object: IO_MovingObject::new(g, nspr, pos, iNumSpr, aniSpeed, iCollisionWidth, iCollisionHeight, iCollisionOffsetX, iCollisionOffsetY, -1, -1, -1, -1),
             desty: 0.0,
         };
         o.desty = o.fy - o.collisionHeight as f32;

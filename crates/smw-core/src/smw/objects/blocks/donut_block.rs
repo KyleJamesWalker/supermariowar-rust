@@ -26,8 +26,8 @@ pub struct B_DonutBlock {
 impl_base!(B_DonutBlock => io_block: IO_Block);
 
 impl B_DonutBlock {
-    pub fn new(nspr: Ptr<gfxSprite>, pos: Vec2s) -> Self {
-        B_DonutBlock { io_block: IO_Block::new(nspr, pos), counter: 0, jigglex: 0, jigglecounter: 0 }
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s) -> Self {
+        B_DonutBlock { io_block: IO_Block::new(g, nspr, pos), counter: 0, jigglex: 0, jigglecounter: 0 }
     }
 
     pub fn trigger_behavior_player(&mut self, g: &mut Game, iPlayerId: i16) {

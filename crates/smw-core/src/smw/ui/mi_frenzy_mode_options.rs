@@ -331,6 +331,6 @@ impl UI_ControlTrait for MI_FrenzyModeOptions {
     }
 
     fn refresh(&mut self, g: &mut Game) {
-        self.mMenu.refresh();
+        self.mMenu.refresh(g);
     }
 }

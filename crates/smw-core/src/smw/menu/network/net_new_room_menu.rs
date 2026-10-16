@@ -115,15 +115,16 @@ impl UI_NetNewRoomMenu {
 
     pub fn abort_create(&mut self, g: &mut Game) {
         unsafe { g.netplay.operationInProgress = false };
-        self.restore();
+        self.restore(g);
     }
 
-    pub fn restore(&mut self) {
+    pub fn restore(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         self.miNetNewRoomCreatingDialogImage.set_visible(false);
         self.miNetNewRoomCreatingDialogText.set_visible(false);
 
         let n = ctl_ptr(self.miNetNewRoomNameField);
-        self.set_initial_focus(game().get(), n);
+        self.set_initial_focus(gp.get(), n);
         self.set_cancel_code(MENU_CODE_TO_NET_NEW_ROOM_LEVEL_SELECT_MENU);
     }
 }

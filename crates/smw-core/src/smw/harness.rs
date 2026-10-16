@@ -355,15 +355,16 @@ fn fill_event(ev: &ReplayEvent, event: &mut SDL_Event) {
     *event = smw_sdl2::input::to_sdl(&Input { timestamp: 0, event: input_for(ev) });
 }
 
-fn state_name() -> &'static str {
-    let current = GameStateManager::instance(game().get()).currentState;
-    if current.addr() == SplashScreenState::instance(game().get()) as *mut SplashScreenState as usize {
+fn state_name(g: &mut Game) -> &'static str {
+    let mut gp = g.ptr();
+    let current = GameStateManager::instance(gp.get()).currentState;
+    if current.addr() == SplashScreenState::instance(gp.get()) as *mut SplashScreenState as usize {
         return "splash";
     }
-    if current.addr() == MenuState::instance(game().get()) as *mut MenuState as usize {
+    if current.addr() == MenuState::instance(gp.get()) as *mut MenuState as usize {
         return "menu";
     }
-    if current.addr() == GameplayState::instance(game().get()) as *mut GameplayState as usize {
+    if current.addr() == GameplayState::instance(gp.get()) as *mut GameplayState as usize {
         return "gameplay";
     }
     "other"
@@ -392,20 +393,21 @@ pub fn keyboard_state() -> *const u8 {
 }
 
 /// Net games only (not in the C++ harness): a `C` line, compared across clients.
-pub fn note_net(line: String) {
+pub fn note_net(g: &mut Game, line: String) {
+    let mut gp = g.ptr();
     unsafe {
-        if crate::game::game().netplay.active && h().dump.is_some() {
+        if gp.netplay.active && h().dump.is_some() {
             h().spawn_events.push(format!("C {}", line));
         }
     }
 }
 
-pub fn note_powerup_spawn(iType: i16, x: i16, y: i16) {
-    note_net(format!("powerup type={} x={} y={}", iType, x, y));
+pub fn note_powerup_spawn(g: &mut Game, iType: i16, x: i16, y: i16) {
+    note_net(g, format!("powerup type={} x={} y={}", iType, x, y));
 }
 
 fn dump_frame(g: &mut Game, out: &mut impl Write) -> std::io::Result<()> {
-    let state = state_name();
+    let state = state_name(g);
     writeln!(out, "F {} {}", unsafe { h().frame }, state)?;
 
     if state == "menu" {
@@ -628,10 +630,10 @@ pub fn frame_start(g: &mut Game) {
 }
 
 /// Blocking waits take the next replay event immediately instead of waiting for input.
-pub fn wait_event(event: &mut SDL_Event) {
+pub fn wait_event(g: &mut Game, event: &mut SDL_Event) {
     unsafe {
         if h().rec.as_ref().is_some_and(|r| r.live) {
-            record_wait_event(event);
+            record_wait_event(g, event);
             return;
         }
         if !h().replay {
@@ -887,7 +889,7 @@ unsafe extern "C" fn record_filter(_userdata: *mut std::ffi::c_void, event: *mut
 }
 
 /// The replay line for a raw SDL event, or None for input the replay format cannot express.
-fn to_replay_event(raw: &SDL_Event, frame: u32) -> Option<ReplayEvent> {
+fn to_replay_event(g: &mut Game, raw: &SDL_Event, frame: u32) -> Option<ReplayEvent> {
     let mut ev = ReplayEvent { frame, kind: EventKind::Key, down: false, keyName: String::new(), device: 0, index: 0, value: 0 };
     let input = smw_sdl2::input::from_sdl(raw).event;
     if let Some((x, y)) = input.tap() {
@@ -911,7 +913,7 @@ fn to_replay_event(raw: &SDL_Event, frame: u32) -> Option<ReplayEvent> {
         InputEvent::PadButton { pad, button, down } => (pad.0, EventKind::JoyButton, button as i32, down as i32),
         _ => return None,
     };
-    ev.device = device_index(which)?;
+    ev.device = device_index(g, which)?;
     ev.kind = kind;
     ev.index = index;
     ev.value = value;
@@ -927,9 +929,10 @@ fn to_replay_event(raw: &SDL_Event, frame: u32) -> Option<ReplayEvent> {
 }
 
 /// The game addresses a joystick by its open index; SDL events carry the instance id.
-fn device_index(which: i32) -> Option<i32> {
+fn device_index(g: &mut Game, which: i32) -> Option<i32> {
+    let mut gp = g.ptr();
     unsafe {
-        let js = crate::game::game().joysticks;
+        let js = gp.joysticks;
         for i in 0..crate::game::game().joystickcount.max(0) as usize {
             let j = *js.add(i);
             if !j.is_null() && SDL_JoystickInstanceID(j) == which {
@@ -962,7 +965,7 @@ fn inject(event: &mut SDL_Event) {
 
 /// SMW_LIVE_SCRIPT events due this frame enter SDL's queue like OS input, with the modifier and
 /// repeat flags a real keyboard sets, so they take the same capture path as real input.
-fn push_live_script(r: &mut Recorder, frame: u32) {
+fn push_live_script(g: &mut Game, r: &mut Recorder, frame: u32) {
     while r.nextScript < r.script.len() && r.script[r.nextScript].frame <= frame {
         if r.script[r.nextScript].frame == frame {
             let mut event: SDL_Event = unsafe { std::mem::zeroed() };
@@ -972,11 +975,11 @@ fn push_live_script(r: &mut Recorder, frame: u32) {
                     event.key.keysym.mod_ = SDL_Keymod::KMOD_NUM as u16;
                     event.key.repeat = (r.nextScript % 3 == 2) as u8;
                 } else if event.type_ == SDL_EventType::SDL_JOYAXISMOTION as u32 {
-                    event.jaxis.which = sdl_instance(event.jaxis.which);
+                    event.jaxis.which = sdl_instance(g, event.jaxis.which);
                 } else if event.type_ == SDL_EventType::SDL_JOYBUTTONDOWN as u32 || event.type_ == SDL_EventType::SDL_JOYBUTTONUP as u32 {
-                    event.jbutton.which = sdl_instance(event.jbutton.which);
+                    event.jbutton.which = sdl_instance(g, event.jbutton.which);
                 } else if event.type_ == SDL_EventType::SDL_JOYHATMOTION as u32 {
-                    event.jhat.which = sdl_instance(event.jhat.which);
+                    event.jhat.which = sdl_instance(g, event.jhat.which);
                 }
                 smw_sdl2::events::push(&mut event);
             }
@@ -985,10 +988,11 @@ fn push_live_script(r: &mut Recorder, frame: u32) {
     }
 }
 
-fn sdl_instance(device: i32) -> i32 {
+fn sdl_instance(g: &mut Game, device: i32) -> i32 {
+    let mut gp = g.ptr();
     unsafe {
-        let js = crate::game::game().joysticks;
-        if device >= 0 && device < crate::game::game().joystickcount as i32 {
+        let js = gp.joysticks;
+        if device >= 0 && device < gp.joystickcount as i32 {
             let j = *js.add(device as usize);
             if !j.is_null() {
                 return SDL_JoystickInstanceID(j);
@@ -1043,9 +1047,10 @@ mod web_dpad {
 /// Frame start while recording: every joystick open at frame 0 gets a centred-hat line so a replay
 /// attaches the same number of joysticks; then held input becomes replay lines pushed in order.
 fn record_frame_start(g: &mut Game, frame: u32) {
+    let mut gp = g.ptr();
     let Some(r) = rec().filter(|r| r.live) else { return };
     if frame == 0 {
-        for d in 0..unsafe { crate::game::game().joystickcount }.min(8) as i32 {
+        for d in 0..unsafe { gp.joystickcount }.min(8) as i32 {
             let ev = ReplayEvent { frame: 0, kind: EventKind::JoyHat, down: false, keyName: String::new(), device: d, index: 0, value: 0 };
             record_event(r, &ev);
         }
@@ -1056,7 +1061,7 @@ fn record_frame_start(g: &mut Game, frame: u32) {
     if frame % 60 == 0 {
         let _ = r.out.flush();
     }
-    push_live_script(r, frame);
+    push_live_script(g, r, frame);
     smw_sdl2::events::pump();
     let held = std::mem::take(&mut r.pending);
     for raw in held.iter() {
@@ -1064,7 +1069,7 @@ fn record_frame_start(g: &mut Game, frame: u32) {
             r.quit = true;
             continue;
         }
-        if let Some(ev) = to_replay_event(raw, frame) {
+        if let Some(ev) = to_replay_event(g, raw, frame) {
             #[cfg(target_os = "emscripten")]
             if let Some(hat) = web_dpad::hat_for(&ev) {
                 record_event(r, &hat);
@@ -1081,12 +1086,12 @@ fn record_frame_start(g: &mut Game, frame: u32) {
 
 /// A blocking wait while recording returns the next held input event, written with the next frame
 /// number so the replay's frame start leaves it for the replay's own blocking wait.
-fn record_wait_event(event: &mut SDL_Event) {
+fn record_wait_event(g: &mut Game, event: &mut SDL_Event) {
     loop {
         #[cfg(not(target_os = "emscripten"))]
         crate::smw::touch::flush();
         let Some(r) = rec() else { return };
-        push_live_script(r, unsafe { h().frame } + 1);
+        push_live_script(g, r, unsafe { h().frame } + 1);
         smw_sdl2::events::pump();
         while !r.pending.is_empty() {
             let raw = r.pending.remove(0);
@@ -1095,7 +1100,7 @@ fn record_wait_event(event: &mut SDL_Event) {
                 r.pending.insert(0, raw);
                 break;
             }
-            if let Some(ev) = to_replay_event(&raw, unsafe { h().frame } + 1) {
+            if let Some(ev) = to_replay_event(g, &raw, unsafe { h().frame } + 1) {
                 let _ = writeln!(r.out, "{}", line_for(&ev));
                 fill_event(&ev, event);
                 return;
@@ -1205,7 +1210,7 @@ pub fn note_match_map(g: &mut Game, path: &str) {
 pub fn match_checkpoint(g: &mut Game) {
     let Some(r) = rec() else { return };
     r.matches += 1;
-    r.checkpoint = Some(match crate::smw::checkpoint::unsupported_reason() {
+    r.checkpoint = Some(match crate::smw::checkpoint::unsupported_reason(g) {
         Some(reason) => format!("#@ checkpoint match={} frame={} unsupported={}", r.matches, unsafe { h().frame }, reason),
         None => format!("#@ checkpoint match={} frame={} z64={}", r.matches, unsafe { h().frame }, base64_encode(&deflate(&crate::smw::checkpoint::capture(g)))),
     });
@@ -1213,10 +1218,11 @@ pub fn match_checkpoint(g: &mut Game) {
 
 /// The game state markers name: `splash`, `menu`, `worldmap`, `gameplay`, `scoreboard` (gameplay after
 /// the game is over) or `other`.
-fn marker_state() -> &'static str {
-    match state_name() {
-        "menu" if MenuState::instance(game().get()).harness_menu_name() == "world" => "worldmap",
-        "gameplay" if unsafe { game().game_values.gamemode.gameover } => "scoreboard",
+fn marker_state(g: &mut Game) -> &'static str {
+    let mut gp = g.ptr();
+    match state_name(g) {
+        "menu" if MenuState::instance(gp.get()).harness_menu_name() == "world" => "worldmap",
+        "gameplay" if unsafe { gp.game_values.gamemode.gameover } => "scoreboard",
         name => name,
     }
 }
@@ -1225,7 +1231,7 @@ fn marker_state() -> &'static str {
 /// started, its checkpoint.
 fn record_markers(g: &mut Game, frame: u32) {
     let Some(r) = rec() else { return };
-    let state = marker_state();
+    let state = marker_state(g);
     if state == r.state {
         return;
     }

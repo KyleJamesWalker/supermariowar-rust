@@ -36,7 +36,7 @@ impl CO_Flag {
     /// Returns the heap object: the constructor hands `this` to `flagbase->setFlag`, so it must not move afterwards.
     pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, base: Ptr<MO_FlagBase>, iTeamID: i16, iColorID: i16) -> Ptr<CO_Flag> {
         let mut o = Ptr::new_box(CO_Flag {
-            mo_carried_object: MO_CarriedObject::new_anim(nspr, Vec2s::zero(), 4, 8, 30, 30, 1, 1, 0, ((iColorID as i32) << 6) as i16, 32, 32),
+            mo_carried_object: MO_CarriedObject::new_anim(g, nspr, Vec2s::zero(), 4, 8, 30, 30, 1, 1, 0, ((iColorID as i32) << 6) as i16, 32, 32),
             timer: 0,
             flagbase: Ptr::null(),
             teamID: 0,

@@ -37,7 +37,7 @@ impl MO_Coin {
     #[allow(clippy::too_many_arguments)]
     pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, vel: Vec2f, pos: Vec2s, color: i16, team: i16, r#type: i16, uncollectabletime: i16, placecoin: bool) -> Self {
         let mut o = MO_Coin {
-            io_moving_object: IO_MovingObject::new(nspr, pos, 4, 8, 30, 30, 1, 1, 0, ((color as i32) << 5) as i16, 32, 32),
+            io_moving_object: IO_MovingObject::new(g, nspr, pos, 4, 8, 30, 30, 1, 1, 0, ((color as i32) << 5) as i16, 32, 32),
             timer: 0,
             sparkleanimationtimer: 0,
             sparkledrawframe: 0,
@@ -177,7 +177,8 @@ impl CObjectTrait for MO_Coin {
         // Draw sparkles
         if self.iType != 1 {
             unsafe {
-                gp.rm.spr_shinesparkle.draw_src(g, 
+                gp.rm.spr_shinesparkle.draw_src(
+                    g,
                     self.ix as i32 - self.collisionOffsetX as i32,
                     self.iy as i32 - self.collisionOffsetY as i32,
                     &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },

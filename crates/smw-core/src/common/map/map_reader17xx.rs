@@ -199,6 +199,7 @@ impl MapReader {
     }
 
     fn read_platform_tiles_1700(&mut self, g: &mut Game, _map: &mut CMap, mapfile: &mut BinaryFile, iWidth: i16, iHeight: i16) -> (Vec<TilesetTile>, Vec<TileType>) {
+        let mut gp = g.ptr();
         let n = (iWidth as i32 * iHeight as i32).max(0) as usize;
         let mut tiles = Vec::with_capacity(n);
         let mut types = Vec::with_capacity(n);
@@ -222,7 +223,7 @@ impl MapReader {
                         tile.iCol = (iTile as i32 % TILESETWIDTH) as i16;
                         tile.iRow = (iTile as i32 / TILESETWIDTH) as i16;
 
-                        r#type = g.g_tilesetmanager.classic_tileset().tile_type(tile.iCol as isize as usize, tile.iRow as isize as usize);
+                        r#type = gp.g_tilesetmanager.classic_tileset(g).tile_type(tile.iCol as isize as usize, tile.iRow as isize as usize);
                     }
                 }
 

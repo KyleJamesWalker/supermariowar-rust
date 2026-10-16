@@ -38,7 +38,7 @@ impl MO_Hammer {
         let iCollisionWidth = (nspr.get_width() as i16 as i32 / iNumSpr as i32) as i16;
         let iCollisionHeight = ((nspr.get_height() as i16 as i32) >> 2) as i16;
         let mut o = MO_Hammer {
-            io_moving_object: IO_MovingObject::new(nspr, pos, iNumSpr, aniSpeed, iCollisionWidth, iCollisionHeight, 0, 0, -1, -1, -1, -1),
+            io_moving_object: IO_MovingObject::new(g, nspr, pos, iNumSpr, aniSpeed, iCollisionWidth, iCollisionHeight, 0, 0, -1, -1, -1, -1),
             colorOffset: 0,
             ttl: 0,
             fSuper: false,
@@ -174,7 +174,8 @@ impl CObjectTrait for MO_Hammer {
     }
 
     fn draw(&mut self, g: &mut Game) {
-        self.spr.draw_src(g, 
+        self.spr.draw_src(
+            g,
             self.ix as i32 - self.collisionOffsetX as i32,
             self.iy as i32 - self.collisionOffsetY as i32,
             &SDL_Rect { x: self.drawframe as i32, y: self.colorOffset as i32, w: self.iw as i32, h: self.ih as i32 },

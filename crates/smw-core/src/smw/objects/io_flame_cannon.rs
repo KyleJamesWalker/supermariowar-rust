@@ -56,7 +56,8 @@ impl IO_FlameCannon {
         if self.state > 0 {
             let rect = &g_rFlameRects[self.iDirection as usize][self.iFrame as usize];
             unsafe {
-                gfx_drawpreview(g, 
+                gfx_drawpreview(
+                    g,
                     &gp.rm.spr_hazard_flame[1],
                     (((self.ix as i32) >> 1) + iOffsetX as i32) as i16,
                     (((self.iy as i32) >> 1) + iOffsetY as i32) as i16,

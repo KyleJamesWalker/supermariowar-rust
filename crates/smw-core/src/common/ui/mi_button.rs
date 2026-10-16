@@ -132,13 +132,13 @@ impl UI_ControlTrait for MI_Button {
                     }
                 }
                 TextAlign::CENTER => {
-                    g.rm.menu_font_large.draw_centered(x + ((iWidth + (if iImageW > 0 { iImageW + 2 } else { 0 })) >> 1), y + 5, &self.szName);
+                    gp.rm.menu_font_large.draw_centered(g, x + ((iWidth + (if iImageW > 0 { iImageW + 2 } else { 0 })) >> 1), y + 5, &self.szName);
                     if !self.sprImage.is_null() {
                         self.sprImage.draw_src(g, x + (iWidth >> 1) - ((self.iTextW as i32 + iImageW) >> 1) - 1, y + 16 - (iImageH >> 1), &srcRect);
                     }
                 }
                 TextAlign::RIGHT => {
-                    g.rm.menu_font_large.draw_right_justified(x + iWidth - 16, y + 5, &self.szName);
+                    gp.rm.menu_font_large.draw_right_justified(g, x + iWidth - 16, y + 5, &self.szName);
                     if !self.sprImage.is_null() {
                         self.sprImage.draw_src(g, x + iWidth - 18 - self.iTextW as i32 - iImageW, y + 16 - (iImageH >> 1), &srcRect);
                     }

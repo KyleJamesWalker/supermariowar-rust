@@ -227,9 +227,10 @@ fn data_path(g: &mut Game, name: &str) -> String {
 }
 
 /// Matches a checkpoint cannot start: a World's bonus house, which no replay covers yet.
-pub fn unsupported_reason() -> Option<&'static str> {
+pub fn unsupported_reason(g: &mut Game) -> Option<&'static str> {
+    let mut gp = g.ptr();
     unsafe {
-        let g = game();
+        let g = gp;
         let stop = g.game_values.tourstops.get(g.game_values.tourstopcurrent);
         if g.game_values.matchtype == MatchType::World && stop.is_some_and(|s| s.iStageType == 1) {
             return Some("bonus_house");
@@ -240,7 +241,8 @@ pub fn unsupported_reason() -> Option<&'static str> {
 
 /// The checkpoint at the current point of `MenuState::enter_gameplay`.
 pub fn capture(g: &mut Game) -> Vec<u8> {
-    let online = unsafe { crate::game::game().netplay.active };
+    let mut gp = g.ptr();
+    let online = unsafe { gp.netplay.active };
     let mut s = Snap::saver();
     s.put(MAGIC);
     s.put(&[if online { ONLINE_VERSION } else { VERSION }]);
@@ -416,7 +418,8 @@ fn walk(g: &mut Game, s: &mut Snap, online: bool) {
         map = local_path(&map);
         if s.load {
             g.maplist.set_current(map_index);
-            gp.get().g_map.load_map(&data_path(g, &map), crate::common::map::read_type_full);
+            let path = data_path(g, &map);
+            gp.g_map.load_map(g, &path, crate::common::map::read_type_full);
             note_match_map(g, &map);
             crate::common::global::load_current_map_background(g);
         }

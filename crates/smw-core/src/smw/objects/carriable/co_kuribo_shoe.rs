@@ -27,8 +27,8 @@ pub struct CO_KuriboShoe {
 impl_base!(CO_KuriboShoe => co_spring: CO_Spring);
 
 impl CO_KuriboShoe {
-    pub fn new(nspr: Ptr<gfxSprite>, pos: Vec2s, sticky: bool) -> Self {
-        let mut o = CO_KuriboShoe { co_spring: CO_Spring::new(nspr, pos + Vec2s::new(0, 15), false), fSticky: false };
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, sticky: bool) -> Self {
+        let mut o = CO_KuriboShoe { co_spring: CO_Spring::new(g, nspr, pos + Vec2s::new(0, 15), false), fSticky: false };
 
         o.iw = 32;
         o.ih = 32;

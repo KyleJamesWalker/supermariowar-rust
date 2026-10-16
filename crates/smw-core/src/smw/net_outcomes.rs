@@ -60,7 +60,7 @@ pub fn begin_game() {
 pub fn note_death(g: &mut Game, player: i16, style: i32, removed: bool) {
     unsafe {
         if g.netplay.active {
-            harness::note_net(format!("death p={} style={} removed={}", player, style, removed as i32));
+            harness::note_net(g, format!("death p={} style={} removed={}", player, style, removed as i32));
         }
     }
 }
@@ -117,12 +117,12 @@ fn record(g: &mut Game) {
         let scores: Vec<i16> = (0..game().score_cnt as usize).map(|t| g.score[t].score).collect();
         if scores != outcome_state().g_lastScores {
             let text: Vec<String> = scores.iter().map(|s| s.to_string()).collect();
-            harness::note_net(format!("scores {}", text.join(",")));
+            harness::note_net(g, format!("scores {}", text.join(",")));
             outcome_state().g_lastScores = scores;
         }
         let gm = g.game_values.gamemode;
         if gm.gameover && !outcome_state().g_lastGameOver {
-            harness::note_net(format!("gameover winner={}", gm.winningteam));
+            harness::note_net(g, format!("gameover winner={}", gm.winningteam));
         }
         outcome_state().g_lastGameOver = gm.gameover;
     }

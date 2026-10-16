@@ -64,11 +64,13 @@ impl PlayerTail {
         player.spin.spin(g, pp.get());
 
         unsafe {
+            let facing_right = player.is_facing_right(g);
             gp.objectcontainer[1].add(Ptr::new_box(MO_SpinAttack::new(
+                g,
                 player.get_global_id(),
                 player.get_team_id(),
                 KillStyle::Leaf,
-                player.is_facing_right(g),
+                facing_right,
                 13,
             )));
         }

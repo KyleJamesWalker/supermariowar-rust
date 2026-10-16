@@ -33,7 +33,7 @@ impl_base!(OMO_PipeCoin => io_over_map_object: IO_OverMapObject);
 impl OMO_PipeCoin {
     pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, vel: Vec2f, pos: Vec2s, teamid: i16, colorid: i16, uncollectabletime: i16) -> Self {
         let mut this = OMO_PipeCoin {
-            io_over_map_object: IO_OverMapObject::new(nspr, pos, 4, 8, 30, 30, 1, 1, 0, ((colorid as i32) << 5) as i16, 32, 32),
+            io_over_map_object: IO_OverMapObject::new(g, nspr, pos, 4, 8, 30, 30, 1, 1, 0, ((colorid as i32) << 5) as i16, 32, 32),
             iTeamID: teamid,
             iColorID: colorid,
             sparkleanimationtimer: 0,

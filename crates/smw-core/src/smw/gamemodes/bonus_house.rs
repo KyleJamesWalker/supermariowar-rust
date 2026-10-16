@@ -46,6 +46,8 @@ impl CGameModeTrait for CGM_Bonus {
     }
 
     fn init(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
+        let mut rm = g.rm;
         gm::cgamemode_init(g, self);
 
         unsafe {
@@ -96,7 +98,7 @@ impl CGameModeTrait for CGM_Bonus {
             //float dx = 288.0f - (dSpacing * (float)(iNumBonuses - 1) / 2.0f);
             for iChest in 0..iNumBonuses {
                 let iBonus = self.tsTourStop.wsbBonuses[iChestOrder[iChest as usize] as usize].iBonus;
-                g.objectcontainer[0].add(Ptr::new_box(MO_BonusHouseChest::new(Ptr::from_mut(&mut g.rm.spr_worldbonushouse), Vec2s::new(dx as i16, 384), iBonus)));
+                gp.objectcontainer[0].add(Ptr::new_box(MO_BonusHouseChest::new(g, Ptr::from_mut(&mut rm.spr_worldbonushouse), Vec2s::new(dx as i16, 384), iBonus)));
                 dx += dSpacing + 64.0f32;
             }
         }
@@ -112,7 +114,7 @@ impl CGameModeTrait for CGM_Bonus {
             //Draw Bonus House Title
             gp.rm.menu_plain_field.draw_src(g, 0, 0, &SDL_Rect { x: 0, y: 0, w: App::screenWidth / 2, h: 32 });
             gp.rm.menu_plain_field.draw_src(g, App::screenWidth / 2, 0, &SDL_Rect { x: 192, y: 0, w: App::screenWidth / 2, h: 32 });
-            g.rm.game_font_large.draw_centered(App::screenWidth / 2, 5, &self.tsTourStop.szName);
+            gp.rm.game_font_large.draw_centered(g, App::screenWidth / 2, 5, &self.tsTourStop.szName);
 
             //Draw Bonus House Text
             if self.tsTourStop.iBonusTextLines > 0 {

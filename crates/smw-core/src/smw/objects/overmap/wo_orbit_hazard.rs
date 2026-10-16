@@ -28,8 +28,7 @@ impl_base!(OMO_OrbitHazard => io_over_map_object: IO_OverMapObject);
 
 impl OMO_OrbitHazard {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(
-        nspr: Ptr<gfxSprite>,
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>,
         pos: Vec2s,
         radius: f32,
         vel: f32,
@@ -47,6 +46,7 @@ impl OMO_OrbitHazard {
     ) -> Self {
         let mut this = OMO_OrbitHazard {
             io_over_map_object: IO_OverMapObject::new(
+                g,
                 nspr,
                 pos,
                 iNumSpr,

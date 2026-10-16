@@ -39,7 +39,7 @@ struct ScriptEvent {
 
 const QUIT_GRACE_FRAMES: u32 = 60;
 
-pub type Dumper = fn(out: &mut dyn Write);
+pub type Dumper = fn(g: &mut Game, out: &mut dyn Write);
 
 pub struct EditorHarness {
     active: bool,
@@ -370,7 +370,7 @@ pub fn frame_delay(g: &mut Game, delay: u32) {
                     let mut block: Vec<u8> = Vec::new();
                     let _ = writeln!(block, "F {}", h().frame);
                     if let Some(dumper) = h().dumper {
-                        dumper(&mut block);
+                        dumper(g, &mut block);
                     }
                     let _ = writeln!(block, "R calls={} last={}", RandomNumberGenerator::call_count(), RandomNumberGenerator::last_value());
                     let _ = dump.write_all(&block);

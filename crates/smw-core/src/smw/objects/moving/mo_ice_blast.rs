@@ -25,9 +25,9 @@ pub struct MO_IceBlast {
 impl_base!(MO_IceBlast => io_moving_object: IO_MovingObject);
 
 impl MO_IceBlast {
-    pub fn new(nspr: Ptr<gfxSprite>, pos: Vec2s, fVelyX: f32, iGlobalID: i16, teamID: i16, iColorID: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, fVelyX: f32, iGlobalID: i16, teamID: i16, iColorID: i16) -> Self {
         let mut o = MO_IceBlast {
-            io_moving_object: IO_MovingObject::new(nspr, pos, 4, 8, 32, 32, 0, 0, 0, ((iColorID as i32 + 1) << 5) as i16, 32, 32),
+            io_moving_object: IO_MovingObject::new(g, nspr, pos, 4, 8, 32, 32, 0, 0, 0, ((iColorID as i32 + 1) << 5) as i16, 32, 32),
             ttl: 0,
             sSpotlight: Ptr::null(),
         };

@@ -49,7 +49,7 @@ impl UI_NetNewRoomSettingsMenu {
                 this.miGoalField[iGoalField] = Ptr::new_box(MI_SelectField::copy_from(&gsm.miGoalField[iGoalField]));
             }
 
-            this.miMapField = Ptr::new_box(MI_MapField::new(selectfield, 70, 165, "Map", 400, 120, true));
+            this.miMapField = Ptr::new_box(MI_MapField::new(g, selectfield, 70, 165, "Map", 400, 120, true));
             g.netplay.mapfilepath = this.get_current_map_path(g);
 
             this.miModeSettingsButton = Ptr::new_box(MI_Button::new_left(g, selectfield, 430, 125, "Settings", 140));

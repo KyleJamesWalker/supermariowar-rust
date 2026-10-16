@@ -305,11 +305,11 @@ pub fn draw_match_preview(g: &mut Game) {
         if !g.netplay.match_map_name.is_empty() {
             lines.push(format!("Map: {}", g.netplay.match_map_name));
         }
-        g.rm.menu_font_large.draw_centered(320, 116, "Match Settings");
+        gp.rm.menu_font_large.draw_centered(g, 320, 116, "Match Settings");
         for (i, line) in lines.iter().enumerate() {
             gp.rm.menu_font_large.draw_chop_centered(g, 320, 160 + 30 * i as i32, 320, line);
         }
-        g.rm.menu_font_small.draw_centered(320, 340, if g.netplay.match_randomized { "Randomized by the host" } else { "Chosen by the host" });
+        gp.rm.menu_font_small.draw_centered(g, 320, 340, if g.netplay.match_randomized { "Randomized by the host" } else { "Chosen by the host" });
     }
 }
 

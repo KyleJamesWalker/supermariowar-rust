@@ -244,7 +244,7 @@ pub fn event(g: &mut Game, ev: Ev, args: &[i32]) -> bool {
             if ev == Ev::Kill && !crate::smw::net_outcomes::kill_had_effect() {
                 return true;
             }
-            harness::note_net(line);
+            harness::note_net(g, line);
             let mut args = args.to_vec();
             if ev == Ev::Place {
                 // Placements also test the spots against other objects, which a joiner may have elsewhere.
@@ -353,7 +353,8 @@ fn replay(g: &mut Game, pkg: &RandomEvent) {
     }
     set_network_id_context(g, pkg.context as u32);
     RandomNumberGenerator::start_playback(pkg.draws.clone());
-    harness::note_net(run_logged(g, ev, &pkg.args));
+    let line = run_logged(g, ev, &pkg.args);
+    harness::note_net(g, line);
     let left = RandomNumberGenerator::stop_tape();
     set_network_id_context(g, 0);
     if !left.is_empty() {

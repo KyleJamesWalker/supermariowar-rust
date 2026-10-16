@@ -344,7 +344,8 @@ impl UI_ControlTrait for MI_TeamSelect {
                     let pid = iPlayerID as usize;
 
                     if g.game_values.randomskin[pid] {
-                        self.spr.draw_src(g, 
+                        self.spr.draw_src(
+                            g,
                             iTeam * 96 + 43 + px,
                             iTeamItem * 36 + 52 + py,
                             &SDL_Rect { x: 416, y: if self.fReady[pid] { 0 } else { self.iRandomAnimationFrame as i32 }, w: 42, h: 32 },
@@ -354,7 +355,8 @@ impl UI_ControlTrait for MI_TeamSelect {
                         gp.rm.spr_player[pid][frame].draw_src(g, iTeam * 96 + 48 + px, iTeamItem * 36 + 52 + py, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
                     }
 
-                    gp.rm.spr_menu_boxed_numbers.draw_src(g, 
+                    gp.rm.spr_menu_boxed_numbers.draw_src(
+                        g,
                         iTeam * 96 + 44 + px,
                         iTeamItem * 36 + 72 + py,
                         &SDL_Rect { x: iPlayerID as i32 * 16, y: gp.game_values.colorids[pid] as i32 * 16, w: 16, h: 16 },
@@ -386,7 +388,7 @@ impl UI_ControlTrait for MI_TeamSelect {
                 let fy = (py as f32 + App::screenHeight as f32 * 0.47f32) as i32;
                 gp.rm.menu_plain_field.draw_src(g, px + 108, fy, &SDL_Rect { x: 0, y: 160, w: 100, h: 32 });
                 gp.rm.menu_plain_field.draw_src(g, px + 208, fy, &SDL_Rect { x: 412, y: 160, w: 100, h: 32 });
-                g.rm.menu_font_large.draw_centered(App::screenWidth / 2, (py as f32 + App::screenHeight as f32 * 0.48f32) as i32, "Continue");
+                gp.rm.menu_font_large.draw_centered(g, App::screenWidth / 2, (py as f32 + App::screenHeight as f32 * 0.48f32) as i32, "Continue");
             }
         }
     }
@@ -547,7 +549,8 @@ impl UI_ControlTrait for MI_TeamSelect {
 
                 if DEVICE_KEYBOARD != playerInput.inputControls[p].iDevice {
                     let team = self.get_team(iPlayer);
-                    gfx_setjoystickteamcolor(g, 
+                    gfx_setjoystickteamcolor(
+                        g,
                         SDL_JoystickFromPlayerIndex(playerInput.inputControls[p].iDevice as i32),
                         team,
                         if self.fReady[p] { 1.0f32 } else { 0.5f32 },

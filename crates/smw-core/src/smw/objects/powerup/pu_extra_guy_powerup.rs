@@ -25,8 +25,8 @@ impl_base!(PU_ExtraGuyPowerup => mo_powerup: MO_Powerup);
 
 impl PU_ExtraGuyPowerup {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(nspr: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, moveToRight: bool, aniSpeed: i16, iCollisionWidth: i16, iCollisionHeight: i16, iCollisionOffsetX: i16, iCollisionOffsetY: i16, r#type: i16) -> Self {
-        let mut o = PU_ExtraGuyPowerup { mo_powerup: MO_Powerup::new(nspr, pos, iNumSpr, aniSpeed, iCollisionWidth, iCollisionHeight, iCollisionOffsetX, iCollisionOffsetY), iType: r#type };
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, moveToRight: bool, aniSpeed: i16, iCollisionWidth: i16, iCollisionHeight: i16, iCollisionOffsetX: i16, iCollisionOffsetY: i16, r#type: i16) -> Self {
+        let mut o = PU_ExtraGuyPowerup { mo_powerup: MO_Powerup::new(g, nspr, pos, iNumSpr, aniSpeed, iCollisionWidth, iCollisionHeight, iCollisionOffsetX, iCollisionOffsetY), iType: r#type };
         if moveToRight {
             o.velx = 1.0f32 + r#type as f32;
         } else {

@@ -38,11 +38,11 @@ impl_base!(MO_SledgeHammer => io_moving_object: IO_MovingObject);
 
 impl MO_SledgeHammer {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(nspr: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, vel: Vec2f, aniSpeed: i16, iGlobalID: i16, iTeamID: i16, iColorID: i16, superHammer: bool) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, vel: Vec2f, aniSpeed: i16, iGlobalID: i16, iTeamID: i16, iColorID: i16, superHammer: bool) -> Self {
         let iCollisionWidth = (nspr.get_width() as i16 as i32 / iNumSpr as i32) as i16;
         let iCollisionHeight = (nspr.get_height() as i16 as i32 / 5) as i16;
         let mut o = MO_SledgeHammer {
-            io_moving_object: IO_MovingObject::new(nspr, pos, iNumSpr, aniSpeed, iCollisionWidth, iCollisionHeight, 0, 0, -1, -1, -1, -1),
+            io_moving_object: IO_MovingObject::new(g, nspr, pos, iNumSpr, aniSpeed, iCollisionWidth, iCollisionHeight, 0, 0, -1, -1, -1, -1),
             playerID: 0,
             teamID: 0,
             colorOffset: 0,
@@ -71,10 +71,11 @@ impl MO_SledgeHammer {
 
     pub fn explode(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
+        let mut rm = g.rm;
         unsafe {
             if self.fSuper {
                 let pos = Vec2s::new((self.ix as i32 + (self.iw as i32 >> 2) - 96) as i16, (self.iy as i32 + (self.ih as i32 >> 2) - 64) as i16);
-                g.objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(Ptr::from_mut(&mut g.rm.spr_explosion), pos, 2, 4, -1, -1, KillStyle::Hammer)));
+                gp.objectcontainer[2].add(Ptr::new_box(MO_Explosion::new(g, Ptr::from_mut(&mut rm.spr_explosion), pos, 2, 4, -1, -1, KillStyle::Hammer)));
                 if_sound_on_play(g, &mut gp.rm.sfx_bobombsound);
             } else {
                 let iCenterX: i16 = (self.ix as i32 + (self.iw as i32 >> 1) - 14) as i16;
@@ -86,7 +87,8 @@ impl MO_SledgeHammer {
                     let dVel: f32 = RANDOM_INT(5) as f32 / 2.0f32 + 3.0f32;
                     let dVelX: f32 = dVel * cosf(dAngle);
                     let dVelY: f32 = dVel * sinf(dAngle);
-                    gp.get().objectcontainer[2].add(Ptr::new_box(MO_Hammer::new(g, 
+                    gp.get().objectcontainer[2].add(Ptr::new_box(MO_Hammer::new(
+                        g,
                         Ptr::from_mut(&mut gp.get().rm.spr_hammer),
                         Vec2s::new(iCenterX, iCenterY),
                         6,
@@ -173,7 +175,8 @@ impl CObjectTrait for MO_SledgeHammer {
     }
 
     fn draw(&mut self, g: &mut Game) {
-        self.spr.draw_src(g, 
+        self.spr.draw_src(
+            g,
             self.ix as i32 - self.collisionOffsetX as i32,
             self.iy as i32 - self.collisionOffsetY as i32,
             &SDL_Rect { x: self.drawframe as i32, y: self.colorOffset as i32, w: self.iw as i32, h: self.ih as i32 },

@@ -25,6 +25,7 @@ impl MapReader {
     }
 
     fn read_tileset(&mut self, g: &mut Game, mapfile: &mut BinaryFile) {
+        let mut gp = g.ptr();
         let iNumTilesets: i16 = mapfile.read_i32() as i16;
 
         let mut translation: Vec<TilesetTranslation> = Vec::with_capacity(iNumTilesets.max(0) as usize);
@@ -56,7 +57,7 @@ impl MapReader {
                     tilesetwidths[iID] = 1;
                     tilesetheights[iID] = 1;
                 } else {
-                    let ts = g.g_tilesetmanager.tileset(translationid[iID] as isize as usize);
+                    let ts = gp.g_tilesetmanager.tileset(g, translationid[iID] as isize as usize);
                     tilesetwidths[iID] = ts.width();
                     tilesetheights[iID] = ts.height();
                 }

@@ -56,8 +56,8 @@ fn main() {
     gfx_drawpreview(game().get(), &skin[2], 620, 300, 0, 0, 32, 32, &SDL_Rect { x: 0, y: 0, w: 640, h: 480 }, true, None);
 
     font_large.draw(game().get(), 10, 150, "Super Mario War: 0123456789");
-    font_small.draw_centered(320, 180, "centered small text ~!@#$%^&*()");
-    font_large.draw_right_justified(630, 210, "right justified");
+    font_small.draw_centered(game().get(), 320, 180, "centered small text ~!@#$%^&*()");
+    font_large.draw_right_justified(game().get(), 630, 210, "right justified");
     font_small.draw_chop_right(game().get(), 10, 250, 120, "chopped right text that is long");
     font_small.draw_chop_left(game().get(), 630, 250, 120, "chopped left text that is long");
     font_small.draw_chop_centered(game().get(), 320, 270, 100, "chop centered text that is long");

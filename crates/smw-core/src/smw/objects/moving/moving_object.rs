@@ -65,8 +65,7 @@ impl_base!(IO_MovingObject => cobject: CObject);
 impl IO_MovingObject {
     /// Pass `-1` for the C++ default arguments.
     #[allow(clippy::too_many_arguments)]
-    pub fn new(
-        nspr: Ptr<gfxSprite>,
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>,
         pos: Vec2s,
         iNumSpr: i16,
         aniSpeed: i16,
@@ -79,8 +78,9 @@ impl IO_MovingObject {
         iAnimationHeight: i16,
         iAnimationWidth: i16,
     ) -> Self {
+        let mut gp = g.ptr();
         let mut o = IO_MovingObject {
-            cobject: CObject::new(game().get(), nspr, pos),
+            cobject: CObject::new(gp.get(), nspr, pos),
             iPlayerID: 0,
             iTeamID: 0,
             fOldX: 0.0,
@@ -217,7 +217,8 @@ impl IO_MovingObject {
 
 pub fn io_moving_object_draw<T: IO_MovingObjectTrait + ?Sized>(g: &mut Game, this: &mut T) {
     let o = this.mo();
-    o.spr.draw_src(g, 
+    o.spr.draw_src(
+        g,
         (o.ix - o.collisionOffsetX) as i32,
         (o.iy - o.collisionOffsetY) as i32,
         &SDL_Rect { x: o.drawframe as i32, y: o.animationOffsetY as i32, w: o.iw as i32, h: o.ih as i32 },

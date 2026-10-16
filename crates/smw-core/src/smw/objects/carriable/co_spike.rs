@@ -22,8 +22,8 @@ pub struct CO_Spike {
 impl_base!(CO_Spike => co_spring: CO_Spring);
 
 impl CO_Spike {
-    pub fn new(nspr: Ptr<gfxSprite>, pos: Vec2s) -> Self {
-        let mut o = CO_Spike { co_spring: CO_Spring::new(nspr, pos, false) };
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s) -> Self {
+        let mut o = CO_Spike { co_spring: CO_Spring::new(g, nspr, pos, false) };
 
         o.iw = 32;
         o.ih = 32;

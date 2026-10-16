@@ -35,7 +35,7 @@ impl PU_TreasureChestBonus {
     #[allow(clippy::too_many_arguments)]
     pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, iNumSpr: i16, aniSpeed: i16, iCollisionWidth: i16, iCollisionHeight: i16, iCollisionOffsetX: i16, iCollisionOffsetY: i16, iBonusItem: i16) -> Self {
         let mut o = PU_TreasureChestBonus {
-            mo_powerup: MO_Powerup::new(nspr, Vec2s::zero(), iNumSpr, aniSpeed, iCollisionWidth, iCollisionHeight, iCollisionOffsetX, iCollisionOffsetY),
+            mo_powerup: MO_Powerup::new(g, nspr, Vec2s::zero(), iNumSpr, aniSpeed, iCollisionWidth, iCollisionHeight, iCollisionOffsetX, iCollisionOffsetY),
             bonusitem: iBonusItem,
             numbounces: 5,
             sparkleanimationtimer: 0,
@@ -111,7 +111,8 @@ impl CObjectTrait for PU_TreasureChestBonus {
 
             // Draw sparkles
             unsafe {
-                gp.rm.spr_shinesparkle.draw_src(g, 
+                gp.rm.spr_shinesparkle.draw_src(
+                    g,
                     self.ix as i32 - self.collisionOffsetX as i32,
                     self.iy as i32 - self.collisionOffsetY as i32,
                     &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },
@@ -120,13 +121,15 @@ impl CObjectTrait for PU_TreasureChestBonus {
         } else {
             unsafe {
                 if self.bonusitem as i32 >= NUM_POWERUPS {
-                    gp.rm.spr_worlditems.draw_src(g, 
+                    gp.rm.spr_worlditems.draw_src(
+                        g,
                         self.drawbonusitemx as i32,
                         self.drawbonusitemy as i32,
                         &SDL_Rect { x: (self.bonusitem as i32 - NUM_POWERUPS) << 5, y: 0, w: 32, h: 32 },
                     );
                 } else {
-                    gp.rm.spr_storedpoweruplarge.draw_src(g, 
+                    gp.rm.spr_storedpoweruplarge.draw_src(
+                        g,
                         self.drawbonusitemx as i32,
                         self.drawbonusitemy as i32,
                         &SDL_Rect { x: (self.bonusitem as i32) << 5, y: 0, w: 32, h: 32 },

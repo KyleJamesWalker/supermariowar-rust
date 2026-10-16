@@ -40,9 +40,9 @@ impl UI_ControlTrait for MI_Text {
         } else if self.m_align == TextAlign::LEFT {
             self.font.draw_chop_right(g, x, y, self.iw as i32, &self.szText);
         } else if self.m_align == TextAlign::CENTER {
-            self.font.draw_centered(x, y, &self.szText);
+            self.font.draw_centered(g, x, y, &self.szText);
         } else if self.m_align == TextAlign::RIGHT {
-            self.font.draw_right_justified(x, y, &self.szText);
+            self.font.draw_right_justified(g, x, y, &self.szText);
         }
     }
 }

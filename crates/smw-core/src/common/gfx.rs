@@ -220,7 +220,8 @@ pub fn gfx_take_screenshot(g: &mut Game) {
 pub fn gfx_close() {}
 
 pub fn gfx_loadpalette(g: &mut Game, palette_path: &Path) -> bool {
-    unsafe { g.gfx_palette.load(palette_path) }
+    let mut gp = g.ptr();
+    unsafe { gp.gfx_palette.load(g, palette_path) }
 }
 
 /// Not in the C++: writes `screen` as a BMP for the differential replay harness.

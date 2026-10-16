@@ -38,8 +38,9 @@ crate::impl_base!(MI_MapField => mi_map_preview: MI_MapPreview);
 
 impl MI_MapField {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(nspr: Ptr<gfxSprite>, x: i16, y: i16, name: impl Into<String>, width: i16, indent: i16, showtags: bool) -> Self {
-        let mi_map_preview = MI_MapPreview::new(game().get(), nspr, x, y, width, indent);
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, x: i16, y: i16, name: impl Into<String>, width: i16, indent: i16, showtags: bool) -> Self {
+        let mut gp = g.ptr();
+        let mi_map_preview = MI_MapPreview::new(gp.get(), nspr, x, y, width, indent);
         let (px, py, iWidth) = (mi_map_preview.m_pos.x, mi_map_preview.m_pos.y, mi_map_preview.iWidth);
 
         let mut miModifyImageLeft = Box::new(MI_Image::new(nspr, px + indent - 26, py + 4, 32, 64, 26, 24, 4, 1, 8));

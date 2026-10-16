@@ -501,6 +501,7 @@ impl MapList {
     }
 
     pub fn read_filters(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             self.current = 0;
 
@@ -540,7 +541,7 @@ impl MapList {
             while self.current != self.maps.len() {
                 if !self.maps.node(self.current).fReadFromCache {
                     let filename = self.maps.node(self.current).filename.clone();
-                    g.g_map.load_map(&filename, read_type_summary);
+                    gp.g_map.load_map(g, &filename, read_type_summary);
                     let af = g.g_map.fAutoFilter;
                     let mln = self.maps.node_mut(self.current);
                     mln.pfFilters[..af.len()].copy_from_slice(&af);
@@ -585,10 +586,11 @@ impl MapList {
     }
 
     pub fn reload_map_auto_filters(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         unsafe {
             for itr in 0..self.maps.len() {
                 let filename = self.maps.node(itr).filename.clone();
-                g.g_map.load_map(&filename, read_type_summary);
+                gp.g_map.load_map(g, &filename, read_type_summary);
                 let af = g.g_map.fAutoFilter;
                 self.maps.node_mut(itr).pfFilters[..af.len()].copy_from_slice(&af);
             }

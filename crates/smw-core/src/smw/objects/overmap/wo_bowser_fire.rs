@@ -27,9 +27,9 @@ pub struct OMO_BowserFire {
 impl_base!(OMO_BowserFire => io_over_map_object: IO_OverMapObject);
 
 impl OMO_BowserFire {
-    pub fn new(nspr: Ptr<gfxSprite>, pos: Vec2s, vel: Vec2f, id: i16, teamid: i16, colorid: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, vel: Vec2f, id: i16, teamid: i16, colorid: i16) -> Self {
         let mut this = OMO_BowserFire {
-            io_over_map_object: IO_OverMapObject::new(nspr, pos, 3, 6, -1, -1, -1, -1, -1, -1, -1, -1),
+            io_over_map_object: IO_OverMapObject::new(g, nspr, pos, 3, 6, -1, -1, -1, -1, -1, -1, -1, -1),
             iPlayerID: id,
             iTeamID: teamid,
             iColorOffsetY: ((colorid as i32 + 1) * 64) as i16,
@@ -62,7 +62,8 @@ impl CObjectTrait for OMO_BowserFire {
     }
 
     fn draw(&mut self, g: &mut Game) {
-        self.spr.draw_src(g, 
+        self.spr.draw_src(
+            g,
             self.ix as i32,
             self.iy as i32,
             &SDL_Rect { x: self.drawframe as i32, y: (if self.velx > 0.0f32 { 32 } else { 0 }) + self.iColorOffsetY as i32, w: self.iw as i32, h: self.ih as i32 },

@@ -34,9 +34,9 @@ pub struct MO_CheepCheep {
 impl_base!(MO_CheepCheep => io_moving_object: IO_MovingObject);
 
 impl MO_CheepCheep {
-    pub fn new(nspr: Ptr<gfxSprite>) -> Self {
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>) -> Self {
         let mut o = MO_CheepCheep {
-            io_moving_object: IO_MovingObject::new(nspr, Vec2s::new(0, App::screenHeight as i16), 2, 8, 30, 28, 1, 3, -1, -1, -1, -1),
+            io_moving_object: IO_MovingObject::new(g, nspr, Vec2s::new(0, App::screenHeight as i16), 2, 8, 30, 28, 1, 3, -1, -1, -1, -1),
             iColorOffsetY: 0,
             frozen: false,
         };

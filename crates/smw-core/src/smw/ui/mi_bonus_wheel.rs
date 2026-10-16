@@ -74,7 +74,8 @@ impl MI_BonusWheel {
             //Fix the last sector to allow correct detection of sector for tick sound
             dSelectionSector[NB] = TWO_PI;
 
-            let mut miContinueButton = Box::new(MI_Button::new(g, 
+            let mut miContinueButton = Box::new(MI_Button::new(
+                g,
                 Ptr::from_mut(&mut gp.rm.menu_plain_field),
                 ui_control.m_pos.x + 76,
                 ui_control.m_pos.y + 390,
@@ -407,7 +408,7 @@ impl UI_ControlTrait for MI_BonusWheel {
             self.miContinueButton.draw(g);
 
             if self.iState == 1 && !self.fPressedSelect {
-                g.rm.menu_font_large.draw_centered(App::screenWidth / 2, y + 390, "Press a Button To Stop The Wheel");
+                gp.rm.menu_font_large.draw_centered(g, App::screenWidth / 2, y + 390, "Press a Button To Stop The Wheel");
             }
         }
     }

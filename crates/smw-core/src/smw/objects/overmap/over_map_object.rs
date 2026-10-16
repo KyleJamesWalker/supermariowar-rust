@@ -31,8 +31,7 @@ impl_base!(IO_OverMapObject => cobject: CObject);
 impl IO_OverMapObject {
     /// Pass `-1` for the C++ default arguments.
     #[allow(clippy::too_many_arguments)]
-    pub fn new(
-        nspr: Ptr<gfxSprite>,
+    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>,
         pos: Vec2s,
         iNumSpr: i16,
         aniSpeed: i16,
@@ -45,8 +44,9 @@ impl IO_OverMapObject {
         iAnimationHeight: i16,
         iAnimationWidth: i16,
     ) -> Self {
+        let mut gp = g.ptr();
         let mut o = IO_OverMapObject {
-            cobject: CObject::new(game().get(), nspr, pos),
+            cobject: CObject::new(gp.get(), nspr, pos),
             iNumSprites: 0,
             drawframe: 0,
             animationtimer: 0,
@@ -104,7 +104,8 @@ impl IO_OverMapObject {
 
 pub fn io_over_map_object_draw<T: IO_OverMapObjectTrait + ?Sized>(g: &mut Game, this: &mut T) {
     let o = this.omo();
-    o.spr.draw_src(g, 
+    o.spr.draw_src(
+        g,
         (o.ix - o.collisionOffsetX) as i32,
         (o.iy - o.collisionOffsetY) as i32,
         &SDL_Rect { x: o.drawframe as i32, y: o.animationOffsetY as i32, w: o.iw as i32, h: o.ih as i32 },
@@ -113,7 +114,8 @@ pub fn io_over_map_object_draw<T: IO_OverMapObjectTrait + ?Sized>(g: &mut Game, 
 
 pub fn io_over_map_object_draw_offset<T: IO_OverMapObjectTrait + ?Sized>(g: &mut Game, this: &mut T, iOffsetX: i16, iOffsetY: i16) {
     let o = this.omo();
-    gfx_drawpreview(g, 
+    gfx_drawpreview(
+        g,
         &*o.spr,
         (((o.ix - o.collisionOffsetX) as i32 >> 1) + iOffsetX as i32) as i16,
         (((o.iy - o.collisionOffsetY) as i32 >> 1) + iOffsetY as i32) as i16,
@@ -159,8 +161,9 @@ pub trait IO_OverMapObjectTrait: CObjectTrait {
     fn omo(&self) -> &IO_OverMapObject;
     fn omo_mut(&mut self) -> &mut IO_OverMapObject;
 
-    fn draw_offset(&mut self, iOffsetX: i16, iOffsetY: i16) {
-        io_over_map_object_draw_offset(game().get(), self, iOffsetX, iOffsetY)
+    fn draw_offset(&mut self, g: &mut Game, iOffsetX: i16, iOffsetY: i16) {
+        let mut gp = g.ptr();
+        io_over_map_object_draw_offset(gp.get(), self, iOffsetX, iOffsetY)
     }
     fn animate(&mut self) {
         io_over_map_object_animate(self.omo_mut())

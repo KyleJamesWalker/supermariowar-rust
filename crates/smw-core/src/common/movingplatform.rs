@@ -94,6 +94,7 @@ impl MovingPlatform {
         path: Box<dyn MovingPlatformPathTrait>,
         fPreview: bool,
     ) -> Ptr<MovingPlatform> {
+        let mut gp = g.ptr();
         let mut iTileSize: i16 = TILESIZE as i16;
         let mut iTileSizeIndex: i16 = 0;
 
@@ -144,7 +145,7 @@ impl MovingPlatform {
         let self_ptr = this;
         this.pPath.path_mut().set_platform(self_ptr);
 
-        this.reset_path();
+        this.reset_path(g);
 
         unsafe {
             for iSurface in 0..2 {
@@ -169,7 +170,7 @@ impl MovingPlatform {
                         }
 
                         if tile.iID >= 0 {
-                            g.g_tilesetmanager.draw(this.sprites[iSurface].get_surface(), tile.iID, iTileSizeIndex, tile.iCol, tile.iRow, iCol, iRow);
+                            gp.g_tilesetmanager.draw(g, this.sprites[iSurface].get_surface(), tile.iID, iTileSizeIndex, tile.iCol, tile.iRow, iCol, iRow);
                         } else if tile.iID as i32 == TILESETANIMATED {
                             g.rm.spr_tileanimation[iTileSizeIndex as usize].draw_src_to(
                                 &*g.g_tilesetmanager.rect(iTileSizeIndex, tile.iCol * 4, tile.iRow),
@@ -263,7 +264,8 @@ impl MovingPlatform {
 
     /// `draw(short iOffsetX, short iOffsetY)`: path drawing for the map preview.
     pub fn draw_offset(&mut self, g: &mut Game, iOffsetX: i16, iOffsetY: i16) {
-        gfx_drawpreview(g, 
+        gfx_drawpreview(
+            g,
             &self.sprites[0],
             (self.ix as i32 - self.iHalfWidth as i32 + iOffsetX as i32) as i16,
             (self.iy as i32 - self.iHalfHeight as i32 + iOffsetY as i32) as i16,
@@ -277,16 +279,16 @@ impl MovingPlatform {
         );
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, g: &mut Game) {
         self.fOldX = self.pPath.current_pos0().x;
         self.fOldY = self.pPath.current_pos0().y;
 
         self.fOldVelX = self.pPath.velocity0().x;
         self.fOldVelY = self.pPath.velocity0().y;
 
-        self.pPath.r#move(0);
+        self.pPath.r#move(g, 0);
 
-        self.pPath.r#move(1);
+        self.pPath.r#move(g, 1);
 
         self.fVelX = self.pPath.velocity0().x;
         self.fVelY = self.pPath.velocity0().y;
@@ -297,8 +299,9 @@ impl MovingPlatform {
         self.set_yf(y);
     }
 
-    pub fn reset_path(&mut self) {
-        self.pPath.reset(game().get());
+    pub fn reset_path(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
+        self.pPath.reset(gp.get());
 
         let x = self.pPath.current_pos0().x;
         let y = self.pPath.current_pos0().y;

@@ -41,7 +41,7 @@ impl_base!(OMO_KingOfTheHillZone => io_over_map_object: IO_OverMapObject);
 impl OMO_KingOfTheHillZone {
     pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>) -> Self {
         let mut this = OMO_KingOfTheHillZone {
-            io_over_map_object: IO_OverMapObject::new(nspr, Vec2s::zero(), 5, 0, -1, -1, -1, -1, -1, -1, -1, -1),
+            io_over_map_object: IO_OverMapObject::new(g, nspr, Vec2s::zero(), 5, 0, -1, -1, -1, -1, -1, -1, -1, -1),
             playersTouching: [Ptr::null(); 4],
             playersTouchingCount: [0; 4],
             totalTouchingPlayers: 0,
@@ -233,7 +233,8 @@ impl CObjectTrait for OMO_KingOfTheHillZone {
 
                 if self.multiplier > 1 {
                     unsafe {
-                        gp.rm.spr_awardkillsinrow.draw_src(g, 
+                        gp.rm.spr_awardkillsinrow.draw_src(
+                            g,
                             iColX as i32 + 8,
                             iRowX as i32 + 8,
                             &SDL_Rect { x: (self.multiplier as i32 - 1) << 4, y: (self.colorID as i32) << 4, w: 16, h: 16 },

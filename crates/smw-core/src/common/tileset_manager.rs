@@ -59,8 +59,9 @@ fn read_tile_type_file(path: &Path) -> Vec<TileType> {
     tiletypes
 }
 
-fn load_image_or_downscale(path: &Path, largeRes: &gfxSprite) -> gfxSprite {
-    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| ImageLoader::new(path).create(game().get()))) {
+fn load_image_or_downscale(g: &mut Game, path: &Path, largeRes: &gfxSprite) -> gfxSprite {
+    let mut gp = g.ptr();
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| ImageLoader::new(path).create(gp.get()))) {
         Ok(sprite) => sprite,
         Err(err) => {
             let msg = err.downcast_ref::<String>().cloned().unwrap_or_default();
@@ -129,16 +130,17 @@ impl CTileset {
         }
     }
 
-    pub fn ensure_loaded(&mut self) {
+    pub fn ensure_loaded(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
         if self.is_loaded() {
             return;
         }
 
         self.m_tiletypes = read_tile_type_file(&self.m_tileset_dir.join("tileset.tls"));
 
-        self.m_sprite_large = ImageLoader::new(self.m_tileset_dir.join("large.png")).create(game().get());
-        self.m_sprite_medium = load_image_or_downscale(&self.m_tileset_dir.join("medium.png"), &self.m_sprite_large);
-        self.m_sprite_small = load_image_or_downscale(&self.m_tileset_dir.join("small.png"), &self.m_sprite_medium);
+        self.m_sprite_large = ImageLoader::new(self.m_tileset_dir.join("large.png")).create(gp.get());
+        self.m_sprite_medium = load_image_or_downscale(g, &self.m_tileset_dir.join("medium.png"), &self.m_sprite_large);
+        self.m_sprite_small = load_image_or_downscale(g, &self.m_tileset_dir.join("small.png"), &self.m_sprite_medium);
 
         self.m_width = (self.m_sprite_large.get_width() / TILESIZE).min(MAX_TILES_PER_AXIS) as i16;
         self.m_height = (self.m_sprite_large.get_height() / TILESIZE).min(MAX_TILES_PER_AXIS) as i16;
@@ -305,8 +307,7 @@ impl CTilesetManager {
 
     #[allow(clippy::too_many_arguments)]
     pub fn draw(
-        &mut self,
-        dstSurface: *mut SDL_Surface,
+        &mut self, g: &mut Game, dstSurface: *mut SDL_Surface,
         iTilesetID: i16,
         iTileSize: i16,
         iSrcTileCol: i16,
@@ -314,7 +315,7 @@ impl CTilesetManager {
         iDstTileCol: i16,
         iDstTileRow: i16,
     ) {
-        let tileset_ptr = self.tileset(iTilesetID as isize as usize);
+        let tileset_ptr = self.tileset(g, iTilesetID as isize as usize);
         if tileset_ptr.is_null() {
             return;
         }
@@ -330,13 +331,13 @@ impl CTilesetManager {
     }
 
     /// Null when there is no "Classic" tileset.
-    pub fn classic_tileset(&mut self) -> Ptr<CTileset> {
-        self.tileset(self.classic_tileset_index())
+    pub fn classic_tileset(&mut self, g: &mut Game) -> Ptr<CTileset> {
+        self.tileset(g, self.classic_tileset_index())
     }
 
-    pub fn tileset(&mut self, index: usize) -> Ptr<CTileset> {
+    pub fn tileset(&mut self, g: &mut Game, index: usize) -> Ptr<CTileset> {
         if index < self.m_tilesets.len() {
-            self.m_tilesets[index].ensure_loaded();
+            self.m_tilesets[index].ensure_loaded(g);
             Ptr::from_mut(&mut *self.m_tilesets[index])
         } else {
             Ptr::null()

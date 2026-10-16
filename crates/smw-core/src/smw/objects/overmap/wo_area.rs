@@ -34,7 +34,7 @@ impl_base!(OMO_Area => io_over_map_object: IO_OverMapObject);
 impl OMO_Area {
     pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, iNumAreas: i16) -> Self {
         let mut this = OMO_Area {
-            io_over_map_object: IO_OverMapObject::new(nspr, Vec2s::new(1280, 960), 5, 0, -1, -1, -1, -1, -1, -1, -1, -1),
+            io_over_map_object: IO_OverMapObject::new(g, nspr, Vec2s::new(1280, 960), 5, 0, -1, -1, -1, -1, -1, -1, -1, -1),
             numareas: iNumAreas,
             iPlayerID: -1,
             iTeamID: -1,

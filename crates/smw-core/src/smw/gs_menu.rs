@@ -921,7 +921,8 @@ pub fn describe_net_game_mode_settings(g: &mut Game) -> Vec<String> {
 
 /// Loads the map a match is played on; replay checkpoints (smw/checkpoint.rs) note its file.
 fn load_match_map(g: &mut Game, path: &str) {
-    unsafe { g.g_map.load_map(path, read_type_full) };
+    let mut gp = g.ptr();
+    unsafe { gp.g_map.load_map(g, path, read_type_full) };
     harness::note_match_map(g, path);
 }
 
@@ -1225,7 +1226,7 @@ impl MenuState {
                 gp.rm.load_world_graphics(g);
             } else if MENU_CODE_GAME_GRAPHICS_PACK_CHANGED == code {
                 let packdir = g.gamegraphicspacklist.current_path().to_string_lossy().into_owned();
-                let png = std::panic::catch_unwind(|| gfx_loadpalette(game().get(), Path::new(&convert_path_pack(game().get(), "gfx/packs/palette.png", &packdir))));
+                let png = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| gfx_loadpalette(gp.get(), Path::new(&convert_path_pack(gp.get(), "gfx/packs/palette.png", &packdir)))));
                 if let Err(payload) = png {
                     let Some(err) = payload.downcast_ref::<String>() else { std::panic::resume_unwind(payload) };
                     println!("\nwarning: {} -> falling back to BMP", err);
@@ -1290,7 +1291,8 @@ impl MenuState {
                     self.szCurrentMapName = Ptr::from_mut(&mut self.mGameSettingsMenu.miMapField.szMapName);
                 }
             } else if MENU_CODE_MAP_FILTER_EXIT == code {
-                game().maplist.apply_filters(g, &game().game_values.pfFilters);
+                let gv = gp;
+                gp.maplist.apply_filters(g, &gv.game_values.pfFilters);
 
                 //If the filtered map list has at least 1 map in it, then allow exiting the filter menu
                 if g.maplist.map_in_filtered_set() {
@@ -1325,7 +1327,7 @@ impl MenuState {
                 self.mCurrentMenu.reset_menu(g);
             } else if MENU_CODE_SAVE_ALL_MAP_THUMBNAILS == code {
                 // C++ casts mCurrentMenu to UI_OptionsMenu*; only the options menu emits this code.
-                self.mOptionsMenu.show_thumbnails_popup();
+                self.mOptionsMenu.show_thumbnails_popup(g);
                 self.mCurrentMenu.reset_menu(g);
             } else if MENU_CODE_GENERATE_THUMBS_RESET_YES == code || MENU_CODE_GENERATE_THUMBS_RESET_NO == code {
                 self.mOptionsMenu.hide_thumbnails_popup(g);
@@ -1372,7 +1374,7 @@ impl MenuState {
                     self.mCurrentMenu.reset_menu(g);
                     self.mNetEditServersMenu.restore(g);
                 } else if MENU_CODE_NET_ADDREMOVE_SERVER_ON_ADD_BTN == code {
-                    self.mNetEditServersMenu.on_press_add();
+                    self.mNetEditServersMenu.on_press_add(g);
                 } else if MENU_CODE_NET_ADDREMOVE_SERVER_ON_EDIT_BTN == code {
                     self.mNetEditServersMenu.on_press_edit(g);
                 } else if MENU_CODE_NET_ADDREMOVE_SERVER_ON_DELETE_BTN == code {
@@ -1407,8 +1409,8 @@ impl MenuState {
 
                     // Restore layouts
                     self.mNetServersMenu.restore(g);
-                    self.mNetLobbyMenu.restore();
-                    self.mNetNewRoomMenu.restore();
+                    self.mNetLobbyMenu.restore(g);
+                    self.mNetNewRoomMenu.restore(g);
 
                     self.mCurrentMenu = menu(self.mNetLobbyMenu);
                     self.mCurrentMenu.reset_menu(g);
@@ -1431,9 +1433,9 @@ impl MenuState {
                     g.netplay.currentMenuChanged = true;
                     g.netplay.operationInProgress = false;
 
-                    self.mNetRoomMenu.restore(); // Restore Room layout
-                    self.mNetLobbyMenu.restore(); // Restore Lobby layout
-                    self.mNetNewRoomMenu.restore(); // remove 'in progress' dialog
+                    self.mNetRoomMenu.restore(g); // Restore Room layout
+                    self.mNetLobbyMenu.restore(g); // Restore Lobby layout
+                    self.mNetNewRoomMenu.restore(g); // remove 'in progress' dialog
                 } else if MENU_CODE_NET_JOIN_ROOM_IN_PROGRESS == code {
                     self.mNetLobbyMenu.join_in_progress(g);
                 } else if MENU_CODE_NET_JOIN_ROOM_ABORT == code {
@@ -1505,7 +1507,7 @@ impl GameState for MenuState {
             assign(&mut self.mModeOptionsMenu, UI_ModeOptionsMenu::new(g));
             assign(&mut self.mMatchSelectionMenu, UI_MatchSelectionMenu::new(g));
             assign(&mut self.mGameSettingsMenu, UI_GameSettingsMenu::new(g));
-            assign(&mut self.mMapFilterEditMenu, UI_MapFilterEditMenu::new());
+            assign(&mut self.mMapFilterEditMenu, UI_MapFilterEditMenu::new(g));
             assign(&mut self.mTourStopMenu, UI_TourStopMenu::new(g));
             assign(&mut self.mWorldMenu, UI_WorldMenu::new(g));
             assign(&mut self.mTeamSelectMenu, UI_TeamSelectMenu::new(g));
@@ -1796,12 +1798,12 @@ impl GameState for MenuState {
                 gp.rm.spr_selectfield.draw_src(g, 554, 400, &rect(496, 0, 16, 32));
 
                 if self.iDisplayError == DISPLAY_ERROR_READ_TOUR_FILE {
-                    g.rm.menu_font_large.draw_centered(320, 405, "Error Reading Tour File!");
+                    gp.rm.menu_font_large.draw_centered(g, 320, 405, "Error Reading Tour File!");
                 }
                 if self.iDisplayError == DISPLAY_ERROR_READ_WORLD_FILE {
-                    g.rm.menu_font_large.draw_centered(320, 405, "Error Reading World File!");
+                    gp.rm.menu_font_large.draw_centered(g, 320, 405, "Error Reading World File!");
                 } else if self.iDisplayError == DISPLAY_ERROR_MAP_FILTER {
-                    g.rm.menu_font_large.draw_centered(320, 405, "No Maps Meet All Filter Conditions!");
+                    gp.rm.menu_font_large.draw_centered(g, 320, 405, "No Maps Meet All Filter Conditions!");
                 }
 
                 self.iDisplayErrorTimer -= 1;
@@ -1855,8 +1857,8 @@ impl GameState for MenuState {
                 gp.rm.menu_dialog.draw_src(g, App::screenWidth / 2, 176, &rect(352, 0, 160, 64));
                 gp.rm.menu_dialog.draw_src(g, 160, 240, &rect(0, 416, 160, 64));
                 gp.rm.menu_dialog.draw_src(g, App::screenWidth / 2, App::screenHeight / 2, &rect(352, 416, 160, 64));
-                g.rm.menu_font_large.draw_centered(App::screenWidth / 2, 215, "Refreshing Map Thumbnails");
-                g.rm.menu_font_large.draw_centered(App::screenWidth / 2, 245, "Please Wait...");
+                gp.rm.menu_font_large.draw_centered(g, App::screenWidth / 2, 215, "Refreshing Map Thumbnails");
+                gp.rm.menu_font_large.draw_centered(g, App::screenWidth / 2, 245, "Please Wait...");
             }
 
             if fGenerateMapThumbs {
@@ -1875,7 +1877,7 @@ impl GameState for MenuState {
                     szThumbnail += &get_name_from_file_name(&filename, false);
                     szThumbnail += ".png";
 
-                    g.g_map.load_map(&filename, read_type_preview);
+                    gp.g_map.load_map(g, &filename, read_type_preview);
                     gp.get().g_map.save_thumbnail(g, &convert_path(gp.get(), &szThumbnail), false);
 
                     itr += 1;

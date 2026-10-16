@@ -30,7 +30,7 @@ impl_base!(CO_PhantoKey => mo_carried_object: MO_CarriedObject);
 impl CO_PhantoKey {
     pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>) -> Self {
         let mut o = CO_PhantoKey {
-            mo_carried_object: MO_CarriedObject::new_anim(nspr, Vec2s::zero(), 1, 0, 30, 30, 1, 1, 0, 0, 32, 32),
+            mo_carried_object: MO_CarriedObject::new_anim(g, nspr, Vec2s::zero(), 1, 0, 30, 30, 1, 1, 0, 0, 32, 32),
             relocatetimer: 0,
             sparkleanimationtimer: 0,
             sparkledrawframe: 0,
@@ -131,7 +131,8 @@ impl CObjectTrait for CO_PhantoKey {
         mo_carried_object_draw(g, self);
 
         unsafe {
-            gp.rm.spr_shinesparkle.draw_src(g, 
+            gp.rm.spr_shinesparkle.draw_src(
+                g,
                 self.ix as i32 - self.collisionOffsetX as i32,
                 self.iy as i32 - self.collisionOffsetY as i32,
                 &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },

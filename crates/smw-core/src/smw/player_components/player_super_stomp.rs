@@ -57,7 +57,8 @@ impl PlayerSuperStomp {
                 if_sound_on_play(g, &mut gp.rm.sfx_bobombsound);
                 self.is_stomping = false;
 
-                g.objectcontainer[1].add(Ptr::new_box(MO_AttackZone::new(
+                gp.objectcontainer[1].add(Ptr::new_box(MO_AttackZone::new(
+                    g,
                     player.get_global_id(),
                     player.get_team_id(),
                     Vec2s::new((player.left_x() as i32 - 32) as i16, (player.top_y() as i32 + 10) as i16),
@@ -66,7 +67,8 @@ impl PlayerSuperStomp {
                     KillStyle::KuriboShoe,
                     false,
                 )));
-                g.objectcontainer[1].add(Ptr::new_box(MO_AttackZone::new(
+                gp.objectcontainer[1].add(Ptr::new_box(MO_AttackZone::new(
+                    g,
                     player.get_global_id(),
                     player.get_team_id(),
                     Vec2s::new(player.right_x(), (player.top_y() as i32 + 10) as i16),

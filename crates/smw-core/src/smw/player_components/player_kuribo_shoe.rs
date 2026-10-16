@@ -64,6 +64,7 @@ impl PlayerKuriboShoe {
     // Free player from the kuribo shoe
     fn update_getting_out_of_the_shoe(&mut self, g: &mut Game, player: &mut CPlayer, keymask: u8) {
         let mut gp = g.ptr();
+        let mut rm = g.rm;
         unsafe {
             if self.is_on() && player.isready() && !player.frozen {
                 if self.exitIndex > 0 {
@@ -83,7 +84,8 @@ impl PlayerKuriboShoe {
 
                 if self.exitIndex == 4 && self.exitTimer < 32 {
                     let shoe = Ptr::new_box(CO_KuriboShoe::new(
-                        Ptr::from_mut(&mut g.rm.spr_kuriboshoe),
+                        g,
+                        Ptr::from_mut(&mut rm.spr_kuriboshoe),
                         Vec2s::new((player.ix as i32 - PWOFFSET) as i16, (player.iy as i32 - PHOFFSET - 2) as i16),
                         self.r#type == STICKY,
                     ));
