@@ -7,7 +7,7 @@
       screenshots (.bmp, .png) hash their RGB pixels, since BMP headers and PNG encoders differ between SDL builds.
   determinism.py compare <summary.md> <manifest.txt> ...
       Compares the replays the manifests share and writes a Markdown summary naming each replay that differs and its
-      first differing artifact. Always exits 0.
+      first differing artifact. Manifests with the same job name merge into one job. Always exits 0.
 """
 import hashlib
 import re
@@ -130,7 +130,11 @@ def load(path):
 
 def compare(args):
     out, paths = Path(args[0]), args[1:]
-    jobs = [load(p) for p in paths]
+    merged = {}
+    for path in paths:
+        job, replays = load(path)
+        merged.setdefault(job, {}).update(replays)
+    jobs = list(merged.items())
     names = sorted({r for _, replays in jobs for r in replays})
     shared, differ = 0, []
     for replay in names:
