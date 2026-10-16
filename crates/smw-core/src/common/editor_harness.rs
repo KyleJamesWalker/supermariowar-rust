@@ -6,6 +6,7 @@
 
 use crate::common::keys::*;
 use crate::game::Game;
+use smw_platform::{Input, InputEvent, MouseEvent};
 use crate::common::random_number_generator::{RandomNumberGenerator, RandomNumberGeneratorType};
 use crate::globals::*;
 use sdl2::sys::{SDL_Event, SDL_EventType, SDL_GetKeyFromName, SDL_GetScancodeFromKey, SDL_BUTTON_LEFT, SDL_BUTTON_MIDDLE, SDL_BUTTON_RIGHT, SDL_PRESSED, SDL_RELEASED};
@@ -231,62 +232,43 @@ fn sdl_button_mask(button: u8) -> u32 {
 
 fn push_event(g: &mut Game, ev: &ScriptEvent) {
     let mut gp = g.ptr();
-    unsafe {
-        let mut event: SDL_Event = std::mem::zeroed();
-
-        match ev.kind {
-            EventKind::Key => {
-                let cname = CString::new(ev.keyName.as_bytes()).unwrap();
-                let key = SDL_GetKeyFromName(cname.as_ptr());
-                if key == SDLK_UNKNOWN {
-                    eprintln!("[editorharness] unknown SDL key name '{}'", ev.keyName);
-                    std::process::exit(2);
-                }
-
-                let m = modifier_for(key);
-                if ev.down {
-                    h(gp.get()).mod_ |= m;
-                } else {
-                    h(gp.get()).mod_ &= !m;
-                }
-
-                event.key.type_ = if ev.down { SDL_EventType::SDL_KEYDOWN as u32 } else { SDL_EventType::SDL_KEYUP as u32 };
-                event.key.state = if ev.down { SDL_PRESSED as u8 } else { SDL_RELEASED as u8 };
-                event.key.keysym.sym = key;
-                event.key.keysym.scancode = SDL_GetScancodeFromKey(key);
-                event.key.keysym.mod_ = h(gp.get()).mod_;
-                h(gp.get()).keys[event.key.keysym.scancode as usize] = ev.down as u8;
+    let event = match ev.kind {
+        EventKind::Key => {
+            let kb = &crate::services::services(gp.get()).keyboard;
+            let key = kb.key_from_name(&ev.keyName);
+            if key == SDLK_UNKNOWN {
+                eprintln!("[editorharness] unknown SDL key name '{}'", ev.keyName);
+                std::process::exit(2);
             }
-            EventKind::MouseButton => {
-                if ev.down {
-                    h(gp.get()).buttons |= sdl_button_mask(ev.button);
-                } else {
-                    h(gp.get()).buttons &= !sdl_button_mask(ev.button);
-                }
+            let scancode = kb.scancode_from_key(key);
 
-                event.button.type_ = if ev.down { SDL_EventType::SDL_MOUSEBUTTONDOWN as u32 } else { SDL_EventType::SDL_MOUSEBUTTONUP as u32 };
-                event.button.button = ev.button;
-                event.button.state = if ev.down { SDL_PRESSED as u8 } else { SDL_RELEASED as u8 };
-                event.button.clicks = 1;
-                event.button.x = ev.x;
-                event.button.y = ev.y;
-                h(gp.get()).mouseX = ev.x;
-                h(gp.get()).mouseY = ev.y;
+            let m = modifier_for(key);
+            if ev.down {
+                h(gp.get()).mod_ |= m;
+            } else {
+                h(gp.get()).mod_ &= !m;
             }
-            EventKind::MouseMove => {
-                event.motion.type_ = SDL_EventType::SDL_MOUSEMOTION as u32;
-                event.motion.state = h(gp.get()).buttons;
-                event.motion.x = ev.x;
-                event.motion.y = ev.y;
-                event.motion.xrel = ev.x - h(gp.get()).mouseX;
-                event.motion.yrel = ev.y - h(gp.get()).mouseY;
-                h(gp.get()).mouseX = ev.x;
-                h(gp.get()).mouseY = ev.y;
-            }
+            h(gp.get()).keys[scancode as usize] = ev.down as u8;
+            InputEvent::Key { key: smw_platform::Keycode(key), scancode, mods: h(gp.get()).mod_, down: ev.down, repeat: false, window: 0 }
         }
-
-        smw_sdl2::events::push(&mut event);
-    }
+        EventKind::MouseButton => {
+            if ev.down {
+                h(gp.get()).buttons |= sdl_button_mask(ev.button);
+            } else {
+                h(gp.get()).buttons &= !sdl_button_mask(ev.button);
+            }
+            h(gp.get()).mouseX = ev.x;
+            h(gp.get()).mouseY = ev.y;
+            InputEvent::Mouse { window: 0, which: 0, event: MouseEvent::Button { button: ev.button, down: ev.down, clicks: 1, x: ev.x, y: ev.y } }
+        }
+        EventKind::MouseMove => {
+            let (xrel, yrel) = (ev.x - h(gp.get()).mouseX, ev.y - h(gp.get()).mouseY);
+            h(gp.get()).mouseX = ev.x;
+            h(gp.get()).mouseY = ev.y;
+            InputEvent::Mouse { window: 0, which: 0, event: MouseEvent::Motion { x: ev.x, y: ev.y, xrel, yrel, buttons: h(gp.get()).buttons } }
+        }
+    };
+    crate::services::services(g).events.push(&Input { timestamp: 0, event });
 }
 
 fn push_frame_events(g: &mut Game) {
@@ -302,12 +284,8 @@ fn push_frame_events(g: &mut Game) {
     }
 }
 
-fn push_quit() {
-    unsafe {
-        let mut event: SDL_Event = std::mem::zeroed();
-        event.type_ = SDL_EventType::SDL_QUIT as u32;
-        smw_sdl2::events::push(&mut event);
-    }
+fn push_quit(g: &mut Game) {
+    crate::services::services(g).events.push(&Input { timestamp: 0, event: InputEvent::Quit });
 }
 
 pub fn init(g: &mut Game) {
@@ -398,7 +376,7 @@ pub fn frame_delay(g: &mut Game, delay: u32) {
                     eprintln!("[editorharness] editor ignored SDL_QUIT for {} frames", QUIT_GRACE_FRAMES);
                     std::process::exit(3);
                 }
-                push_quit();
+                push_quit(g);
             } else {
                 push_frame_events(g);
             }

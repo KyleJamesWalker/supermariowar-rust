@@ -138,11 +138,7 @@ impl UI_ControlTrait for MI_InputControlField {
 
             while !done {
                 #[cfg(not(target_os = "emscripten"))]
-                let input = {
-                    let mut event: SDL_Event = std::mem::zeroed();
-                    harness::wait_event(g, &mut event);
-                    smw_sdl2::input::from_sdl(&event)
-                };
+                let input = harness::wait_event(g);
                 #[cfg(target_os = "emscripten")]
                 let Some(input) = events.next() else {
                     return MENU_CODE_NONE;

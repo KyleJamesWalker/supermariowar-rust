@@ -17,6 +17,20 @@ impl smw_platform::Events for Sdl2Events {
     fn poll(&mut self) -> Option<smw_platform::Input> {
         poll_input()
     }
+    fn wait(&mut self) -> smw_platform::Input {
+        unsafe {
+            let mut event: SDL_Event = std::mem::zeroed();
+            wait(&mut event);
+            crate::input::from_sdl(&event)
+        }
+    }
+    fn push(&mut self, input: &smw_platform::Input) {
+        let mut event = crate::input::to_sdl(input);
+        unsafe { push(&mut event) };
+    }
+    fn pump(&mut self) {
+        pump();
+    }
 }
 
 /// SDL's keyboard and mouse state.

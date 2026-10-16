@@ -471,16 +471,13 @@ pub fn flush(g: &mut Game) {
         }
         st(gp.get()).pushing = true;
         for (key, down) in std::mem::take(&mut t.controls.queue) {
-            let mut event: SDL_Event = std::mem::zeroed();
-            event.key.type_ = if down { SDL_EventType::SDL_KEYDOWN } else { SDL_EventType::SDL_KEYUP } as u32;
-            event.key.state = if down { SDL_PRESSED } else { SDL_RELEASED } as u8;
-            event.key.keysym.sym = key.sym();
-            event.key.keysym.scancode = SDL_GetScancodeFromKey(key.sym());
-            smw_sdl2::events::push(&mut event);
+            let scancode = crate::services::services(gp.get()).keyboard.scancode_from_key(key.sym());
+            let event = InputEvent::Key { key: smw_platform::Keycode(key.sym()), scancode, mods: 0, down, repeat: false, window: 0 };
+            crate::services::services(gp.get()).events.push(&Input { timestamp: 0, event });
         }
         st(gp.get()).pushing = false;
         for (x, y) in std::mem::take(&mut t.controls.taps) {
-            smw_sdl2::events::push(&mut smw_sdl2::input::to_sdl(&Input { timestamp: 0, event: InputEvent::Tap { x, y } }));
+            crate::services::services(gp.get()).events.push(&Input { timestamp: 0, event: InputEvent::Tap { x, y } });
         }
     }
 }

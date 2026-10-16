@@ -332,18 +332,18 @@ pub fn record_device(g: &mut Game, index: usize, added: bool) {
 }
 
 /// The normalized event a replay line pushes, before the backend gives it a timestamp.
-fn input_for(ev: &ReplayEvent) -> InputEvent {
+fn input_for(g: &mut Game, ev: &ReplayEvent) -> InputEvent {
     let pad = PadSlot(ev.device);
     match ev.kind {
-        EventKind::Key => unsafe {
-            let cname = CString::new(ev.keyName.as_bytes()).unwrap();
-            let key = SDL_GetKeyFromName(cname.as_ptr());
+        EventKind::Key => {
+            let kb = &crate::services::services(g).keyboard;
+            let key = kb.key_from_name(&ev.keyName);
             if key == SDLK_UNKNOWN {
                 fail(format!("unknown SDL key name '{}'", ev.keyName));
             }
-            let scancode = SDL_GetScancodeFromKey(key) as i32;
+            let scancode = kb.scancode_from_key(key);
             InputEvent::Key { key: Keycode(key), scancode, mods: KMOD_NONE, down: ev.down, repeat: false, window: 0 }
-        },
+        }
         EventKind::JoyAxis => InputEvent::PadAxis { pad, axis: ev.index as u8, value: ev.value as i16 },
         EventKind::JoyButton => InputEvent::PadButton { pad, button: ev.index as u8, down: ev.value != 0 },
         EventKind::JoyHat => InputEvent::PadHat { pad, hat: ev.index as u8, value: ev.value as u8 },
@@ -351,8 +351,8 @@ fn input_for(ev: &ReplayEvent) -> InputEvent {
     }
 }
 
-fn fill_event(ev: &ReplayEvent, event: &mut SDL_Event) {
-    *event = smw_sdl2::input::to_sdl(&Input { timestamp: 0, event: input_for(ev) });
+fn input_of(g: &mut Game, ev: &ReplayEvent) -> Input {
+    Input { timestamp: 0, event: input_for(g, ev) }
 }
 
 fn state_name(g: &mut Game) -> &'static str {
@@ -371,13 +371,9 @@ fn state_name(g: &mut Game) -> &'static str {
 }
 
 
-fn note_replay_key(g: &mut Game, event: &SDL_Event) {
-    let mut gp = g.ptr();
-    unsafe {
-        let t = event.type_;
-        if t == SDL_EventType::SDL_KEYDOWN as u32 || t == SDL_EventType::SDL_KEYUP as u32 {
-            h(gp.get()).replay_keys[event.key.keysym.scancode as usize] = (t == SDL_EventType::SDL_KEYDOWN as u32) as u8;
-        }
+fn note_replay_key(g: &mut Game, input: &Input) {
+    if let InputEvent::Key { scancode, down, .. } = input.event {
+        h(g).replay_keys[scancode as usize] = down as u8;
     }
 }
 
@@ -630,10 +626,9 @@ pub fn frame_start(g: &mut Game) {
     unsafe {
         while h(gp.get()).nextEvent < h(gp.get()).events.len() && h(gp.get()).events[h(gp.get()).nextEvent].frame <= h(gp.get()).frame {
             if h(gp.get()).events[h(gp.get()).nextEvent].frame == h(gp.get()).frame {
-                let mut event: SDL_Event = std::mem::zeroed();
-                fill_event(&h(gp.get()).events[h(gp.get()).nextEvent], &mut event);
-                note_replay_key(g, &event);
-                smw_sdl2::events::push(&mut event);
+                let input = input_of(g, &h(gp.get()).events[h(gp.get()).nextEvent]);
+                note_replay_key(g, &input);
+                crate::services::services(g).events.push(&input);
                 copy_replay_event(g, &h(gp.get()).events[h(gp.get()).nextEvent]);
             }
             h(gp.get()).nextEvent += 1;
@@ -642,24 +637,23 @@ pub fn frame_start(g: &mut Game) {
 }
 
 /// Blocking waits take the next replay event immediately instead of waiting for input.
-pub fn wait_event(g: &mut Game, event: &mut SDL_Event) {
+pub fn wait_event(g: &mut Game) -> Input {
     let mut gp = g.ptr();
     unsafe {
         if h(gp.get()).rec.as_ref().is_some_and(|r| r.live) {
-            record_wait_event(g, event);
-            return;
+            return record_wait_event(g);
         }
         if !h(gp.get()).replay {
-            smw_sdl2::events::wait(event);
-            return;
+            return crate::services::services(g).events.wait();
         }
         if h(gp.get()).nextEvent >= h(gp.get()).events.len() {
             fail(format!("blocking wait at frame {} but the replay has no events left", h(gp.get()).frame));
         }
-        fill_event(&h(gp.get()).events[h(gp.get()).nextEvent], event);
-        note_replay_key(g, event);
+        let input = input_of(g, &h(gp.get()).events[h(gp.get()).nextEvent]);
+        note_replay_key(g, &input);
         copy_replay_event(g, &h(gp.get()).events[h(gp.get()).nextEvent]);
         h(gp.get()).nextEvent += 1;
+        input
     }
 }
 
@@ -976,9 +970,9 @@ fn line_for(ev: &ReplayEvent) -> String {
 /// the compiler may drop a store through `&mut Recorder` that only the filter callback reads.
 static INJECTING: AtomicBool = AtomicBool::new(false);
 
-fn inject(event: &mut SDL_Event) {
+fn inject(g: &mut Game, input: &Input) {
     INJECTING.store(true, Ordering::Relaxed);
-    unsafe { smw_sdl2::events::push(event) };
+    crate::services::services(g).events.push(input);
     INJECTING.store(false, Ordering::Relaxed);
 }
 
@@ -987,21 +981,18 @@ fn inject(event: &mut SDL_Event) {
 fn push_live_script(g: &mut Game, r: &mut Recorder, frame: u32) {
     while r.nextScript < r.script.len() && r.script[r.nextScript].frame <= frame {
         if r.script[r.nextScript].frame == frame {
-            let mut event: SDL_Event = unsafe { std::mem::zeroed() };
-            fill_event(&r.script[r.nextScript], &mut event);
-            unsafe {
-                if event.type_ == SDL_EventType::SDL_KEYDOWN as u32 {
-                    event.key.keysym.mod_ = KMOD_NUM;
-                    event.key.repeat = (r.nextScript % 3 == 2) as u8;
-                } else if event.type_ == SDL_EventType::SDL_JOYAXISMOTION as u32 {
-                    event.jaxis.which = sdl_instance(g, event.jaxis.which);
-                } else if event.type_ == SDL_EventType::SDL_JOYBUTTONDOWN as u32 || event.type_ == SDL_EventType::SDL_JOYBUTTONUP as u32 {
-                    event.jbutton.which = sdl_instance(g, event.jbutton.which);
-                } else if event.type_ == SDL_EventType::SDL_JOYHATMOTION as u32 {
-                    event.jhat.which = sdl_instance(g, event.jhat.which);
+            let mut input = input_of(g, &r.script[r.nextScript]);
+            match &mut input.event {
+                InputEvent::Key { mods, repeat, down: true, .. } => {
+                    *mods = KMOD_NUM;
+                    *repeat = r.nextScript % 3 == 2;
                 }
-                smw_sdl2::events::push(&mut event);
+                InputEvent::PadAxis { pad, .. } | InputEvent::PadButton { pad, .. } | InputEvent::PadHat { pad, .. } => {
+                    *pad = PadSlot(sdl_instance(g, pad.0));
+                }
+                _ => {}
             }
+            crate::services::services(g).events.push(&input);
         }
         r.nextScript += 1;
     }
@@ -1021,11 +1012,10 @@ fn sdl_instance(g: &mut Game, device: i32) -> i32 {
     }
 }
 
-fn record_event(r: &mut Recorder, ev: &ReplayEvent) {
+fn record_event(g: &mut Game, r: &mut Recorder, ev: &ReplayEvent) {
     let _ = writeln!(r.out, "{}", line_for(ev));
-    let mut event: SDL_Event = unsafe { std::mem::zeroed() };
-    fill_event(ev, &mut event);
-    inject(&mut event);
+    let input = input_of(g, ev);
+    inject(g, &input);
 }
 
 /// Not in upstream. Browsers report a standard-mapping pad's D-pad as buttons 12-15 (up, down, left,
@@ -1072,7 +1062,7 @@ fn record_frame_start(g: &mut Game, frame: u32) {
     if frame == 0 {
         for d in 0..unsafe { gp.joystickcount }.min(8) as i32 {
             let ev = ReplayEvent { frame: 0, kind: EventKind::JoyHat, down: false, keyName: String::new(), device: d, index: 0, value: 0 };
-            record_event(r, &ev);
+            record_event(g, r, &ev);
         }
         #[cfg(target_os = "emscripten")]
         web_dpad::init(g);
@@ -1092,9 +1082,9 @@ fn record_frame_start(g: &mut Game, frame: u32) {
         if let Some(ev) = to_replay_event(g, raw, frame) {
             #[cfg(target_os = "emscripten")]
             if let Some(hat) = web_dpad::hat_for(g, &ev) {
-                record_event(r, &hat);
+                record_event(g, r, &hat);
             }
-            record_event(r, &ev);
+            record_event(g, r, &ev);
         }
     }
     if r.quit {
@@ -1106,14 +1096,14 @@ fn record_frame_start(g: &mut Game, frame: u32) {
 
 /// A blocking wait while recording returns the next held input event, written with the next frame
 /// number so the replay's frame start leaves it for the replay's own blocking wait.
-fn record_wait_event(g: &mut Game, event: &mut SDL_Event) {
+fn record_wait_event(g: &mut Game) -> Input {
     let mut gp = g.ptr();
     loop {
         #[cfg(not(target_os = "emscripten"))]
         crate::smw::touch::flush(g);
-        let Some(r) = rec(g) else { return };
+        let Some(r) = rec(g) else { return Input { timestamp: 0, event: InputEvent::Other(0) } };
         push_live_script(g, r, unsafe { h(gp.get()).frame } + 1);
-        smw_sdl2::events::pump();
+        crate::services::services(gp.get()).events.pump();
         while !r.pending.is_empty() {
             let raw = r.pending.remove(0);
             if unsafe { raw.type_ } == SDL_EventType::SDL_QUIT as u32 {
@@ -1123,14 +1113,12 @@ fn record_wait_event(g: &mut Game, event: &mut SDL_Event) {
             }
             if let Some(ev) = to_replay_event(g, &raw, unsafe { h(gp.get()).frame } + 1) {
                 let _ = writeln!(r.out, "{}", line_for(&ev));
-                fill_event(&ev, event);
-                return;
+                return input_of(g, &ev);
             }
         }
         if r.quit {
             // Hand the game an event its wait loop ignores until the frame start ends the session.
-            unsafe { *event = std::mem::zeroed() };
-            return;
+            return Input { timestamp: 0, event: InputEvent::Other(0) };
         }
         crate::services::delay(gp.get(), 5);
     }

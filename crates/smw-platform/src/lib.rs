@@ -56,6 +56,12 @@ pub trait Video {
 pub trait Events {
     /// The next queued input, or `None` when the queue is empty.
     fn poll(&mut self) -> Option<Input>;
+    /// Blocks until an input arrives.
+    fn wait(&mut self) -> Input;
+    /// Queues an input as if the platform delivered it.
+    fn push(&mut self, input: &Input);
+    /// Moves the platform's pending events into the queue.
+    fn pump(&mut self);
 }
 
 /// Keyboard and mouse queries, in SDL2's key and scancode values under the current keyboard layout.
@@ -240,6 +246,11 @@ mod tests {
         fn poll(&mut self) -> Option<Input> {
             None
         }
+        fn wait(&mut self) -> Input {
+            Input { timestamp: 0, event: InputEvent::Quit }
+        }
+        fn push(&mut self, _: &Input) {}
+        fn pump(&mut self) {}
     }
 
     impl Keyboard for Null {
