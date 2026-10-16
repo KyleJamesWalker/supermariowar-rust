@@ -4,6 +4,7 @@ use smw_platform::{Clock, Services, Storage};
 use std::path::PathBuf;
 
 mod audio;
+pub mod durations;
 pub mod events;
 pub mod input;
 mod video;
