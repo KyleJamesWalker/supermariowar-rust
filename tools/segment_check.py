@@ -13,6 +13,7 @@ from the match's first frame up to the frame it left gameplay with
   web      (--web) that clip in the web build (tools/web_replay.mjs, dist/web).
 
 All must be byte-identical and cover exactly those frames. Exit status 0 when all are, 1 otherwise.
+SMW_NO_BUILD=1 skips the cargo build.
 """
 import argparse
 import concurrent.futures
@@ -120,9 +121,10 @@ def main():
     ap.add_argument('--keep', help='keep recordings, clips and dumps in this directory')
     args = ap.parse_args()
 
-    build = subprocess.run(['cargo', 'build', '--release', '--quiet', '--manifest-path', REPO / 'Cargo.toml'], capture_output=True, text=True)
-    if build.returncode != 0:
-        sys.exit(build.stderr)
+    if not os.environ.get('SMW_NO_BUILD'):
+        build = subprocess.run(['cargo', 'build', '--release', '--quiet', '--manifest-path', REPO / 'Cargo.toml'], capture_output=True, text=True)
+        if build.returncode != 0:
+            sys.exit(build.stderr)
     work = Path(args.keep) if args.keep else Path(tempfile.mkdtemp(prefix='smw-segment-check-'))
     work.mkdir(parents=True, exist_ok=True)
     try:
