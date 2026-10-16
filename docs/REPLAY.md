@@ -127,7 +127,7 @@ A `.smwrp` ("Super Mario War replay") is a recording gzipped, nothing more; `gun
 - A blocking wait (control binding) returns the next held input event and writes it with the next frame number, which is how a replay's `waitEvent` consumes it.
 - Window close: `#@ frames=` is the frame the close arrived in, so the replay ends where the live session stopped processing input.
 - Sound: the virtual mixer drives every game-visible sound state, as in replays, and SDL_mixer also plays the same commands as output only (results ignored, no finished callbacks). The device is opened at 44100 Hz, S16, stereo with no format changes allowed, so sound lengths match the headless dummy driver; with no usable device the game falls back to the dummy driver.
-- `SMW_LIVE_SCRIPT=<file>` pushes a replay script's events into SDL's queue at their frames, with the `KMOD_NUM` modifier and some repeat flags a real keyboard sends, so they take the live capture path. A scripted live session's `SMW_DUMP` equals its recording's dump under `run_rust.sh`.
+- `SMW_LIVE_SCRIPT=<file>` pushes a replay script's events into SDL's queue at their frames, with the `KMOD_NUM` modifier and some repeat flags a real keyboard sends, so they take the live capture path. A scripted live session's `SMW_DUMP` equals its recording's dump under `run_rust.sh`. `tools/live_roundtrip.sh` checks this in CI.
 
 ### Online matches
 

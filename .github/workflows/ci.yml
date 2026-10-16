@@ -108,6 +108,9 @@ jobs:
       - name: Lobby connect stress
         run: tools/ref/net_connect_stress.sh 20
 
+      - name: Live recording round trip
+        run: SMW_NO_BUILD=1 tools/live_roundtrip.sh tools/replays/text_shift.txt tools/replays/menu_nav.txt tools/replays/start_classic.txt
+
       - name: Net games, recorded and replayed offline
         env:
           SDL_RENDER_DRIVER: software
