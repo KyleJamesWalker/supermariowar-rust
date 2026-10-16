@@ -2,11 +2,12 @@
 //! web/touch.js they press player 1's default keys, so recordings hold ordinary key input;
 //! a still tap off the controls is a menu tap.
 
+use crate::common::keys::*;
 use crate::game::Game;
 use smw_platform::{Input, InputEvent, Overlay, OverlayImage, OverlayQuad, SCREEN_H, SCREEN_W};
 use std::sync::Arc;
 use crate::common::path::get_home_directory;
-use sdl2::sys::{SDL_Event, SDL_EventType, SDL_GetKeyboardFocus, SDL_GetScancodeFromKey, SDL_KeyCode, SDL_PRESSED, SDL_RELEASED};
+use sdl2::sys::{SDL_Event, SDL_EventType, SDL_GetKeyboardFocus, SDL_GetScancodeFromKey, SDL_PRESSED, SDL_RELEASED};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Key {
@@ -28,7 +29,6 @@ impl Key {
     }
 
     fn sym(self) -> i32 {
-        use SDL_KeyCode::*;
         (match self {
             Key::Left => SDLK_LEFT,
             Key::Right => SDLK_RIGHT,
@@ -449,7 +449,7 @@ pub fn filter(g: &mut Game, event: &SDL_Event) -> bool {
             }
             return false;
         }
-        let other_input = (ty == SDL_KEYDOWN as u32 && !st(gp.get()).pushing && event.key.keysym.sym != SDL_KeyCode::SDLK_AC_BACK as i32)
+        let other_input = (ty == SDL_KEYDOWN as u32 && !st(gp.get()).pushing && event.key.keysym.sym != SDLK_AC_BACK)
             || ty == SDL_JOYBUTTONDOWN as u32
             || (ty == SDL_JOYHATMOTION as u32 && event.jhat.value != 0)
             || (ty == SDL_JOYAXISMOTION as u32 && (event.jaxis.value as i32).abs() > 16384);
@@ -466,21 +466,18 @@ pub fn flush(g: &mut Game) {
     let mut gp = g.ptr();
     unsafe {
         let Some(t) = st(gp.get()).touch.as_mut() else { return };
-        if SDL_GetKeyboardFocus().is_null() {
+        if !crate::services::services(gp.get()).keyboard.has_focus() {
             t.controls.release_all();
         }
         st(gp.get()).pushing = true;
         for (key, down) in std::mem::take(&mut t.controls.queue) {
-            let mut event: SDL_Event = std::mem::zeroed();
-            event.key.type_ = if down { SDL_EventType::SDL_KEYDOWN } else { SDL_EventType::SDL_KEYUP } as u32;
-            event.key.state = if down { SDL_PRESSED } else { SDL_RELEASED } as u8;
-            event.key.keysym.sym = key.sym();
-            event.key.keysym.scancode = SDL_GetScancodeFromKey(key.sym());
-            smw_sdl2::events::push(&mut event);
+            let scancode = crate::services::services(gp.get()).keyboard.scancode_from_key(key.sym());
+            let event = InputEvent::Key { key: smw_platform::Keycode(key.sym()), scancode, mods: 0, down, repeat: false, window: 0 };
+            crate::services::services(gp.get()).events.push(&Input { timestamp: 0, event });
         }
         st(gp.get()).pushing = false;
         for (x, y) in std::mem::take(&mut t.controls.taps) {
-            smw_sdl2::events::push(&mut smw_sdl2::input::to_sdl(&Input { timestamp: 0, event: InputEvent::Tap { x, y } }));
+            crate::services::services(gp.get()).events.push(&Input { timestamp: 0, event: InputEvent::Tap { x, y } });
         }
     }
 }
@@ -810,7 +807,7 @@ mod tests {
 
     #[test]
     fn the_overlay_draws_each_control_once_and_tints_the_held_arm() {
-        let g = crate::game::game().get();
+        let g = crate::game::Game::create();
         let l = pixel();
         let mut t = Touch { controls: Controls::new(Mode::Dpad, l), visible: true, alpha: 1.0, cutouts: Vec::new(), images: None, generation: 0 };
         let images = build_images(&l);
@@ -841,7 +838,7 @@ mod tests {
 
     #[test]
     fn multi_touch_holds_a_direction_run_and_jump() {
-        let g = crate::game::game().get();
+        let g = crate::game::Game::create();
         let l = pixel();
         let mut c = Controls::new(Mode::Dpad, l);
         c.down(g, 1, l.dpad.x + l.dpad.r * 0.8, l.dpad.y);
@@ -864,7 +861,7 @@ mod tests {
 
     #[test]
     fn floating_stick_spawns_under_the_thumb_and_follows_it() {
-        let g = crate::game::game().get();
+        let g = crate::game::Game::create();
         let l = pixel();
         let mut c = Controls::new(Mode::Stick, l);
         let (x, y) = (155.0, 600.0);
@@ -887,7 +884,7 @@ mod tests {
 
     #[test]
     fn the_stick_stays_in_the_left_bar() {
-        let g = crate::game::game().get();
+        let g = crate::game::Game::create();
         let l = pixel();
         let mut c = Controls::new(Mode::Stick, l);
         c.down(g, 1, l.view.x - 10.0, 700.0);
@@ -915,7 +912,7 @@ mod tests {
 
     #[test]
     fn stick_mode_leaves_the_keys_and_toggle_alone() {
-        let g = crate::game::game().get();
+        let g = crate::game::Game::create();
         let l = pixel();
         let mut c = Controls::new(Mode::Stick, l);
         c.down(g, 1, l.back.x + 5.0, l.back.y + 5.0);
@@ -930,7 +927,7 @@ mod tests {
 
     #[test]
     fn sliding_between_buttons_presses_both() {
-        let g = crate::game::game().get();
+        let g = crate::game::Game::create();
         let l = pixel();
         let mut c = Controls::new(Mode::Dpad, l);
         c.down(g, 1, l.run.x, (l.run.y + l.item.y) / 2.0);
@@ -942,7 +939,7 @@ mod tests {
 
     #[test]
     fn a_still_finger_off_the_controls_taps_the_picture() {
-        let g = crate::game::game().get();
+        let g = crate::game::Game::create();
         let l = pixel();
         let mut c = Controls::new(Mode::Dpad, l);
         c.down(g, 1, 1122.0, 504.0);

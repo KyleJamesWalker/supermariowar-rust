@@ -1,7 +1,7 @@
 //! Port of src/smw/objects/blocks/WeaponBreakableBlock.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
-use crate::game::game;
 use crate::common::eyecandy::EC_FallingObject;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gameplay_styles::TeamCollisionStyle;
@@ -22,7 +22,6 @@ use crate::smw::objects::moving::mo_attack_zone::MO_AttackZone;
 use crate::smw::objects::moving::mo_spin_attack::MO_SpinAttack;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
-use sdl2::sys::SDL_Rect;
 
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
@@ -136,7 +135,7 @@ impl CObjectTrait for B_WeaponBreakableBlock {
                 g,
                 self.ix as i32,
                 self.iy as i32,
-                &SDL_Rect { x: self.iDrawOffsetX as i32, y: 0, w: self.iw as i32, h: self.ih as i32 },
+                &Rect { x: self.iDrawOffsetX as i32, y: 0, w: self.iw as i32, h: self.ih as i32 },
             );
         }
     }

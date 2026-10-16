@@ -9,17 +9,16 @@ pub mod gfx_sprite;
 pub mod soft_image;
 pub mod soft_surface;
 
+use crate::common::gfx::soft_surface::{Surface, SurfacePtr};
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::color::{colors, RGB};
 use crate::common::gfx::gfx_palette::{gfxPalette, PlayerPalette};
 use crate::common::gfx::gfx_sdl::GraphicsSDL;
 use crate::common::gfx::gfx_sprite::{gfxSprite, ClipEdge, ImageLoader};
 use crate::common::global_constants::PGFX_LAST;
-use crate::common::util::sdl_helpers::SdlSurfacePtr;
 use crate::globals::*;
-use sdl2::sys::image::IMG_Load;
-use sdl2::sys::*;
-use std::ffi::{CStr, CString};
+use sdl2::sys::{SDL_Joystick, SDL_JoystickSetLED};
 use std::path::Path;
 
 pub type SpriteStrip = [gfxSprite; PGFX_LAST as usize];
@@ -36,81 +35,20 @@ pub fn init_globals(g: &mut Game) {
     }
 }
 
-/// Not in upstream: `SDL_SetSurfaceRLE` only on the web by default (docs/sdl2-compat-rle.md); `SMW_RLE=0`/`1` overrides.
-pub fn rle_enabled() -> bool {
-    static RLE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
-    *RLE.get_or_init(|| match std::env::var("SMW_RLE").as_deref() {
-        Ok("0") => false,
-        Ok("1") => true,
-        _ => cfg!(target_os = "emscripten"),
-    })
-}
-
-fn sdl_error() -> String {
-    unsafe { CStr::from_ptr(SDL_GetError()).to_string_lossy().into_owned() }
-}
-
-pub unsafe fn get_raw_pixel(surf: *mut SDL_Surface, x: i32, y: i32) -> u32 {
+pub unsafe fn get_raw_pixel(surf: *mut Surface, x: i32, y: i32) -> u32 {
     assert!(!surf.is_null());
     assert!(0 <= x && x < (*surf).w);
     assert!(0 <= y && y < (*surf).h);
-
-    let bpp = (*(*surf).format).BytesPerPixel;
-    let idx = (y * (*surf).pitch + x * bpp as i32) as usize;
-    let pixel8 = ((*surf).pixels as *const u8).add(idx);
-
-    match bpp {
-        1 => *pixel8 as u32,
-        2 => (pixel8 as *const u16).read_unaligned() as u32,
-        3 => {
-            if SDL_BYTEORDER == SDL_BIG_ENDIAN {
-                (*pixel8 as u32) << 16 | (*pixel8.add(1) as u32) << 8 | *pixel8.add(2) as u32
-            } else {
-                *pixel8 as u32 | (*pixel8.add(1) as u32) << 8 | (*pixel8.add(2) as u32) << 16
-            }
-        }
-        4 => (pixel8 as *const u32).read_unaligned(),
-        _ => unreachable!(),
-    }
+    (*surf).pixel(x, y)
 }
 
-unsafe fn set_raw_pixel(surf: *mut SDL_Surface, x: i32, y: i32, value: u32) {
+unsafe fn set_rgb(surf: *mut Surface, x: i32, y: i32, color: &RGB) {
     assert!(!surf.is_null());
     assert!(0 <= x && x < (*surf).w);
     assert!(0 <= y && y < (*surf).h);
-
-    let bpp = (*(*surf).format).BytesPerPixel;
-    let idx = (y * (*surf).pitch + x * bpp as i32) as usize;
-    let pixel8 = ((*surf).pixels as *mut u8).add(idx);
-
-    match bpp {
-        1 => *pixel8 = value as u8,
-        2 => (pixel8 as *mut u16).write_unaligned(value as u16),
-        3 => {
-            if SDL_BYTEORDER == SDL_BIG_ENDIAN {
-                *pixel8 = ((value >> 16) & 0xFF) as u8;
-                *pixel8.add(1) = ((value >> 8) & 0xFF) as u8;
-                *pixel8.add(2) = (value & 0xFF) as u8;
-            } else {
-                *pixel8 = (value & 0xFF) as u8;
-                *pixel8.add(1) = ((value >> 8) & 0xFF) as u8;
-                *pixel8.add(2) = ((value >> 16) & 0xFF) as u8;
-            }
-        }
-        4 => (pixel8 as *mut u32).write_unaligned(value),
-        _ => unreachable!(),
-    }
-}
-
-unsafe fn set_rgb(surf: *mut SDL_Surface, x: i32, y: i32, color: &RGB) {
-    assert!(!surf.is_null());
-    let rawPixel = SDL_MapRGB((*surf).format, color.r, color.g, color.b);
-    set_raw_pixel(surf, x, y, rawPixel);
-}
-
-#[inline]
-fn must_lock(surf: *mut SDL_Surface) -> bool {
-    unsafe { (*surf).flags & SDL_RLEACCEL != 0 }
+    let s = &mut *surf;
+    let value = s.map_rgb(color.r, color.g, color.b);
+    s.pixels[(y * s.w + x) as usize] = value;
 }
 
 /// Makes team-colored skin surface frame from a loaded sprite strip.
@@ -120,14 +58,6 @@ fn create_skin_surface(g: &mut Game, source: &gfxSprite, sourceFrame: usize, tea
         let outFrameCount: usize = if allStates { gfx_palette::COUNT as usize } else { 1 };
 
         let out = gfxSprite::blank(g, 32 * outFrameCount as u32, 32);
-
-        if must_lock(out.get_surface()) {
-            SDL_LockSurface(out.get_surface());
-        }
-
-        if must_lock(source.get_surface()) {
-            SDL_LockSurface(source.get_surface());
-        }
 
         let startX = (sourceFrame * 32) as i32;
 
@@ -150,16 +80,8 @@ fn create_skin_surface(g: &mut Game, source: &gfxSprite, sourceFrame: usize, tea
             }
         }
 
-        SDL_UnlockSurface(source.get_surface());
-        SDL_UnlockSurface(out.get_surface());
-
-        let color_key = SDL_MapRGB((*out.get_surface()).format, colors::MAGENTA.r, colors::MAGENTA.g, colors::MAGENTA.b);
-        if SDL_SetColorKey(out.get_surface(), 1, color_key) < 0 {
-            panic!("Couldn't set color key for new skin surface: {}", sdl_error());
-        }
-        if rle_enabled() && SDL_SetSurfaceRLE(out.get_surface(), 1) < 0 {
-            panic!("Couldn't set RLE acceleration for new skin surface: {}", sdl_error());
-        }
+        let s = &mut *out.get_surface();
+        s.color_key = Some(s.map_rgb(colors::MAGENTA.r, colors::MAGENTA.g, colors::MAGENTA.b));
 
         out
     }
@@ -169,13 +91,11 @@ fn valid_skin_surface(skin: &gfxSprite) -> bool {
     skin.get_width() == 192 && skin.get_height() == 32
 }
 
-pub fn get_rgb(surf: *mut SDL_Surface, x: i32, y: i32) -> RGB {
+pub fn get_rgb(surf: *mut Surface, x: i32, y: i32) -> RGB {
     unsafe {
         assert!(!surf.is_null());
-        let rawPixel = get_raw_pixel(surf, x, y);
-        let mut color = RGB::default();
-        SDL_GetRGB(rawPixel, (*surf).format, &mut color.r, &mut color.g, &mut color.b);
-        color
+        let (r, g, b) = (*surf).get_rgb(get_raw_pixel(surf, x, y));
+        RGB { r, g, b }
     }
 }
 
@@ -230,35 +150,14 @@ pub fn gfx_loadpalette(g: &mut Game, palette_path: &Path) -> bool {
 
 /// Not in the C++: writes `screen` as a BMP for the differential replay harness.
 pub fn gfx_save_screen_bmp(g: &mut Game, path: &str) -> bool {
-    let cpath = CString::new(path).unwrap();
-    unsafe {
-        let rw = SDL_RWFromFile(cpath.as_ptr(), b"wb\0".as_ptr() as *const _);
-        !rw.is_null() && SDL_SaveBMP_RW(g.screen, rw, 1) == 0
-    }
+    unsafe { (*g.screen).save_bmp(Path::new(path)).is_ok() }
 }
 
 /// Appends the screen's 640x480 pixels to `out` as raw ARGB8888 (BGRA bytes on little-endian).
 pub fn gfx_write_screen_raw(g: &mut Game, out: &mut impl std::io::Write) -> std::io::Result<()> {
-    unsafe {
-        let argb = SDL_PixelFormatEnum::SDL_PIXELFORMAT_ARGB8888 as u32;
-        let surface = if (*(*g.screen).format).format == argb {
-            g.screen
-        } else {
-            SDL_ConvertSurfaceFormat(g.screen, argb, 0)
-        };
-        if surface.is_null() {
-            return Err(std::io::Error::other("cannot convert the screen surface"));
-        }
-        SDL_LockSurface(surface);
-        let (w, rows, pitch) = ((*surface).w as usize * 4, (*surface).h as usize, (*surface).pitch as usize);
-        let pixels = std::slice::from_raw_parts((*surface).pixels as *const u8, pitch * rows);
-        let result = (0..rows).try_for_each(|y| out.write_all(&pixels[y * pitch..y * pitch + w]));
-        SDL_UnlockSurface(surface);
-        if surface != g.screen {
-            SDL_FreeSurface(surface);
-        }
-        result
-    }
+    let screen = unsafe { &*g.screen };
+    let bytes: Vec<u8> = screen.pixels.iter().flat_map(|&p| (if screen.alpha { p } else { p | 0xFF00_0000 }).to_le_bytes()).collect();
+    out.write_all(&bytes)
 }
 
 fn load_skin(g: &mut Game, path: &Path) -> Result<gfxSprite, String> {
@@ -316,7 +215,7 @@ pub fn gfx_loadfullskin(g: &mut Game, path: &Path, colorScheme: i16) -> Result<S
     Ok(strip)
 }
 
-pub fn gfx_cliprect(srcRect: &mut SDL_Rect, dstRect: &mut SDL_Rect, clipArea: &SDL_Rect) {
+pub fn gfx_cliprect(srcRect: &mut Rect, dstRect: &mut Rect, clipArea: &Rect) {
     if dstRect.x >= clipArea.x + clipArea.w
         || dstRect.x + dstRect.w < clipArea.x
         || dstRect.y >= clipArea.y + clipArea.h
@@ -354,7 +253,7 @@ pub fn gfx_cliprect(srcRect: &mut SDL_Rect, dstRect: &mut SDL_Rect, clipArea: &S
 
 /// Clips a source and destination area pair, so that the destination area doesn't go past
 /// a certain threshold in a given direction. Returns true if the destination area is fully hidden.
-pub fn gfx_adjusthiddenrects(g: &mut Game, src: &mut SDL_Rect, dst: &mut SDL_Rect, edge: ClipEdge, threshold: i32) -> bool {
+pub fn gfx_adjusthiddenrects(g: &mut Game, src: &mut Rect, dst: &mut Rect, edge: ClipEdge, threshold: i32) -> bool {
     unsafe {
         match edge {
             ClipEdge::Top => {
@@ -417,14 +316,14 @@ pub fn gfx_drawpreview(g: &mut Game,
     srcY: i16,
     iw: i16,
     ih: i16,
-    clipRect: &SDL_Rect,
+    clipRect: &Rect,
     wrap: bool,
     clip: Option<(ClipEdge, i32)>,
 ) {
     unsafe {
         //need to set source rect before each blit so it can be clipped correctly
-        let mut rSrcRect = SDL_Rect { x: srcX as i32, y: srcY as i32, w: iw as i32, h: ih as i32 };
-        let mut rDstRect = SDL_Rect { x: dstX as i32, y: dstY as i32, w: iw as i32, h: ih as i32 };
+        let mut rSrcRect = Rect { x: srcX as i32, y: srcY as i32, w: iw as i32, h: ih as i32 };
+        let mut rDstRect = Rect { x: dstX as i32, y: dstY as i32, w: iw as i32, h: ih as i32 };
 
         gfx_cliprect(&mut rSrcRect, &mut rDstRect, clipRect);
 

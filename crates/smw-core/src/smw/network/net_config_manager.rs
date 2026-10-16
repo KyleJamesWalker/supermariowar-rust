@@ -1,7 +1,6 @@
 //! Port of src/smw/network/NetConfigManager.cpp
 
 use crate::game::Game;
-use crate::game::game;
 use crate::common::path::get_home_directory;
 use crate::common_netplay::protocol_definitions::{NET_MAX_PLAYER_NAME_LENGTH, NET_MAX_ROOM_NAME_LENGTH};
 use crate::smw::net::{ServerAddress};

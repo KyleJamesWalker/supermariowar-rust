@@ -11,7 +11,6 @@ pub mod powerup;
 pub mod walkingenemy;
 
 use crate::game::Game;
-use crate::game::game;
 use crate::common::object_base::CObjectTrait;
 use crate::globals::Ptr;
 use crate::smw::net_random::arg_f32;

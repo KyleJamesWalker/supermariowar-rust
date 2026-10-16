@@ -1,7 +1,7 @@
 //! Port of src/common/movingplatform.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
-use crate::game::game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::game::App;
 use crate::common::gfx::gfx_drawpreview;
@@ -17,7 +17,6 @@ use crate::globals::{Aliased, Ptr};
 use crate::smw::objectgame::removeifprojectile;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::player::CPlayer;
-use sdl2::sys::*;
 use std::ffi::CStr;
 use std::ptr::{null, null_mut};
 
@@ -28,10 +27,6 @@ const collision_overlap_left: CollisionStyle = 2;
 const collision_overlap_right: CollisionStyle = 3;
 
 const SW: f32 = App::screenWidth as f32;
-
-fn sdl_error() -> String {
-    unsafe { CStr::from_ptr(SDL_GetError()).to_string_lossy().into_owned() }
-}
 
 /// `(short)f / TILESIZE` as an index.
 #[inline(always)]
@@ -65,8 +60,8 @@ pub struct MovingPlatform {
 
     pub sprites: [gfxSprite; 2],
 
-    pub rSrcRect: SDL_Rect,
-    pub rDstRect: SDL_Rect,
+    pub rSrcRect: Rect,
+    pub rDstRect: Rect,
 
     pub fForwardDirection: bool,
     pub fStartDirection: bool,
@@ -130,8 +125,8 @@ impl MovingPlatform {
             iSteps: 0,
             iOnStep: 0,
             sprites: [gfxSprite::new(), gfxSprite::new()],
-            rSrcRect: SDL_Rect { x: 0, y: 0, w: 0, h: 0 },
-            rDstRect: SDL_Rect { x: 0, y: 0, w: 0, h: 0 },
+            rSrcRect: Rect { x: 0, y: 0, w: 0, h: 0 },
+            rDstRect: Rect { x: 0, y: 0, w: 0, h: 0 },
             fForwardDirection: false,
             fStartDirection: false,
             iDrawLayer: drawlayer,
@@ -153,11 +148,8 @@ impl MovingPlatform {
                 this.sprites[iSurface].set_wrap(640);
 
                 let s = this.sprites[iSurface].get_surface();
-                if SDL_SetColorKey(s, SDL_bool::SDL_TRUE as i32, SDL_MapRGB((*s).format, 255, 0, 255)) < 0 {
-                    print!("\n ERROR: Couldn't set ColorKey for moving platform: {}\n", sdl_error());
-                }
-
-                crate::common::gfx::blit::fill_rect(s, null(), SDL_MapRGB((*s).format, 255, 0, 255));
+                (*s).color_key = Some((*s).map_rgb(255, 0, 255));
+                crate::common::gfx::blit::fill_rect(s, null(), (*s).map_rgb(255, 0, 255));
             }
 
             for iSurface in 0..2 {
@@ -219,7 +211,7 @@ impl MovingPlatform {
     //Draw a custom sprite on a tile of the platform, instead of a tileset tile
     pub fn paint_sprite_at(&mut self, spr: &gfxSprite, col: usize, row: usize) {
         let iTileSize: i16 = self.iWidth / self.iTileWidth;
-        let dstPos = SDL_Rect { x: col as i32 * iTileSize as i32, y: row as i32 * iTileSize as i32, w: 0, h: 0 };
+        let dstPos = Rect { x: col as i32 * iTileSize as i32, y: row as i32 * iTileSize as i32, w: 0, h: 0 };
 
         for layer in &self.sprites {
             spr.draw_to(layer.get_surface(), &dstPos);
@@ -273,7 +265,7 @@ impl MovingPlatform {
             0,
             self.iWidth,
             self.iHeight,
-            &SDL_Rect { x: iOffsetX as i32, y: iOffsetY as i32, w: App::screenWidth / 2, h: App::screenHeight / 2 },
+            &Rect { x: iOffsetX as i32, y: iOffsetY as i32, w: App::screenWidth / 2, h: App::screenHeight / 2 },
             true,
             Option::None,
         );

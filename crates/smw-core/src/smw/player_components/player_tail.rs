@@ -1,5 +1,6 @@
 //! Port of src/smw/player_components/PlayerTail.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::ClipEdge;
@@ -7,7 +8,6 @@ use crate::common::player_kill_styles::KillStyle;
 use crate::globals::*;
 use crate::smw::objects::moving::mo_spin_attack::MO_SpinAttack;
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 
 pub type PlayerTailState = i32;
 pub const TAIL_NOT_IN_USE: PlayerTailState = 0;
@@ -157,7 +157,7 @@ impl PlayerTail {
 
                 let x = player.left_x() as i32 + if fPlayerFacingRight { -18 } else { 18 };
                 let y = player.top_y() as i32 + 6;
-                let src = SDL_Rect {
+                let src = Rect {
                     x: self.iTailFrame as i32,
                     y: (if fPlayerFacingRight { 0 } else { 26 }) + iOffsetY as i32,
                     w: 22,

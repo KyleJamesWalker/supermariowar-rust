@@ -1,5 +1,6 @@
 //! The game's state as one value (docs/ARCHITECTURE_V2.md, Step 2: globals into a `Game` struct).
 
+use crate::common::gfx::soft_surface::Surface;
 use crate::common::eyecandy::{CEyecandyContainer, SpotlightManager};
 use crate::common::game_mode::{CGameModeTrait, GAMEMODE_LAST};
 use crate::common::file_list::{AnnouncerList, FiltersList, GraphicsList, MusicList, SkinList, SoundsList, TourList, WorldList, WorldMusicList};
@@ -15,7 +16,6 @@ use crate::common::game_values::CGameValues;
 use crate::common::gfx::gfx_sdl::GraphicsSDL;
 use crate::common::gfx::gfx_palette::gfxPalette;
 use crate::globals::{Aliased, Global, Ptr};
-use std::sync::atomic::{AtomicPtr, Ordering};
 use crate::leveleditor::leveleditor::LevelEditorState;
 use crate::smw::gamemodes::{bonus_house::CGM_Bonus, mini_boss::CGM_Boss_MiniGame, mini_boxes::CGM_Boxes_MiniGame, mini_pipe::CGM_Pipe_MiniGame};
 use crate::smw::fps_limiter::FPSLimiter;
@@ -103,9 +103,9 @@ pub struct Game {
     #[cfg(target_os = "emscripten")]
     pub frame_events: Vec<smw_platform::Input>,
     pub net_record: NetRecordState,
-    pub screen: *mut sdl2::sys::SDL_Surface,
+    pub screen: *mut Surface,
     /// The destination surface for all drawing; swapped from `screen` to another surface at times.
-    pub blitdest: *mut sdl2::sys::SDL_Surface,
+    pub blitdest: *mut Surface,
     pub fps_limiter: FPSLimiter,
     pub main_loop: MainLoopState,
     pub(crate) harness: Harness,
@@ -220,30 +220,9 @@ impl Game {
     }
 }
 
-static GAME: AtomicPtr<Game> = AtomicPtr::new(std::ptr::null_mut());
-
 impl Game {
-    /// The game an entry point runs: on the heap, for the rest of the process, and what game() returns.
+    /// The game an entry point runs. It lives on the heap for the rest of the process.
     pub fn create() -> &'static mut Game {
-        let g = Box::leak(Box::new(Game::new()));
-        GAME.store(g, Ordering::Release);
-        g
-    }
-}
-
-/// The running game, for code with no `g`: Drop impls, fn-pointer callbacks and unit tests.
-#[inline]
-pub fn game() -> Ptr<Game> {
-    let p = GAME.load(Ordering::Acquire);
-    if !p.is_null() {
-        return Ptr::from_raw(p);
-    }
-    let fresh = Box::into_raw(Box::new(Game::new()));
-    match GAME.compare_exchange(std::ptr::null_mut(), fresh, Ordering::AcqRel, Ordering::Acquire) {
-        Ok(_) => Ptr::from_raw(fresh),
-        Err(existing) => {
-            drop(unsafe { Box::from_raw(fresh) });
-            Ptr::from_raw(existing)
-        }
+        Box::leak(Box::new(Game::new()))
     }
 }

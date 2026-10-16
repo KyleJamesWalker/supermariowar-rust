@@ -1,11 +1,11 @@
 //! Port of src/smw/player_components/PlayerOutOfArenaTimer.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::global_constants::PWOFFSET;
 use crate::common::player_kill_styles::KillStyle;
 use crate::globals::*;
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 
 #[derive(Default)]
 pub struct PlayerOutOfArenaTimer {
@@ -61,7 +61,7 @@ impl PlayerOutOfArenaTimer {
                         g,
                         player.left_x() as i32 - PWOFFSET,
                         0,
-                        &SDL_Rect { x: player.get_color_id() as i32 * 32, y: 0, w: 32, h: 26 },
+                        &Rect { x: player.get_color_id() as i32 * 32, y: 0, w: 32, h: 26 },
                     );
 
                     //This displays the out of arena timer before the player is killed
@@ -70,7 +70,7 @@ impl PlayerOutOfArenaTimer {
                             g,
                             player.left_x() as i32 - PWOFFSET + 8,
                             18,
-                            &SDL_Rect { x: (self.displaytimer as i32) << 4, y: (player.get_color_id() as i32) << 4, w: 16, h: 16 },
+                            &Rect { x: (self.displaytimer as i32) << 4, y: (player.get_color_id() as i32) << 4, w: 16, h: 16 },
                         );
                     }
                 }

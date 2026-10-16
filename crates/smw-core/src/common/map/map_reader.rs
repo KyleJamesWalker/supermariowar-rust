@@ -4,7 +4,6 @@
 //! concrete class; each `read_*` method dispatches to the override that class would use.
 
 use crate::game::Game;
-use crate::game::game;
 use crate::globals::Aliased;
 use crate::common::file_io::BinaryFile;
 use crate::common::map::{CMap, ReadType};

@@ -1,7 +1,6 @@
 //! Port of src/common/map/MapReader17xx.cpp
 
 use crate::game::Game;
-use crate::game::game;
 use crate::common::file_io::BinaryFile;
 use crate::common::game_values::default_powerup_setting;
 use crate::common::global_constants::*;

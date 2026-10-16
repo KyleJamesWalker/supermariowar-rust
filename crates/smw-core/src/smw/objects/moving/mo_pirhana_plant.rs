@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_PirhanaPlant.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game::App;
@@ -21,7 +22,6 @@ use crate::smw::objects::carriable::co_throw_box::CO_ThrowBox;
 use crate::smw::objects::moving::moving_object::{IO_MovingObject, IO_MovingObjectTrait};
 use crate::smw::objects::overmap::wo_straight_path_hazard::OMO_StraightPathHazard;
 use crate::smw::player::{CPlayer, PlayerState};
-use sdl2::sys::SDL_Rect;
 
 //------------------------------------------------------------------------------
 // class IO_PirhanaPlant - pirhana plant that appears on a certain frequency
@@ -118,7 +118,7 @@ impl MO_PirhanaPlant {
             unsafe {
                 let rect = &g_rPirhanaRects[self.iType as usize][self.iDirection as usize][self.iFrame as usize];
                 let surface = &gp.rm.spr_hazard_pirhanaplant[1];
-                let clipRect = SDL_Rect { x: iOffsetX as i32, y: iOffsetY as i32, w: 320, h: 240 };
+                let clipRect = Rect { x: iOffsetX as i32, y: iOffsetY as i32, w: 320, h: 240 };
                 let dstX = ((self.ix as i32 >> 1) + iOffsetX as i32) as i16;
                 let dstY = ((self.iy as i32 >> 1) + iOffsetY as i32) as i16;
                 let (ih, iw) = (self.ih as i32, self.iw as i32);
@@ -377,13 +377,13 @@ impl CObjectTrait for MO_PirhanaPlant {
                 let (ih, iw) = (self.ih as i32, self.iw as i32);
                 let (ch, cw) = (self.collisionHeight as i32, self.collisionWidth as i32);
                 if self.iDirection == 0 {
-                    gp.rm.spr_hazard_pirhanaplant[0].draw_src(g, ix, iy, &SDL_Rect { x: rect.x, y: rect.y, w: 32, h: ch });
+                    gp.rm.spr_hazard_pirhanaplant[0].draw_src(g, ix, iy, &Rect { x: rect.x, y: rect.y, w: 32, h: ch });
                 } else if self.iDirection == 1 {
-                    gp.rm.spr_hazard_pirhanaplant[0].draw_src(g, ix, iy, &SDL_Rect { x: rect.x, y: rect.y + ih - ch, w: 32, h: ch });
+                    gp.rm.spr_hazard_pirhanaplant[0].draw_src(g, ix, iy, &Rect { x: rect.x, y: rect.y + ih - ch, w: 32, h: ch });
                 } else if self.iDirection == 2 {
-                    gp.rm.spr_hazard_pirhanaplant[0].draw_src(g, ix, iy, &SDL_Rect { x: rect.x, y: rect.y, w: cw, h: 32 });
+                    gp.rm.spr_hazard_pirhanaplant[0].draw_src(g, ix, iy, &Rect { x: rect.x, y: rect.y, w: cw, h: 32 });
                 } else {
-                    gp.rm.spr_hazard_pirhanaplant[0].draw_src(g, ix, iy, &SDL_Rect { x: rect.x + iw - cw, y: rect.y, w: cw, h: 32 });
+                    gp.rm.spr_hazard_pirhanaplant[0].draw_src(g, ix, iy, &Rect { x: rect.x + iw - cw, y: rect.y, w: cw, h: 32 });
                 }
             }
         }

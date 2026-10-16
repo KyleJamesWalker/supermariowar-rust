@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MovingObject.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -24,7 +25,6 @@ use crate::smw::objects::moving::mo_carried_object::MO_CarriedObjectTrait;
 use crate::smw::objects::powerup::powerup::MO_PowerupTrait;
 use crate::smw::objects::walkingenemy::walking_enemy::MO_WalkingEnemyTrait;
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 use std::ops::{Deref, DerefMut};
 
 pub struct IO_MovingObject {
@@ -221,7 +221,7 @@ pub fn io_moving_object_draw<T: IO_MovingObjectTrait + ?Sized>(g: &mut Game, thi
         g,
         (o.ix - o.collisionOffsetX) as i32,
         (o.iy - o.collisionOffsetY) as i32,
-        &SDL_Rect { x: o.drawframe as i32, y: o.animationOffsetY as i32, w: o.iw as i32, h: o.ih as i32 },
+        &Rect { x: o.drawframe as i32, y: o.animationOffsetY as i32, w: o.iw as i32, h: o.ih as i32 },
     );
 }
 

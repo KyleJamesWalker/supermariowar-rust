@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_Shell.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::{EC_FallingObject, EC_SingleAnimation, Spotlight};
 use crate::common::eyecandy_styles::AwardStyle;
@@ -19,7 +20,6 @@ use crate::smw::objectgame::removeifprojectile;
 use crate::smw::objects::moving::mo_carried_object::{MO_CarriedObject, MO_CarriedObjectTrait};
 use crate::smw::objects::moving::moving_object::{io_moving_object_collision_detection_checksides, io_moving_object_update, IO_MovingObjectTrait};
 use crate::smw::player::{get_player_from_global_id, player_killed_player, CPlayer, PlayerDeathStyle};
-use sdl2::sys::SDL_Rect;
 
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -563,9 +563,9 @@ impl CObjectTrait for CO_Shell {
         let y = self.iy as i32 - self.collisionOffsetY as i32;
         if self.state == 0 {
             let h = (self.ih as f32 - self.fy + self.iDestY as f32) as i16;
-            self.spr.draw_src(g, x, y, &SDL_Rect { x: 0, y: self.iColorOffsetY as i32, w: self.iw as i32, h: h as i32 });
+            self.spr.draw_src(g, x, y, &Rect { x: 0, y: self.iColorOffsetY as i32, w: self.iw as i32, h: h as i32 });
         } else if !self.owner.is_null() {
-            let src = SDL_Rect { x: 0, y: self.iColorOffsetY as i32 + self.iFlippedOffset as i32, w: self.iw as i32, h: self.ih as i32 };
+            let src = Rect { x: 0, y: self.iColorOffsetY as i32 + self.iFlippedOffset as i32, w: self.iw as i32, h: self.ih as i32 };
             if self.owner.iswarping() {
                 let edge: ClipEdge = unsafe { std::mem::transmute::<i32, ClipEdge>(self.owner.get_warp_state() as i32) };
                 self.spr.draw_clip(g, x, y, &src, edge, self.owner.get_warp_plane() as i32);
@@ -573,14 +573,14 @@ impl CObjectTrait for CO_Shell {
                 self.spr.draw_src(g, x, y, &src);
             }
         } else if self.state == 2 {
-            self.spr.draw_src(g, x, y, &SDL_Rect { x: 0, y: self.iColorOffsetY as i32 + self.iFlippedOffset as i32, w: self.iw as i32, h: self.ih as i32 });
+            self.spr.draw_src(g, x, y, &Rect { x: 0, y: self.iColorOffsetY as i32 + self.iFlippedOffset as i32, w: self.iw as i32, h: self.ih as i32 });
         } else if self.state == 1 {
-            self.spr.draw_src(g, x, y, &SDL_Rect { x: self.drawframe as i32, y: self.iColorOffsetY as i32 + self.iFlippedOffset as i32, w: self.iw as i32, h: self.ih as i32 });
+            self.spr.draw_src(g, x, y, &Rect { x: self.drawframe as i32, y: self.iColorOffsetY as i32 + self.iFlippedOffset as i32, w: self.iw as i32, h: self.ih as i32 });
         }
 
         unsafe {
             if self.frozen {
-                gp.rm.spr_iceblock.draw_src(g, x, y, &SDL_Rect { x: 0, y: 0, w: 32, h: 32 });
+                gp.rm.spr_iceblock.draw_src(g, x, y, &Rect { x: 0, y: 0, w: 32, h: 32 });
             } else if self.fSmoking {
                 g.eyecandy[0].emplace(EC_SingleAnimation::new(
                     Ptr::from_mut(&mut g.rm.spr_burnup),
@@ -726,7 +726,7 @@ impl MO_CarriedObjectTrait for CO_Shell {
         {
             vel = 10.0f;
             fSmoking = true;
-            ifSoundOnPlay(game().rm->sfx_cannon);
+            ifSoundOnPlay(rm->sfx_cannon);
         }
         */
 

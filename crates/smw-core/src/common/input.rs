@@ -3,11 +3,12 @@
 //! The C++ unions that alias `keys[NUM_KEYS]` with named members (`menu_up`, `game_jump`, ...)
 //! become a plain `keys` array plus same-named accessor methods (`game_jump()` / `game_jump_mut()`).
 
+use crate::common::keys::*;
 use crate::game::Game;
 use smw_platform::{Input, InputEvent, MouseEvent};
 use crate::common::global_constants::MAX_PLAYERS;
 use crate::globals::*;
-use sdl2::sys::{SDL_Event, SDL_EventType, SDL_Keycode, SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP};
+use sdl2::sys::{SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP};
 
 pub const NUM_KEYS: usize = 8;
 
@@ -85,9 +86,9 @@ macro_rules! all_key_aliases {
 
 #[derive(Clone, Copy, Default, PartialEq, Eq, Debug)]
 pub struct CInputControl {
-    pub keys: [SDL_Keycode; NUM_KEYS],
+    pub keys: [Keycode; NUM_KEYS],
 }
-all_key_aliases!(CInputControl, SDL_Keycode);
+all_key_aliases!(CInputControl, Keycode);
 
 #[derive(Clone, Copy, Default, Debug)]
 pub struct COutputControl {
@@ -127,7 +128,7 @@ pub struct CPlayerInput {
     //Use these structures to see what input has been pressed
     pub outputControls: [COutputControl; 4],
 
-    pub iPressedKey: SDL_Keycode,
+    pub iPressedKey: Keycode,
     /// Not in upstream: per joystick (`which`), the stick 1 and hat directions held (up, down, left, right).
     joyDirections: Vec<(i32, [bool; 4], [bool; 4])>,
     pub _alias: Aliased,
@@ -135,7 +136,7 @@ pub struct CPlayerInput {
 
 /// Not in upstream: the direction (up, down, left, right) of a stick 1 or hat binding. A joystick's
 /// stick 1 and hat drive the same direction bindings, so either one moves a player or a menu.
-fn joy_direction(key: SDL_Keycode) -> Option<usize> {
+fn joy_direction(key: Keycode) -> Option<usize> {
     match key {
         JOY_STICK_1_UP..=JOY_STICK_1_RIGHT => Some(key as usize),
         JOY_HAT_UP..=JOY_HAT_RIGHT => Some((key - JOY_HAT_UP) as usize),

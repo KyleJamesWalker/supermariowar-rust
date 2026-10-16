@@ -1,5 +1,6 @@
 //! Port of src/common/ui/MI_MapPreview.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
 use crate::common::map::read_type_preview;
@@ -15,7 +16,6 @@ use crate::smw::objects::moving::mo_pirhana_plant::MO_PirhanaPlant;
 use crate::smw::objects::overmap::over_map_object::io_over_map_object_draw_offset;
 use crate::smw::objects::overmap::wo_orbit_hazard::OMO_OrbitHazard;
 use crate::smw::objects::overmap::wo_straight_path_hazard::OMO_StraightPathHazard;
-use sdl2::sys::SDL_Rect;
 
 #[cfg(not(target_os = "emscripten"))]
 fn small_delay(g: &mut Game) {
@@ -40,7 +40,7 @@ pub struct MI_MapPreview {
     pub surfaceMapBackground: gfxSprite,
     pub surfaceMapBlockLayer: gfxSprite,
     pub surfaceMapForeground: gfxSprite,
-    pub rectDst: SDL_Rect,
+    pub rectDst: Rect,
 
     pub iWidth: i16,
     pub iIndent: i16,
@@ -62,7 +62,7 @@ impl MI_MapPreview {
             surfaceMapBackground,
             surfaceMapBlockLayer,
             surfaceMapForeground,
-            rectDst: SDL_Rect { x: 0, y: 0, w: 0, h: 0 },
+            rectDst: Rect { x: 0, y: 0, w: 0, h: 0 },
             iWidth: width,
             iIndent: indent,
             szMapName: String::new(),
@@ -105,10 +105,10 @@ impl MI_MapPreview {
 
         unsafe {
             //Draw the background for the map preview
-            gp.rm.menu_dialog.draw_src(g, bx, y + 30, &SDL_Rect { x: 0, y: 0, w: 336, h: 254 });
-            gp.rm.menu_dialog.draw_src(g, bx + 336, y + 30, &SDL_Rect { x: 496, y: 0, w: 16, h: 254 });
-            gp.rm.menu_dialog.draw_src(g, bx, y + 284, &SDL_Rect { x: 0, y: 464, w: 336, h: 16 });
-            gp.rm.menu_dialog.draw_src(g, bx + 336, y + 284, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
+            gp.rm.menu_dialog.draw_src(g, bx, y + 30, &Rect { x: 0, y: 0, w: 336, h: 254 });
+            gp.rm.menu_dialog.draw_src(g, bx + 336, y + 30, &Rect { x: 496, y: 0, w: 16, h: 254 });
+            gp.rm.menu_dialog.draw_src(g, bx, y + 284, &Rect { x: 0, y: 464, w: 336, h: 16 });
+            gp.rm.menu_dialog.draw_src(g, bx + 336, y + 284, &Rect { x: 496, y: 464, w: 16, h: 16 });
 
             self.rectDst.x = bx + 16;
 

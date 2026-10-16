@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_PhantoKey.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -12,7 +13,6 @@ use crate::impl_base;
 use crate::smw::objects::moving::mo_carried_object::{mo_carried_object_draw, MO_CarriedObject, MO_CarriedObjectTrait};
 use crate::smw::objects::moving::moving_object::{io_moving_object_collision_detection_map, IO_MovingObjectTrait};
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 
 //------------------------------------------------------------------------------
 // class phanto key (for chase mode)
@@ -136,7 +136,7 @@ impl CObjectTrait for CO_PhantoKey {
                 g,
                 self.ix as i32 - self.collisionOffsetX as i32,
                 self.iy as i32 - self.collisionOffsetY as i32,
-                &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },
+                &Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },
             );
         }
     }

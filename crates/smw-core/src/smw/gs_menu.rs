@@ -1,5 +1,7 @@
 //! Port of src/smw/GSMenu.cpp (reference build: original + tools/cpp-harness.patch).
 
+use crate::common::keys::*;
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use smw_platform::{Input, InputEvent};
 use crate::common::file_list::{MusicCategory, WorldMusicCategory};
@@ -58,7 +60,6 @@ use crate::smw::menu::network::net_servers_menu::UI_NetServersMenu;
 use crate::common::path::get_home_directory;
 use crate::common_netplay::protocol_definitions::*;
 use crate::smw::net::{net_end_session, net_start_session};
-use sdl2::sys::{SDL_Event, SDL_EventType, SDL_FillRect, SDL_KeyCode, SDL_Keymod, SDL_MapRGB, SDL_Rect};
 use std::ops::DerefMut;
 use std::path::Path;
 
@@ -84,8 +85,8 @@ fn assign<T>(slot: &mut Ptr<T>, value: Box<T>) {
     old.delete();
 }
 
-fn rect(x: i32, y: i32, w: i32, h: i32) -> SDL_Rect {
-    SDL_Rect { x, y, w, h }
+fn rect(x: i32, y: i32, w: i32, h: i32) -> Rect {
+    Rect { x, y, w, h }
 }
 
 pub struct MenuState {
@@ -1533,7 +1534,7 @@ impl GameState for MenuState {
     fn on_enter_state(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         unsafe {
-            sdl2::sys::SDL_ShowCursor(sdl2::sys::SDL_ENABLE as i32);
+            crate::services::services(gp.get()).video.show_cursor(true);
             self.iUnlockMinigameOptionIndex = 0;
 
             self.iTournamentAIStep = 0;
@@ -1585,7 +1586,7 @@ impl GameState for MenuState {
                         }
                     }
                 }
-                /*else if (game().game_values.tournamentwinner > -1) //World is completed
+                /*else if (game_values.tournamentwinner > -1) //World is completed
                 {
                     miBonusWheel->Reset(true);
                     mCurrentMenu = mBonusWheelMenu;
@@ -1673,7 +1674,7 @@ impl GameState for MenuState {
             //handle messages
             #[cfg(target_os = "emscripten")]
             g.frame_events.clear();
-            while let Some(input) = smw_sdl2::events::poll_input() {
+            while let Some(input) = crate::services::services(gp.get()).events.poll() {
                 #[cfg(target_os = "emscripten")]
                 g.frame_events.push(input.clone());
                 if input.event == InputEvent::Quit {
@@ -1681,18 +1682,18 @@ impl GameState for MenuState {
                     return;
                 } else if let InputEvent::Key { key, mods, down: true, .. } = input.event {
                     let sym = key.0;
-                    if sym == SDL_KeyCode::SDLK_F1 as i32 {
+                    if sym == SDLK_F1 {
                         g.game_values.showfps = !g.game_values.showfps;
                     }
 
-                    if (mods as u32) & (SDL_Keymod::KMOD_LALT as u32 | SDL_Keymod::KMOD_RALT as u32) != 0 {
+                    if (mods as u32) & (KMOD_LALT as u32 | KMOD_RALT as u32) != 0 {
                         //ALT + F4 = close window
-                        if sym == SDL_KeyCode::SDLK_F4 as i32 {
+                        if sym == SDLK_F4 {
                             self.exit(g);
                             return;
                         }
                         //ALT + Enter = fullscreen/windowed toggle
-                        else if sym == SDL_KeyCode::SDLK_RETURN as i32 {
+                        else if sym == SDLK_RETURN {
                             g.game_values.fullscreen = !g.game_values.fullscreen;
                             gfx_changefullscreen(g, g.game_values.fullscreen);
                             g.blitdest = g.screen;
@@ -1701,7 +1702,7 @@ impl GameState for MenuState {
                         }
                     }
 
-                    if sym == SDL_KeyCode::SDLK_INSERT as i32 {
+                    if sym == SDLK_INSERT {
                         gfx_take_screenshot(g);
                     }
                 }
@@ -1756,7 +1757,7 @@ impl GameState for MenuState {
 
             //Watch for the konami code to unlock the minigames match type
             /*
-            if (!game().game_values.minigameunlocked && mCurrentMenu == mMatchSelectionMenu) {
+            if (!game_values.minigameunlocked && mCurrentMenu == mMatchSelectionMenu) {
                 ... (commented out in the C++)
             }
             */
@@ -1775,7 +1776,7 @@ impl GameState for MenuState {
             if self.mCurrentMenu != menu(self.mWorldMenu) {
                 gp.rm.menu_backdrop.draw(g, 0, 0);
             } else {
-                crate::common::gfx::blit::fill_rect(g.screen, std::ptr::null(), SDL_MapRGB((*g.screen).format, 0, 0, 0));
+                crate::common::gfx::blit::fill_rect(g.screen, std::ptr::null(), (*g.screen).map_rgb(0, 0, 0));
             }
 
             self.mCurrentMenu.update(g);

@@ -1,7 +1,6 @@
 //! Port of src/common/FileList.cpp
 
 use crate::game::Game;
-use crate::game::game;
 use crate::globals::Aliased;
 use crate::common::file_io::cstr_bytes_to_string;
 use crate::common::linfunc::tokenize;
@@ -932,7 +931,6 @@ impl WorldMusicList {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::globals::game;
 
     fn set_data_root(g: &mut Game) {
         let mut gp = g.ptr();
@@ -943,7 +941,7 @@ mod tests {
 
     #[test]
     fn lists_load_from_data_dir() {
-        let g = game().get();
+        let g = crate::game::Game::create();
         let mut gp = g.ptr();
         set_data_root(g);
 

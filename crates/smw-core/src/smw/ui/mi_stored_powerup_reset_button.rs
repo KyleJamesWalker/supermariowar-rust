@@ -1,5 +1,6 @@
 //! Port of src/smw/ui/MI_StoredPowerupResetButton.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::input::CPlayerInput;
@@ -7,7 +8,6 @@ use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_button::MI_Button;
 use crate::common::uicontrol::{TextAlign, UI_ControlTrait};
 use crate::globals::*;
-use sdl2::sys::SDL_Rect;
 
 pub struct MI_StoredPowerupResetButton {
     pub mi_button: MI_Button,
@@ -47,12 +47,12 @@ impl UI_ControlTrait for MI_StoredPowerupResetButton {
 
         unsafe {
             for iPowerup in 0..4i32 {
-                gp.rm.spr_selectfield.draw_src(g, x + iWidth - 142 + iPowerup * 30, y + 4, &SDL_Rect { x: 188, y: 88, w: 24, h: 24 });
+                gp.rm.spr_selectfield.draw_src(g, x + iWidth - 142 + iPowerup * 30, y + 4, &Rect { x: 188, y: 88, w: 24, h: 24 });
                 gp.rm.spr_storedpowerupsmall.draw_src(
                     g,
                     x + iWidth - 138 + iPowerup * 30,
                     y + 8,
-                    &SDL_Rect { x: gp.game_values.storedpowerups[iPowerup as usize] as i32 * 16, y: 0, w: 16, h: 16 },
+                    &Rect { x: gp.game_values.storedpowerups[iPowerup as usize] as i32 * 16, y: 0, w: 16, h: 16 },
                 );
             }
         }

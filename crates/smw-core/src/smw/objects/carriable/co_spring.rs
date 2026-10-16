@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_Spring.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::{gfxSprite, ClipEdge};
@@ -12,7 +13,6 @@ use crate::impl_base;
 use crate::smw::objects::moving::mo_carried_object::{MO_CarriedObject, MO_CarriedObjectTrait};
 use crate::smw::objects::moving::moving_object::{io_moving_object_collision_detection_map, IO_MovingObjectTrait};
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 
 //------------------------------------------------------------------------------
 // class spring
@@ -130,7 +130,7 @@ pub fn co_spring_draw<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T) {
     let x = o.ix as i32 - o.collisionOffsetX as i32;
     let y = o.iy as i32 - o.collisionOffsetY as i32;
     if !o.owner.is_null() {
-        let src = SDL_Rect { x: o.animationOffsetX as i32, y: o.iOffsetY as i32, w: 32, h: 32 };
+        let src = Rect { x: o.animationOffsetX as i32, y: o.iOffsetY as i32, w: 32, h: 32 };
         if o.owner.iswarping() {
             let edge: ClipEdge = unsafe { std::mem::transmute::<i32, ClipEdge>(o.owner.get_warp_state() as i32) };
             o.spr.draw_clip(g, x, y, &src, edge, o.owner.get_warp_plane() as i32);
@@ -138,7 +138,7 @@ pub fn co_spring_draw<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T) {
             o.spr.draw_src(g, x, y, &src);
         }
     } else {
-        o.spr.draw_src(g, x, y, &SDL_Rect { x: o.animationOffsetX as i32 + o.drawframe as i32, y: o.iOffsetY as i32, w: 32, h: 32 });
+        o.spr.draw_src(g, x, y, &Rect { x: o.animationOffsetX as i32 + o.drawframe as i32, y: o.iOffsetY as i32, w: 32, h: 32 });
     }
 }
 

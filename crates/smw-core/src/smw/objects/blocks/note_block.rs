@@ -1,7 +1,7 @@
 //! Port of src/smw/objects/blocks/NoteBlock.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
-use crate::game::game;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::*;
@@ -14,7 +14,6 @@ use crate::smw::objectgame::check_secret;
 use crate::smw::objects::blocks::io_block::*;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 
 /// NOTE: The elements are ordered!
 #[repr(u8)]
@@ -85,7 +84,7 @@ impl CObjectTrait for B_NoteBlock {
             g,
             self.ix as i32,
             self.iy as i32,
-            &SDL_Rect { x: self.drawFrame as i32, y: self.iTypeOffsetY as i32, w: self.iw as i32, h: self.ih as i32 },
+            &Rect { x: self.drawFrame as i32, y: self.iTypeOffsetY as i32, w: self.iw as i32, h: self.ih as i32 },
         );
     }
 

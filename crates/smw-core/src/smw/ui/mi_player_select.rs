@@ -1,5 +1,6 @@
 //! Port of src/smw/ui/MI_PlayerSelect.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::input::CPlayerInput;
@@ -7,7 +8,6 @@ use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_image::MI_Image;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
-use sdl2::sys::SDL_Rect;
 
 pub struct MI_PlayerSelect {
     pub ui_control: UI_Control,
@@ -187,9 +187,9 @@ impl UI_ControlTrait for MI_PlayerSelect {
         let iWidth = self.iWidth as i32;
 
         unsafe {
-            self.spr.draw_src(g, x, y, &SDL_Rect { x: 0, y: if self.fSelected { 64 } else { 0 }, w: iIndent - 16, h: 64 });
-            self.spr.draw_src(g, x + iIndent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 192 } else { 128 }, w: 32, h: 64 });
-            self.spr.draw_src(g, x + iIndent + 16, y, &SDL_Rect { x: 528 - iWidth + iIndent, y: if self.fSelected { 64 } else { 0 }, w: iWidth - iIndent - 16, h: 64 });
+            self.spr.draw_src(g, x, y, &Rect { x: 0, y: if self.fSelected { 64 } else { 0 }, w: iIndent - 16, h: 64 });
+            self.spr.draw_src(g, x + iIndent - 16, y, &Rect { x: 0, y: if self.fSelected { 192 } else { 128 }, w: 32, h: 64 });
+            self.spr.draw_src(g, x + iIndent + 16, y, &Rect { x: 528 - iWidth + iIndent, y: if self.fSelected { 64 } else { 0 }, w: iWidth - iIndent - 16, h: 64 });
 
             gp.rm.menu_font_large.draw_chop_right(g, x + 16, y + 20, iIndent - 8, &self.szName);
 
@@ -200,7 +200,7 @@ impl UI_ControlTrait for MI_PlayerSelect {
                     g,
                     x + self.iPlayerPosition[iPlayer] as i32,
                     y + 16,
-                    &SDL_Rect { x: g.game_values.playercontrol[iPlayer] as i32 * 34 + 32, y: 206, w: 34, h: 32 },
+                    &Rect { x: g.game_values.playercontrol[iPlayer] as i32 * 34 + 32, y: 206, w: 34, h: 32 },
                 );
             }
         }

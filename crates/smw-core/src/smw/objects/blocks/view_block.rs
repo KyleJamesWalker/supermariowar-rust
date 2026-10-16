@@ -1,7 +1,7 @@
 //! Port of src/smw/objects/blocks/ViewBlock.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
-use crate::game::game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::*;
 use crate::common::io_block::IO_BlockTrait;
@@ -11,7 +11,6 @@ use crate::common::random_number_generator::RANDOM_INT;
 use crate::globals::Ptr;
 use crate::impl_base;
 use crate::smw::objects::blocks::powerup_block::*;
-use sdl2::sys::SDL_Rect;
 
 pub struct B_ViewBlock {
     pub b_powerup_block: B_PowerupBlock,
@@ -87,7 +86,7 @@ impl CObjectTrait for B_ViewBlock {
                     g,
                     self.ix as i32,
                     self.iy as i32,
-                    &SDL_Rect { x: self.powerupindex as i32 * 32, y: 0, w: 32, h: 32 },
+                    &Rect { x: self.powerupindex as i32 * 32, y: 0, w: 32, h: 32 },
                 );
             }
         }

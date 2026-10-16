@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_Fireball.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::Spotlight;
 use crate::common::gameplay_styles::TeamCollisionStyle;
@@ -14,7 +15,6 @@ use crate::impl_base;
 use crate::smw::objectgame::removeifprojectile;
 use crate::smw::objects::moving::moving_object::{io_moving_object_update, IO_MovingObject, IO_MovingObjectTrait};
 use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
-use sdl2::sys::SDL_Rect;
 
 //------------------------------------------------------------------------------
 // class fireball
@@ -135,7 +135,7 @@ impl CObjectTrait for MO_Fireball {
             g,
             self.ix as i32 - self.collisionOffsetX as i32,
             self.iy as i32 - self.collisionOffsetY as i32,
-            &SDL_Rect {
+            &Rect {
                 x: self.drawframe as i32,
                 y: (if self.velx > 0.0 { 0 } else { 18 }) + self.colorOffset as i32,
                 w: self.iw as i32,

@@ -1,5 +1,6 @@
 //! Port of src/smw/GSSplashScreen.cpp
 
+use crate::common::keys::*;
 use crate::game::Game;
 use smw_platform::InputEvent;
 use crate::common::game::App;
@@ -12,7 +13,6 @@ use crate::globals::*;
 use crate::smw::game_state::{GameState, GameStateManager};
 use crate::smw::gs_gameplay::{GameplayState};
 use crate::smw::gs_menu::MenuState;
-use sdl2::sys::{SDL_Event, SDL_EventType, SDL_FillRect, SDL_KeyCode, SDL_Keymod};
 
 //-----------------------------------------------------------------------------
 // THE LOAD UP SEQUENCE + SPLASH SCREEN
@@ -70,25 +70,25 @@ impl GameState for SplashScreenState {
             // TODO: move this out of this method maybe
 
             let mut tapped = false;
-            while let Some(input) = smw_sdl2::events::poll_input() {
+            while let Some(input) = crate::services::services(gp.get()).events.poll() {
                 tapped |= input.event.tap().is_some();
                 if input.event == InputEvent::Quit {
                     g.game_values.appstate = AppState::Quit;
                     return;
                 } else if let InputEvent::Key { key, mods, down: true, .. } = input.event {
-                    let alt = (mods as u32) & (SDL_Keymod::KMOD_LALT as u32 | SDL_Keymod::KMOD_RALT as u32) != 0;
-                    if key.0 == SDL_KeyCode::SDLK_RETURN as i32 {
+                    let alt = (mods as u32) & (KMOD_LALT as u32 | KMOD_RALT as u32) != 0;
+                    if key.0 == SDLK_RETURN {
                         if alt {
                             g.game_values.fullscreen = !g.game_values.fullscreen;
                             gfx_changefullscreen(g, g.game_values.fullscreen);
                             g.blitdest = g.screen;
                         }
-                    } else if key.0 == SDL_KeyCode::SDLK_F4 as i32 {
+                    } else if key.0 == SDLK_F4 {
                         if alt {
                             g.game_values.appstate = AppState::Quit;
                             return;
                         }
-                    } else if key.0 == SDL_KeyCode::SDLK_INSERT as i32 {
+                    } else if key.0 == SDLK_INSERT {
                         crate::common::gfx::gfx_take_screenshot(g);
                     }
                 }

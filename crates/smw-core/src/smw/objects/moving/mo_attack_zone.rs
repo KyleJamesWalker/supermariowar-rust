@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_AttackZone.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gameplay_styles::TeamCollisionStyle;
@@ -103,7 +104,7 @@ pub fn mo_attack_zone_collide_player<T: MO_AttackZoneTrait + ?Sized>(g: &mut Gam
 {
         if (!dead)
         {
-                SDL_Rect r = {ix, iy, collisionWidth, collisionHeight};
+                Rect r = {ix, iy, collisionWidth, collisionHeight};
                 crate::common::gfx::blit::fill_rect(blitdest, &r, 0xf000);
         }
 }*/

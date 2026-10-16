@@ -1,7 +1,6 @@
 //! Port of src/smw/menu/network/NetNewRoomSettingsMenu.cpp
 
 use crate::game::Game;
-use crate::game::game;
 use crate::common::game_mode::GAMEMODE_LAST;
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_button::MI_Button;

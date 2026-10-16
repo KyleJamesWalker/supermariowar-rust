@@ -1,6 +1,7 @@
 //! Software ARGB8888 surfaces and the SDL3 blit paths the game uses.
 
-/// `SDL_Rect`.
+/// `SDL_Rect`, with its layout, so a pointer to one can go to the SDL calls that remain.
+#[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Rect {
     pub x: i32,
@@ -53,6 +54,8 @@ pub struct Surface {
     pub color_key: Option<u32>,
     pub alpha_mod: u8,
     pub blend: BlendMode,
+    /// ARGB8888; `false` is XRGB8888, whose top byte reads as opaque.
+    pub alpha: bool,
 }
 
 const RGB_MASK: u32 = 0x00FF_FFFF;
@@ -178,7 +181,24 @@ impl Surface {
             color_key: None,
             alpha_mod: 255,
             blend: BlendMode::Blend,
+            alpha: true,
         }
+    }
+
+    /// `SDL_CreateRGBSurface(.., 32, 0, 0, 0, 0)`: XRGB8888, zeroed, no blending.
+    pub fn new_xrgb(w: i32, h: i32) -> Self {
+        Surface { blend: BlendMode::None, alpha: false, ..Surface::new(w, h) }
+    }
+
+    /// `SDL_MapRGB` in this surface's format.
+    pub fn map_rgb(&self, r: u8, g: u8, b: u8) -> u32 {
+        let rgb = (r as u32) << 16 | (g as u32) << 8 | b as u32;
+        if self.alpha { 0xFF00_0000 | rgb } else { rgb }
+    }
+
+    /// `SDL_GetRGB` of a pixel value in this surface's format.
+    pub fn get_rgb(&self, pixel: u32) -> (u8, u8, u8) {
+        ((pixel >> 16) as u8, (pixel >> 8) as u8, pixel as u8)
     }
 
     pub fn pixel(&self, x: i32, y: i32) -> u32 {
@@ -186,11 +206,11 @@ impl Surface {
     }
 
     pub fn view(&self) -> Pixels<'_> {
-        Pixels { w: self.w, h: self.h, pitch: self.w as usize, pixels: &self.pixels, alpha: true }
+        Pixels { w: self.w, h: self.h, pitch: self.w as usize, pixels: &self.pixels, alpha: self.alpha }
     }
 
     pub fn view_mut(&mut self) -> PixelsMut<'_> {
-        PixelsMut { w: self.w, h: self.h, pitch: self.w as usize, pixels: &mut self.pixels, clip: self.clip, alpha: true }
+        PixelsMut { w: self.w, h: self.h, pitch: self.w as usize, pixels: &mut self.pixels, clip: self.clip, alpha: self.alpha }
     }
 
     pub fn state(&self) -> BlitState {
@@ -219,6 +239,89 @@ impl Surface {
     /// `SDL_FillRect`: `None` fills the clip rectangle; a rectangle is intersected with it.
     pub fn fill_rect(&mut self, rect: Option<&Rect>, color: u32) {
         fill_rect(&mut self.view_mut(), rect, color);
+    }
+}
+
+/// An owned surface, or none: `std::unique_ptr<SDL_Surface, SdlDeleter>`.
+#[derive(Default)]
+pub struct SurfacePtr(Option<Box<Surface>>);
+
+impl SurfacePtr {
+    pub fn new(s: Surface) -> Self {
+        SurfacePtr(Some(Box::new(s)))
+    }
+    pub const fn null() -> Self {
+        SurfacePtr(None)
+    }
+    pub fn get(&self) -> *mut Surface {
+        self.0.as_ref().map_or(std::ptr::null_mut(), |b| &**b as *const Surface as *mut Surface)
+    }
+    pub fn is_null(&self) -> bool {
+        self.0.is_none()
+    }
+    /// Gives up ownership; the caller frees it with `free_surface`.
+    pub fn release(&mut self) -> *mut Surface {
+        self.0.take().map_or(std::ptr::null_mut(), Box::into_raw)
+    }
+}
+
+impl std::ops::Deref for SurfacePtr {
+    type Target = Surface;
+    fn deref(&self) -> &Surface {
+        self.0.as_deref().expect("null surface dereference")
+    }
+}
+
+impl Surface {
+    /// `SDL_SaveBMP`: 32 bits per pixel, bottom-up, no compression.
+    pub fn save_bmp(&self, path: &std::path::Path) -> std::io::Result<()> {
+        let image = (self.w * self.h * 4) as u32;
+        let mut out = Vec::with_capacity(54 + image as usize);
+        out.extend_from_slice(b"BM");
+        out.extend_from_slice(&(54 + image).to_le_bytes());
+        out.extend_from_slice(&0u32.to_le_bytes());
+        out.extend_from_slice(&54u32.to_le_bytes());
+        out.extend_from_slice(&40u32.to_le_bytes());
+        out.extend_from_slice(&self.w.to_le_bytes());
+        out.extend_from_slice(&self.h.to_le_bytes());
+        out.extend_from_slice(&1u16.to_le_bytes());
+        out.extend_from_slice(&32u16.to_le_bytes());
+        out.extend_from_slice(&[0; 4]);
+        out.extend_from_slice(&image.to_le_bytes());
+        out.extend_from_slice(&[0; 16]);
+        for y in (0..self.h).rev() {
+            for x in 0..self.w {
+                out.extend_from_slice(&self.pixel(x, y).to_le_bytes());
+            }
+        }
+        std::fs::write(path, out)
+    }
+
+    /// `IMG_SavePNG`: 8-bit RGBA, opaque where the surface has no alpha.
+    pub fn save_png(&self, path: &std::path::Path) -> std::io::Result<()> {
+        let file = std::io::BufWriter::new(std::fs::File::create(path)?);
+        let mut enc = png::Encoder::new(file, self.w as u32, self.h as u32);
+        enc.set_color(png::ColorType::Rgba);
+        enc.set_depth(png::BitDepth::Eight);
+        let mut writer = enc.write_header().map_err(std::io::Error::other)?;
+        let data: Vec<u8> = self
+            .pixels
+            .iter()
+            .flat_map(|&p| [(p >> 16) as u8, (p >> 8) as u8, p as u8, if self.alpha { (p >> 24) as u8 } else { 255 }])
+            .collect();
+        writer.write_image_data(&data).map_err(std::io::Error::other)
+    }
+}
+
+/// A surface on the heap for code that holds it by pointer; `free_surface` frees it.
+pub fn alloc_surface(s: Surface) -> *mut Surface {
+    Box::into_raw(Box::new(s))
+}
+
+/// `SDL_FreeSurface`.
+pub unsafe fn free_surface(s: *mut Surface) {
+    if !s.is_null() {
+        drop(Box::from_raw(s));
     }
 }
 

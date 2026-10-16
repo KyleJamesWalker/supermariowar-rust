@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_RaceGoal.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
 use crate::common::game_mode::game_mode_race;
@@ -15,7 +16,6 @@ use crate::smw::gamemodes::race::CGM_Race;
 use crate::smw::net_random::{self, Ev};
 use crate::smw::objects::overmap::over_map_object::{io_over_map_object_update, IO_OverMapObject, IO_OverMapObjectTrait};
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 
 //------------------------------------------------------------------------------
 // class race goal (for Race mode)
@@ -146,19 +146,19 @@ impl CObjectTrait for OMO_RaceGoal {
 
         unsafe {
             if self.isfinishline {
-                self.spr.draw_src(g, x, y, &SDL_Rect { x: self.drawframe as i32, y: 54, w: self.iw as i32, h: self.ih as i32 });
+                self.spr.draw_src(g, x, y, &Rect { x: self.drawframe as i32, y: 54, w: self.iw as i32, h: self.ih as i32 });
             } else {
-                self.spr.draw_src(g, x, y, &SDL_Rect { x: self.drawframe as i32, y: 0, w: self.iw as i32, h: self.ih as i32 });
+                self.spr.draw_src(g, x, y, &Rect { x: self.drawframe as i32, y: 0, w: self.iw as i32, h: self.ih as i32 });
 
                 for k in 0..g.score_cnt {
                     if self.tagged[k as usize] > -1 {
                         let fp = &flagpositions[(g.score_cnt - 2) as usize][k as usize];
-                        gp.rm.spr_bonus.draw_src(g, x + fp[0] as i32, y + fp[1] as i32, &SDL_Rect { x: 0, y: self.tagged[k as usize] as i32 * 16, w: 16, h: 16 });
+                        gp.rm.spr_bonus.draw_src(g, x + fp[0] as i32, y + fp[1] as i32, &Rect { x: 0, y: self.tagged[k as usize] as i32 * 16, w: 16, h: 16 });
                     }
                 }
             }
 
-            gp.rm.spr_racetext.draw_src(g, x + 26, y, &SDL_Rect { x: (self.goalID as i32 + 1) * 16, y: 0, w: 16, h: 16 });
+            gp.rm.spr_racetext.draw_src(g, x + 26, y, &Rect { x: (self.goalID as i32 + 1) * 16, y: 0, w: 16, h: 16 });
         }
     }
 

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/IO_FlameCannon.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_drawpreview;
@@ -65,7 +66,7 @@ impl IO_FlameCannon {
                     (rect.y >> 1) as i16,
                     (rect.w >> 1) as i16,
                     (rect.h >> 1) as i16,
-                    &sdl2::sys::SDL_Rect { x: iOffsetX as i32, y: iOffsetY as i32, w: 320, h: 240 },
+                    &Rect { x: iOffsetX as i32, y: iOffsetY as i32, w: 320, h: 240 },
                     true,
                     None,
                 );

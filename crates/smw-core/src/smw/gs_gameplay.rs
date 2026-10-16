@@ -2,6 +2,8 @@
 //!
 //! `_DEBUG`-only code (autotest, debug hotkeys, autokill) is not ported: the reference build is Release.
 
+use crate::common::keys::*;
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use smw_platform::InputEvent;
 use crate::common::eyecandy::{
@@ -66,7 +68,6 @@ use crate::smw::objects::mystery_mushroom_temp_player::MysteryMushroomTempPlayer
 use crate::smw::objects::switch_color::SwitchColor;
 use crate::smw::objects::throw_block_type::ThrowBlockType;
 use crate::smw::player::{get_player_from_global_id, player_killed_player, CPlayer, PlayerDeathStyle, PlayerState};
-use sdl2::sys::{SDL_Event, SDL_EventType, SDL_FillRect, SDL_KeyCode, SDL_Keymod, SDL_Rect};
 use std::io::Write;
 
 pub const COUNTDOWN_START_INDEX: i16 = 4;
@@ -213,11 +214,11 @@ impl GameplayState {
 // THE GAME LOOP
 //-----------------------------------------------------------------------------
 
-const fn rc(x: i32, y: i32, w: i32, h: i32) -> SDL_Rect {
-    SDL_Rect { x, y, w, h }
+const fn rc(x: i32, y: i32, w: i32, h: i32) -> Rect {
+    Rect { x, y, w, h }
 }
 
-const iCountDownNumbers: [[[SDL_Rect; 2]; 4]; 4] = [
+const iCountDownNumbers: [[[Rect; 2]; 4]; 4] = [
     [
         [rc(0, 0, 64, 64), rc(288, 208, 64, 64)],
         [rc(0, 64, 48, 48), rc(296, 216, 48, 48)],
@@ -362,7 +363,7 @@ fn spr(s: &mut gfxSprite) -> Ptr<gfxSprite> {
 }
 
 fn draw_rect(g: &mut Game, sprite: &gfxSprite, x: i32, y: i32, sx: i32, sy: i32, w: i32, h: i32) {
-    sprite.draw_src(g, x, y, &SDL_Rect { x: sx, y: sy, w, h });
+    sprite.draw_src(g, x, y, &Rect { x: sx, y: sy, w, h });
 }
 
 /// `static_cast<MusicCategory>(id)`.
@@ -1447,18 +1448,18 @@ impl GameplayState {
         unsafe {
             //Draw black "behind" the game if we are shaking/moving the screen
             if g.y_shake > 0 {
-                let rect = SDL_Rect { x: 0, y: 0, w: App::screenWidth, h: g.y_shake as i32 };
+                let rect = Rect { x: 0, y: 0, w: App::screenWidth, h: g.y_shake as i32 };
                 crate::common::gfx::blit::fill_rect(g.screen, &rect, 0x0); //fill empty area with black
             } else if g.y_shake < 0 {
-                let rect = SDL_Rect { x: 0, y: App::screenHeight + g.y_shake as i32, w: App::screenWidth, h: App::screenHeight };
+                let rect = Rect { x: 0, y: App::screenHeight + g.y_shake as i32, w: App::screenWidth, h: App::screenHeight };
                 crate::common::gfx::blit::fill_rect(g.screen, &rect, 0x0); //fill empty area with black
             }
 
             if g.x_shake > 0 {
-                let rect = SDL_Rect { x: 0, y: 0, w: g.x_shake as i32, h: App::screenHeight };
+                let rect = Rect { x: 0, y: 0, w: g.x_shake as i32, h: App::screenHeight };
                 crate::common::gfx::blit::fill_rect(g.screen, &rect, 0x0); //fill empty area with black
             } else if g.x_shake < 0 {
-                let rect = SDL_Rect { x: App::screenWidth + g.x_shake as i32, y: 0, w: App::screenWidth, h: App::screenHeight };
+                let rect = Rect { x: App::screenWidth + g.x_shake as i32, y: 0, w: App::screenWidth, h: App::screenHeight };
                 crate::common::gfx::blit::fill_rect(g.screen, &rect, 0x0); //fill empty area with black
             }
         }
@@ -1615,7 +1616,7 @@ impl GameplayState {
             //Draw countdown start timer
             if self.iCountDownState > 0 && g.game_values.screenfade == 0 {
                 let idx = (28 - self.iCountDownState) as usize;
-                let rects: &[SDL_Rect; 2] = &iCountDownNumbers[iCountDownRectGroup[idx] as usize][iCountDownRectSize[idx] as usize];
+                let rects: &[Rect; 2] = &iCountDownNumbers[iCountDownRectGroup[idx] as usize][iCountDownRectSize[idx] as usize];
                 gp.rm.spr_countdown_numbers.draw_src(g, rects[1].x, rects[1].y, &rects[0]);
             }
         }
@@ -2394,19 +2395,19 @@ impl GameplayState {
             let menu_controls = if g.game_values.flags.exitinggame { 1 } else { 0 };
             g.game_values.playerInput.clear_pressed_keys(menu_controls);
 
-            while let Some(input) = smw_sdl2::events::poll_input() {
+            while let Some(input) = crate::services::services(gp.get()).events.poll() {
                 if input.event == InputEvent::Quit {
                     clean_up(g);
                     g.game_values.appstate = AppState::Quit;
                     return;
                 } else if let InputEvent::Key { key, mods, down: true, .. } = input.event {
                     let sym = key.0;
-                    if (mods as u32) & (SDL_Keymod::KMOD_LALT as u32 | SDL_Keymod::KMOD_RALT as u32) != 0 {
-                        if sym == SDL_KeyCode::SDLK_F4 as i32 {
+                    if (mods as u32) & (KMOD_LALT as u32 | KMOD_RALT as u32) != 0 {
+                        if sym == SDLK_F4 {
                             clean_up(g);
                             g.game_values.appstate = AppState::Quit;
                             return;
-                        } else if sym == SDL_KeyCode::SDLK_RETURN as i32 {
+                        } else if sym == SDLK_RETURN {
                             g.game_values.fullscreen = !g.game_values.fullscreen;
                             gfx_changefullscreen(g, g.game_values.fullscreen);
                             g.blitdest = g.screen;
@@ -2415,13 +2416,13 @@ impl GameplayState {
                             continue;
                         }
                     }
-                    if sym == SDL_KeyCode::SDLK_F1 as i32 {
+                    if sym == SDLK_F1 {
                         g.game_values.showfps = !g.game_values.showfps;
-                    } else if sym == SDL_KeyCode::SDLK_ESCAPE as i32 {
+                    } else if sym == SDLK_ESCAPE {
                         g.game_values.playerInput.outputControls[0].game_cancel_mut().fPressed = true;
-                    } else if sym == SDL_KeyCode::SDLK_TAB as i32 {
+                    } else if sym == SDLK_TAB {
                         play_next_music_track(g);
-                    } else if sym == SDL_KeyCode::SDLK_INSERT as i32 {
+                    } else if sym == SDLK_INSERT {
                         gfx_take_screenshot(g);
                     }
                 }
@@ -2734,7 +2735,7 @@ impl GameplayState {
 impl GameState for GameplayState {
     fn on_enter_state(&mut self, g: &mut Game) {
         unsafe {
-            sdl2::sys::SDL_ShowCursor(sdl2::sys::SDL_DISABLE as i32);
+            crate::services::services(g).video.show_cursor(false);
             self.iCountDownState = 0;
             self.iCountDownTimer = 0;
 

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_SledgeBrother.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::EC_FallingObject;
 use crate::common::game::App;
@@ -28,7 +29,6 @@ use crate::smw::objects::moving::mo_super_fireball::MO_SuperFireball;
 use crate::smw::objects::moving::moving_object::{IO_MovingObject, IO_MovingObjectTrait};
 use crate::smw::objects::overmap::wo_thwomp::OMO_Thwomp;
 use crate::smw::player::{get_player_from_global_id, CPlayer};
-use sdl2::sys::SDL_Rect;
 
 fn push_bombs(g: &mut Game, container: &CObjectContainer, x: i16, y: i16) {
     let mut gp = g.ptr();
@@ -441,7 +441,7 @@ impl CObjectTrait for MO_SledgeBrother {
             g,
             self.ix as i32 - self.collisionOffsetX as i32,
             self.iy as i32 - self.collisionOffsetY as i32,
-            &SDL_Rect {
+            &Rect {
                 x: self.leg_offset_x as i32 + self.arm_offset_x as i32 + if self.face_right { 0 } else { 192 },
                 y: self.hit_offset_y as i32,
                 w: self.iw as i32,
@@ -456,7 +456,7 @@ impl CObjectTrait for MO_SledgeBrother {
                         g,
                         self.ix as i32 - self.collisionOffsetX as i32 + iHeart as i32 * 8,
                         self.iy as i32 - self.collisionOffsetY as i32 - 18,
-                        &SDL_Rect { x: 0, y: 0, w: 16, h: 16 },
+                        &Rect { x: 0, y: 0, w: 16, h: 16 },
                     );
                 }
             }

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_Area.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -9,7 +10,6 @@ use crate::globals::*;
 use crate::impl_base;
 use crate::smw::objects::overmap::over_map_object::{IO_OverMapObject, IO_OverMapObjectTrait};
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 
 //------------------------------------------------------------------------------
 // class area (for Domination mode)
@@ -110,7 +110,7 @@ impl CObjectTrait for OMO_Area {
     crate::impl_cobject_plumbing!();
 
     fn draw(&mut self, g: &mut Game) {
-        self.spr.draw_src(g, self.ix as i32, self.iy as i32, &SDL_Rect { x: self.frame as i32, y: 0, w: self.iw as i32, h: self.ih as i32 });
+        self.spr.draw_src(g, self.ix as i32, self.iy as i32, &Rect { x: self.frame as i32, y: 0, w: self.iw as i32, h: self.ih as i32 });
     }
 
     fn update(&mut self, g: &mut Game) {

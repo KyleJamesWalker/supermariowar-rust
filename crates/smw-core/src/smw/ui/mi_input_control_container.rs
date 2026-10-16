@@ -1,5 +1,7 @@
 //! Port of src/smw/ui/MI_InputControlContainer.cpp
 
+use crate::common::keys::*;
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use smw_platform::{InputEvent, MouseEvent};
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -13,7 +15,7 @@ use crate::common::uicontrol::{ctl_ptr, TextAlign, UI_Control, UI_ControlTrait};
 use crate::common::uimenu::UI_Menu;
 use crate::globals::*;
 use crate::smw::harness;
-use sdl2::sys::{SDL_Event, SDL_EventType, SDL_GetKeyName, SDL_JoystickName, SDL_JoystickNameForIndex, SDL_Keycode, SDL_Rect, SDL_KeyCode, SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP, SDL_PRESSED};
+use sdl2::sys::{SDL_Event, SDL_GetKeyName, SDL_JoystickName, SDL_JoystickNameForIndex, SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP};
 use std::ffi::CStr;
 
 const GameInputNames: [&str; NUM_KEYS] = ["Left", "Right", "Jump", "Down", "Turbo", "Use Item", "Pause", "Exit"];
@@ -33,7 +35,7 @@ pub struct MI_InputControlField {
     pub iIndent: i16,
 
     pub iDevice: i16,
-    pub iKey: *mut SDL_Keycode,
+    pub iKey: *mut Keycode,
     pub iType: i16,
     pub iKeyIndex: i16,
     pub iPlayerIndex: i16,
@@ -67,7 +69,7 @@ impl MI_InputControlField {
     pub fn set_device(&mut self, device: i16) {
         self.iDevice = device;
     }
-    pub fn set_key(&mut self, key: *mut SDL_Keycode) {
+    pub fn set_key(&mut self, key: *mut Keycode) {
         self.iKey = key;
     }
     pub fn set_type(&mut self, type_: i16) {
@@ -80,8 +82,8 @@ impl MI_InputControlField {
         self.iPlayerIndex = playerindex;
     }
 
-    /// `SetKey(SDL_Keycode* iSetKey, SDL_Keycode key, short device)`
-    pub fn set_key_device(&mut self, g: &mut Game, iSetKey: *mut SDL_Keycode, key: SDL_Keycode, device: i16) {
+    /// `SetKey(Keycode* iSetKey, Keycode key, short device)`
+    pub fn set_key_device(&mut self, g: &mut Game, iSetKey: *mut Keycode, key: Keycode, device: i16) {
         unsafe {
             let mut fNeedSwap = false;
             let mut iSwapPlayer: i16 = 0;
@@ -136,11 +138,7 @@ impl UI_ControlTrait for MI_InputControlField {
 
             while !done {
                 #[cfg(not(target_os = "emscripten"))]
-                let input = {
-                    let mut event: SDL_Event = std::mem::zeroed();
-                    harness::wait_event(g, &mut event);
-                    smw_sdl2::input::from_sdl(&event)
-                };
+                let input = harness::wait_event(g);
                 #[cfg(target_os = "emscripten")]
                 let Some(input) = events.next() else {
                     return MENU_CODE_NONE;
@@ -159,7 +157,7 @@ impl UI_ControlTrait for MI_InputControlField {
 
                 if self.iDevice == DEVICE_KEYBOARD {
                     if matches!(ev, E::Key { down: true, .. }) {
-                        let key: SDL_Keycode = key_sym;
+                        let key: Keycode = key_sym;
 
                         self.set_key_device(g, self.iKey, key, self.iDevice);
                         done = true;
@@ -171,7 +169,7 @@ impl UI_ControlTrait for MI_InputControlField {
                             continue;
                         }
 
-                        let key: SDL_Keycode = if xmag > ymag {
+                        let key: Keycode = if xmag > ymag {
                             if motion_xrel < 0 {
                                 MOUSE_LEFT
                             } else {
@@ -188,16 +186,16 @@ impl UI_ControlTrait for MI_InputControlField {
                             done = true;
                         }
                     } else if matches!(ev, E::Mouse { event: MouseEvent::Button { down: true, .. }, .. }) {
-                        let key: SDL_Keycode = mouse_button as i32 + MOUSE_BUTTON_START;
+                        let key: Keycode = mouse_button as i32 + MOUSE_BUTTON_START;
                         self.set_key_device(g, self.iKey, key, self.iDevice);
                         done = true;
                     }
                 } else if matches!(ev, E::Key { down: true, .. }) {
-                    if key_sym == SDL_KeyCode::SDLK_ESCAPE as i32 {
+                    if key_sym == SDLK_ESCAPE {
                         done = true;
                     }
                 } else if matches!(ev, E::PadHat { .. }) {
-                    let mut key: SDL_Keycode = KEY_NONE;
+                    let mut key: Keycode = KEY_NONE;
                     let value = jhat_value as u32;
 
                     if value & SDL_HAT_UP as u32 != 0 {
@@ -215,7 +213,7 @@ impl UI_ControlTrait for MI_InputControlField {
                         done = true;
                     }
                 } else if matches!(ev, E::PadAxis { .. }) {
-                    let mut key: SDL_Keycode = KEY_NONE;
+                    let mut key: Keycode = KEY_NONE;
                     let value = jaxis_value as i32;
 
                     if jaxis_axis == 0 {
@@ -249,7 +247,7 @@ impl UI_ControlTrait for MI_InputControlField {
                         done = true;
                     }
                 } else if matches!(ev, E::PadButton { down: true, .. }) {
-                    let key: SDL_Keycode = jbutton_button as i32 + JOY_BUTTON_START;
+                    let key: Keycode = jbutton_button as i32 + JOY_BUTTON_START;
                     self.set_key_device(g, self.iKey, key, self.iDevice);
                     done = true;
                 }
@@ -275,9 +273,9 @@ impl UI_ControlTrait for MI_InputControlField {
         let iWidth = self.iWidth as i32;
 
         unsafe {
-            self.spr.draw_src(g, x, y, &SDL_Rect { x: 0, y: if self.fSelected { 32 } else { 0 }, w: iIndent - 16, h: 32 });
-            self.spr.draw_src(g, x + iIndent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
-            self.spr.draw_src(g, x + iIndent + 16, y, &SDL_Rect { x: 528 - iWidth + iIndent, y: if self.fSelected { 32 } else { 0 }, w: iWidth - iIndent - 16, h: 32 });
+            self.spr.draw_src(g, x, y, &Rect { x: 0, y: if self.fSelected { 32 } else { 0 }, w: iIndent - 16, h: 32 });
+            self.spr.draw_src(g, x + iIndent - 16, y, &Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
+            self.spr.draw_src(g, x + iIndent + 16, y, &Rect { x: 528 - iWidth + iIndent, y: if self.fSelected { 32 } else { 0 }, w: iWidth - iIndent - 16, h: 32 });
 
             gp.rm.menu_font_large.draw_chop_right(g, x + 16, y + 5, iIndent - 8, &self.szName);
 
@@ -286,7 +284,7 @@ impl UI_ControlTrait for MI_InputControlField {
             } else if self.fModifying {
                 gp.rm.menu_font_large.draw_chop_right(g, x + iIndent + 8, y + 5, iWidth - iIndent - 16, "(Press Button)");
             } else if self.iDevice == DEVICE_KEYBOARD {
-                let name = CStr::from_ptr(SDL_GetKeyName(*self.iKey)).to_string_lossy();
+                let name = crate::services::services(gp.get()).keyboard.key_name(*self.iKey);
                 gp.rm.menu_font_large.draw_chop_right(g, x + iIndent + 8, y + 5, iWidth - iIndent - 16, &name);
             } else {
                 gp.rm.menu_font_large.draw_chop_right(g, x + iIndent + 8, y + 5, iWidth - iIndent - 16, Self::Joynames[*self.iKey as usize]);
@@ -341,8 +339,8 @@ unsafe fn add_joysticks(g: &mut Game, field: &mut MI_SelectField<i16>) {
     }
 }
 
-fn key_ptr(g: &mut Game, iPlayerID: i16, iType: usize, iKey: usize) -> *mut SDL_Keycode {
-    unsafe { &mut g.game_values.playerInput.inputControls[iPlayerID as usize].inputGameControls[iType].keys[iKey] as *mut SDL_Keycode }
+fn key_ptr(g: &mut Game, iPlayerID: i16, iType: usize, iKey: usize) -> *mut Keycode {
+    unsafe { &mut g.game_values.playerInput.inputControls[iPlayerID as usize].inputGameControls[iType].keys[iKey] as *mut Keycode }
 }
 
 impl MI_InputControlContainer {

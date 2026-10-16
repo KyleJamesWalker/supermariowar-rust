@@ -1,5 +1,6 @@
 //! Port of src/smw/player_components/PlayerTanookiSuit.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game_values::if_sound_on_play;
@@ -8,7 +9,6 @@ use crate::common::global_constants::*;
 use crate::globals::*;
 use crate::smw::player::CPlayer;
 use crate::smw::player_components::player_shield::{OFF, SOFT_WITH_STOMP};
-use sdl2::sys::SDL_Rect;
 
 #[derive(Default)]
 pub struct PlayerTanookiSuit {
@@ -206,7 +206,7 @@ impl PlayerTanookiSuit {
         //Draw the statue
         let x = player.left_x() as i32 - PWOFFSET;
         let y = player.top_y() as i32 - 31;
-        let src = SDL_Rect { x: (player.get_color_id() as i32) << 5, y: 0, w: 32, h: 58 };
+        let src = Rect { x: (player.get_color_id() as i32) << 5, y: 0, w: 32, h: 58 };
         unsafe {
             if player.iswarping() {
                 let edge: ClipEdge = std::mem::transmute::<i32, ClipEdge>((player.state as i16 % 4) as i32);

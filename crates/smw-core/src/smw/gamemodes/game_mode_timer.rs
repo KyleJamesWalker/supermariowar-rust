@@ -1,10 +1,10 @@
 //! Port of src/smw/gamemodes/GameModeTimer.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy_styles::ScoreboardStyle;
 use crate::common::global_constants::WAITTIME;
 use crate::globals::*;
-use sdl2::sys::SDL_Rect;
 
 #[derive(Default)]
 pub struct GameTimerDisplay {
@@ -73,13 +73,13 @@ impl GameTimerDisplay {
         let mut gp = g.ptr();
         unsafe {
             gp.rm.spr_timershade.draw(g, self.iScoreOffsetX as i32, 5);
-            gp.rm.spr_scoretext.draw_src(g, self.iDigitRightDstX as i32, 13, &SDL_Rect { x: self.iDigitRightSrcX as i32, y: 0, w: 16, h: 16 });
+            gp.rm.spr_scoretext.draw_src(g, self.iDigitRightDstX as i32, 13, &Rect { x: self.iDigitRightSrcX as i32, y: 0, w: 16, h: 16 });
 
             if self.iDigitLeftSrcX > 0 {
-                gp.rm.spr_scoretext.draw_src(g, self.iDigitMiddleDstX as i32, 13, &SDL_Rect { x: self.iDigitMiddleSrcX as i32, y: 0, w: 16, h: 16 });
-                gp.rm.spr_scoretext.draw_src(g, self.iDigitLeftDstX as i32, 13, &SDL_Rect { x: self.iDigitLeftSrcX as i32, y: 0, w: 16, h: 16 });
+                gp.rm.spr_scoretext.draw_src(g, self.iDigitMiddleDstX as i32, 13, &Rect { x: self.iDigitMiddleSrcX as i32, y: 0, w: 16, h: 16 });
+                gp.rm.spr_scoretext.draw_src(g, self.iDigitLeftDstX as i32, 13, &Rect { x: self.iDigitLeftSrcX as i32, y: 0, w: 16, h: 16 });
             } else if self.iDigitMiddleSrcX > 0 {
-                gp.rm.spr_scoretext.draw_src(g, self.iDigitMiddleDstX as i32, 13, &SDL_Rect { x: self.iDigitMiddleSrcX as i32, y: 0, w: 16, h: 16 });
+                gp.rm.spr_scoretext.draw_src(g, self.iDigitMiddleDstX as i32, 13, &Rect { x: self.iDigitMiddleSrcX as i32, y: 0, w: 16, h: 16 });
             }
         }
     }

@@ -1,5 +1,6 @@
 //! Port of src/smw/ui/NetworkListScroll.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 
@@ -8,7 +9,6 @@ use crate::common::ui::menu_code::*;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
 use crate::smw::gs_gameplay::lookup_team_id;
-use sdl2::sys::SDL_Rect;
 
 #[derive(Clone, Debug, Default)]
 pub struct NLS_ListItem {
@@ -159,10 +159,10 @@ impl UI_ControlTrait for MI_NetworkListScroll {
             let (x, y) = (self.m_pos.x as i32, self.m_pos.y as i32);
             let w = self.iWidth as i32;
             let n = self.iNumLines as i32;
-            gp.rm.menu_dialog.draw_src(g, x, y, &SDL_Rect { x: 0, y: 0, w: w - 16, h: n * 32 + 32 });
-            gp.rm.menu_dialog.draw_src(g, x + w - 16, y, &SDL_Rect { x: 496, y: 0, w: 16, h: n * 32 + 32 });
-            gp.rm.menu_dialog.draw_src(g, x, y + n * 32 + 32, &SDL_Rect { x: 0, y: 464, w: w - 16, h: 16 });
-            gp.rm.menu_dialog.draw_src(g, x + w - 16, y + n * 32 + 32, &SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
+            gp.rm.menu_dialog.draw_src(g, x, y, &Rect { x: 0, y: 0, w: w - 16, h: n * 32 + 32 });
+            gp.rm.menu_dialog.draw_src(g, x + w - 16, y, &Rect { x: 496, y: 0, w: 16, h: n * 32 + 32 });
+            gp.rm.menu_dialog.draw_src(g, x, y + n * 32 + 32, &Rect { x: 0, y: 464, w: w - 16, h: 16 });
+            gp.rm.menu_dialog.draw_src(g, x + w - 16, y + n * 32 + 32, &Rect { x: 496, y: 464, w: 16, h: 16 });
 
             gp.rm.menu_font_large.draw_centered(g, x + (w >> 1), y + 5, &self.sTitle);
 
@@ -172,12 +172,12 @@ impl UI_ControlTrait for MI_NetworkListScroll {
                 let iLineWidth: i16 = self.iWidth - 32;
                 let sel = if self.iSelectedLine == iLine { 32 } else { 0 };
                 let ly = y + 32 + iLine as i32 * 32;
-                self.spr.draw_src(g, x + 16, ly, &SDL_Rect { x: 0, y: sel, w: iHalfLineWidth as i32, h: 32 });
+                self.spr.draw_src(g, x + 16, ly, &Rect { x: 0, y: sel, w: iHalfLineWidth as i32, h: 32 });
                 self.spr.draw_src(
                     g,
                     x + 16 + iHalfLineWidth as i32,
                     ly,
-                    &SDL_Rect { x: 512 - iLineWidth as i32 + iHalfLineWidth as i32, y: sel, w: (iLineWidth - iHalfLineWidth) as i32, h: 32 },
+                    &Rect { x: 512 - iLineWidth as i32 + iHalfLineWidth as i32, y: sel, w: (iLineWidth - iHalfLineWidth) as i32, h: 32 },
                 );
 
                 let item = &self.items[(self.iOffset + iLine) as usize];

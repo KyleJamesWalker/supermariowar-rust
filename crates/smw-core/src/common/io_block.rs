@@ -1,6 +1,4 @@
 //! Port of src/common/IO_Block.h
-
-use crate::game::game;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::math::vec2::Vec2s;

@@ -1,11 +1,11 @@
 //! Port of src/common/ui/MI_Image.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::math::trig::{cosf, sinf};
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
-use sdl2::sys::SDL_Rect;
 
 pub struct MI_Image {
     pub ui_control: UI_Control,
@@ -194,10 +194,10 @@ impl UI_ControlTrait for MI_Image {
             iYOffset = (self.dSwirlRadius * sinf(self.dSwirlAngle)) as i16;
         }
 
-        let src = SDL_Rect { x: self.iXFrame as i32, y: self.iYFrame as i32, w: self.iw as i32, h: self.ih as i32 };
+        let src = Rect { x: self.iXFrame as i32, y: self.iYFrame as i32, w: self.iw as i32, h: self.ih as i32 };
         if self.fPulse {
             let pv = self.iPulseValue as i32;
-            let dst = SDL_Rect {
+            let dst = Rect {
                 x: self.m_pos.x as i32 - pv + iXOffset as i32,
                 y: self.m_pos.y as i32 - pv + iYOffset as i32,
                 w: self.iw as i32 + (pv << 1),

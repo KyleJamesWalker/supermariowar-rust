@@ -9,7 +9,6 @@
 //! records (docs/REPLAY.md), so net_game_compare.py can tell whether the clients agree on them.
 
 use crate::game::Game;
-use crate::game::game;
 use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
 use crate::smw::harness;

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_Egg.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
@@ -15,7 +16,6 @@ use crate::smw::objects::moving::mo_carried_object::{mo_carried_object_draw, mo_
 use crate::smw::objects::moving::mo_explosion::MO_Explosion;
 use crate::smw::objects::moving::moving_object::{io_moving_object_collision_detection_map, IO_MovingObjectTrait};
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 
 //------------------------------------------------------------------------------
 // class egg (for egg mode)
@@ -233,7 +233,7 @@ impl CObjectTrait for CO_Egg {
             if g.game_values.gamemodesettings.egg.explode > 0 && self.explosiondrawframe < 5 {
                 let x = self.ix as i32 - self.collisionOffsetX as i32;
                 let y = self.iy as i32 - self.collisionOffsetY as i32;
-                let src = SDL_Rect { x: (self.explosiondrawframe as i32) << 5, y: (self.color as i32) << 5, w: 32, h: 32 };
+                let src = Rect { x: (self.explosiondrawframe as i32) << 5, y: (self.color as i32) << 5, w: 32, h: 32 };
                 if !self.owner.is_null() && self.owner.iswarping() {
                     let edge: ClipEdge = std::mem::transmute::<i32, ClipEdge>(self.owner.get_warp_state() as i32);
                     gp.rm.spr_eggnumbers.draw_clip(g, x, y, &src, edge, self.owner.get_warp_plane() as i32);

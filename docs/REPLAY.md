@@ -52,7 +52,7 @@ Each variable is a no-op when unset or empty. The Rust binary must honour the sa
 | `SMW_SHOT_STREAM=<file>` | Append the frames `SMW_SHOT_EVERY`/`SMW_SHOT_RANGE` select to this file (or pipe) as raw 640x480 ARGB8888 rows, 1,228,800 bytes each, instead of writing BMPs. `SMW_SHOT_FRAMES` still writes BMPs. |
 | `SMW_MAP=<name>` | Select the start map when the menu is created (see below). |
 
-Rust only (see Recordings and "Markers, checkpoints and clips"): `SMW_SEGMENT=<k>` replays only match k from its checkpoint, `SMW_RECORD_TO=<file>` writes a replay's events, markers and checkpoints to a new recording, `SMW_NO_RECORD=1` turns off session recording, `SMW_LIVE_SCRIPT=<file>` feeds a replay-format script into the live input path of a recorded session, `SMW_AUDIBLE=1` plays real sound alongside the virtual mixer, `SMW_REPLAY_SPEED=<n>` scales the frame-limiter sleep, and `SMW_RLE=0`/`1` turns SDL surface RLE off or on (default: off natively, on in the web build).
+Rust only (see Recordings and "Markers, checkpoints and clips"): `SMW_SEGMENT=<k>` replays only match k from its checkpoint, `SMW_RECORD_TO=<file>` writes a replay's events, markers and checkpoints to a new recording, `SMW_NO_RECORD=1` turns off session recording, `SMW_LIVE_SCRIPT=<file>` feeds a replay-format script into the live input path of a recorded session, `SMW_AUDIBLE=1` plays real sound alongside the virtual mixer, and `SMW_REPLAY_SPEED=<n>` scales the frame-limiter sleep.
 
 ## Frame loop
 

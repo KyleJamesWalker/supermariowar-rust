@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_Boomerang.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::Spotlight;
 use crate::common::game::App;
@@ -17,7 +18,6 @@ use crate::smw::objectgame::removeifprojectile;
 use crate::smw::objects::blocks::weapon_breakable_block::{B_WeaponBreakableBlock, WeaponDamageType};
 use crate::smw::objects::moving::moving_object::{IO_MovingObject, IO_MovingObjectTrait};
 use crate::smw::player::{get_player_from_global_id, player_killed_player, CPlayer, PlayerDeathStyle};
-use sdl2::sys::SDL_Rect;
 
 //------------------------------------------------------------------------------
 // class boomerang
@@ -414,7 +414,7 @@ impl CObjectTrait for MO_Boomerang {
             g,
             self.ix as i32 - self.collisionOffsetX as i32,
             self.iy as i32 - self.collisionOffsetY as i32,
-            &SDL_Rect {
+            &Rect {
                 x: self.drawframe as i32,
                 y: self.colorOffset as i32 + if self.fMoveToRight { 0 } else { 32 },
                 w: self.iw as i32,

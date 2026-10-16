@@ -4,6 +4,7 @@ use smw_platform::{Clock, Services, Storage};
 use std::path::PathBuf;
 
 mod audio;
+pub mod durations;
 pub mod events;
 pub mod input;
 mod video;
@@ -85,5 +86,12 @@ pub fn android_storage_path() -> String {
 }
 
 pub fn services() -> Services {
-    Services { clock: Box::new(Sdl2Clock), storage: Box::new(Sdl2Storage), video: Box::new(Sdl2Video::new()), audio: Box::new(Sdl2Audio::new()) }
+    Services {
+        clock: Box::new(Sdl2Clock),
+        storage: Box::new(Sdl2Storage),
+        video: Box::new(Sdl2Video::new()),
+        audio: Box::new(Sdl2Audio::new()),
+        events: Box::new(events::Sdl2Events),
+        keyboard: Box::new(events::Sdl2Keyboard),
+    }
 }

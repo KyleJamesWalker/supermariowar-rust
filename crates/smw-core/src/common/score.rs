@@ -1,7 +1,6 @@
 //! Port of src/common/Score.h
 
 use crate::game::Game;
-use crate::game::game;
 use crate::globals::Aliased;
 /// `CScore::AdjustScore` is defined in smw/player.cpp, so its port lives in `smw::player`.
 #[derive(Clone, Debug, Default)]

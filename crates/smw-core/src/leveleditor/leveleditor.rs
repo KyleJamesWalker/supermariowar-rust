@@ -1,5 +1,7 @@
 //! Port of src/leveleditor/leveleditor.cpp
 
+use crate::common::keys::*;
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::cmd_args as cmd;
 use crate::common::editor_harness;
@@ -27,15 +29,9 @@ use crate::common::tile_types::{next_tile_type, prev_tile_type, TileType};
 use crate::common::tileset_manager::{CTileset, CTilesetManager};
 use crate::globals::*;
 use crate::smw::fps_limiter::FPSLimiter;
-use sdl2::sys::image::IMG_SavePNG;
 use crate::common::editor_event::EditorEvent;
 use crate::common::util::sdl_helpers::poll_event;
-use sdl2::sys::SDL_KeyCode::*;
-use sdl2::sys::{
-    SDL_EventType, SDL_FillRect, SDL_GetError, SDL_GetScancodeFromKey, SDL_KeyCode,
-    SDL_Keycode, SDL_MapRGB, SDL_Rect, SDL_SetColorKey, SDL_Surface, SDL_UpperBlit, SDL_bool, SDL_Keymod,
-    SDL_BUTTON_LEFT, SDL_BUTTON_MIDDLE, SDL_BUTTON_RIGHT,
-};
+use sdl2::sys::{SDL_EventType, SDL_GetError, SDL_GetScancodeFromKey, SDL_BUTTON_LEFT, SDL_BUTTON_MIDDLE, SDL_BUTTON_RIGHT};
 use std::ffi::{CStr, CString};
 use std::io::Write;
 use std::path::Path;
@@ -83,11 +79,6 @@ const SDL_MOUSEMOTION_EV: u32 = SDL_EventType::SDL_MOUSEMOTION as u32;
 const BUTTON_LEFT: u8 = SDL_BUTTON_LEFT as u8;
 const BUTTON_MIDDLE: u8 = SDL_BUTTON_MIDDLE as u8;
 const BUTTON_RIGHT: u8 = SDL_BUTTON_RIGHT as u8;
-
-#[inline(always)]
-fn k(key: SDL_KeyCode) -> SDL_Keycode {
-    key as SDL_Keycode
-}
 
 /// `SDL_BUTTON(X)`
 #[inline(always)]
@@ -184,11 +175,11 @@ pub struct LevelEditorState {
     pub fExiting: bool,
     pub fSelectedYes: bool,
     pub editor_edit_initialized: bool,
-    pub r: SDL_Rect,
+    pub r: Rect,
     pub iBlockType: i16,
     pub editor_properties_initialized: bool,
-    pub rNewButton: [SDL_Rect; 2],
-    pub rTypeButton: [[SDL_Rect; 4]; 8],
+    pub rNewButton: [Rect; 2],
+    pub rTypeButton: [[Rect; 4]; 8],
     pub iPlatformEditState: i16,
     pub iPlatformSwitchState: i16,
     pub iPlatformSwitchIndex: i16,
@@ -201,8 +192,8 @@ pub struct LevelEditorState {
     pub editor_platforms_initialized: bool,
     pub iEditState: i16,
     pub iEditMapHazard: i16,
-    pub rBackground: [SDL_Rect; 2],
-    pub rIconRects: [[SDL_Rect; 2]; MAXMAPHAZARDS as usize],
+    pub rBackground: [Rect; 2],
+    pub rIconRects: [[Rect; 2]; MAXMAPHAZARDS as usize],
     pub editor_maphazards_initialized: bool,
     pub tileset: Ptr<CTileset>,
     pub view_tileset_repeat_direction: i16,
@@ -215,8 +206,8 @@ pub struct LevelEditorState {
     pub editor_modeitems_initialized: bool,
     pub iPage: i16,
     pub sBackgrounds: Global<[gfxSprite; 16]>,
-    pub rSrc: SDL_Rect,
-    pub rDst: [SDL_Rect; 16],
+    pub rSrc: Rect,
+    pub rDst: [Rect; 16],
     pub editor_backgrounds_initialized: bool,
     pub editor_animation_initialized: bool,
 }
@@ -284,11 +275,11 @@ impl LevelEditorState {
             fExiting: false,
             fSelectedYes: false,
             editor_edit_initialized: false,
-            r: SDL_Rect { x: 0, y: 0, w: 0, h: 0 },
+            r: Rect { x: 0, y: 0, w: 0, h: 0 },
             iBlockType: 0,
             editor_properties_initialized: false,
-            rNewButton: [SDL_Rect { x: 0, y: 0, w: 0, h: 0 }; 2],
-            rTypeButton: [[SDL_Rect { x: 0, y: 0, w: 0, h: 0 }; 4]; 8],
+            rNewButton: [Rect { x: 0, y: 0, w: 0, h: 0 }; 2],
+            rTypeButton: [[Rect { x: 0, y: 0, w: 0, h: 0 }; 4]; 8],
             iPlatformEditState: PLATFORM_EDIT_STATE_SELECT,
             iPlatformSwitchState: 0,
             iPlatformSwitchIndex: 0,
@@ -301,8 +292,8 @@ impl LevelEditorState {
             editor_platforms_initialized: false,
             iEditState: MAPHAZARD_EDIT_STATE_SELECT,
             iEditMapHazard: 0,
-            rBackground: [SDL_Rect { x: 0, y: 0, w: 0, h: 0 }; 2],
-            rIconRects: [[SDL_Rect { x: 0, y: 0, w: 0, h: 0 }; 2]; MAXMAPHAZARDS as usize],
+            rBackground: [Rect { x: 0, y: 0, w: 0, h: 0 }; 2],
+            rIconRects: [[Rect { x: 0, y: 0, w: 0, h: 0 }; 2]; MAXMAPHAZARDS as usize],
             editor_maphazards_initialized: false,
             tileset: Ptr::null(),
             view_tileset_repeat_direction: -1,
@@ -315,8 +306,8 @@ impl LevelEditorState {
             editor_modeitems_initialized: false,
             iPage: 0,
             sBackgrounds: Global::uninit(),
-            rSrc: SDL_Rect { x: 0, y: 0, w: 160, h: 120 },
-            rDst: [SDL_Rect { x: 0, y: 0, w: 0, h: 0 }; 16],
+            rSrc: Rect { x: 0, y: 0, w: 160, h: 120 },
+            rDst: [Rect { x: 0, y: 0, w: 0, h: 0 }; 16],
             editor_backgrounds_initialized: false,
             editor_animation_initialized: false,
         }
@@ -360,7 +351,7 @@ pub struct MapPlatform {
 
     pub iDrawLayer: i16,
 
-    pub rIcon: [SDL_Rect; 2],
+    pub rIcon: [Rect; 2],
     pub preview: gfxSprite,
     pub _alias: Aliased,
 }
@@ -380,7 +371,7 @@ impl MapPlatform {
             fRadiusX: 0.0,
             fRadiusY: 0.0,
             iDrawLayer: 0,
-            rIcon: [SDL_Rect { x: 0, y: 0, w: 0, h: 0 }; 2],
+            rIcon: [Rect { x: 0, y: 0, w: 0, h: 0 }; 2],
             preview: gfxSprite::new(),
         }
     }
@@ -390,16 +381,16 @@ impl MapPlatform {
         unsafe {
             if self.preview.get_surface().is_null() {
                 self.preview = gfxSprite::blank(g, 160, 120);
-                SDL_SetColorKey(self.preview.get_surface(), SDL_bool::SDL_TRUE as i32, SDL_MapRGB((*self.preview.get_surface()).format, 255, 0, 255));
+                (*self.preview.get_surface()).color_key = Some((*self.preview.get_surface()).map_rgb(255, 0, 255));
             }
 
-            crate::common::gfx::blit::fill_rect(self.preview.get_surface(), null(), SDL_MapRGB((*self.preview.get_surface()).format, 255, 0, 255));
+            crate::common::gfx::blit::fill_rect(self.preview.get_surface(), null(), (*self.preview.get_surface()).map_rgb(255, 0, 255));
 
             for iPlatformX in 0..MAPWIDTH as i16 {
                 for iPlatformY in 0..MAPHEIGHT as i16 {
                     let tile = self.tiles[iPlatformX as usize * MH + iPlatformY as usize];
 
-                    let mut bltrect = SDL_Rect { x: (iPlatformX as i32) << 3, y: (iPlatformY as i32) << 3, w: THUMBTILESIZE, h: THUMBTILESIZE };
+                    let mut bltrect = Rect { x: (iPlatformX as i32) << 3, y: (iPlatformY as i32) << 3, w: THUMBTILESIZE, h: THUMBTILESIZE };
                     if tile.iID >= 0 {
                         let src = g.g_tilesetmanager.rect(2, tile.iCol, tile.iRow);
                         crate::common::gfx::blit::upper_blit(gp.g_tilesetmanager.tileset(g, tile.iID as usize).surface(2), src, self.preview.get_surface(), &mut bltrect);
@@ -427,8 +418,8 @@ fn get_mouse_state(g: &mut Game) -> u32 {
     editor_harness::mouse_state(g)
 }
 
-pub fn check_key(keystate: *const u8, key: SDL_KeyCode) -> bool {
-    unsafe { *keystate.add(SDL_GetScancodeFromKey(key as SDL_Keycode) as usize) != 0 }
+pub fn check_key(g: &mut Game, keystate: *const u8, key: Keycode) -> bool {
+    unsafe { *keystate.add(crate::services::services(g).keyboard.scancode_from_key(key) as usize) != 0 }
 }
 
 pub fn set_tileset_tile(tile: &mut TilesetTile, iTileset: i16, iCol: i16, iRow: i16) {
@@ -445,8 +436,8 @@ fn sdl_error() -> String {
     unsafe { CStr::from_ptr(SDL_GetError()).to_string_lossy().into_owned() }
 }
 
-fn rect(x: i32, y: i32, w: i32, h: i32) -> SDL_Rect {
-    SDL_Rect { x, y, w, h }
+fn rect(x: i32, y: i32, w: i32, h: i32) -> Rect {
+    Rect { x, y, w, h }
 }
 
 //main main main
@@ -714,7 +705,6 @@ pub fn inner_main(g: &mut Game) {
         g.g_tilesetmanager.save_tilesets();
 
         println!("\n---------------- shutdown ----------------");
-        crate::common::gfx::blit::report_fallbacks();
     }
 }
 
@@ -817,15 +807,15 @@ pub fn editor_edit(g: &mut Game) -> i32 {
     unsafe {
         if ed(gp.get()).fExiting {
             //handle messages
-            while poll_event(&mut ed(gp.get()).event) != 0 {
+            while poll_event(g, &mut ed(gp.get()).event) != 0 {
                 if ed(gp.get()).event.type_() == SDL_KEYDOWN_EV {
                     let key = ed(gp.get()).event.key_sym();
 
-                    if key == k(SDLK_LEFT) {
+                    if key == SDLK_LEFT {
                         ed(gp.get()).fSelectedYes = true;
-                    } else if key == k(SDLK_RIGHT) {
+                    } else if key == SDLK_RIGHT {
                         ed(gp.get()).fSelectedYes = false;
-                    } else if ed(gp.get()).event.key_sym() == k(SDLK_KP_ENTER) || ed(gp.get()).event.key_sym() == k(SDLK_RETURN) {
+                    } else if ed(gp.get()).event.key_sym() == SDLK_KP_ENTER || ed(gp.get()).event.key_sym() == SDLK_RETURN {
                         if ed(gp.get()).fSelectedYes {
                             return EDITOR_QUIT;
                         }
@@ -836,7 +826,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
             }
         } else {
             //handle messages
-            while poll_event(&mut ed(gp.get()).event) != 0 {
+            while poll_event(g, &mut ed(gp.get()).event) != 0 {
                 let keystate = get_keyboard_state(g);
 
                 match ed(gp.get()).event.type_() {
@@ -845,7 +835,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                     SDL_KEYDOWN_EV => {
                         let key = ed(gp.get()).event.key_sym();
 
-                        if key == k(SDLK_ESCAPE) {
+                        if key == SDLK_ESCAPE {
                             if ed(gp.get()).g_musiccategorydisplaytimer > 0 {
                                 ed(gp.get()).g_musiccategorydisplaytimer = 0;
                             } else if ed(gp.get()).edit_mode != 1 {
@@ -856,31 +846,31 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                             }
                         }
 
-                        if ed(gp.get()).event.key_mod() & (SDL_Keymod::KMOD_LALT as u16 | SDL_Keymod::KMOD_RALT as u16) != 0 {
-                            if ed(gp.get()).event.key_sym() == k(SDLK_RETURN) {
+                        if ed(gp.get()).event.key_mod() & (KMOD_LALT | KMOD_RALT) != 0 {
+                            if ed(gp.get()).event.key_sym() == SDLK_RETURN {
                                 ed(gp.get()).g_fFullScreen = !ed(gp.get()).g_fFullScreen;
                                 gfx_changefullscreen(g, ed(gp.get()).g_fFullScreen);
                                 g.blitdest = g.screen;
                             }
                         }
 
-                        if key >= k(SDLK_1) && key <= k(SDLK_4) {
+                        if key >= SDLK_1 && key <= SDLK_4 {
                             if ed(gp.get()).edit_mode == 4 {
                                 //no spawn zones
-                                ed(gp.get()).nospawn_mode = key - k(SDLK_1) + 1;
+                                ed(gp.get()).nospawn_mode = key - SDLK_1 + 1;
                             }
                         }
 
-                        if key == k(SDLK_INSERT) {
+                        if key == SDLK_INSERT {
                             takescreenshot(g);
                         }
 
-                        if key == k(SDLK_t) {
+                        if key == SDLK_t {
                             ed(gp.get()).editor_edit_initialized = false;
                             return EDITOR_TILES;
                         }
 
-                        if key == k(SDLK_i) {
+                        if key == SDLK_i {
                             if ed(gp.get()).edit_mode == 4 {
                                 for iRow in 0..MAPHEIGHT as i16 {
                                     for iCol in 0..MAPWIDTH as i16 {
@@ -894,7 +884,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                             }
                         }
 
-                        if key == k(SDLK_a) {
+                        if key == SDLK_a {
                             if ed(gp.get()).edit_mode == 4 {
                                 for iRow in 0..MAPHEIGHT as i16 {
                                     for iCol in 0..MAPWIDTH as i16 {
@@ -907,22 +897,22 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                             }
                         }
 
-                        if key == k(SDLK_o) {
+                        if key == SDLK_o {
                             ed(gp.get()).editor_edit_initialized = false;
                             return EDITOR_MAPITEMS;
                         }
 
-                        if key == k(SDLK_j) {
+                        if key == SDLK_j {
                             ed(gp.get()).editor_edit_initialized = false;
                             return EDITOR_MODEITEMS;
                         }
 
-                        if key == k(SDLK_h) {
+                        if key == SDLK_h {
                             ed(gp.get()).editor_edit_initialized = false;
                             return EDITOR_MAPHAZARDS;
                         }
 
-                        if key == k(SDLK_k) {
+                        if key == SDLK_k {
                             let iMouseX = ed(gp.get()).mouse_x / TILESIZE;
                             let iMouseY = ed(gp.get()).mouse_y / TILESIZE;
 
@@ -933,24 +923,24 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                         }
 
                         //if 'B' is pressed, rotate backgrounds
-                        if key == k(SDLK_b) {
+                        if key == SDLK_b {
                             ed(gp.get()).editor_edit_initialized = false;
                             return EDITOR_BACKGROUNDS;
                         }
 
-                        if key == k(SDLK_g) {
+                        if key == SDLK_g {
                             ed(gp.get()).backgroundlist.next();
 
                             g.rm.spr_background = ImageLoader::new(ed(gp.get()).backgroundlist.current_path()).without_color_key().create(g);
                             g.g_map.szBackgroundFile = get_filename_from_path(&ed(gp.get()).backgroundlist.current_path().to_string_lossy());
 
-                            if !check_key(keystate, SDLK_LSHIFT) && !check_key(keystate, SDLK_RSHIFT) {
+                            if !check_key(gp.get(), keystate, SDLK_LSHIFT) && !check_key(gp.get(), keystate, SDLK_RSHIFT) {
                                 //Set music to background default
                                 set_music_category_from_background(g);
                             }
                         }
 
-                        if key == k(SDLK_r) {
+                        if key == SDLK_r {
                             if ed(gp.get()).g_musiccategorydisplaytimer > 0 && {
                                 g.g_map.musicCategoryID += 1;
                                 g.g_map.musicCategoryID as i32 >= MAXMUSICCATEGORY
@@ -961,27 +951,27 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                             ed(gp.get()).g_musiccategorydisplaytimer = 90;
                         }
 
-                        if key == k(SDLK_s) {
-                            if check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT) {
+                        if key == SDLK_s {
+                            if check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT) {
                                 return SAVE_AS;
                             }
 
                             return SAVE;
                         }
 
-                        if key == k(SDLK_f) {
-                            if check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT) || ed(gp.get()).findstring.is_empty() {
+                        if key == SDLK_f {
+                            if check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT) || ed(gp.get()).findstring.is_empty() {
                                 return FIND;
                             }
 
                             findcurrentstring(g);
                         }
 
-                        if key == k(SDLK_DELETE) && (check_key(keystate, SDLK_LCTRL) || check_key(keystate, SDLK_RCTRL)) {
+                        if key == SDLK_DELETE && (check_key(gp.get(), keystate, SDLK_LCTRL) || check_key(gp.get(), keystate, SDLK_RCTRL)) {
                             return CLEAR_MAP;
                         }
 
-                        if key == k(SDLK_DELETE) || key == k(SDLK_BACKSPACE) {
+                        if key == SDLK_DELETE || key == SDLK_BACKSPACE {
                             if ed(gp.get()).edit_mode == 3 {
                                 clearselectedmaptiles(g);
                                 resetselectedtiles(g);
@@ -994,7 +984,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                             }
                         }
 
-                        if key == k(SDLK_n) {
+                        if key == SDLK_n {
                             if ed(gp.get()).edit_mode == 4 {
                                 for iRow in 0..MAPHEIGHT as i16 {
                                     for iCol in 0..MAPWIDTH as i16 {
@@ -1006,30 +996,30 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                             }
                         }
 
-                        if key == k(SDLK_v) {
+                        if key == SDLK_v {
                             ed(gp.get()).viewblocks = !ed(gp.get()).viewblocks;
                         }
 
-                        if key == k(SDLK_e) {
+                        if key == SDLK_e {
                             ed(gp.get()).editor_edit_initialized = false;
                             return EDITOR_EYECANDY;
                         }
 
-                        if key == k(SDLK_w) {
+                        if key == SDLK_w {
                             ed(gp.get()).editor_edit_initialized = false;
                             return EDITOR_WARP;
                         }
 
-                        if key == k(SDLK_l) {
+                        if key == SDLK_l {
                             ed(gp.get()).editor_edit_initialized = false;
                             return EDITOR_TILETYPE;
                         }
 
-                        if key == k(SDLK_F1) {
+                        if key == SDLK_F1 {
                             return DISPLAY_HELP;
                         }
 
-                        if key == k(SDLK_PAGEUP) {
+                        if key == SDLK_PAGEUP {
                             loop {
                                 g.maplist.prev(false);
                                 if g.maplist.is_valid() {
@@ -1040,7 +1030,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                             loadcurrentmap(g);
                         }
 
-                        if key == k(SDLK_PAGEDOWN) {
+                        if key == SDLK_PAGEDOWN {
                             loop {
                                 g.maplist.next(false);
                                 if g.maplist.is_valid() {
@@ -1051,18 +1041,18 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                             loadcurrentmap(g);
                         }
 
-                        if key == k(SDLK_y) {
+                        if key == SDLK_y {
                             ed(gp.get()).selected_layer += 1;
                             if ed(gp.get()).selected_layer >= MAPLAYERS {
                                 ed(gp.get()).selected_layer = 0;
                             }
                         }
 
-                        if key == k(SDLK_u) {
+                        if key == SDLK_u {
                             ed(gp.get()).view_only_layer = !ed(gp.get()).view_only_layer;
                         }
 
-                        if key == k(SDLK_m) {
+                        if key == SDLK_m {
                             if ed(gp.get()).edit_mode == 3 {
                                 ed(gp.get()).move_replace = !ed(gp.get()).move_replace;
                             }
@@ -1070,25 +1060,25 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                             ed(gp.get()).edit_mode = 3;
                         }
 
-                        if key == k(SDLK_x) {
+                        if key == SDLK_x {
                             ed(gp.get()).edit_mode = 4;
                             ed(gp.get()).nospawn_mode = 0;
                         }
 
-                        if key == k(SDLK_z) {
+                        if key == SDLK_z {
                             ed(gp.get()).edit_mode = 5;
                         }
 
-                        if key == k(SDLK_LCTRL) {
+                        if key == SDLK_LCTRL {
                             ed(gp.get()).move_nodrag = true;
                         }
 
-                        if key == k(SDLK_p) {
+                        if key == SDLK_p {
                             ed(gp.get()).editor_edit_initialized = false;
                             return EDITOR_PLATFORM;
                         }
 
-                        if key == k(SDLK_c) {
+                        if key == SDLK_c {
                             if ed(gp.get()).edit_mode == 3 {
                                 if copyselectedtiles(g) {
                                     ed(gp.get()).move_mode = 3;
@@ -1099,7 +1089,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                     }
 
                     SDL_KEYUP_EV => {
-                        if ed(gp.get()).event.key_sym() == k(SDLK_LCTRL) {
+                        if ed(gp.get()).event.key_sym() == SDLK_LCTRL {
                             ed(gp.get()).move_nodrag = false;
                         }
                     }
@@ -1163,7 +1153,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                                             clearselectedmaptiles(g);
                                         }
                                     } else {
-                                        if !check_key(keystate, SDLK_LSHIFT) && !check_key(keystate, SDLK_RSHIFT) && !check_key(keystate, SDLK_LCTRL) {
+                                        if !check_key(gp.get(), keystate, SDLK_LSHIFT) && !check_key(gp.get(), keystate, SDLK_RSHIFT) && !check_key(gp.get(), keystate, SDLK_LCTRL) {
                                             resetselectedtiles(g);
                                         }
 
@@ -1841,7 +1831,7 @@ pub fn editor_warp(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
     unsafe {
         //handle messages
-        while poll_event(&mut ed(gp.get()).event) != 0 {
+        while poll_event(g, &mut ed(gp.get()).event) != 0 {
             match ed(gp.get()).event.type_() {
                 SDL_QUIT_EV => return EDITOR_QUIT,
 
@@ -1894,7 +1884,7 @@ pub fn editor_eyecandy(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
     unsafe {
         //handle messages
-        while poll_event(&mut ed(gp.get()).event) != 0 {
+        while poll_event(g, &mut ed(gp.get()).event) != 0 {
             let ty = ed(gp.get()).event.type_();
             let mut fall = false;
 
@@ -1903,7 +1893,7 @@ pub fn editor_eyecandy(g: &mut Game) -> i32 {
             }
 
             if ty == SDL_KEYDOWN_EV {
-                if ed(gp.get()).event.key_sym() == k(SDLK_ESCAPE) || ed(gp.get()).event.key_sym() == k(SDLK_e) {
+                if ed(gp.get()).event.key_sym() == SDLK_ESCAPE || ed(gp.get()).event.key_sym() == SDLK_e {
                     return EDITOR_EDIT;
                 }
                 fall = true;
@@ -2012,7 +2002,7 @@ pub fn editor_properties(g: &mut Game, iBlockCol: i16, iBlockRow: i16) -> i32 {
         loop {
             FPSLimiter::instance(g).frame_start(g);
             //handle messages
-            while poll_event(&mut ed(gp.get()).event) != 0 {
+            while poll_event(g, &mut ed(gp.get()).event) != 0 {
                 let ty = ed(gp.get()).event.type_();
                 let mut fall = false;
 
@@ -2022,28 +2012,28 @@ pub fn editor_properties(g: &mut Game, iBlockCol: i16, iBlockRow: i16) -> i32 {
 
                 if ty == SDL_KEYDOWN_EV {
                     let sym = ed(gp.get()).event.key_sym();
-                    if sym == k(SDLK_ESCAPE) || sym == k(SDLK_k) {
+                    if sym == SDLK_ESCAPE || sym == SDLK_k {
                         ed(gp.get()).editor_properties_initialized = false;
                         return EDITOR_EDIT;
-                    } else if (ed(gp.get()).iBlockType == 1 || ed(gp.get()).iBlockType == 15) && ((sym >= k(SDLK_0) && sym <= k(SDLK_9)) || sym == k(SDLK_BACKQUOTE) || sym == k(SDLK_d)) {
+                    } else if (ed(gp.get()).iBlockType == 1 || ed(gp.get()).iBlockType == 15) && ((sym >= SDLK_0 && sym <= SDLK_9) || sym == SDLK_BACKQUOTE || sym == SDLK_d) {
                         let mut iSettingIndex: i16 = 0;
                         let piSetting = get_block_property(ed(gp.get()).mouse_x, ed(gp.get()).mouse_y, Some(&mut iSettingIndex));
 
                         //If shift is held, set all powerups to this setting
-                        let mut iValue: i16 = (sym - k(SDLK_0)) as i16;
+                        let mut iValue: i16 = (sym - SDLK_0) as i16;
 
-                        if sym == k(SDLK_0) {
+                        if sym == SDLK_0 {
                             iValue = 10;
-                        } else if sym == k(SDLK_BACKQUOTE) {
+                        } else if sym == SDLK_BACKQUOTE {
                             iValue = 0;
-                        } else if sym == k(SDLK_d) {
+                        } else if sym == SDLK_d {
                             iValue = default_powerup_setting(0, iSettingIndex as usize);
                         }
 
                         let keystate = get_keyboard_state(g);
-                        if check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT) {
+                        if check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT) {
                             for iSetting in 0..NUM_BLOCK_SETTINGS as usize {
-                                if ed(gp.get()).event.key_sym() == k(SDLK_d) {
+                                if ed(gp.get()).event.key_sym() == SDLK_d {
                                     iValue = default_powerup_setting(0, iSetting);
                                 }
 
@@ -2245,7 +2235,7 @@ pub fn init_editor_platforms(g: &mut Game) {
     }
 }
 
-pub fn editor_platforms_draw_background_section(g: &mut Game, src_area: &SDL_Rect, dst_area: &SDL_Rect) {
+pub fn editor_platforms_draw_background_section(g: &mut Game, src_area: &Rect, dst_area: &Rect) {
     let mut gp = g.ptr();
     let mut offset_y = 0;
     while offset_y < dst_area.h {
@@ -2326,7 +2316,7 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
 
     unsafe {
         //handle messages
-        while poll_event(&mut ed(gp.get()).event) != 0 {
+        while poll_event(g, &mut ed(gp.get()).event) != 0 {
             let ty = ed(gp.get()).event.type_();
             let mut fall = false;
 
@@ -2337,17 +2327,17 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
             if ty == SDL_KEYDOWN_EV {
                 let sym = ed(gp.get()).event.key_sym();
                 let ep = ed(gp.get()).iEditPlatform as usize;
-                if sym == k(SDLK_s) {
+                if sym == SDLK_s {
                     savecurrentmap(g);
-                } else if sym >= k(SDLK_1) && sym <= k(SDLK_9) {
-                    if PLATFORM_EDIT_STATE_SELECT == ed(gp.get()).iPlatformEditState && sym - k(SDLK_1) < ed(gp.get()).g_iNumPlatforms as i32 {
-                        ed(gp.get()).iEditPlatform = (sym - k(SDLK_1)) as i16;
+                } else if sym >= SDLK_1 && sym <= SDLK_9 {
+                    if PLATFORM_EDIT_STATE_SELECT == ed(gp.get()).iPlatformEditState && sym - SDLK_1 < ed(gp.get()).g_iNumPlatforms as i32 {
+                        ed(gp.get()).iEditPlatform = (sym - SDLK_1) as i16;
                         ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_EDIT;
                     } else if (PLATFORM_EDIT_STATE_PATH_TYPE == ed(gp.get()).iPlatformEditState || PLATFORM_EDIT_STATE_CHANGE_PATH_TYPE == ed(gp.get()).iPlatformEditState)
-                        && sym >= k(SDLK_1)
-                        && sym <= k(SDLK_3)
+                        && sym >= SDLK_1
+                        && sym <= SDLK_3
                     {
-                        ed(gp.get()).g_Platforms[ep].iPathType = path_type_from((sym - k(SDLK_1)) as u8);
+                        ed(gp.get()).g_Platforms[ep].iPathType = path_type_from((sym - SDLK_1) as u8);
 
                         if PLATFORM_EDIT_STATE_PATH_TYPE == ed(gp.get()).iPlatformEditState {
                             ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_EDIT;
@@ -2355,9 +2345,9 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
                         } else {
                             ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_PATH;
                         }
-                    } else if PLATFORM_EDIT_STATE_MOVE == ed(gp.get()).iPlatformEditState && sym - k(SDLK_1) < ed(gp.get()).g_iNumPlatforms as i32 {
+                    } else if PLATFORM_EDIT_STATE_MOVE == ed(gp.get()).iPlatformEditState && sym - SDLK_1 < ed(gp.get()).g_iNumPlatforms as i32 {
                         if ed(gp.get()).iPlatformSwitchState == 1 {
-                            switch_platforms(g, ed(gp.get()).iPlatformSwitchIndex, (sym - k(SDLK_1)) as i16);
+                            switch_platforms(g, ed(gp.get()).iPlatformSwitchIndex, (sym - SDLK_1) as i16);
 
                             ed(gp.get()).iPlatformPreview = -1;
 
@@ -2365,40 +2355,40 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
                             ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_SELECT;
                         } else {
                             ed(gp.get()).iPlatformSwitchState = 1;
-                            ed(gp.get()).iPlatformSwitchIndex = (sym - k(SDLK_1)) as i16;
+                            ed(gp.get()).iPlatformSwitchIndex = (sym - SDLK_1) as i16;
                         }
                     }
-                } else if sym == k(SDLK_n) {
+                } else if sym == SDLK_n {
                     if PLATFORM_EDIT_STATE_SELECT == ed(gp.get()).iPlatformEditState && (ed(gp.get()).g_iNumPlatforms as i32) < MAX_PLATFORMS {
                         ed(gp.get()).iEditPlatform = ed(gp.get()).g_iNumPlatforms;
                         ed(gp.get()).g_iNumPlatforms += 1;
                         editor_platforms_update_layout(g);
                         ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_PATH_TYPE;
                     }
-                } else if sym == k(SDLK_m) {
+                } else if sym == SDLK_m {
                     if PLATFORM_EDIT_STATE_SELECT == ed(gp.get()).iPlatformEditState {
                         ed(gp.get()).iPlatformPreview = -1;
                         ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_MOVE;
                         ed(gp.get()).iPlatformSwitchState = 0;
                     }
-                } else if sym == k(SDLK_t) {
+                } else if sym == SDLK_t {
                     if platform_edit_or_animated_or_tiletype(g) {
                         run_nested_editor(g, editor_tiles, EDITOR_TILES);
                         ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_EDIT;
                     } else if PLATFORM_EDIT_STATE_PATH == ed(gp.get()).iPlatformEditState {
                         ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_CHANGE_PATH_TYPE;
                     }
-                } else if sym == k(SDLK_a) {
+                } else if sym == SDLK_a {
                     if platform_edit_or_animated_or_tiletype(g) {
                         run_nested_editor(g, editor_animation, EDITOR_ANIMATION);
                         ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_ANIMATED;
                     }
-                } else if sym == k(SDLK_l) {
+                } else if sym == SDLK_l {
                     if platform_edit_or_animated_or_tiletype(g) {
                         run_nested_editor(g, editor_tiletype, EDITOR_TILETYPE);
                         ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_TILETYPE;
                     }
-                } else if sym == k(SDLK_y) {
+                } else if sym == SDLK_y {
                     //Change the draw layer
                     if platform_edit_or_animated_or_tiletype(g) {
                         ed(gp.get()).g_Platforms[ep].iDrawLayer += 1;
@@ -2406,13 +2396,13 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
                             ed(gp.get()).g_Platforms[ep].iDrawLayer = 0;
                         }
                     }
-                } else if sym == k(SDLK_c) {
+                } else if sym == SDLK_c {
                     if PLATFORM_EDIT_STATE_SELECT == ed(gp.get()).iPlatformEditState {
                         ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_TEST;
                         insert_platforms_into_map(g);
                         gp.g_map.reset_platforms(g);
                     }
-                } else if sym == k(SDLK_DELETE) {
+                } else if sym == SDLK_DELETE {
                     if platform_edit_or_animated_or_tiletype(g) {
                         //Copy platforms into empty spot
                         let mut iPlatform = ed(gp.get()).iEditPlatform as usize;
@@ -2443,7 +2433,7 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
                         ed(gp.get()).g_iNumPlatforms -= 1;
                         ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_SELECT;
                     }
-                } else if sym == k(SDLK_ESCAPE) {
+                } else if sym == SDLK_ESCAPE {
                     if PLATFORM_EDIT_STATE_SELECT == ed(gp.get()).iPlatformEditState {
                         ed(gp.get()).editor_platforms_initialized = false;
                         return EDITOR_EDIT;
@@ -2460,7 +2450,7 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
                     } else if PLATFORM_EDIT_STATE_PATH == ed(gp.get()).iPlatformEditState || PLATFORM_EDIT_STATE_TILETYPE == ed(gp.get()).iPlatformEditState {
                         ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_EDIT;
                     }
-                } else if sym == k(SDLK_KP_MINUS) || sym == k(SDLK_MINUS) {
+                } else if sym == SDLK_KP_MINUS || sym == SDLK_MINUS {
                     if platform_edit_or_animated_or_tiletype(g) {
                         let p = &mut ed(gp.get()).g_Platforms[ep];
                         if p.iPathType == PlatformPathType::Ellipse {
@@ -2475,7 +2465,7 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
                             p.iVelocity -= 1;
                         }
                     }
-                } else if sym == k(SDLK_KP_PLUS) || sym == k(SDLK_EQUALS) {
+                } else if sym == SDLK_KP_PLUS || sym == SDLK_EQUALS {
                     if platform_edit_or_animated_or_tiletype(g) {
                         let p = &mut ed(gp.get()).g_Platforms[ep];
                         if p.iPathType == PlatformPathType::Ellipse {
@@ -2490,7 +2480,7 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
                             p.iVelocity += 1;
                         }
                     }
-                } else if sym == k(SDLK_p) {
+                } else if sym == SDLK_p {
                     if platform_edit_or_animated_or_tiletype(g) {
                         ed(gp.get()).iPlatformEditState = PLATFORM_EDIT_STATE_PATH;
                         calculate_platform_dims(g, ed(gp.get()).iEditPlatform, &mut ed(gp.get()).iPlatformLeft, &mut ed(gp.get()).iPlatformTop, &mut ed(gp.get()).iPlatformWidth, &mut ed(gp.get()).iPlatformHeight);
@@ -2609,17 +2599,17 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
                         }
                     } else if PLATFORM_EDIT_STATE_PATH == ed(gp.get()).iPlatformEditState {
                         let keystate = get_keyboard_state(g);
-                        if ed(gp.get()).g_Platforms[ep].iPathType == PlatformPathType::Ellipse && (check_key(keystate, SDLK_z) || check_key(keystate, SDLK_x) || check_key(keystate, SDLK_c)) {
+                        if ed(gp.get()).g_Platforms[ep].iPathType == PlatformPathType::Ellipse && (check_key(gp.get(), keystate, SDLK_z) || check_key(gp.get(), keystate, SDLK_x) || check_key(gp.get(), keystate, SDLK_c)) {
                             update_platform_path_radius(g, 
                                 ed(gp.get()).iEditPlatform,
                                 ed(gp.get()).event.button_x() as i16,
                                 ed(gp.get()).event.button_y() as i16,
-                                check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT),
-                                check_key(keystate, SDLK_z),
-                                check_key(keystate, SDLK_c),
+                                check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT),
+                                check_key(gp.get(), keystate, SDLK_z),
+                                check_key(gp.get(), keystate, SDLK_c),
                             );
                         } else {
-                            update_platform_path_start(g, ed(gp.get()).iEditPlatform, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16, check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT));
+                            update_platform_path_start(g, ed(gp.get()).iEditPlatform, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16, check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT));
                         }
                     }
                 } else {
@@ -2635,9 +2625,9 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
                         } else if PLATFORM_EDIT_STATE_PATH == ed(gp.get()).iPlatformEditState {
                             let keystate = get_keyboard_state(g);
                             if ed(gp.get()).g_Platforms[ep].iPathType == PlatformPathType::Straight {
-                                update_platform_path_end(g, ed(gp.get()).iEditPlatform, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16, check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT));
+                                update_platform_path_end(g, ed(gp.get()).iEditPlatform, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16, check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT));
                             } else if ed(gp.get()).g_Platforms[ep].iPathType == PlatformPathType::StraightContinuous || ed(gp.get()).g_Platforms[ep].iPathType == PlatformPathType::Ellipse {
-                                update_platform_path_angle(g, ed(gp.get()).iEditPlatform, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16, check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT));
+                                update_platform_path_angle(g, ed(gp.get()).iEditPlatform, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16, check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT));
                             }
                         }
                     }
@@ -2687,24 +2677,24 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
                 } else if PLATFORM_EDIT_STATE_PATH == ed(gp.get()).iPlatformEditState {
                     if ed(gp.get()).event.motion_state() == sdl_button(SDL_BUTTON_LEFT) {
                         let keystate = get_keyboard_state(g);
-                        if ed(gp.get()).g_Platforms[ep].iPathType == PlatformPathType::Ellipse && (check_key(keystate, SDLK_z) || check_key(keystate, SDLK_x) || check_key(keystate, SDLK_c)) {
+                        if ed(gp.get()).g_Platforms[ep].iPathType == PlatformPathType::Ellipse && (check_key(gp.get(), keystate, SDLK_z) || check_key(gp.get(), keystate, SDLK_x) || check_key(gp.get(), keystate, SDLK_c)) {
                             update_platform_path_radius(g, 
                                 ed(gp.get()).iEditPlatform,
                                 ed(gp.get()).event.button_x() as i16,
                                 ed(gp.get()).event.button_y() as i16,
-                                check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT),
-                                check_key(keystate, SDLK_z),
-                                check_key(keystate, SDLK_c),
+                                check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT),
+                                check_key(gp.get(), keystate, SDLK_z),
+                                check_key(gp.get(), keystate, SDLK_c),
                             );
                         } else {
-                            update_platform_path_start(g, ed(gp.get()).iEditPlatform, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16, check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT));
+                            update_platform_path_start(g, ed(gp.get()).iEditPlatform, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16, check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT));
                         }
                     } else if ed(gp.get()).event.motion_state() == sdl_button(SDL_BUTTON_RIGHT) {
                         let keystate = get_keyboard_state(g);
                         if ed(gp.get()).g_Platforms[ep].iPathType == PlatformPathType::Straight {
-                            update_platform_path_end(g, ed(gp.get()).iEditPlatform, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16, check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT));
+                            update_platform_path_end(g, ed(gp.get()).iEditPlatform, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16, check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT));
                         } else if ed(gp.get()).g_Platforms[ep].iPathType == PlatformPathType::StraightContinuous || ed(gp.get()).g_Platforms[ep].iPathType == PlatformPathType::Ellipse {
-                            update_platform_path_angle(g, ed(gp.get()).iEditPlatform, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16, check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT));
+                            update_platform_path_angle(g, ed(gp.get()).iEditPlatform, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16, check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT));
                         }
                     }
                 }
@@ -3105,7 +3095,7 @@ pub fn editor_maphazards(g: &mut Game) -> i32 {
 
     unsafe {
         //handle messages
-        while poll_event(&mut ed(gp.get()).event) != 0 {
+        while poll_event(g, &mut ed(gp.get()).event) != 0 {
             let ty = ed(gp.get()).event.type_();
             let mut fall = false;
 
@@ -3116,19 +3106,19 @@ pub fn editor_maphazards(g: &mut Game) -> i32 {
             if ty == SDL_KEYDOWN_EV {
                 let sym = ed(gp.get()).event.key_sym();
                 let eh = ed(gp.get()).iEditMapHazard as usize;
-                if sym == k(SDLK_s) {
+                if sym == SDLK_s {
                     savecurrentmap(g);
-                } else if sym == k(SDLK_l) {
+                } else if sym == SDLK_l {
                     if MAPHAZARD_EDIT_STATE_SELECT != ed(gp.get()).iEditState {
                         ed(gp.get()).iEditState = MAPHAZARD_EDIT_STATE_LOCATION;
                     }
-                } else if sym == k(SDLK_p) {
+                } else if sym == SDLK_p {
                     if MAPHAZARD_EDIT_STATE_SELECT != ed(gp.get()).iEditState {
                         ed(gp.get()).iEditState = MAPHAZARD_EDIT_STATE_PROPERTIES;
                     }
-                } else if sym >= k(SDLK_1) && sym <= k(SDLK_9) {
+                } else if sym >= SDLK_1 && sym <= SDLK_9 {
                     if MAPHAZARD_EDIT_STATE_SELECT == ed(gp.get()).iEditState {
-                        let iHazard = (sym - k(SDLK_1)) as i16;
+                        let iHazard = (sym - SDLK_1) as i16;
                         if iHazard < g.g_map.maphazards.len() as i16 {
                             ed(gp.get()).iEditMapHazard = iHazard;
                             ed(gp.get()).iEditState = MAPHAZARD_EDIT_STATE_PROPERTIES;
@@ -3137,10 +3127,10 @@ pub fn editor_maphazards(g: &mut Game) -> i32 {
                         let hazard = &mut g.g_map.maphazards[eh];
 
                         if hazard.itype == 0 || hazard.itype == 1 {
-                            hazard.iparam[0] = (sym - k(SDLK_1) + 1) as i16;
+                            hazard.iparam[0] = (sym - SDLK_1 + 1) as i16;
                         }
                     }
-                } else if sym == k(SDLK_DELETE) {
+                } else if sym == SDLK_DELETE {
                     if MAPHAZARD_EDIT_STATE_PROPERTIES == ed(gp.get()).iEditState || MAPHAZARD_EDIT_STATE_LOCATION == ed(gp.get()).iEditState {
                         //Copy platforms into empty spot
                         let mut iMapHazard = ed(gp.get()).iEditMapHazard as usize;
@@ -3159,14 +3149,14 @@ pub fn editor_maphazards(g: &mut Game) -> i32 {
                         g.g_map.maphazards.pop();
                         ed(gp.get()).iEditState = MAPHAZARD_EDIT_STATE_SELECT;
                     }
-                } else if sym == k(SDLK_ESCAPE) {
+                } else if sym == SDLK_ESCAPE {
                     if MAPHAZARD_EDIT_STATE_SELECT == ed(gp.get()).iEditState {
                         ed(gp.get()).editor_maphazards_initialized = false;
                         return EDITOR_EDIT;
                     } else if MAPHAZARD_EDIT_STATE_LOCATION == ed(gp.get()).iEditState || MAPHAZARD_EDIT_STATE_PROPERTIES == ed(gp.get()).iEditState {
                         ed(gp.get()).iEditState = MAPHAZARD_EDIT_STATE_SELECT;
                     }
-                } else if sym == k(SDLK_KP_MINUS) || sym == k(SDLK_MINUS) {
+                } else if sym == SDLK_KP_MINUS || sym == SDLK_MINUS {
                     if MAPHAZARD_EDIT_STATE_PROPERTIES == ed(gp.get()).iEditState {
                         let hazard = &mut g.g_map.maphazards[eh];
 
@@ -3184,7 +3174,7 @@ pub fn editor_maphazards(g: &mut Game) -> i32 {
                             }
                         }
                     }
-                } else if sym == k(SDLK_KP_PLUS) || sym == k(SDLK_EQUALS) {
+                } else if sym == SDLK_KP_PLUS || sym == SDLK_EQUALS {
                     if MAPHAZARD_EDIT_STATE_PROPERTIES == ed(gp.get()).iEditState {
                         let hazard = &mut g.g_map.maphazards[eh];
 
@@ -3202,7 +3192,7 @@ pub fn editor_maphazards(g: &mut Game) -> i32 {
                             }
                         }
                     }
-                } else if sym == k(SDLK_COMMA) || sym == k(SDLK_LEFTBRACKET) {
+                } else if sym == SDLK_COMMA || sym == SDLK_LEFTBRACKET {
                     if MAPHAZARD_EDIT_STATE_PROPERTIES == ed(gp.get()).iEditState {
                         let hazard = &mut g.g_map.maphazards[eh];
 
@@ -3212,7 +3202,7 @@ pub fn editor_maphazards(g: &mut Game) -> i32 {
                             }
                         }
                     }
-                } else if sym == k(SDLK_PERIOD) || sym == k(SDLK_RIGHTBRACKET) {
+                } else if sym == SDLK_PERIOD || sym == SDLK_RIGHTBRACKET {
                     if MAPHAZARD_EDIT_STATE_PROPERTIES == ed(gp.get()).iEditState {
                         let hazard = &mut g.g_map.maphazards[eh];
 
@@ -3222,7 +3212,7 @@ pub fn editor_maphazards(g: &mut Game) -> i32 {
                             }
                         }
                     }
-                } else if sym == k(SDLK_d) {
+                } else if sym == SDLK_d {
                     if MAPHAZARD_EDIT_STATE_PROPERTIES == ed(gp.get()).iEditState {
                         let hazard = &mut g.g_map.maphazards[eh];
 
@@ -3235,7 +3225,7 @@ pub fn editor_maphazards(g: &mut Game) -> i32 {
                             hazard.dparam[0] = -hazard.dparam[0];
                         }
                     }
-                } else if sym == k(SDLK_n) {
+                } else if sym == SDLK_n {
                     if MAPHAZARD_EDIT_STATE_SELECT == ed(gp.get()).iEditState {
                         ed(gp.get()).iEditMapHazard = new_map_hazard(g);
                         ed(gp.get()).iEditState = MAPHAZARD_EDIT_STATE_TYPE;
@@ -3484,6 +3474,7 @@ pub fn draw_map_hazard_controls(g: &mut Game, hazard: &MapHazard) {
 }
 
 pub fn adjust_map_hazard_radius(g: &mut Game, hazard: &mut MapHazard, iClickX: i16, iClickY: i16) {
+    let mut gp = g.ptr();
     let iDiffX: i16 = (iClickX as i32 - (((hazard.ix as i32) << 4) + 16)) as i16;
     let iDiffY: i16 = (iClickY as i32 - (((hazard.iy as i32) << 4) + 16)) as i16;
 
@@ -3495,7 +3486,7 @@ pub fn adjust_map_hazard_radius(g: &mut Game, hazard: &mut MapHazard, iClickX: i
     }
 
     let keystate = get_keyboard_state(g);
-    if check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT) {
+    if check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT) {
         angle = snap_angle(angle);
     }
 
@@ -3511,7 +3502,7 @@ pub fn adjust_map_hazard_radius(g: &mut Game, hazard: &mut MapHazard, iClickX: i
         hazard.dparam[1] = angle;
 
         if radius > 32.0f32 {
-            if check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT) {
+            if check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT) {
                 //Snap radius to every 16 pixels
                 hazard.dparam[2] = ((((radius - 16.0f32) as i32) >> 4) << 4) as f32;
             } else {
@@ -3545,51 +3536,51 @@ pub fn editor_tiles(g: &mut Game) -> i32 {
 
     unsafe {
         //handle messages
-        while poll_event(&mut ed(gp.get()).event) != 0 {
+        while poll_event(g, &mut ed(gp.get()).event) != 0 {
             match ed(gp.get()).event.type_() {
                 SDL_QUIT_EV => return EDITOR_QUIT,
 
                 SDL_KEYDOWN_EV => {
                     if !ed(gp.get()).set_tile_drag {
                         let sym = ed(gp.get()).event.key_sym();
-                        if sym >= k(SDLK_1) && sym <= k(SDLK_9) && (sym as i64) < k(SDLK_1) as i64 + g.g_tilesetmanager.count() as i64 {
-                            ed(gp.get()).set_tile_tileset = sym - k(SDLK_1);
+                        if sym >= SDLK_1 && sym <= SDLK_9 && (sym as i64) < SDLK_1 as i64 + g.g_tilesetmanager.count() as i64 {
+                            ed(gp.get()).set_tile_tileset = sym - SDLK_1;
                             ed(gp.get()).tileset = gp.get().g_tilesetmanager.tileset(g, ed(gp.get()).set_tile_tileset as usize);
                             ed(gp.get()).view_tileset_x = 0;
                             ed(gp.get()).view_tileset_y = 0;
-                        } else if sym == k(SDLK_PAGEUP) {
+                        } else if sym == SDLK_PAGEUP {
                             if ed(gp.get()).set_tile_tileset > 0 {
                                 ed(gp.get()).set_tile_tileset -= 1;
                                 ed(gp.get()).tileset = gp.get().g_tilesetmanager.tileset(g, ed(gp.get()).set_tile_tileset as usize);
                                 ed(gp.get()).view_tileset_x = 0;
                                 ed(gp.get()).view_tileset_y = 0;
                             }
-                        } else if sym == k(SDLK_PAGEDOWN) {
+                        } else if sym == SDLK_PAGEDOWN {
                             if (ed(gp.get()).set_tile_tileset as i64) < g.g_tilesetmanager.count() as i64 - 1 {
                                 ed(gp.get()).set_tile_tileset += 1;
                                 ed(gp.get()).tileset = gp.get().g_tilesetmanager.tileset(g, ed(gp.get()).set_tile_tileset as usize);
                                 ed(gp.get()).view_tileset_x = 0;
                                 ed(gp.get()).view_tileset_y = 0;
                             }
-                        } else if sym == k(SDLK_UP) {
+                        } else if sym == SDLK_UP {
                             if ed(gp.get()).view_tileset_y > 0 {
                                 ed(gp.get()).view_tileset_y -= 1;
                                 ed(gp.get()).view_tileset_repeat_direction = 0;
                                 ed(gp.get()).view_tileset_repeat_timer = 30;
                             }
-                        } else if sym == k(SDLK_DOWN) {
+                        } else if sym == SDLK_DOWN {
                             if ed(gp.get()).view_tileset_y < gp.get().g_tilesetmanager.tileset(g, ed(gp.get()).set_tile_tileset as usize).height() as i32 - 15 {
                                 ed(gp.get()).view_tileset_y += 1;
                                 ed(gp.get()).view_tileset_repeat_direction = 1;
                                 ed(gp.get()).view_tileset_repeat_timer = 30;
                             }
-                        } else if sym == k(SDLK_LEFT) {
+                        } else if sym == SDLK_LEFT {
                             if ed(gp.get()).view_tileset_x > 0 {
                                 ed(gp.get()).view_tileset_x -= 1;
                                 ed(gp.get()).view_tileset_repeat_direction = 2;
                                 ed(gp.get()).view_tileset_repeat_timer = 30;
                             }
-                        } else if sym == k(SDLK_RIGHT) {
+                        } else if sym == SDLK_RIGHT {
                             if ed(gp.get()).view_tileset_x < gp.get().g_tilesetmanager.tileset(g, ed(gp.get()).set_tile_tileset as usize).width() as i32 - 20 {
                                 ed(gp.get()).view_tileset_x += 1;
                                 ed(gp.get()).view_tileset_repeat_direction = 3;
@@ -3606,7 +3597,7 @@ pub fn editor_tiles(g: &mut Game) -> i32 {
 
                 SDL_KEYUP_EV => {
                     let sym = ed(gp.get()).event.key_sym();
-                    if sym == k(SDLK_UP) || sym == k(SDLK_DOWN) || sym == k(SDLK_LEFT) || sym == k(SDLK_RIGHT) {
+                    if sym == SDLK_UP || sym == SDLK_DOWN || sym == SDLK_LEFT || sym == SDLK_RIGHT {
                         ed(gp.get()).view_tileset_repeat_direction = -1;
                         ed(gp.get()).view_tileset_repeat_timer = 0;
                     }
@@ -3746,7 +3737,7 @@ pub fn editor_blocks(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
     unsafe {
         //handle messages
-        while poll_event(&mut ed(gp.get()).event) != 0 {
+        while poll_event(g, &mut ed(gp.get()).event) != 0 {
             match ed(gp.get()).event.type_() {
                 SDL_QUIT_EV => return EDITOR_QUIT,
 
@@ -3813,7 +3804,7 @@ pub fn editor_mapitems(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
     unsafe {
         //handle messages
-        while poll_event(&mut ed(gp.get()).event) != 0 {
+        while poll_event(g, &mut ed(gp.get()).event) != 0 {
             match ed(gp.get()).event.type_() {
                 SDL_QUIT_EV => return EDITOR_QUIT,
 
@@ -3879,7 +3870,7 @@ pub fn editor_modeitems(g: &mut Game) -> i32 {
 
     unsafe {
         //handle messages
-        while poll_event(&mut ed(gp.get()).event) != 0 {
+        while poll_event(g, &mut ed(gp.get()).event) != 0 {
             let ty = ed(gp.get()).event.type_();
             let mut fall = false;
 
@@ -3891,14 +3882,14 @@ pub fn editor_modeitems(g: &mut Game) -> i32 {
                 ed(gp.get()).dragmodeitem = -1;
 
                 let sym = ed(gp.get()).event.key_sym();
-                if sym == k(SDLK_s) {
+                if sym == SDLK_s {
                     savecurrentmap(g);
-                } else if sym == k(SDLK_ESCAPE) || sym == k(SDLK_j) {
+                } else if sym == SDLK_ESCAPE || sym == SDLK_j {
                     ed(gp.get()).editor_modeitems_initialized = false;
                     return EDITOR_EDIT;
-                } else if sym >= k(SDLK_1) && sym <= k(SDLK_2) {
-                    ed(gp.get()).modeitemmode = (sym - k(SDLK_1)) as i16;
-                } else if sym == k(SDLK_r) {
+                } else if sym >= SDLK_1 && sym <= SDLK_2 {
+                    ed(gp.get()).modeitemmode = (sym - SDLK_1) as i16;
+                } else if sym == SDLK_r {
                     //Set this mode item set to random
                     if ed(gp.get()).modeitemmode == 0 {
                         if g.g_map.iNumRaceGoals == 0 {
@@ -3951,7 +3942,7 @@ pub fn editor_modeitems(g: &mut Game) -> i32 {
                 bound_mouse_motion_coords(g);
                 if ed(gp.get()).dragmodeitem >= 0 && ed(gp.get()).event.motion_state() == sdl_button(SDL_BUTTON_LEFT) {
                     let keystate = get_keyboard_state(g);
-                    let fShiftDown = check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT);
+                    let fShiftDown = check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT);
 
                     let d = ed(gp.get()).dragmodeitem as usize;
                     let loc = if ed(gp.get()).modeitemmode == 0 {
@@ -4017,7 +4008,7 @@ pub fn editor_tiletype(g: &mut Game) -> i32 {
     let mut gp = g.ptr();
     unsafe {
         //handle messages
-        while poll_event(&mut ed(gp.get()).event) != 0 {
+        while poll_event(g, &mut ed(gp.get()).event) != 0 {
             match ed(gp.get()).event.type_() {
                 SDL_QUIT_EV => return EDITOR_QUIT,
 
@@ -4093,7 +4084,7 @@ pub fn editor_backgrounds(g: &mut Game) -> i32 {
 
     unsafe {
         //handle messages
-        while poll_event(&mut ed(gp.get()).event) != 0 {
+        while poll_event(g, &mut ed(gp.get()).event) != 0 {
             match ed(gp.get()).event.type_() {
                 SDL_QUIT_EV => {
                     free_background_surfaces(g);
@@ -4104,17 +4095,17 @@ pub fn editor_backgrounds(g: &mut Game) -> i32 {
 
                 SDL_KEYDOWN_EV => {
                     let sym = ed(gp.get()).event.key_sym();
-                    if sym == k(SDLK_ESCAPE) {
+                    if sym == SDLK_ESCAPE {
                         free_background_surfaces(g);
 
                         ed(gp.get()).editor_backgrounds_initialized = false;
                         return EDITOR_EDIT;
-                    } else if sym == k(SDLK_PAGEDOWN) || sym == k(SDLK_DOWN) {
+                    } else if sym == SDLK_PAGEDOWN || sym == SDLK_DOWN {
                         if ((ed(gp.get()).iPage as i32 + 1) * 16) < ed(gp.get()).backgroundlist.count() as i32 {
                             ed(gp.get()).iPage += 1;
                             load_background_page(g, ed(gp.get()).iPage);
                         }
-                    } else if sym == k(SDLK_PAGEUP) || sym == k(SDLK_UP) {
+                    } else if sym == SDLK_PAGEUP || sym == SDLK_UP {
                         if (ed(gp.get()).iPage as i32 - 1) * 16 >= 0 {
                             ed(gp.get()).iPage -= 1;
                             load_background_page(g, ed(gp.get()).iPage);
@@ -4204,7 +4195,7 @@ pub fn editor_animation(g: &mut Game) -> i32 {
 
     unsafe {
         //handle messages
-        while poll_event(&mut ed(gp.get()).event) != 0 {
+        while poll_event(g, &mut ed(gp.get()).event) != 0 {
             let iCol = (ed(gp.get()).event.button_x() / TILESIZE + ed(gp.get()).view_animated_tileset_x) as i16;
             let iRow = (ed(gp.get()).event.button_y() / TILESIZE) as i16;
 
@@ -4215,19 +4206,19 @@ pub fn editor_animation(g: &mut Game) -> i32 {
 
                 SDL_KEYDOWN_EV => {
                     let sym = ed(gp.get()).event.key_sym();
-                    if sym == k(SDLK_ESCAPE) || sym == k(SDLK_a) {
+                    if sym == SDLK_ESCAPE || sym == SDLK_a {
                         if !ed(gp.get()).set_tile_drag {
                             ed(gp.get()).edit_mode = 8;
                             ed(gp.get()).editor_animation_initialized = false;
                             return EDITOR_EDIT;
                         }
-                    } else if sym == k(SDLK_LEFT) {
+                    } else if sym == SDLK_LEFT {
                         if ed(gp.get()).view_animated_tileset_x > 0 {
                             ed(gp.get()).view_animated_tileset_x -= 1;
                             ed(gp.get()).view_tileset_repeat_direction = 2;
                             ed(gp.get()).view_tileset_repeat_timer = 30;
                         }
-                    } else if sym == k(SDLK_RIGHT) {
+                    } else if sym == SDLK_RIGHT {
                         if ed(gp.get()).view_animated_tileset_x < 12 {
                             ed(gp.get()).view_animated_tileset_x += 1;
                             ed(gp.get()).view_tileset_repeat_direction = 3;
@@ -4238,7 +4229,7 @@ pub fn editor_animation(g: &mut Game) -> i32 {
 
                 SDL_KEYUP_EV => {
                     let sym = ed(gp.get()).event.key_sym();
-                    if sym == k(SDLK_LEFT) || sym == k(SDLK_RIGHT) {
+                    if sym == SDLK_LEFT || sym == SDLK_RIGHT {
                         ed(gp.get()).view_tileset_repeat_direction = -1;
                         ed(gp.get()).view_tileset_repeat_timer = 0;
                     }
@@ -4461,7 +4452,7 @@ pub fn display_help(g: &mut Game) -> i32 {
         gp.rm.menu_font_small.draw(g, offsetx, offsety, "[alt] + [enter] - Full Screen/Window");
 
         //handle messages
-        while poll_event(&mut ed(gp.get()).event) != 0 {
+        while poll_event(g, &mut ed(gp.get()).event) != 0 {
             match ed(gp.get()).event.type_() {
                 SDL_QUIT_EV => return 0,
                 SDL_KEYDOWN_EV => return 0,
@@ -4518,17 +4509,17 @@ pub fn dialog(g: &mut Game, title: &str, instructions: &str, input: &mut String,
             let framestart = crate::services::ticks(gp.get()) as i32;
 
             //handle messages
-            while poll_event(&mut ed(gp.get()).event) != 0 {
+            while poll_event(g, &mut ed(gp.get()).event) != 0 {
                 match ed(gp.get()).event.type_() {
                     SDL_QUIT_EV => return false,
 
                     SDL_KEYDOWN_EV => {
                         let sym = ed(gp.get()).event.key_sym();
-                        if sym == k(SDLK_KP_ENTER) || sym == k(SDLK_RETURN) {
+                        if sym == SDLK_KP_ENTER || sym == SDLK_RETURN {
                             return true;
-                        } else if sym == k(SDLK_ESCAPE) {
+                        } else if sym == SDLK_ESCAPE {
                             return false;
-                        } else if sym == k(SDLK_BACKSPACE) {
+                        } else if sym == SDLK_BACKSPACE {
                             if currentChar > 0 {
                                 input.truncate((currentChar - 1) as usize);
 
@@ -4541,7 +4532,7 @@ pub fn dialog(g: &mut Game, title: &str, instructions: &str, input: &mut String,
                             let mut key: u8 = sym as u8;
 
                             let keystate = get_keyboard_state(g);
-                            if check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT) {
+                            if check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT) {
                                 if sym == 45 {
                                     key = 95;
                                 } else if (95..=122).contains(&sym) {
@@ -5198,8 +5189,7 @@ pub fn takescreenshot(g: &mut Game) {
             }
 
             szSaveFile.push_str(".png");
-            let c = CString::new(convert_path(g, &szSaveFile)).unwrap();
-            IMG_SavePNG(screenshot.get_surface(), c.as_ptr());
+            let _ = (*screenshot.get_surface()).save_png(std::path::Path::new(&convert_path(g, &szSaveFile)));
 
             println!("Screenshot taken: {}", szSaveFile);
 

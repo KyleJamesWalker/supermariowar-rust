@@ -15,7 +15,6 @@
 //! can name them.
 
 use crate::game::Game;
-use crate::game::game;
 use crate::common::math::vec2::Vec2s;
 use crate::common::object_base::{set_network_id_context, CObjectTrait};
 use crate::common::random_number_generator::RandomNumberGenerator;

@@ -1,5 +1,6 @@
 //! Port of src/smw/ui/MI_World.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::{EC_Announcement, EC_SingleAnimation};
 use crate::common::file_list::WorldMusicCategory;
@@ -16,7 +17,6 @@ use crate::smw::gs_gameplay::lookup_team_id;
 use crate::smw::world::{WorldMapTile, WORLD_BRIDGE_SPRITE_OFFSET};
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::math::trig::{cosf, sinf};
-use sdl2::sys::{SDL_Rect, SDL_Surface};
 
 pub struct MI_World {
     pub ui_control: UI_Control,
@@ -36,8 +36,8 @@ pub struct MI_World {
     iItemPage: [i16; 4],
 
     map_sprites: [gfxSprite; 2],
-    rectSrcSurface: SDL_Rect,
-    rectDstSurface: SDL_Rect,
+    rectSrcSurface: Rect,
+    rectDstSurface: Rect,
 
     iCurrentSurfaceIndex: i16,
     iCycleIndex: i16,
@@ -116,8 +116,8 @@ impl MI_World {
             iItemCol: [0; 4],
             iItemPage: [0; 4],
             map_sprites: [gfxSprite::blank(g, 768, 608), gfxSprite::blank(g, 768, 608)],
-            rectSrcSurface: SDL_Rect { x: 0, y: 0, w: 768, h: 608 },
-            rectDstSurface: SDL_Rect { x: 0, y: 0, w: App::screenWidth, h: App::screenHeight },
+            rectSrcSurface: Rect { x: 0, y: 0, w: 768, h: 608 },
+            rectDstSurface: Rect { x: 0, y: 0, w: App::screenWidth, h: App::screenHeight },
             iCurrentSurfaceIndex: 0,
             iCycleIndex: 0,
             iDrawFullRefresh: 0,
@@ -469,9 +469,9 @@ impl MI_World {
             if p < NUM_POWERUPS {
                 /*
                 //Comment this in to give the powerup to all members of the team
-                for (short iPlayer = 0; iPlayer < game().game_values.teamcounts[iTeam]; iPlayer++)
+                for (short iPlayer = 0; iPlayer < game_values.teamcounts[iTeam]; iPlayer++)
                 {
-                    game().game_values.storedpowerups[game().game_values.teamids[iTeam][iPlayer]] = iPowerup;
+                    game_values.storedpowerups[game_values.teamids[iTeam][iPlayer]] = iPowerup;
                 }*/
 
                 //Give the powerup only to the player that selected it
@@ -868,8 +868,8 @@ impl UI_ControlTrait for MI_World {
                 self.iSrcOffsetY = -self.iMapOffsetY - (self.iMapDrawOffsetRow << 5);
             }
 
-            self.rectSrcSurface = SDL_Rect { x: self.iSrcOffsetX as i32, y: self.iSrcOffsetY as i32, w: self.iDrawWidth as i32, h: self.iDrawHeight as i32 };
-            self.rectDstSurface = SDL_Rect { x: self.iDstOffsetX as i32, y: self.iDstOffsetY as i32, w: self.iDrawWidth as i32, h: self.iDrawHeight as i32 };
+            self.rectSrcSurface = Rect { x: self.iSrcOffsetX as i32, y: self.iSrcOffsetY as i32, w: self.iDrawWidth as i32, h: self.iDrawHeight as i32 };
+            self.rectDstSurface = Rect { x: self.iDstOffsetX as i32, y: self.iDstOffsetY as i32, w: self.iDrawWidth as i32, h: self.iDrawHeight as i32 };
 
             self.map_sprites[self.iCurrentSurfaceIndex as usize].draw_src_to(&self.rectSrcSurface, g.blitdest, &self.rectDstSurface);
 
@@ -881,12 +881,12 @@ impl UI_ControlTrait for MI_World {
 
             //Draw the cloud if the player is one
             if self.fUsingCloud && self.iState == -1 {
-                gp.rm.spr_worlditems.draw_src(g, px, py, &SDL_Rect { x: 32, y: 0, w: 32, h: 32 });
+                gp.rm.spr_worlditems.draw_src(g, px, py, &Rect { x: 32, y: 0, w: 32, h: 32 });
             }
 
             //If a points modifier is in place, display it
             if g.game_values.worldpointsbonus >= 0 {
-                gp.rm.spr_worlditems.draw_src(g, 603, 5, &SDL_Rect { x: (gp.game_values.worldpointsbonus as i32 + 9) << 5, y: 0, w: 32, h: 32 });
+                gp.rm.spr_worlditems.draw_src(g, 603, 5, &Rect { x: (gp.game_values.worldpointsbonus as i32 + 9) << 5, y: 0, w: 32, h: 32 });
             }
 
             //Draw the teleport/warp stars effect
@@ -896,7 +896,7 @@ impl UI_ControlTrait for MI_World {
                     let iStarX = (self.dTeleportStarRadius * cosf(dAngle)) as i16;
                     let iStarY = (self.dTeleportStarRadius * sinf(dAngle)) as i16;
 
-                    gp.rm.spr_teleportstar.draw_src(g, iStarX as i32 + px, iStarY as i32 + py, &SDL_Rect { x: self.iTeleportStarAnimationFrame as i32, y: 0, w: 32, h: 32 });
+                    gp.rm.spr_teleportstar.draw_src(g, iStarX as i32 + px, iStarY as i32 + py, &Rect { x: self.iTeleportStarAnimationFrame as i32, y: 0, w: 32, h: 32 });
                 }
             }
 
@@ -917,14 +917,14 @@ impl UI_ControlTrait for MI_World {
                             g,
                             iStoredPowerupBoxX as i32,
                             self.iStoredItemPopupDrawY as i32,
-                            &SDL_Rect { x: gp.game_values.colorids[iPlayerId] as i32 * 48, y: 256, w: 48, h: 48 },
+                            &Rect { x: gp.game_values.colorids[iPlayerId] as i32 * 48, y: 256, w: 48, h: 48 },
                         );
 
                         gp.rm.spr_storedpoweruplarge.draw_src(
                             g,
                             iStoredPowerupBoxX as i32 + 8,
                             self.iStoredItemPopupDrawY as i32 + 8,
-                            &SDL_Rect { x: (gp.game_values.storedpowerups[iPlayerId] as i32) << 5, y: 0, w: 32, h: 32 },
+                            &Rect { x: (gp.game_values.storedpowerups[iPlayerId] as i32) << 5, y: 0, w: 32, h: 32 },
                         );
 
                         iStoredPowerupBoxX += 96;
@@ -936,14 +936,14 @@ impl UI_ControlTrait for MI_World {
                         let iColorId = g.game_values.colorids[g.game_values.teamids[t][0] as usize] as i32;
                         let drawY = self.iItemPopupDrawY[t] as i32;
                         let offCur = self.iPopupOffsetsCurrent[t] as i32;
-                        gp.rm.spr_worlditempopup.draw_src(g, 0, 448 - drawY - offCur, &SDL_Rect { x: 0, y: iColorId * 64 + 32 - drawY, w: 320, h: drawY << 1 });
-                        gp.rm.spr_worlditempopup.draw_src(g, 320, 448 - drawY - offCur, &SDL_Rect { x: 192, y: iColorId * 64 + 32 - drawY, w: 320, h: drawY << 1 });
+                        gp.rm.spr_worlditempopup.draw_src(g, 0, 448 - drawY - offCur, &Rect { x: 0, y: iColorId * 64 + 32 - drawY, w: 320, h: drawY << 1 });
+                        gp.rm.spr_worlditempopup.draw_src(g, 320, 448 - drawY - offCur, &Rect { x: 192, y: iColorId * 64 + 32 - drawY, w: 320, h: drawY << 1 });
 
                         if self.iStateTransition[t] == 3 {
                             let iNumPowerups = g.game_values.worldpowerupcount[t];
 
                             if iNumPowerups > 0 {
-                                gp.rm.spr_worlditempopup.draw_src(g, self.iItemCol[t] as i32 * 52 + 114, 424 - offCur, &SDL_Rect { x: iColorId * 48, y: 256, w: 48, h: 48 });
+                                gp.rm.spr_worlditempopup.draw_src(g, self.iItemCol[t] as i32 * 52 + 114, 424 - offCur, &Rect { x: iColorId * 48, y: 256, w: 48, h: 48 });
                             }
 
                             let iStartItem: i16 = self.iItemPage[t] << 3;
@@ -952,9 +952,9 @@ impl UI_ControlTrait for MI_World {
                                 let iPowerup = g.game_values.worldpowerups[t][iItem as usize] as i32;
                                 let x = (iItem as i32 - self.iItemPage[t] as i32 * 8) * 52 + 122;
                                 if iPowerup >= NUM_POWERUPS {
-                                    gp.rm.spr_worlditems.draw_src(g, x, 432 - offCur, &SDL_Rect { x: (iPowerup - NUM_POWERUPS) << 5, y: 0, w: 32, h: 32 });
+                                    gp.rm.spr_worlditems.draw_src(g, x, 432 - offCur, &Rect { x: (iPowerup - NUM_POWERUPS) << 5, y: 0, w: 32, h: 32 });
                                 } else {
-                                    gp.rm.spr_storedpoweruplarge.draw_src(g, x, 432 - offCur, &SDL_Rect { x: iPowerup << 5, y: 0, w: 32, h: 32 });
+                                    gp.rm.spr_storedpoweruplarge.draw_src(g, x, 432 - offCur, &Rect { x: iPowerup << 5, y: 0, w: 32, h: 32 });
                                 }
                                 iItem += 1;
                             }

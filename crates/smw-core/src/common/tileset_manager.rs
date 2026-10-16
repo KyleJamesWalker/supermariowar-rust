@@ -1,7 +1,8 @@
 //! Port of src/common/TilesetManager.cpp
 
+use crate::common::gfx::soft_surface::{BlendMode, Surface, SurfacePtr};
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
-use crate::game::game;
 use crate::common::file_io::BinaryFile;
 use crate::common::gfx::gfx_sprite::{gfxSprite, ImageLoader};
 use crate::common::global_constants::*;
@@ -9,9 +10,7 @@ use crate::common::path::{convert_path, convert_path_pack};
 use crate::common::tile_types::*;
 use crate::common::util::container_helpers;
 use crate::common::util::dir_iterator::SubdirsIterator;
-use crate::common::util::sdl_helpers::SdlSurfacePtr;
 use crate::globals::{Aliased, Ptr};
-use sdl2::sys::{SDL_CreateRGBSurfaceWithFormat, SDL_GetError, SDL_Rect, SDL_Surface, SDL_UpperBlit};
 use std::collections::HashSet;
 use std::ffi::CStr;
 use std::path::{Path, PathBuf};
@@ -21,11 +20,11 @@ use std::ptr::null_mut;
 pub const MAX_TILES_PER_AXIS: i32 = 128;
 pub const MAX_TILES: i32 = MAX_TILES_PER_AXIS * MAX_TILES_PER_AXIS;
 
-fn generate_tileset_rects(tilesize: i32) -> Vec<SDL_Rect> {
+fn generate_tileset_rects(tilesize: i32) -> Vec<Rect> {
     let mut rects = Vec::with_capacity(MAX_TILES as usize);
     for row in 0..MAX_TILES_PER_AXIS {
         for col in 0..MAX_TILES_PER_AXIS {
-            rects.push(SDL_Rect { x: col * tilesize, y: row * tilesize, w: tilesize, h: tilesize });
+            rects.push(Rect { x: col * tilesize, y: row * tilesize, w: tilesize, h: tilesize });
         }
     }
     rects
@@ -69,17 +68,10 @@ fn load_image_or_downscale(g: &mut Game, path: &Path, largeRes: &gfxSprite) -> g
 
             unsafe {
                 let large = largeRes.get_surface();
-                let format = (*large).format;
-                let surf = SdlSurfacePtr::new(SDL_CreateRGBSurfaceWithFormat(
-                    0,
-                    largeRes.get_width() / 2,
-                    largeRes.get_height() / 2,
-                    (*format).BitsPerPixel as i32,
-                    (*format).format,
-                ));
-                if crate::common::gfx::blit::upper_blit(large, null_mut(), surf.get(), null_mut()) < 0 {
-                    eprintln!("SDL_BlitSurface error: {}", CStr::from_ptr(SDL_GetError()).to_string_lossy());
-                }
+                let alpha = (*large).alpha;
+                let blend = if alpha { BlendMode::Blend } else { BlendMode::None };
+                let surf = SurfacePtr::new(Surface { alpha, blend, ..Surface::new(largeRes.get_width() / 2, largeRes.get_height() / 2) });
+                crate::common::gfx::blit::upper_blit(large, null_mut(), surf.get(), null_mut());
 
                 gfxSprite::from_surface(surf, None)
             }
@@ -164,7 +156,7 @@ impl CTileset {
         }
     }
 
-    pub fn surface(&self, size: usize) -> *mut SDL_Surface {
+    pub fn surface(&self, size: usize) -> *mut Surface {
         self.sprite(size as i16).get_surface()
     }
 
@@ -194,7 +186,7 @@ impl CTileset {
         new_type
     }
 
-    pub fn draw(&self, dstSurface: *mut SDL_Surface, tileSize: i16, srcRect: *mut SDL_Rect, dstRect: *mut SDL_Rect) {
+    pub fn draw(&self, dstSurface: *mut Surface, tileSize: i16, srcRect: *mut Rect, dstRect: *mut Rect) {
         unsafe {
             crate::common::gfx::blit::upper_blit(self.surface(tileSize as usize), srcRect, dstSurface, dstRect);
         }
@@ -246,9 +238,9 @@ pub struct CTilesetManager {
     m_tilesets: Vec<Box<CTileset>>,
     m_classicTilesetIndex: usize,
 
-    m_rects_ingame: Vec<SDL_Rect>,
-    m_rects_preview: Vec<SDL_Rect>,
-    m_rects_thumb: Vec<SDL_Rect>,
+    m_rects_ingame: Vec<Rect>,
+    m_rects_preview: Vec<Rect>,
+    m_rects_thumb: Vec<Rect>,
 
     pub _alias: Aliased,
 }
@@ -307,7 +299,7 @@ impl CTilesetManager {
 
     #[allow(clippy::too_many_arguments)]
     pub fn draw(
-        &mut self, g: &mut Game, dstSurface: *mut SDL_Surface,
+        &mut self, g: &mut Game, dstSurface: *mut Surface,
         iTilesetID: i16,
         iTileSize: i16,
         iSrcTileCol: i16,
@@ -345,13 +337,13 @@ impl CTilesetManager {
     }
 
     /// `rect(DrawSize size, size_t col, size_t row)`
-    pub fn rect(&mut self, size_id: i16, col: i16, row: i16) -> *mut SDL_Rect {
+    pub fn rect(&mut self, size_id: i16, col: i16, row: i16) -> *mut Rect {
         let rect_idx = (row as isize as usize).wrapping_mul(MAX_TILES_PER_AXIS as usize).wrapping_add(col as isize as usize);
         self.rect_idx(size_id, rect_idx)
     }
 
     /// `rect(DrawSize size, size_t idx)`; out of range panics like `std::array::at`.
-    pub fn rect_idx(&mut self, size_id: i16, idx: usize) -> *mut SDL_Rect {
+    pub fn rect_idx(&mut self, size_id: i16, idx: usize) -> *mut Rect {
         match size_id {
             1 => &mut self.m_rects_preview[idx],
             2 => &mut self.m_rects_thumb[idx],

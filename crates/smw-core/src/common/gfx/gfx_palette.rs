@@ -1,13 +1,11 @@
 //! Port of src/common/gfx/gfxPalette.cpp
 
 use crate::game::Game;
-use crate::game::game;
 use crate::globals::Aliased;
 use crate::common::gfx::color::RGB;
 use crate::common::gfx::get_rgb;
 use crate::common::global_constants::MAX_PLAYERS;
 use crate::common::gfx::gfx_sprite::ImageLoader;
-use sdl2::sys::{SDL_LockSurface, SDL_UnlockSurface, SDL_RLEACCEL};
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -68,10 +66,6 @@ impl gfxPalette {
 
         unsafe {
             let surf = sprite.get_surface();
-            if (*surf).flags & SDL_RLEACCEL != 0 {
-                SDL_LockSurface(surf);
-            }
-
             for x in 0..sprite.get_width() {
                 let key = get_rgb(surf, x, 0);
 
@@ -85,10 +79,6 @@ impl gfxPalette {
 
                 // unordered_map::emplace keeps the first entry for a duplicate key
                 self.m_colorsheets.entry(key).or_insert(sheet);
-            }
-
-            if (*surf).flags & SDL_RLEACCEL != 0 {
-                SDL_UnlockSurface(surf);
             }
         }
         true

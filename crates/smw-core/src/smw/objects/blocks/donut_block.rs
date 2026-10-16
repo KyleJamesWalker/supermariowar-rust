@@ -1,7 +1,6 @@
 //! Port of src/smw/objects/blocks/DonutBlock.cpp
 
 use crate::game::Game;
-use crate::game::game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::TILESETNONE;
 use crate::common::io_block::{IO_Block, IO_BlockTrait};

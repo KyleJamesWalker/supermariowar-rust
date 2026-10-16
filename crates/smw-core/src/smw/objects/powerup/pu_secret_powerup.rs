@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/PU_SecretPowerup.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::EC_Snow;
 use crate::common::game::App;
@@ -13,7 +14,6 @@ use crate::impl_base;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::objects::powerup::powerup::{mo_powerup_draw, mo_powerup_update, MO_Powerup, MO_PowerupTrait};
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 
 //------------------------------------------------------------------------------
 // secret powerup
@@ -94,7 +94,7 @@ impl CObjectTrait for PU_SecretPowerup {
                 g,
                 self.ix as i32 - self.collisionOffsetX as i32,
                 self.iy as i32 - self.collisionOffsetY as i32,
-                &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },
+                &Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },
             );
         }
     }

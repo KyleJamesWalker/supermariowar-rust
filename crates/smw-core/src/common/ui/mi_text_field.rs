@@ -1,5 +1,7 @@
 //! Port of src/common/ui/MI_TextField.cpp
 
+use crate::common::keys::*;
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::input::{CPlayerInput, DEVICE_KEYBOARD};
@@ -7,8 +9,7 @@ use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_image::MI_Image;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
-use sdl2::sys::SDL_KeyCode::*;
-use sdl2::sys::{SDL_Keycode, SDL_Rect, SDL_Scancode};
+use sdl2::sys::SDL_Scancode;
 
 const NUMBER_KEY_MAP: [i16; 10] = [41, 33, 64, 35, 36, 37, 94, 38, 42, 40];
 
@@ -37,20 +38,19 @@ fn touch_session(g: &mut Game) -> bool {
     false
 }
 
-fn is_text_key(key: SDL_Keycode) -> bool {
-    let k = |c: sdl2::sys::SDL_KeyCode| c as SDL_Keycode;
-    (key >= k(SDLK_a) && key <= k(SDLK_z))
-        || key == k(SDLK_SPACE)
-        || (key >= k(SDLK_0) && key <= k(SDLK_9))
-        || key == k(SDLK_EQUALS)
-        || key == k(SDLK_MINUS)
-        || key == k(SDLK_BACKQUOTE)
-        || (key >= k(SDLK_LEFTBRACKET) && key <= k(SDLK_RIGHTBRACKET))
-        || key == k(SDLK_SEMICOLON)
-        || key == k(SDLK_QUOTE)
-        || key == k(SDLK_COMMA)
-        || key == k(SDLK_PERIOD)
-        || key == k(SDLK_SLASH)
+fn is_text_key(key: Keycode) -> bool {
+    (key >= SDLK_a && key <= SDLK_z)
+        || key == SDLK_SPACE
+        || (key >= SDLK_0 && key <= SDLK_9)
+        || key == SDLK_EQUALS
+        || key == SDLK_MINUS
+        || key == SDLK_BACKQUOTE
+        || (key >= SDLK_LEFTBRACKET && key <= SDLK_RIGHTBRACKET)
+        || key == SDLK_SEMICOLON
+        || key == SDLK_QUOTE
+        || key == SDLK_COMMA
+        || key == SDLK_PERIOD
+        || key == SDLK_SLASH
 }
 
 pub struct MI_TextField {
@@ -217,7 +217,7 @@ impl MI_TextField {
     /// cancel erases (or leaves an empty field). A typed character means a keyboard is here, so it closes.
     fn osk_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         let key = playerInput.iPressedKey;
-        if is_text_key(key) || key == SDLK_BACKSPACE as SDL_Keycode || key == SDLK_DELETE as SDL_Keycode {
+        if is_text_key(key) || key == SDLK_BACKSPACE as Keycode || key == SDLK_DELETE as Keycode {
             self.fOsk = false;
             return self.send_input(g, playerInput);
         }
@@ -288,18 +288,18 @@ impl MI_TextField {
         // The dialog image is 512 wide, so the panel is its left and right halves.
         let half = OSK_W / 2;
         unsafe {
-            gp.rm.menu_dialog.draw_src(g, OSK_X, top, &SDL_Rect { x: 0, y: 0, w: half, h: OSK_H - 16 });
-            gp.rm.menu_dialog.draw_src(g, OSK_X + half, top, &SDL_Rect { x: 512 - half, y: 0, w: half, h: OSK_H - 16 });
-            gp.rm.menu_dialog.draw_src(g, OSK_X, top + OSK_H - 16, &SDL_Rect { x: 0, y: 464, w: half, h: 16 });
-            gp.rm.menu_dialog.draw_src(g, OSK_X + half, top + OSK_H - 16, &SDL_Rect { x: 512 - half, y: 464, w: half, h: 16 });
+            gp.rm.menu_dialog.draw_src(g, OSK_X, top, &Rect { x: 0, y: 0, w: half, h: OSK_H - 16 });
+            gp.rm.menu_dialog.draw_src(g, OSK_X + half, top, &Rect { x: 512 - half, y: 0, w: half, h: OSK_H - 16 });
+            gp.rm.menu_dialog.draw_src(g, OSK_X, top + OSK_H - 16, &Rect { x: 0, y: 464, w: half, h: 16 });
+            gp.rm.menu_dialog.draw_src(g, OSK_X + half, top + OSK_H - 16, &Rect { x: 512 - half, y: 464, w: half, h: 16 });
         }
         let mut key = |spr: &Ptr<gfxSprite>, col: i16, row: i16, span: i16, selected: bool, label: &str| {
             let x = OSK_X + 16 + col as i32 * OSK_CELL;
             let y = top + 12 + row as i32 * OSK_ROW_H;
             let w = span as i32 * OSK_CELL - 4;
             let srcY = if selected { 32 } else { 0 };
-            spr.draw_src(g, x, y, &SDL_Rect { x: 0, y: srcY, w: w - 8, h: 32 });
-            spr.draw_src(g, x + w - 8, y, &SDL_Rect { x: 504, y: srcY, w: 8, h: 32 });
+            spr.draw_src(g, x, y, &Rect { x: 0, y: srcY, w: w - 8, h: 32 });
+            spr.draw_src(g, x + w - 8, y, &Rect { x: 504, y: srcY, w: 8, h: 32 });
             unsafe { gp.rm.menu_font_large.draw_centered(g, x + w / 2, y + 5, label) };
         };
         let rows = if self.fOskShift { OSK_SHIFTED } else { OSK_KEYS };
@@ -412,11 +412,10 @@ impl UI_ControlTrait for MI_TextField {
             return MENU_CODE_NONE;
         }
 
-        let k = |c: sdl2::sys::SDL_KeyCode| c as SDL_Keycode;
 
         // TODO: check string conversion
         //Watch for characters typed in including delete and backspace
-        let mut key: SDL_Keycode = playerInput.iPressedKey;
+        let mut key: Keycode = playerInput.iPressedKey;
         if is_text_key(key) {
             if self.iNumChars < self.iMaxChars - 1 {
                 //Take care of holding shift to shift the pressed key to another character
@@ -424,36 +423,36 @@ impl UI_ControlTrait for MI_TextField {
                     *keystate.add(SDL_Scancode::SDL_SCANCODE_LSHIFT as usize) != 0 || *keystate.add(SDL_Scancode::SDL_SCANCODE_RSHIFT as usize) != 0
                 };
                 if shift {
-                    if key >= k(SDLK_a) && key <= k(SDLK_z) {
+                    if key >= SDLK_a && key <= SDLK_z {
                         key -= 32;
-                    } else if key >= k(SDLK_0) && key <= k(SDLK_9) {
-                        key = NUMBER_KEY_MAP[(key - 48) as usize] as SDL_Keycode;
-                    } else if key == k(SDLK_MINUS) {
-                        key = k(SDLK_UNDERSCORE);
-                    } else if key == k(SDLK_EQUALS) {
-                        key = k(SDLK_PLUS);
-                    } else if key == k(SDLK_BACKQUOTE) {
+                    } else if key >= SDLK_0 && key <= SDLK_9 {
+                        key = NUMBER_KEY_MAP[(key - 48) as usize] as Keycode;
+                    } else if key == SDLK_MINUS {
+                        key = SDLK_UNDERSCORE;
+                    } else if key == SDLK_EQUALS {
+                        key = SDLK_PLUS;
+                    } else if key == SDLK_BACKQUOTE {
                         key = 126;
-                    } else if key >= k(SDLK_LEFTBRACKET) && key <= k(SDLK_RIGHTBRACKET) {
+                    } else if key >= SDLK_LEFTBRACKET && key <= SDLK_RIGHTBRACKET {
                         key += 32;
-                    } else if key == k(SDLK_SEMICOLON) {
-                        key = k(SDLK_COLON);
-                    } else if key == k(SDLK_QUOTE) {
-                        key = k(SDLK_QUOTEDBL);
-                    } else if key == k(SDLK_COMMA) {
-                        key = k(SDLK_LESS);
-                    } else if key == k(SDLK_PERIOD) {
-                        key = k(SDLK_GREATER);
-                    } else if key == k(SDLK_SLASH) {
-                        key = k(SDLK_QUESTION);
+                    } else if key == SDLK_SEMICOLON {
+                        key = SDLK_COLON;
+                    } else if key == SDLK_QUOTE {
+                        key = SDLK_QUOTEDBL;
+                    } else if key == SDLK_COMMA {
+                        key = SDLK_LESS;
+                    } else if key == SDLK_PERIOD {
+                        key = SDLK_GREATER;
+                    } else if key == SDLK_SLASH {
+                        key = SDLK_QUESTION;
                     }
                 }
 
                 return self.insert_char(g, key as u8);
             }
-        } else if key == k(SDLK_BACKSPACE) {
+        } else if key == SDLK_BACKSPACE {
             return self.backspace(g);
-        } else if key == k(SDLK_DELETE) {
+        } else if key == SDLK_DELETE {
             if self.iCursorIndex < self.iNumChars {
                 unsafe { (*self.szOutValue).as_mut_vec().remove(self.iCursorIndex as usize) };
                 self.iNumChars -= 1;
@@ -461,12 +460,12 @@ impl UI_ControlTrait for MI_TextField {
                 self.update_cursor(g);
                 return self.mcItemChangedCode;
             }
-        } else if key == k(SDLK_LEFT) {
+        } else if key == SDLK_LEFT {
             if self.iCursorIndex > 0 {
                 self.iCursorIndex -= 1;
                 self.update_cursor(g);
             }
-        } else if key == k(SDLK_RIGHT) {
+        } else if key == SDLK_RIGHT {
             if self.iCursorIndex < self.iNumChars {
                 self.iCursorIndex += 1;
                 self.update_cursor(g);
@@ -493,9 +492,9 @@ impl UI_ControlTrait for MI_TextField {
         let selY = (if self.fSelected { 32 } else { 0 }) + self.iAdjustmentY as i32;
 
         unsafe {
-            self.spr.draw_src(g, x, y, &SDL_Rect { x: 0, y: selY, w: indent - 16, h: 32 });
-            self.spr.draw_src(g, x + indent - 16, y, &SDL_Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
-            self.spr.draw_src(g, x + indent + 16, y, &SDL_Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
+            self.spr.draw_src(g, x, y, &Rect { x: 0, y: selY, w: indent - 16, h: 32 });
+            self.spr.draw_src(g, x + indent - 16, y, &Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
+            self.spr.draw_src(g, x + indent + 16, y, &Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
 
             gp.rm.menu_font_large.draw_chop_right(g, x + 16, y + 5, indent - 8, &self.szName);
 

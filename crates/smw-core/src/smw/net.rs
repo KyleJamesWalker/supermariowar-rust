@@ -1,7 +1,7 @@
 //! Port of src/smw/net.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
-use crate::game::game;
 use crate::common::game_mode::{GameModeType, *};
 use crate::common::game_mode_settings::GAMEMODESETTINGS_RAW_SIZE;
 
@@ -290,10 +290,10 @@ pub fn draw_match_preview(g: &mut Game) {
         let mut gp = g.ptr();
     unsafe {
         gp.rm.menu_backdrop.draw(g, 0, 0);
-        gp.rm.menu_dialog.draw_src(g, 144, 100, &sdl2::sys::SDL_Rect { x: 0, y: 0, w: 336, h: 264 });
-        gp.rm.menu_dialog.draw_src(g, 480, 100, &sdl2::sys::SDL_Rect { x: 496, y: 0, w: 16, h: 264 });
-        gp.rm.menu_dialog.draw_src(g, 144, 364, &sdl2::sys::SDL_Rect { x: 0, y: 464, w: 336, h: 16 });
-        gp.rm.menu_dialog.draw_src(g, 480, 364, &sdl2::sys::SDL_Rect { x: 496, y: 464, w: 16, h: 16 });
+        gp.rm.menu_dialog.draw_src(g, 144, 100, &Rect { x: 0, y: 0, w: 336, h: 264 });
+        gp.rm.menu_dialog.draw_src(g, 480, 100, &Rect { x: 496, y: 0, w: 16, h: 264 });
+        gp.rm.menu_dialog.draw_src(g, 144, 364, &Rect { x: 0, y: 464, w: 336, h: 16 });
+        gp.rm.menu_dialog.draw_src(g, 480, 364, &Rect { x: 496, y: 464, w: 16, h: 16 });
 
         let gm = g.game_values.gamemode;
         let mut lines = vec![gm.szModeName.clone()];

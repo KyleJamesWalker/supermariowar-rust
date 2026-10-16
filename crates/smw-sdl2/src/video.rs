@@ -164,8 +164,18 @@ impl Sdl2Video {
 }
 
 impl Video for Sdl2Video {
+    fn show_cursor(&mut self, on: bool) {
+        unsafe { SDL_ShowCursor(if on { SDL_ENABLE } else { SDL_DISABLE } as i32) };
+    }
+
     fn open(&mut self, fullscreen: bool) {
         unsafe {
+            if SDL_Init(SDL_INIT_VIDEO) < 0 {
+                panic!("SDL error: {}", std::ffi::CStr::from_ptr(SDL_GetError()).to_string_lossy());
+            }
+            let mut v = SDL_version { major: 0, minor: 0, patch: 0 };
+            SDL_GetVersion(&mut v);
+            println!("[gfx] SDL {}.{}.{} loaded.", v.major, v.minor, v.patch);
             self.window = create_window(fullscreen);
             self.renderer = create_renderer(self.window);
             self.texture = create_screen_texture(self.renderer);

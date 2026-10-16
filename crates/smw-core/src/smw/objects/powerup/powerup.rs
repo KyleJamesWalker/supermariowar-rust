@@ -1,7 +1,7 @@
 //! Port of src/smw/objects/powerup/Powerup.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
-use crate::game::game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::*;
 use crate::common::math::vec2::Vec2s;
@@ -10,7 +10,6 @@ use crate::globals::Ptr;
 use crate::impl_base;
 use crate::smw::objects::moving::moving_object::{io_moving_object_collision_detection_map, IO_MovingObject, IO_MovingObjectTrait};
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 use std::ops::{Deref, DerefMut};
 
 //------------------------------------------------------------------------------
@@ -49,9 +48,9 @@ pub fn mo_powerup_draw<T: MO_PowerupTrait + ?Sized>(g: &mut Game, this: &mut T) 
     let o = this.pu();
     if o.state == 0 {
         let h = (o.ih as f32 - o.fy + o.desty) as i16;
-        o.spr.draw_src(g, (o.ix - o.collisionOffsetX) as i32, (o.iy - o.collisionOffsetY) as i32, &SDL_Rect { x: o.drawframe as i32, y: 0, w: o.iw as i32, h: h as i32 });
+        o.spr.draw_src(g, (o.ix - o.collisionOffsetX) as i32, (o.iy - o.collisionOffsetY) as i32, &Rect { x: o.drawframe as i32, y: 0, w: o.iw as i32, h: h as i32 });
     } else {
-        o.spr.draw_src(g, (o.ix - o.collisionOffsetX) as i32, (o.iy - o.collisionOffsetY) as i32, &SDL_Rect { x: o.drawframe as i32, y: 0, w: o.iw as i32, h: o.ih as i32 });
+        o.spr.draw_src(g, (o.ix - o.collisionOffsetX) as i32, (o.iy - o.collisionOffsetY) as i32, &Rect { x: o.drawframe as i32, y: 0, w: o.iw as i32, h: o.ih as i32 });
     }
 }
 

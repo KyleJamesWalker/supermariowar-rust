@@ -1,7 +1,7 @@
 //! Port of src/smw/objects/blocks/ThrowBlock.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
-use crate::game::game;
 use crate::common::eyecandy::EC_FallingObject;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -16,7 +16,6 @@ use crate::smw::objects::carriable::co_throw_block::CO_ThrowBlock;
 use crate::smw::objects::moving::mo_carried_object::MO_CarriedObjectTrait;
 use crate::smw::objects::throw_block_type::ThrowBlockType;
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 
 pub struct B_ThrowBlock {
     pub io_block: IO_Block,
@@ -84,7 +83,7 @@ impl CObjectTrait for B_ThrowBlock {
             g,
             self.ix as i32,
             self.iy as i32,
-            &SDL_Rect { x: self.drawFrame as i32, y: (self.iType as i16 * 32) as i32, w: self.iw as i32, h: self.ih as i32 },
+            &Rect { x: self.drawFrame as i32, y: (self.iType as i16 * 32) as i32, w: self.iw as i32, h: self.ih as i32 },
         );
     }
 

@@ -1,10 +1,10 @@
 //! Port of src/smw/player_components/PlayerWings.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::ClipEdge;
 use crate::globals::*;
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 
 #[derive(Default)]
 pub struct PlayerWings {
@@ -42,7 +42,7 @@ impl PlayerWings {
         let fPlayerFacingRight = player.is_facing_right(g);
         let x = player.ix as i32 + if fPlayerFacingRight { -19 } else { 15 };
         let y = player.iy as i32 - 10;
-        let src = SDL_Rect { x: self.iWingsFrame as i32, y: if fPlayerFacingRight { 0 } else { 32 }, w: 26, h: 32 };
+        let src = Rect { x: self.iWingsFrame as i32, y: if fPlayerFacingRight { 0 } else { 32 }, w: 26, h: 32 };
         unsafe {
             if player.iswarping() {
                 let edge: ClipEdge = std::mem::transmute::<i32, ClipEdge>((player.state as i16 % 4) as i32);

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_Flag.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::{gfxSprite, ClipEdge};
@@ -13,7 +14,6 @@ use crate::smw::objects::moving::mo_carried_object::{mo_carried_object_drop, mo_
 use crate::smw::objects::moving::mo_flag_base::MO_FlagBase;
 use crate::smw::objects::moving::moving_object::{io_moving_object_collision_detection_map, IO_MovingObjectTrait};
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 
 //------------------------------------------------------------------------------
 // class flag (for Capture the Flag mode)
@@ -197,7 +197,7 @@ impl CObjectTrait for CO_Flag {
     }
 
     fn draw(&mut self, g: &mut Game) {
-        let srcRect = SDL_Rect {
+        let srcRect = Rect {
             x: self.drawframe as i32,
             y: self.animationOffsetY as i32 + if self.fLastFlagDirection { 32 } else { 0 },
             w: self.iw as i32,

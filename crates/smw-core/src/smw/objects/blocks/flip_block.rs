@@ -1,7 +1,7 @@
 //! Port of src/smw/objects/blocks/FlipBlock.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
-use crate::game::game;
 use crate::common::eyecandy::EC_FallingObject;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -16,7 +16,6 @@ use crate::smw::objects::blocks::io_block::*;
 use crate::smw::objects::carriable::co_throw_box::CO_ThrowBox;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 
 //------------------------------------------------------------------------------
 // class flip block
@@ -128,7 +127,7 @@ impl CObjectTrait for B_FlipBlock {
                 g,
                 self.ix as i32,
                 self.iy as i32,
-                &SDL_Rect { x: self.frame as i32, y: 0, w: self.iw as i32, h: self.ih as i32 },
+                &Rect { x: self.frame as i32, y: 0, w: self.iw as i32, h: self.ih as i32 },
             );
         }
     }

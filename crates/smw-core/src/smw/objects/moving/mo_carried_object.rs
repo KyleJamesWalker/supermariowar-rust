@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_CarriedObject.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::{gfxSprite, ClipEdge};
@@ -9,7 +10,6 @@ use crate::globals::*;
 use crate::impl_base;
 use crate::smw::objects::moving::moving_object::{io_moving_object_collision_detection_checksides, IO_MovingObject, IO_MovingObjectTrait};
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 use std::ops::{Deref, DerefMut};
 
 //------------------------------------------------------------------------------
@@ -122,7 +122,7 @@ impl Drop for MO_CarriedObject {
 
 pub fn mo_carried_object_draw<T: MO_CarriedObjectTrait + ?Sized>(g: &mut Game, this: &mut T) {
     let o = this.carried();
-    let src = SDL_Rect { x: o.drawframe as i32, y: o.animationOffsetY as i32, w: o.iw as i32, h: o.ih as i32 };
+    let src = Rect { x: o.drawframe as i32, y: o.animationOffsetY as i32, w: o.iw as i32, h: o.ih as i32 };
     if !o.owner.is_null() && o.owner.iswarping() {
         let edge: ClipEdge = unsafe { std::mem::transmute::<i32, ClipEdge>(o.owner.get_warp_state() as i32) };
         o.spr.draw_clip(g, (o.ix - o.collisionOffsetX) as i32, (o.iy - o.collisionOffsetY) as i32, &src, edge, o.owner.get_warp_plane() as i32);

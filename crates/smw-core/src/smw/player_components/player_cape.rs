@@ -1,5 +1,6 @@
 //! Port of src/smw/player_components/PlayerCape.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::ClipEdge;
@@ -8,7 +9,6 @@ use crate::common::player_kill_styles::KillStyle;
 use crate::globals::*;
 use crate::smw::objects::moving::mo_spin_attack::MO_SpinAttack;
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 
 #[derive(Default)]
 pub struct PlayerCape {
@@ -61,7 +61,7 @@ impl PlayerCape {
 
     pub fn draw(&mut self, g: &mut Game, player: &mut CPlayer) {
         let mut gp = g.ptr();
-        /* See game().eyecandy/cape.png for reference */
+        /* See eyecandy/cape.png for reference */
         unsafe {
             self.iCapeTimer = self.iCapeTimer.wrapping_add(1);
             if self.iCapeTimer > 3 {
@@ -113,7 +113,7 @@ impl PlayerCape {
 
             let x = player.left_x() as i32 - PWOFFSET + (if fPlayerFacingRight { -18 } else { 18 });
             let y = player.top_y() as i32 - PHOFFSET + 4 + self.iCapeYOffset as i32;
-            let src = SDL_Rect {
+            let src = Rect {
                 x: (if fPlayerFacingRight { 128 } else { 0 }) + self.iCapeFrameX as i32,
                 y: self.iCapeFrameY as i32,
                 w: 32,

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_SuperFireball.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game::App;
@@ -16,7 +17,6 @@ use crate::impl_base;
 use crate::smw::objectgame::removeifprojectile;
 use crate::smw::objects::moving::moving_object::{IO_MovingObject, IO_MovingObjectTrait};
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 
 //------------------------------------------------------------------------------
 // class super fireball
@@ -134,7 +134,7 @@ impl CObjectTrait for MO_SuperFireball {
             g,
             self.ix as i32 - self.collisionOffsetX as i32,
             self.iy as i32 - self.collisionOffsetY as i32,
-            &SDL_Rect { x: self.drawframe as i32, y: self.colorOffset as i32 + self.directionOffset as i32, w: self.iw as i32, h: self.ih as i32 },
+            &Rect { x: self.drawframe as i32, y: self.colorOffset as i32 + self.directionOffset as i32, w: self.iw as i32, h: self.ih as i32 },
         );
     }
 }

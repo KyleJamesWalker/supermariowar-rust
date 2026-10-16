@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_Star.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
 use crate::common::game_mode::game_mode_star;
@@ -14,7 +15,6 @@ use crate::smw::gamemodes::star::CGM_Star;
 use crate::smw::objects::moving::mo_carried_object::{MO_CarriedObject, MO_CarriedObjectTrait};
 use crate::smw::objects::moving::moving_object::{io_moving_object_update, IO_MovingObjectTrait};
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 
 //------------------------------------------------------------------------------
 // class star (for star mode)
@@ -170,7 +170,7 @@ impl CObjectTrait for CO_Star {
         let x = self.ix as i32 - self.collisionOffsetX as i32;
         let y = self.iy as i32 - self.collisionOffsetY as i32;
         if !self.owner.is_null() {
-            let src = SDL_Rect { x: 0, y: self.iOffsetY as i32, w: self.iw as i32, h: self.ih as i32 };
+            let src = Rect { x: 0, y: self.iOffsetY as i32, w: self.iw as i32, h: self.ih as i32 };
             if self.owner.iswarping() {
                 let edge: ClipEdge = unsafe { std::mem::transmute::<i32, ClipEdge>(self.owner.get_warp_state() as i32) };
                 self.spr.draw_clip(g, x, y, &src, edge, self.owner.get_warp_plane() as i32);
@@ -178,12 +178,12 @@ impl CObjectTrait for CO_Star {
                 self.spr.draw_src(g, x, y, &src);
             }
         } else if self.velx != 0.0 {
-            self.spr.draw_src(g, x, y, &SDL_Rect { x: 0, y: self.iOffsetY as i32, w: self.iw as i32, h: self.ih as i32 }); // keep the star still while it's moving
+            self.spr.draw_src(g, x, y, &Rect { x: 0, y: self.iOffsetY as i32, w: self.iw as i32, h: self.ih as i32 }); // keep the star still while it's moving
         } else {
-            self.spr.draw_src(g, x, y, &SDL_Rect { x: self.drawframe as i32, y: self.iOffsetY as i32, w: self.iw as i32, h: self.ih as i32 });
+            self.spr.draw_src(g, x, y, &Rect { x: self.drawframe as i32, y: self.iOffsetY as i32, w: self.iw as i32, h: self.ih as i32 });
         }
 
-        let src = SDL_Rect { x: self.sparkledrawframe as i32, y: if self.iType != 0 { 0 } else { 32 }, w: 32, h: 32 };
+        let src = Rect { x: self.sparkledrawframe as i32, y: if self.iType != 0 { 0 } else { 32 }, w: 32, h: 32 };
         unsafe {
             if !self.owner.is_null() && self.owner.iswarping() {
                 let edge: ClipEdge = std::mem::transmute::<i32, ClipEdge>(self.owner.get_warp_state() as i32);

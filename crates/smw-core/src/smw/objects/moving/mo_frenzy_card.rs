@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_FrenzyCard.cpp
 
+use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
 use crate::common::game_mode::game_mode_frenzy;
@@ -14,7 +15,6 @@ use crate::smw::gamemodes::frenzy::CGM_Frenzy;
 use crate::smw::objects::carriable::co_shell::{CO_Shell, ShellType};
 use crate::smw::objects::moving::moving_object::{io_moving_object_draw, IO_MovingObject, IO_MovingObjectTrait};
 use crate::smw::player::CPlayer;
-use sdl2::sys::SDL_Rect;
 
 //------------------------------------------------------------------------------
 // class frenzycard (for fire frenzy mode)
@@ -164,7 +164,7 @@ impl CObjectTrait for MO_FrenzyCard {
                 g,
                 self.ix as i32 - self.collisionOffsetX as i32,
                 self.iy as i32 - self.collisionOffsetY as i32,
-                &SDL_Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },
+                &Rect { x: self.sparkledrawframe as i32, y: 0, w: 32, h: 32 },
             );
         }
     }
