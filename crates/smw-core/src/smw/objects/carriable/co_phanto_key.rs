@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_PhantoKey.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
@@ -28,7 +29,7 @@ pub struct CO_PhantoKey {
 impl_base!(CO_PhantoKey => mo_carried_object: MO_CarriedObject);
 
 impl CO_PhantoKey {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId) -> Self {
         let mut o = CO_PhantoKey {
             mo_carried_object: MO_CarriedObject::new_anim(g, nspr, Vec2s::zero(), 1, 0, 30, 30, 1, 1, 0, 0, 32, 32),
             relocatetimer: 0,
@@ -131,7 +132,7 @@ impl CObjectTrait for CO_PhantoKey {
         let mut gp = g.ptr();
         mo_carried_object_draw(g, self);
 
-        gp.rm.spr_shinesparkle.draw_src(
+        gp.rm.sprite(gp.rm.spr_shinesparkle).draw_src(
             g,
             self.ix as i32 - self.collisionOffsetX as i32,
             self.iy as i32 - self.collisionOffsetY as i32,

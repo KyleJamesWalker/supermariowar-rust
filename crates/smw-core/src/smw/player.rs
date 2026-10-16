@@ -1,5 +1,6 @@
 //! Port of src/smw/player.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::{EC_Corpse, EC_Door, EC_FallingObject, EC_GravText, EC_SingleAnimation, Spotlight};
@@ -10,7 +11,7 @@ use crate::common::game_values::if_sound_on_play;
 use crate::common::gameplay_styles::{BoomerangStyle, StarStyle};
 use crate::common::gfx::gfx_palette::{self, PlayerPalette};
 use crate::common::gfx::gfx_sprite::{gfxSprite, ClipEdge};
-use crate::common::gfx::SpriteStrip;
+use crate::common::resource_manager::StripIds;
 use crate::common::global_constants::*;
 use crate::common::input::{COutputControl, DEVICE_KEYBOARD};
 use crate::common::map::CMap;
@@ -146,7 +147,7 @@ pub struct CPlayer {
     pub fOldSwapX: f32,
     pub fOldSwapY: f32,
     pub iSrcOffsetX: i16,
-    pub pScoreboardSprite: Ptr<SpriteStrip>,
+    pub pScoreboardSprite: StripIds,
 
     pub iNewPowerupX: i16,
     pub iNewPowerupY: i16,
@@ -179,7 +180,7 @@ pub struct CPlayer {
 
     pub pPlayerAI: Option<Box<dyn CPlayerAITrait>>,
 
-    pub sprites: Ptr<SpriteStrip>,
+    pub sprites: StripIds,
 
     pub sprite_state: u8,
     pub sprswitch: i16,
@@ -345,7 +346,7 @@ impl CPlayer {
         iTeamID: i16,
         iSubTeamID: i16,
         iColorID: i16,
-        nsprites: Ptr<SpriteStrip>,
+        nsprites: StripIds,
         nscore: Ptr<CScore>,
         sRespawnCounter: Ptr<i16>,
         ai: Option<Box<dyn CPlayerAITrait>>,
@@ -518,7 +519,7 @@ impl CPlayer {
         self.diedas
     }
 
-    pub fn get_scoreboard_sprite(&self) -> Ptr<SpriteStrip> {
+    pub fn get_scoreboard_sprite(&self) -> StripIds {
         self.pScoreboardSprite
     }
 
@@ -585,8 +586,8 @@ impl CPlayer {
 
                 //Shield the player after becoming unfrozen to protect against being frozen again
                 self.shield.turn_on(g);
-                g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(&g.rm, 
+                    g.rm.spr_fireballexplosion,
                     (self.ix as i32 + HALFPW - 16) as i16,
                     (self.iy as i32 + HALFPH - 16) as i16,
                     3,
@@ -660,8 +661,8 @@ impl CPlayer {
                 }
             {
                 self.rainsteptimer = 0;
-                g.eyecandy[1].emplace(EC_SingleAnimation::new_rect(
-                    Ptr::from_mut(&mut g.rm.spr_frictionsmoke),
+                g.eyecandy[1].emplace(EC_SingleAnimation::new_rect(&g.rm, 
+                    g.rm.spr_frictionsmoke,
                     self.ix,
                     (self.iy as i32 + PH - 14) as i16,
                     5,
@@ -785,8 +786,8 @@ impl CPlayer {
             self.state = PlayerState::Spawning;
 
             if g.game_values.spawnstyle == SpawnStyle::Instant {
-                g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(&g.rm, 
+                    g.rm.spr_fireballexplosion,
                     (self.ix as i32 + HALFPW - 16) as i16,
                     (self.iy as i32 + HALFPH - 16) as i16,
                     3,
@@ -794,8 +795,8 @@ impl CPlayer {
                 ));
             } else if g.game_values.spawnstyle == SpawnStyle::Door {
                 g.eyecandy[0].emplace(EC_Door::new(
-                    Ptr::from_mut(&mut g.rm.spr_spawndoor),
-                    Ptr::from_mut(&mut self.sprites.get()[self.sprite_state as usize]),
+                    g.rm.spr_spawndoor,
+                    self.sprites[self.sprite_state as usize],
                     (self.ix as i32 + HALFPW - 16) as i16,
                     (self.iy as i32 + HALFPH - 16) as i16,
                     1,
@@ -815,7 +816,7 @@ impl CPlayer {
             let vy = -((RANDOM_INT(gp.get(), 9) as f32) / 2.0f32) - 9.0f32;
             let obj = Ptr::new_box(MO_Podobo::new(
                 g,
-                Ptr::from_mut(&mut rm.spr_podobo),
+                rm.spr_podobo,
                 Vec2s::new(x, App::screenHeight as i16),
                 vy,
                 self.globalID,
@@ -832,7 +833,7 @@ impl CPlayer {
         let mut gp = g.ptr();
         let obj = Ptr::new_box(MO_Boomerang::new(
             g,
-            Ptr::from_mut(&mut gp.get().rm.spr_boomerang),
+            gp.get().rm.spr_boomerang,
             Vec2s::new(ix as i16, (iy + HALFPH - 16) as i16),
             4,
             facingRight,
@@ -856,7 +857,7 @@ impl CPlayer {
         let ttl = (RANDOM_INT(gp.get(), 120) + 120) as i16;
         let mut bomb = Ptr::new_box(CO_Bomb::new(
             g,
-            Ptr::from_mut(&mut rm.spr_bomb),
+            rm.spr_bomb,
             Vec2s::new((ix + HALFPW - 14) as i16, (iy - 8) as i16),
             Vec2f::new(if facingRight { 3.0 } else { -3.0 }, -3.0),
             4,
@@ -918,8 +919,8 @@ impl CPlayer {
                     let iColorIdOffset = ((self.colorID as i32) << 5) as i16;
 
                     for iSwirl in 0..4usize {
-                        g.eyecandy[2].emplace(EC_SingleAnimation::new_rect(
-                            Ptr::from_mut(&mut g.rm.spr_spawnsmoke),
+                        g.eyecandy[2].emplace(EC_SingleAnimation::new_rect(&g.rm, 
+                            g.rm.spr_spawnsmoke,
                             (ixoffset as i32 + g.g_iSwirlSpawnLocations[iSwirl][0][swirlindex] as i32) as i16,
                             (iyoffset as i32 + g.g_iSwirlSpawnLocations[iSwirl][1][swirlindex] as i32) as i16,
                             4,
@@ -1629,7 +1630,7 @@ impl CPlayer {
             self.bobomb = false;
             let obj = Ptr::new_box(MO_Explosion::new(
                 g,
-                Ptr::from_mut(&mut rm.spr_explosion),
+                rm.spr_explosion,
                 Vec2s::new((ix + HALFPW - 96) as i16, (iy + HALFPH - 64) as i16),
                 2,
                 4,
@@ -1642,7 +1643,7 @@ impl CPlayer {
         } else if PlayerAction::Fireball == self.action {
             let obj = Ptr::new_box(MO_Fireball::new(
                 g,
-                Ptr::from_mut(&mut gp.get().rm.spr_fireball),
+                gp.get().rm.spr_fireball,
                 Vec2s::new((ix + 6) as i16, iy as i16),
                 4,
                 self.is_facing_right(gp.get()),
@@ -1664,7 +1665,7 @@ impl CPlayer {
             if self.is_facing_right(g) {
                 let obj = Ptr::new_box(MO_Hammer::new(
                     g,
-                    Ptr::from_mut(&mut gp.get().rm.spr_hammer),
+                    gp.get().rm.spr_hammer,
                     Vec2s::new((ix + 8) as i16, iy as i16),
                     6,
                     Vec2f::new(vx + 2.0f32, -HAMMERTHROW),
@@ -1678,7 +1679,7 @@ impl CPlayer {
             } else {
                 let obj = Ptr::new_box(MO_Hammer::new(
                     g,
-                    Ptr::from_mut(&mut gp.get().rm.spr_hammer),
+                    gp.get().rm.spr_hammer,
                     Vec2s::new((ix - 14) as i16, iy as i16),
                     6,
                     Vec2f::new(vx - 2.0f32, -HAMMERTHROW),
@@ -1707,7 +1708,7 @@ impl CPlayer {
             if self.is_facing_right(g) {
                 let obj = Ptr::new_box(MO_IceBlast::new(
                     g,
-                    Ptr::from_mut(&mut rm.spr_iceblast),
+                    rm.spr_iceblast,
                     Vec2s::new((ix + HALFPW - 2) as i16, (iy + HALFPH - 16) as i16),
                     5.0,
                     self.globalID,
@@ -1718,7 +1719,7 @@ impl CPlayer {
             } else {
                 let obj = Ptr::new_box(MO_IceBlast::new(
                     g,
-                    Ptr::from_mut(&mut rm.spr_iceblast),
+                    rm.spr_iceblast,
                     Vec2s::new((ix + HALFPW - 30) as i16, (iy + HALFPH - 16) as i16),
                     -5.0,
                     self.globalID,
@@ -1794,8 +1795,8 @@ impl CPlayer {
                     self.frictionslidetimer += 1;
                     if self.frictionslidetimer > 3 {
                         self.frictionslidetimer = 0;
-                        g.eyecandy[1].emplace(EC_SingleAnimation::new_rect(
-                            Ptr::from_mut(&mut g.rm.spr_frictionsmoke),
+                        g.eyecandy[1].emplace(EC_SingleAnimation::new_rect(&g.rm, 
+                            g.rm.spr_frictionsmoke,
                             self.ix,
                             (self.iy as i32 + PH - 12) as i16,
                             4,
@@ -1842,8 +1843,8 @@ impl CPlayer {
                     self.frictionslidetimer += 1;
                     if self.frictionslidetimer > 3 {
                         self.frictionslidetimer = 0;
-                        g.eyecandy[1].emplace(EC_SingleAnimation::new_rect(
-                            Ptr::from_mut(&mut g.rm.spr_frictionsmoke),
+                        g.eyecandy[1].emplace(EC_SingleAnimation::new_rect(&g.rm, 
+                            g.rm.spr_frictionsmoke,
                             (self.ix as i32 + PW - 16) as i16,
                             (self.iy as i32 + PH - 12) as i16,
                             4,
@@ -1953,7 +1954,7 @@ impl CPlayer {
         if self.state >= PlayerState::Dead {
             let iDeathSprite = if deathStyle == PlayerDeathStyle::Jump { PGFX_DEADFLYING } else { PGFX_DEAD } as usize;
 
-            let mut corpseSprite: Ptr<gfxSprite> = Ptr::from_mut(&mut self.sprites.get()[iDeathSprite]);
+            let mut corpseSprite: SpriteId = self.sprites[iDeathSprite];
             let isChicken = match gamemode_as::<CGM_Chicken>(g) {
                 Some(gmChicken) => gmChicken.chicken() == Ptr::from_mut(self),
                 None => false,
@@ -1961,24 +1962,24 @@ impl CPlayer {
 
             //If the player was a bobomb or chicken, make sure their death sprite matches
             if self.diedas == 1 || isChicken {
-                corpseSprite = Ptr::from_mut(&mut g.rm.spr_chocobo[self.colorID as usize][iDeathSprite]);
+                corpseSprite = g.rm.spr_chocobo[self.colorID as usize][iDeathSprite];
             } else if self.diedas == 2 || self.bobomb {
-                corpseSprite = Ptr::from_mut(&mut g.rm.spr_bobomb[self.colorID as usize][iDeathSprite]);
+                corpseSprite = g.rm.spr_bobomb[self.colorID as usize][iDeathSprite];
             } else if self.diedas == 3 || self.shyguy {
-                corpseSprite = Ptr::from_mut(&mut g.rm.spr_shyguy[self.colorID as usize][iDeathSprite]);
+                corpseSprite = g.rm.spr_shyguy[self.colorID as usize][iDeathSprite];
             }
 
             //Add eyecandy for the dead player
             if deathStyle == PlayerDeathStyle::Shatter || self.frozen {
-                let ice = Ptr::from_mut(&mut g.rm.spr_brokeniceblock);
-                g.eyecandy[2].emplace(EC_FallingObject::new(ice, (ix + HALFPW - 16) as i16, (iy + HALFPH - 16) as i16, -1.5, -7.0, 4, 2, 0, 0, 16, 16));
-                g.eyecandy[2].emplace(EC_FallingObject::new(ice, (ix + HALFPW) as i16, (iy + HALFPH - 16) as i16, 1.5, -7.0, 4, 2, 0, 0, 16, 16));
-                g.eyecandy[2].emplace(EC_FallingObject::new(ice, (ix + HALFPW - 16) as i16, (iy + HALFPH) as i16, -1.5, -4.0, 4, 2, 0, 0, 16, 16));
-                g.eyecandy[2].emplace(EC_FallingObject::new(ice, (ix + HALFPW) as i16, (iy + HALFPH) as i16, 1.5, -4.0, 4, 2, 0, 0, 16, 16));
+                let ice = g.rm.spr_brokeniceblock;
+                g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, ice, (ix + HALFPW - 16) as i16, (iy + HALFPH - 16) as i16, -1.5, -7.0, 4, 2, 0, 0, 16, 16));
+                g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, ice, (ix + HALFPW) as i16, (iy + HALFPH - 16) as i16, 1.5, -7.0, 4, 2, 0, 0, 16, 16));
+                g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, ice, (ix + HALFPW - 16) as i16, (iy + HALFPH) as i16, -1.5, -4.0, 4, 2, 0, 0, 16, 16));
+                g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, ice, (ix + HALFPW) as i16, (iy + HALFPH) as i16, 1.5, -4.0, 4, 2, 0, 0, 16, 16));
 
                 g.game_values.unlocksecret2part2 += 1;
             } else if deathStyle == PlayerDeathStyle::Jump {
-                g.eyecandy[2].emplace(EC_FallingObject::new(
+                g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, 
                     corpseSprite,
                     (ix + HALFPW - 16) as i16,
                     (iy + PH - 32) as i16,
@@ -1992,7 +1993,7 @@ impl CPlayer {
                     32,
                 ));
             } else if deathStyle == PlayerDeathStyle::Squish {
-                g.eyecandy[1].emplace(EC_Corpse::new(corpseSprite, (ix - PWOFFSET) as f32, (iy + PH - 32) as f32, self.iSrcOffsetX));
+                g.eyecandy[1].emplace(EC_Corpse::new(&gp.rm, corpseSprite, (ix - PWOFFSET) as f32, (iy + PH - 32) as f32, self.iSrcOffsetX));
             }
         }
 
@@ -2011,7 +2012,7 @@ impl CPlayer {
         if self.kuriboshoe.is_on() {
             let shoe = Ptr::new_box(CO_KuriboShoe::new(
                 g,
-                Ptr::from_mut(&mut rm.spr_kuriboshoe),
+                rm.spr_kuriboshoe,
                 Vec2s::new((ix - PWOFFSET) as i16, (iy - PHOFFSET) as i16),
                 self.kuriboshoe.get_type() == STICKY,
             ));
@@ -2273,8 +2274,8 @@ impl CPlayer {
                 "Tagged!".to_string(),
                 (-(VELJUMP as f64) * 1.5) as f32,
             ));
-            g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
+                g.rm.spr_fireballexplosion,
                 (t.ix as i32 + HALFPW - 16) as i16,
                 (t.iy as i32 + HALFPH - 16) as i16,
                 3,
@@ -2353,9 +2354,9 @@ impl CPlayer {
 
                 let src = Rect { x: used as i32 * 16, y: 0, w: 16, h: 16 };
                 if self.iswarping() {
-                    gp.rm.spr_storedpowerupsmall.draw_clip(g, powerupX as i32, powerupY as i32, &src, self.clip_edge(), self.get_warp_plane() as i32);
+                    gp.rm.sprite(gp.rm.spr_storedpowerupsmall).draw_clip(g, powerupX as i32, powerupY as i32, &src, self.clip_edge(), self.get_warp_plane() as i32);
                 } else {
-                    gp.rm.spr_storedpowerupsmall.draw_src(g, powerupX as i32, powerupY as i32, &src);
+                    gp.rm.sprite(gp.rm.spr_storedpowerupsmall).draw_src(g, powerupX as i32, powerupY as i32, &src);
                 }
             }
         }
@@ -2367,9 +2368,9 @@ impl CPlayer {
             let x = self.ix as i32 + HALFPW - if self.is_facing_right(g) { 4 } else { 10 };
             let y = self.iy as i32 - 10 - if self.kuriboshoe.is_on() { 16 } else { 0 };
             if self.iswarping() {
-                gp.rm.spr_crown.draw_clip(g, x, y, &Rect { x: 0, y: 0, w: 14, h: 14 }, self.clip_edge(), self.get_warp_plane() as i32);
+                gp.rm.sprite(gp.rm.spr_crown).draw_clip(g, x, y, &Rect { x: 0, y: 0, w: 14, h: 14 }, self.clip_edge(), self.get_warp_plane() as i32);
             } else {
-                gp.rm.spr_crown.draw(g, x, y);
+                gp.rm.sprite(gp.rm.spr_crown).draw(g, x, y);
             }
         }
     }
@@ -2404,11 +2405,11 @@ impl CPlayer {
         if self.tanookisuit.is_statue() {
             //Make sure the scoreboard still accurately represents the player
             if self.bobomb {
-                self.pScoreboardSprite = Ptr::from_mut(&mut g.rm.spr_bobomb[colorID]);
+                self.pScoreboardSprite = g.rm.spr_bobomb[colorID];
             } else if chicken == this {
-                self.pScoreboardSprite = Ptr::from_mut(&mut g.rm.spr_chocobo[colorID]);
+                self.pScoreboardSprite = g.rm.spr_chocobo[colorID];
             } else if self.shyguy {
-                self.pScoreboardSprite = Ptr::from_mut(&mut g.rm.spr_shyguy[colorID]);
+                self.pScoreboardSprite = g.rm.spr_shyguy[colorID];
             }
 
             self.tanookisuit.draw_statue(g, this.get());
@@ -2416,7 +2417,7 @@ impl CPlayer {
             return;
         } else if self.bobomb {
             //draw him as bob-omb
-            self.pScoreboardSprite = Ptr::from_mut(&mut g.rm.spr_bobomb[colorID]);
+            self.pScoreboardSprite = g.rm.spr_bobomb[colorID];
 
             //Add smoke to the top of the bomb
             if {
@@ -2426,8 +2427,8 @@ impl CPlayer {
                 && self.state == PlayerState::Ready
             {
                 self.bobombsmoketimer = 0;
-                g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut g.rm.spr_bobombsmoke),
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
+                    g.rm.spr_bobombsmoke,
                     (ix + HALFPH - 8) as i16,
                     (iy - PHOFFSET - 8) as i16,
                     4,
@@ -2436,19 +2437,19 @@ impl CPlayer {
             }
         } else if chicken == this {
             //draw him as chicken
-            self.pScoreboardSprite = Ptr::from_mut(&mut g.rm.spr_chocobo[colorID]);
+            self.pScoreboardSprite = g.rm.spr_chocobo[colorID];
         } else if self.shyguy {
             //draw him as chicken
-            self.pScoreboardSprite = Ptr::from_mut(&mut g.rm.spr_shyguy[colorID]);
-            gp.rm.spr_ownedtags.draw_src(g, ix - PWOFFSET - 8, iy - PHOFFSET - 8, &Rect { x: self.ownerColorOffsetX as i32, y: 0, w: 48, h: 48 });
+            self.pScoreboardSprite = g.rm.spr_shyguy[colorID];
+            gp.rm.sprite(gp.rm.spr_ownedtags).draw_src(g, ix - PWOFFSET - 8, iy - PHOFFSET - 8, &Rect { x: self.ownerColorOffsetX as i32, y: 0, w: 48, h: 48 });
         }
 
         if self.ownerPlayerID > -1 {
             let src = Rect { x: self.ownerColorOffsetX as i32, y: 0, w: 48, h: 48 };
             if self.iswarping() {
-                gp.rm.spr_ownedtags.draw_clip(g, ix - PWOFFSET - 8, iy - PHOFFSET - 8, &src, self.clip_edge(), self.get_warp_plane() as i32);
+                gp.rm.sprite(gp.rm.spr_ownedtags).draw_clip(g, ix - PWOFFSET - 8, iy - PHOFFSET - 8, &src, self.clip_edge(), self.get_warp_plane() as i32);
             } else {
-                gp.rm.spr_ownedtags.draw_src(g, ix - PWOFFSET - 8, iy - PHOFFSET - 8, &src);
+                gp.rm.sprite(gp.rm.spr_ownedtags).draw_src(g, ix - PWOFFSET - 8, iy - PHOFFSET - 8, &src);
             }
         }
 
@@ -2473,12 +2474,12 @@ impl CPlayer {
 
         //Don't draw the player if he is frozen in a shoe
         if !self.frozen || !self.kuriboshoe.is_on() {
-            let spr = &self.pScoreboardSprite.get()[self.sprite_state as usize];
+            let spr = self.pScoreboardSprite[self.sprite_state as usize];
             let src = Rect { x: self.iSrcOffsetX as i32, y: 0, w: 32, h: 32 };
             if self.iswarping() {
-                spr.draw_clip(g, ix - PWOFFSET, iy - PHOFFSET - iPlayerKuriboOffsetY, &src, self.clip_edge(), self.get_warp_plane() as i32);
+                g.rm.sprite(spr).draw_clip(g, ix - PWOFFSET, iy - PHOFFSET - iPlayerKuriboOffsetY, &src, self.clip_edge(), self.get_warp_plane() as i32);
             } else {
-                spr.draw_src(g, ix - PWOFFSET, iy - PHOFFSET - iPlayerKuriboOffsetY, &src);
+                g.rm.sprite(spr).draw_src(g, ix - PWOFFSET, iy - PHOFFSET - iPlayerKuriboOffsetY, &src);
             }
         }
 
@@ -2495,9 +2496,9 @@ impl CPlayer {
         if self.frozen {
             let src = Rect { x: 0, y: 0, w: 32, h: 32 };
             if self.iswarping() {
-                gp.rm.spr_iceblock.draw_clip(g, ix - PWOFFSET, iy - PHOFFSET, &src, self.clip_edge(), self.get_warp_plane() as i32);
+                gp.rm.sprite(gp.rm.spr_iceblock).draw_clip(g, ix - PWOFFSET, iy - PHOFFSET, &src, self.clip_edge(), self.get_warp_plane() as i32);
             } else {
-                gp.rm.spr_iceblock.draw_src(g, ix - PWOFFSET, iy - PHOFFSET, &src);
+                gp.rm.sprite(gp.rm.spr_iceblock).draw_src(g, ix - PWOFFSET, iy - PHOFFSET, &src);
             }
         }
 
@@ -3260,8 +3261,8 @@ impl CPlayer {
             self.frozen = true;
             self.frozentimer = iTime;
 
-            g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(&g.rm, 
+                g.rm.spr_fireballexplosion,
                 (self.ix as i32 + HALFPW - 16) as i16,
                 (self.iy as i32 + HALFPH - 16) as i16,
                 3,
@@ -3339,8 +3340,8 @@ impl CPlayer {
                 self.set_stored_powerup_type(g, PowerupType::Bobomb);
             } else {
                 if_sound_on_play(g, &mut gp.rm.sfx_transform);
-                g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut g.rm.spr_poof),
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
+                    g.rm.spr_poof,
                     (self.ix as i32 + HALFPW - 24) as i16,
                     (self.iy as i32 + HALFPH - 24) as i16,
                     4,
@@ -3368,8 +3369,8 @@ impl CPlayer {
             }
         } else {
             if iPowerup == 3 || iPowerup == 7 || iPowerup == 8 {
-                g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
+                    g.rm.spr_fireballexplosion,
                     (self.ix as i32 + HALFPW - 16) as i16,
                     (self.iy as i32 + HALFPH - 16) as i16,
                     3,

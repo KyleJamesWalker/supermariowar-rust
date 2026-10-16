@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_KingOfTheHillZone.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -39,7 +40,7 @@ pub struct OMO_KingOfTheHillZone {
 impl_base!(OMO_KingOfTheHillZone => io_over_map_object: IO_OverMapObject);
 
 impl OMO_KingOfTheHillZone {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId) -> Self {
         let mut this = OMO_KingOfTheHillZone {
             io_over_map_object: IO_OverMapObject::new(g, nspr, Vec2s::zero(), 5, 0, -1, -1, -1, -1, -1, -1, -1, -1),
             playersTouching: [Ptr::null(); 4],
@@ -229,7 +230,7 @@ impl CObjectTrait for OMO_KingOfTheHillZone {
                 let iRowX: i16 = (self.iy as i32 + ((iRow as i32) << 5)) as i16;
 
                 if self.multiplier > 1 {
-                    gp.rm.spr_awardkillsinrow.draw_src(
+                    gp.rm.sprite(gp.rm.spr_awardkillsinrow).draw_src(
                         g,
                         iColX as i32 + 8,
                         iRowX as i32 + 8,
@@ -237,7 +238,7 @@ impl CObjectTrait for OMO_KingOfTheHillZone {
                     );
                 }
 
-                self.spr.draw_src(g, iColX as i32, iRowX as i32, &Rect { x: iXPiece as i32 + self.frame as i32, y: iYPiece as i32, w: TILESIZE, h: TILESIZE });
+                g.rm.sprite(self.spr).draw_src(g, iColX as i32, iRowX as i32, &Rect { x: iXPiece as i32 + self.frame as i32, y: iYPiece as i32, w: TILESIZE, h: TILESIZE });
             }
         }
     }

@@ -1,5 +1,6 @@
 //! Port of src/smw/ui/MI_StoredPowerupResetButton.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -15,7 +16,7 @@ pub struct MI_StoredPowerupResetButton {
 crate::impl_base!(MI_StoredPowerupResetButton => mi_button: MI_Button);
 
 impl MI_StoredPowerupResetButton {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, x: i16, y: i16, name: impl Into<String>, width: i16, align: TextAlign) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, x: i16, y: i16, name: impl Into<String>, width: i16, align: TextAlign) -> Self {
         MI_StoredPowerupResetButton { mi_button: MI_Button::new(g, nspr, x, y, name, width, align) }
     }
 }
@@ -46,8 +47,8 @@ impl UI_ControlTrait for MI_StoredPowerupResetButton {
         let iWidth = self.iWidth as i32;
 
         for iPowerup in 0..4i32 {
-            gp.rm.spr_selectfield.draw_src(g, x + iWidth - 142 + iPowerup * 30, y + 4, &Rect { x: 188, y: 88, w: 24, h: 24 });
-            gp.rm.spr_storedpowerupsmall.draw_src(
+            gp.rm.sprite(gp.rm.spr_selectfield).draw_src(g, x + iWidth - 142 + iPowerup * 30, y + 4, &Rect { x: 188, y: 88, w: 24, h: 24 });
+            gp.rm.sprite(gp.rm.spr_storedpowerupsmall).draw_src(
                 g,
                 x + iWidth - 138 + iPowerup * 30,
                 y + 8,

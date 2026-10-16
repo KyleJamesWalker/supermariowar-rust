@@ -2,6 +2,7 @@
 //!
 //! `_DEBUG`-only code (autotest, debug hotkeys, autokill) is not ported: the reference build is Release.
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::keys::*;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -350,9 +351,6 @@ pub fn get_mode_icon_index_from_mode(mut iMode: i16) -> i16 {
     iMode
 }
 
-fn spr(s: &mut gfxSprite) -> Ptr<gfxSprite> {
-    Ptr::from_mut(s)
-}
 
 fn draw_rect(g: &mut Game, sprite: &gfxSprite, x: i32, y: i32, sx: i32, sy: i32, w: i32, h: i32) {
     sprite.draw_src(g, x, y, &Rect { x: sx, y: sy, w, h });
@@ -398,7 +396,7 @@ impl GameplayState {
                         teamid,
                         subteamid,
                         g.game_values.colorids[p],
-                        Ptr::from_mut(&mut gp.get().rm.spr_player[p]),
+                        gp.get().rm.spr_player[p],
                         g.score[teamid as usize],
                         Ptr::from_mut(&mut self.respawnCount[p]),
                         ai.map(|a| a as Box<dyn crate::smw::ai::CPlayerAITrait>),
@@ -489,7 +487,7 @@ impl GameplayState {
                     //add cloud to eyecandy array
                     let x = RANDOM_INT(gp.get(), App::screenWidth) as f32;
                     let y = RANDOM_INT(gp.get(), 100) as f32;
-                    g.eyecandy[iEyeCandyLayer].emplace(EC_Cloud::new(spr(&mut g.rm.spr_clouds), x, y, velx, 0, srcy, w, h));
+                    g.eyecandy[iEyeCandyLayer].emplace(EC_Cloud::new(&gp.rm, g.rm.spr_clouds, x, y, velx, 0, srcy, w, h));
                 }
             }
 
@@ -504,8 +502,8 @@ impl GameplayState {
                     //add cloud to eyecandy array
                     let x = RANDOM_INT(gp.get(), App::screenWidth) as f32;
                     let y = RANDOM_INT(gp.get(), 100) as f32;
-                    g.eyecandy[iEyeCandyLayer].emplace(EC_Ghost::new(
-                        spr(&mut g.rm.spr_ghosts),
+                    g.eyecandy[iEyeCandyLayer].emplace(EC_Ghost::new(&gp.rm, 
+                        g.rm.spr_ghosts,
                         x,
                         y,
                         velx,
@@ -524,7 +522,7 @@ impl GameplayState {
                 for _i in 0..15 {
                     let x = RANDOM_INT(gp.get(), App::screenWidth) as f32;
                     let y = RANDOM_INT(gp.get(), App::screenHeight) as f32;
-                    gp.eyecandy[iEyeCandyLayer].emplace(EC_Leaf::new(g, spr(&mut rm.spr_leaves), x, y));
+                    gp.eyecandy[iEyeCandyLayer].emplace(EC_Leaf::new(g, rm.spr_leaves, x, y));
                 }
             }
 
@@ -533,7 +531,7 @@ impl GameplayState {
                 for _i in 0..15 {
                     let x = RANDOM_INT(gp.get(), App::screenWidth) as f32;
                     let y = RANDOM_INT(gp.get(), App::screenHeight) as f32;
-                    gp.eyecandy[iEyeCandyLayer].emplace(EC_Snow::new(g, spr(&mut rm.spr_snow), x, y, 0));
+                    gp.eyecandy[iEyeCandyLayer].emplace(EC_Snow::new(g, rm.spr_snow, x, y, 0));
                 }
             }
 
@@ -570,8 +568,8 @@ impl GameplayState {
                     let iPossibleY: i16 = ((App::screenHeight - h as i32) / 10) as i16;
                     let dDestY: f32 = (RANDOM_INT(gp.get(), iPossibleY as i32) + iPossibleY as i32 * i as i32) as f32;
                     let x = RANDOM_INT(gp.get(), App::screenWidth) as f32;
-                    g.eyecandy[iEyeCandyLayer].emplace(EC_Cloud::new(
-                        spr(&mut g.rm.spr_fish),
+                    g.eyecandy[iEyeCandyLayer].emplace(EC_Cloud::new(&g.rm, 
+                        g.rm.spr_fish,
                         x,
                         dDestY,
                         velx,
@@ -588,7 +586,7 @@ impl GameplayState {
                 for _i in 0..20 {
                     let x = RANDOM_INT(gp.get(), App::screenWidth) as f32;
                     let y = RANDOM_INT(gp.get(), App::screenHeight) as f32;
-                    gp.eyecandy[iEyeCandyLayer].emplace(EC_Rain::new(g, spr(&mut rm.spr_rain), x, y));
+                    gp.eyecandy[iEyeCandyLayer].emplace(EC_Rain::new(g, rm.spr_rain, x, y));
                 }
             }
 
@@ -597,7 +595,7 @@ impl GameplayState {
                 for _i in 0..10 {
                     let x = RANDOM_INT(gp.get(), App::screenWidth) as f32;
                     let y = RANDOM_INT(gp.get(), App::screenHeight) as f32;
-                    gp.eyecandy[iEyeCandyLayer].emplace(EC_Bubble::new(g, spr(&mut rm.spr_rain), x, y));
+                    gp.eyecandy[iEyeCandyLayer].emplace(EC_Bubble::new(g, rm.spr_rain, x, y));
                 }
             }
         }
@@ -1179,9 +1177,9 @@ impl GameplayState {
                 let teamcount = g.game_values.teamcounts[i];
                 let gm = g.game_values.gamemode.gamemode;
                 if gm == game_mode_health || gm == game_mode_collection || gm == game_mode_boxes_minigame {
-                    gp.rm.spr_shade[(teamcount - 1) as usize].draw(g, s.x as i32, s.y as i32);
+                    gp.rm.sprite(gp.rm.spr_shade[(teamcount - 1) as usize]).draw(g, s.x as i32, s.y as i32);
                 } else {
-                    draw_rect(g, &gp.rm.spr_shade[(teamcount - 1) as usize], s.x as i32, s.y as i32, 0, 0, 256, 41);
+                    draw_rect(g, &gp.rm.sprite(gp.rm.spr_shade[(teamcount - 1) as usize]), s.x as i32, s.y as i32, 0, 0, 256, 41);
                 }
 
                 for k in 0..teamcount as usize {
@@ -1202,10 +1200,10 @@ impl GameplayState {
 
                         let scorex: i16 = (s.x as i32 + Self::scoreoffsets[k] as i32) as i16;
                         let scorey: i16 = (s.y as i32 + 2) as i16;
-                        draw_rect(g, &gp.rm.spr_egg, scorex as i32, scorey as i32, self.respawnanimationframe[gid] as i32, (g.game_values.colorids[gid] as i32) << 5, 32, 32);
+                        draw_rect(g, &gp.rm.sprite(gp.rm.spr_egg), scorex as i32, scorey as i32, self.respawnanimationframe[gid] as i32, (g.game_values.colorids[gid] as i32) << 5, 32, 32);
                         draw_rect(
                             g,
-                            &gp.rm.spr_eggnumbers,
+                            &gp.rm.sprite(gp.rm.spr_eggnumbers),
                             scorex as i32,
                             scorey as i32,
                             ((self.respawnCount[gid] as i32 - 1) >> 1) << 5,
@@ -1235,29 +1233,29 @@ impl GameplayState {
                             let (ox, oy) = (iScoreOffsetX as i32, iScoreOffsetY as i32);
 
                             if player.ownerPlayerID > -1 {
-                                draw_rect(g, &gp.rm.spr_ownedtags, ox - 8, oy - 8, player.ownerColorOffsetX as i32, 0, 48, 48);
+                                draw_rect(g, gp.rm.sprite(gp.rm.spr_ownedtags), ox - 8, oy - 8, player.ownerColorOffsetX as i32, 0, 48, 48);
                             }
 
-                            draw_rect(g, &player.get_scoreboard_sprite()[iScoreboardSprite as usize], ox, oy, player.iSrcOffsetX as i32, 0, 32, 32);
+                            draw_rect(g, gp.rm.sprite(player.get_scoreboard_sprite()[iScoreboardSprite as usize]), ox, oy, player.iSrcOffsetX as i32, 0, 32, 32);
 
                             //Display jail if player is jailed
                             if player.jail.is_active() {
-                                draw_rect(g, &gp.rm.spr_jail, ox - 6, oy - 6, (player.jail.get_color() as i32 + 1) * 44, 0, 44, 44);
+                                draw_rect(g, &gp.rm.sprite(gp.rm.spr_jail), ox - 6, oy - 6, (player.jail.get_color() as i32 + 1) * 44, 0, 44, 44);
                             }
 
                             //Display current powerup if player is using one
                             if player.powerup > 0 {
-                                draw_rect(g, &gp.rm.spr_storedpowerupsmall, ox, oy + 16, Self::g_iPowerupToIcon[(player.powerup - 1) as usize] as i32, 0, 16, 16);
+                                draw_rect(g, &gp.rm.sprite(gp.rm.spr_storedpowerupsmall), ox, oy + 16, Self::g_iPowerupToIcon[(player.powerup - 1) as usize] as i32, 0, 16, 16);
                             }
 
                             //Display tanooki powerup if player has it
                             if player.tanookisuit.is_on() {
-                                draw_rect(g, &gp.rm.spr_storedpowerupsmall, ox + 16, oy + 16, App::screenWidth / 2, 0, 16, 16);
+                                draw_rect(g, &gp.rm.sprite(gp.rm.spr_storedpowerupsmall), ox + 16, oy + 16, App::screenWidth / 2, 0, 16, 16);
                             }
                         } else {
                             draw_rect(
                                 g,
-                                &gp.rm.spr_player[gid][iScoreboardSprite as usize],
+                                &gp.rm.sprite(gp.rm.spr_player[gid][iScoreboardSprite as usize]),
                                 s.x as i32 + Self::scoreoffsets[k] as i32,
                                 s.y as i32 + 2,
                                 0,
@@ -1269,7 +1267,7 @@ impl GameplayState {
 
                         //give crown to player(s) with most kills
                         if g.g_iWinningPlayer as i32 == i as i32 {
-                            gp.rm.spr_crown.draw(g, s.x as i32 + Self::scoreoffsets[k] as i32 + 12, s.y as i32 - 4);
+                            gp.rm.sprite(gp.rm.spr_crown).draw(g, s.x as i32 + Self::scoreoffsets[k] as i32 + 12, s.y as i32 - 4);
                         }
                     }
 
@@ -1280,7 +1278,7 @@ impl GameplayState {
                         if !g.game_values.flags.swapplayers {
                             draw_rect(
                                 g,
-                                &gp.rm.spr_storedpowerupsmall,
+                                &gp.rm.sprite(gp.rm.spr_storedpowerupsmall),
                                 s.x as i32 + scorepowerupoffsets[(teamcount - 1) as usize][k] as i32,
                                 s.y as i32 + 25,
                                 storedpowerupid as i32 * 16,
@@ -1302,9 +1300,9 @@ impl GameplayState {
                     while iHeart < iLife {
                         let dx = iHeartX as i32 + iHeart as i32 * 8;
                         if iHeart == iMax - 1 && iHeart % 2 == 0 {
-                            draw_rect(g, &gp.rm.spr_scorehearts, dx, s.y as i32 + 43, 32, 0, 8, 16);
+                            draw_rect(g, &gp.rm.sprite(gp.rm.spr_scorehearts), dx, s.y as i32 + 43, 32, 0, 8, 16);
                         } else {
-                            draw_rect(g, &gp.rm.spr_scorehearts, dx, s.y as i32 + 43, if iHeart % 2 != 0 { 8 } else { 0 }, 0, 8, 16);
+                            draw_rect(g, &gp.rm.sprite(gp.rm.spr_scorehearts), dx, s.y as i32 + 43, if iHeart % 2 != 0 { 8 } else { 0 }, 0, 8, 16);
                         }
                         iHeart += 1;
                     }
@@ -1313,9 +1311,9 @@ impl GameplayState {
                     while iHeart < iMax {
                         let dx = iHeartX as i32 + iHeart as i32 * 8;
                         if iHeart == iMax - 1 && iHeart % 2 == 0 {
-                            draw_rect(g, &gp.rm.spr_scorehearts, dx, s.y as i32 + 43, 40, 0, 8, 16);
+                            draw_rect(g, &gp.rm.sprite(gp.rm.spr_scorehearts), dx, s.y as i32 + 43, 40, 0, 8, 16);
                         } else {
-                            draw_rect(g, &gp.rm.spr_scorehearts, dx, s.y as i32 + 43, if iHeart % 2 != 0 { 24 } else { 16 }, 0, 8, 16);
+                            draw_rect(g, &gp.rm.sprite(gp.rm.spr_scorehearts), dx, s.y as i32 + 43, if iHeart % 2 != 0 { 24 } else { 16 }, 0, 8, 16);
                         }
                         iHeart += 1;
                     }
@@ -1328,7 +1326,7 @@ impl GameplayState {
                         let iCardX: i16 = (s.x as i32 + scorepowerupoffsets[(teamcount - 1) as usize][0] as i32 - 20) as i16;
 
                         for iCard in 0..iNumCards {
-                            draw_rect(g, &gp.rm.spr_scorecards, iCardX as i32 + iCard as i32 * 20, s.y as i32 + 43, (iCardValues as i32 & 3) << 4, 0, 16, 16);
+                            draw_rect(g, &gp.rm.sprite(gp.rm.spr_scorecards), iCardX as i32 + iCard as i32 * 20, s.y as i32 + 43, (iCardValues as i32 & 3) << 4, 0, 16, 16);
                             iCardValues >>= 2;
                         }
                     }
@@ -1339,12 +1337,12 @@ impl GameplayState {
 
                     let mut iCoin: i16 = 0;
                     while iCoin < iNumCoins {
-                        draw_rect(g, &gp.rm.spr_scorecoins, iCoinX as i32 + iCoin as i32 * 16, s.y as i32 + 43, 0, 0, 16, 16);
+                        draw_rect(g, &gp.rm.sprite(gp.rm.spr_scorecoins), iCoinX as i32 + iCoin as i32 * 16, s.y as i32 + 43, 0, 0, 16, 16);
                         iCoin += 1;
                     }
 
                     for iEmptyCoin in iCoin..5 {
-                        draw_rect(g, &gp.rm.spr_scorecoins, iCoinX as i32 + iEmptyCoin as i32 * 16, s.y as i32 + 43, 16, 0, 16, 16);
+                        draw_rect(g, &gp.rm.sprite(gp.rm.spr_scorecoins), iCoinX as i32 + iEmptyCoin as i32 * 16, s.y as i32 + 43, 16, 0, 16, 16);
                     }
                 }
 
@@ -1352,9 +1350,9 @@ impl GameplayState {
                 let iScoreY: i16 = (s.y as i32 + 4) as i16;
                 let (sx, sy) = (iScoreX as i32, iScoreY as i32);
 
-                draw_rect(g, &gp.rm.spr_scoretext, sx, sy, s.iDigitLeft as i32, if s.iDigitLeft == 0 { 16 } else { 0 }, 16, 16);
-                draw_rect(g, &gp.rm.spr_scoretext, sx + 18, sy, s.iDigitMiddle as i32, if s.iDigitLeft == 0 && s.iDigitMiddle == 0 { 16 } else { 0 }, 16, 16);
-                draw_rect(g, &gp.rm.spr_scoretext, sx + 36, sy, s.iDigitRight as i32, 0, 16, 16);
+                draw_rect(g, &gp.rm.sprite(gp.rm.spr_scoretext), sx, sy, s.iDigitLeft as i32, if s.iDigitLeft == 0 { 16 } else { 0 }, 16, 16);
+                draw_rect(g, &gp.rm.sprite(gp.rm.spr_scoretext), sx + 18, sy, s.iDigitMiddle as i32, if s.iDigitLeft == 0 && s.iDigitMiddle == 0 { 16 } else { 0 }, 16, 16);
+                draw_rect(g, &gp.rm.sprite(gp.rm.spr_scoretext), sx + 36, sy, s.iDigitRight as i32, 0, 16, 16);
             }
         }
     }
@@ -1383,7 +1381,7 @@ impl GameplayState {
 
                     g.eyecandy[2].emplace(EC_Announcement::new(
                         Ptr::from_mut(&mut g.rm.game_font_large),
-                        spr(&mut g.rm.menu_mode_large),
+                        g.rm.menu_mode_large,
                         szMode,
                         iMode,
                         130,
@@ -1397,8 +1395,8 @@ impl GameplayState {
         }
 
         if g.game_values.screenfade > 0 {
-            g.rm.menu_shade.setalpha(g.game_values.screenfade as u8);
-            gp.rm.menu_shade.draw(g, 0, 0);
+            g.rm.sprite(g.rm.menu_shade).setalpha(g.game_values.screenfade as u8);
+            gp.rm.sprite(gp.rm.menu_shade).draw(g, 0, 0);
         }
     }
 
@@ -1446,7 +1444,7 @@ impl GameplayState {
                             + player.iOldPowerupY as i32) as i16;
                     }
 
-                    draw_rect(g, &gp.rm.spr_storedpowerupsmall, iPowerupX as i32, iPowerupY as i32, storedpowerupid as i32 * 16, 0, 16, 16);
+                    draw_rect(g, &gp.rm.sprite(gp.rm.spr_storedpowerupsmall), iPowerupX as i32, iPowerupY as i32, storedpowerupid as i32 * 16, 0, 16, 16);
                 }
             }
 
@@ -1477,8 +1475,8 @@ impl GameplayState {
                 if g.game_values.swapstyle == 1 {
                     for i in 0..g.players.len() {
                         let player = g.players[i];
-                        g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                            spr(&mut g.rm.spr_fireballexplosion),
+                        g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
+                            g.rm.spr_fireballexplosion,
                             (player.left_x() as i32 + HALFPW - 16) as i16,
                             (player.top_y() as i32 + HALFPH - 16) as i16,
                             3,
@@ -1492,7 +1490,7 @@ impl GameplayState {
 
     fn draw_back_layer(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        gp.rm.spr_backmap[gp.g_iCurrentDrawIndex as usize].draw(g, 0, 0);
+        gp.rm.sprite(gp.rm.spr_backmap[gp.g_iCurrentDrawIndex as usize]).draw(g, 0, 0);
 
         //draw back eyecandy behind players
         gp.g_map.draw_platforms(g, 0);
@@ -1544,10 +1542,10 @@ impl GameplayState {
         let mut gp = g.ptr();
         if g.game_values.windaffectsplayers {
             let iDisplayWindMeterY: i16 = if g.game_values.scoreboardstyle == ScoreboardStyle::Bottom { 8 } else { 440 };
-            draw_rect(g, &gp.rm.spr_windmeter, 210, iDisplayWindMeterY as i32, 0, 0, 220, 32);
+            draw_rect(g, &gp.rm.sprite(gp.rm.spr_windmeter), 210, iDisplayWindMeterY as i32, 0, 0, 220, 32);
             draw_rect(
                 g,
-                &gp.rm.spr_windmeter,
+                &gp.rm.sprite(gp.rm.spr_windmeter),
                 ((gp.game_values.flags.gamewindx * 20.0f32) as i16) as i32 + App::screenWidth / 2,
                 iDisplayWindMeterY as i32 + 6,
                 220,
@@ -1564,7 +1562,7 @@ impl GameplayState {
         if self.iCountDownState > 0 && g.game_values.screenfade == 0 {
             let idx = (28 - self.iCountDownState) as usize;
             let rects: &[Rect; 2] = &iCountDownNumbers[iCountDownRectGroup[idx] as usize][iCountDownRectSize[idx] as usize];
-            gp.rm.spr_countdown_numbers.draw_src(g, rects[1].x, rects[1].y, &rects[0]);
+            gp.rm.sprite(gp.rm.spr_countdown_numbers).draw_src(g, rects[1].x, rects[1].y, &rects[0]);
         }
     }
 
@@ -1602,12 +1600,12 @@ impl GameplayState {
 pub fn draw_exit_pause_dialog(g: &mut Game) {
         let mut gp = g.ptr();
     if g.game_values.flags.pausegame {
-        gp.rm.spr_dialog.draw(g, 224, 176);
+        gp.rm.sprite(gp.rm.spr_dialog).draw(g, 224, 176);
         gp.rm.menu_font_large.draw_centered(g, App::screenWidth / 2, 194, "Pause");
 
         let iMode = get_mode_icon_index_from_mode(g.game_values.gamemode.gamemode as i16);
 
-        draw_rect(g, &gp.rm.menu_mode_large, 304, 224, (iMode as i32) << 5, 0, 32, 32);
+        draw_rect(g, &gp.rm.sprite(gp.rm.menu_mode_large), 304, 224, (iMode as i32) << 5, 0, 32, 32);
 
         let mut szGoal: String = g.game_values.gamemode.get_goal_name().to_string() + ": ";
 
@@ -1623,11 +1621,11 @@ pub fn draw_exit_pause_dialog(g: &mut Game) {
     if g.game_values.flags.exitinggame {
         let sw = App::screenWidth as f32;
         let sh = App::screenHeight as f32;
-        gp.rm.spr_dialog.draw(g, (sw * 0.35f32) as i32, (sh * 0.37f32) as i32);
+        gp.rm.sprite(gp.rm.spr_dialog).draw(g, (sw * 0.35f32) as i32, (sh * 0.37f32) as i32);
         gp.rm.menu_font_large.draw_centered(g, (sw * 0.5f32) as i32, (sh * 0.46f32 - (g.rm.menu_font_large.get_height() >> 1) as f32) as i32, "Exit Game");
 
-        draw_rect(g, &gp.rm.spr_dialogbutton, (sw * 0.37f32) as i32, (sh * 0.52f32) as i32, 0, if gp.game_values.flags.exityes { 34 } else { 0 }, 80, 34);
-        draw_rect(g, &gp.rm.spr_dialogbutton, (sw * 0.51f32) as i32, (sh * 0.52f32) as i32, 0, if gp.game_values.flags.exityes { 0 } else { 34 }, 80, 34);
+        draw_rect(g, &gp.rm.sprite(gp.rm.spr_dialogbutton), (sw * 0.37f32) as i32, (sh * 0.52f32) as i32, 0, if gp.game_values.flags.exityes { 34 } else { 0 }, 80, 34);
+        draw_rect(g, &gp.rm.sprite(gp.rm.spr_dialogbutton), (sw * 0.51f32) as i32, (sh * 0.52f32) as i32, 0, if gp.game_values.flags.exityes { 0 } else { 34 }, 80, 34);
 
         gp.rm.menu_font_large.draw(
             g,
@@ -1847,28 +1845,28 @@ pub fn spawn_map_block(g: &mut Game, typeId: i16, drawPos: Vec2s, objdata: &MapB
         let mut gp = g.ptr();
         let mut rm = g.rm;
         let mut gp = g.ptr();
-    let wbb = || spr(&mut gp.get().rm.spr_weaponbreakableblock);
+    let wbb = || gp.get().rm.spr_weaponbreakableblock;
     match typeId as i32 {
-        MapBlock_BrickYellow => new_block(B_BreakableBlock::new(g, spr(&mut rm.spr_breakableblock), drawPos, 4, 10)),
-        MapBlock_Powerup => new_block(B_PowerupBlock::new(g, spr(&mut gp.rm.spr_powerupblock), drawPos, 4, 10, objdata.fHidden, &objdata.iSettings)),
-        MapBlock_Donut => new_block(B_DonutBlock::new(g, spr(&mut rm.spr_donutblock), drawPos)),
-        MapBlock_Flip => new_block(B_FlipBlock::new(g, spr(&mut rm.spr_flipblock), drawPos, objdata.fHidden)),
-        MapBlock_Bounce => new_block(B_BounceBlock::new(g, spr(&mut rm.spr_bounceblock), drawPos, objdata.fHidden)),
-        MapBlock_NoteGray => new_block(B_NoteBlock::new(g, spr(&mut rm.spr_noteblock), drawPos, 4, 10, NoteBlockType::Gray, objdata.fHidden)),
-        MapBlock_BrickBlue => new_block(B_ThrowBlock::new(g, spr(&mut rm.spr_throwblock), drawPos, 4, 10, ThrowBlockType::Blue)),
-        MapBlock_SwitchToggleRed => new_block(B_OnOffSwitchBlock::new(g, spr(&mut rm.spr_switchblocks), drawPos, SwitchColor::Red, switchStates[0])),
-        MapBlock_SwitchToggleGreen => new_block(B_OnOffSwitchBlock::new(g, spr(&mut rm.spr_switchblocks), drawPos, SwitchColor::Green, switchStates[1])),
-        MapBlock_SwitchToggleYellow => new_block(B_OnOffSwitchBlock::new(g, spr(&mut rm.spr_switchblocks), drawPos, SwitchColor::Yellow, switchStates[2])),
-        MapBlock_SwitchToggleBlue => new_block(B_OnOffSwitchBlock::new(g, spr(&mut rm.spr_switchblocks), drawPos, SwitchColor::Blue, switchStates[3])),
-        MapBlock_SwitchBlockRed => new_block(B_SwitchBlock::new(g, spr(&mut rm.spr_switchblocks), drawPos, SwitchColor::Red, objdata.iSettings[0])),
-        MapBlock_SwitchBlockGreen => new_block(B_SwitchBlock::new(g, spr(&mut rm.spr_switchblocks), drawPos, SwitchColor::Green, objdata.iSettings[0])),
-        MapBlock_SwitchBlockYellow => new_block(B_SwitchBlock::new(g, spr(&mut rm.spr_switchblocks), drawPos, SwitchColor::Yellow, objdata.iSettings[0])),
-        MapBlock_SwitchBlockBlue => new_block(B_SwitchBlock::new(g, spr(&mut rm.spr_switchblocks), drawPos, SwitchColor::Blue, objdata.iSettings[0])),
-        MapBlock_View => new_block(B_ViewBlock::new(g, spr(&mut gp.rm.spr_viewblock), drawPos, objdata.fHidden, &objdata.iSettings)),
-        MapBlock_BrickRed => new_block(B_ThrowBlock::new(g, spr(&mut rm.spr_throwblock), drawPos, 4, 10, ThrowBlockType::Red)),
-        MapBlock_NoteRed => new_block(B_NoteBlock::new(g, spr(&mut rm.spr_noteblock), drawPos, 4, 10, NoteBlockType::Red, objdata.fHidden)),
-        MapBlock_NoteBlue => new_block(B_NoteBlock::new(g, spr(&mut rm.spr_noteblock), drawPos, 4, 10, NoteBlockType::Blue, objdata.fHidden)),
-        MapBlock_BrickGray => new_block(B_ThrowBlock::new(g, spr(&mut rm.spr_throwblock), drawPos, 4, 10, ThrowBlockType::Gray)),
+        MapBlock_BrickYellow => new_block(B_BreakableBlock::new(g, rm.spr_breakableblock, drawPos, 4, 10)),
+        MapBlock_Powerup => new_block(B_PowerupBlock::new(g, gp.rm.spr_powerupblock, drawPos, 4, 10, objdata.fHidden, &objdata.iSettings)),
+        MapBlock_Donut => new_block(B_DonutBlock::new(g, rm.spr_donutblock, drawPos)),
+        MapBlock_Flip => new_block(B_FlipBlock::new(g, rm.spr_flipblock, drawPos, objdata.fHidden)),
+        MapBlock_Bounce => new_block(B_BounceBlock::new(g, rm.spr_bounceblock, drawPos, objdata.fHidden)),
+        MapBlock_NoteGray => new_block(B_NoteBlock::new(g, rm.spr_noteblock, drawPos, 4, 10, NoteBlockType::Gray, objdata.fHidden)),
+        MapBlock_BrickBlue => new_block(B_ThrowBlock::new(g, rm.spr_throwblock, drawPos, 4, 10, ThrowBlockType::Blue)),
+        MapBlock_SwitchToggleRed => new_block(B_OnOffSwitchBlock::new(g, rm.spr_switchblocks, drawPos, SwitchColor::Red, switchStates[0])),
+        MapBlock_SwitchToggleGreen => new_block(B_OnOffSwitchBlock::new(g, rm.spr_switchblocks, drawPos, SwitchColor::Green, switchStates[1])),
+        MapBlock_SwitchToggleYellow => new_block(B_OnOffSwitchBlock::new(g, rm.spr_switchblocks, drawPos, SwitchColor::Yellow, switchStates[2])),
+        MapBlock_SwitchToggleBlue => new_block(B_OnOffSwitchBlock::new(g, rm.spr_switchblocks, drawPos, SwitchColor::Blue, switchStates[3])),
+        MapBlock_SwitchBlockRed => new_block(B_SwitchBlock::new(g, rm.spr_switchblocks, drawPos, SwitchColor::Red, objdata.iSettings[0])),
+        MapBlock_SwitchBlockGreen => new_block(B_SwitchBlock::new(g, rm.spr_switchblocks, drawPos, SwitchColor::Green, objdata.iSettings[0])),
+        MapBlock_SwitchBlockYellow => new_block(B_SwitchBlock::new(g, rm.spr_switchblocks, drawPos, SwitchColor::Yellow, objdata.iSettings[0])),
+        MapBlock_SwitchBlockBlue => new_block(B_SwitchBlock::new(g, rm.spr_switchblocks, drawPos, SwitchColor::Blue, objdata.iSettings[0])),
+        MapBlock_View => new_block(B_ViewBlock::new(g, gp.rm.spr_viewblock, drawPos, objdata.fHidden, &objdata.iSettings)),
+        MapBlock_BrickRed => new_block(B_ThrowBlock::new(g, rm.spr_throwblock, drawPos, 4, 10, ThrowBlockType::Red)),
+        MapBlock_NoteRed => new_block(B_NoteBlock::new(g, rm.spr_noteblock, drawPos, 4, 10, NoteBlockType::Red, objdata.fHidden)),
+        MapBlock_NoteBlue => new_block(B_NoteBlock::new(g, rm.spr_noteblock, drawPos, 4, 10, NoteBlockType::Blue, objdata.fHidden)),
+        MapBlock_BrickGray => new_block(B_ThrowBlock::new(g, rm.spr_throwblock, drawPos, 4, 10, ThrowBlockType::Gray)),
         MapBlock_WpnBreakFireball => new_block(B_WeaponBreakableBlock::new(g, wbb(), drawPos, WeaponDamageType::Fireball)),
         MapBlock_WpnBreakFeather => new_block(B_WeaponBreakableBlock::new(g, wbb(), drawPos, WeaponDamageType::Feather)),
         MapBlock_WpnBreakShell => new_block(B_WeaponBreakableBlock::new(g, wbb(), drawPos, WeaponDamageType::Shell)),
@@ -1962,7 +1960,7 @@ pub fn load_map_objects(g: &mut Game, fPreview: bool) {
         //If map has less than 5 boxes, then insert coins into map in random locations
         let iExtraCoinsNeeded: i16 = 5 - iThrowBoxCount;
         for _iExtraCoin in 0..iExtraCoinsNeeded {
-            let obj = Ptr::new_box(MO_Coin::new(g, spr(&mut gp.get().rm.spr_coin), Vec2f::zero(), Vec2s::zero(), 2, -1, 2, 0, true));
+            let obj = Ptr::new_box(MO_Coin::new(g, gp.get().rm.spr_coin, Vec2f::zero(), Vec2s::zero(), 2, -1, 2, 0, true));
             gp.get().objectcontainer[1].add(g, obj);
         }
     }
@@ -1976,19 +1974,19 @@ pub fn load_map_objects(g: &mut Game, fPreview: bool) {
         let pos = Vec2s::new((item.ix as i32 * 32) as i16, (item.iy as i32 * 32) as i16);
 
         if iType == 0 {
-            let obj = Ptr::new_box(CO_Spring::new(g, spr(&mut rm.spr_spring), pos, false));
+            let obj = Ptr::new_box(CO_Spring::new(g, rm.spr_spring, pos, false));
             gp.objectcontainer[1].add(g, obj);
         } else if iType == 1 {
-            let obj = Ptr::new_box(CO_Spike::new(g, spr(&mut rm.spr_spike), pos));
+            let obj = Ptr::new_box(CO_Spike::new(g, rm.spr_spike, pos));
             gp.objectcontainer[1].add(g, obj);
         } else if iType == 2 {
-            let obj = Ptr::new_box(CO_KuriboShoe::new(g, spr(&mut rm.spr_kuriboshoe), pos, false));
+            let obj = Ptr::new_box(CO_KuriboShoe::new(g, rm.spr_kuriboshoe, pos, false));
             gp.objectcontainer[1].add(g, obj);
         } else if iType == 3 {
-            let obj = Ptr::new_box(CO_Spring::new(g, spr(&mut rm.spr_spring), pos, true));
+            let obj = Ptr::new_box(CO_Spring::new(g, rm.spr_spring, pos, true));
             gp.objectcontainer[1].add(g, obj);
         } else if iType == 4 {
-            let obj = Ptr::new_box(CO_KuriboShoe::new(g, spr(&mut rm.spr_kuriboshoe), pos, true));
+            let obj = Ptr::new_box(CO_KuriboShoe::new(g, rm.spr_kuriboshoe, pos, true));
             gp.objectcontainer[1].add(g, obj);
         } else if iType == 5 {
             let mut iItem: i16 = NO_POWERUP as i16;
@@ -2024,7 +2022,7 @@ pub fn load_map_objects(g: &mut Game, fPreview: bool) {
                 }
             }
 
-            let obj = Ptr::new_box(CO_ThrowBox::new(g, spr(&mut rm.spr_throwbox), pos, iItem));
+            let obj = Ptr::new_box(CO_ThrowBox::new(g, rm.spr_throwbox, pos, iItem));
             gp.objectcontainer[1].add(g, obj);
             iAddThrowBoxIndex += 1;
         }
@@ -2092,8 +2090,8 @@ pub fn update_exit_pause_dialog(g: &mut Game, iCountDownState: i16) -> bool {
                     g.game_values.flags.pausegame = !g.game_values.flags.pausegame;
 
                     if g.game_values.flags.pausegame {
-                        g.rm.menu_shade.setalpha(App::menuTransparency as u8);
-                        gp.rm.menu_shade.draw(g, 0, 0);
+                        g.rm.sprite(g.rm.menu_shade).setalpha(App::menuTransparency as u8);
+                        gp.rm.sprite(gp.rm.menu_shade).draw(g, 0, 0);
 
                         //Stop the pwings sound if it is on
                         if g.rm.sfx_flyingsound.is_playing() {
@@ -2116,8 +2114,8 @@ pub fn update_exit_pause_dialog(g: &mut Game, iCountDownState: i16) -> bool {
 
                     return true;
                 } else if !g.game_values.flags.pausegame && !g.game_values.flags.exitinggame {
-                    g.rm.menu_shade.setalpha(App::menuTransparency as u8);
-                    gp.rm.menu_shade.draw(g, 0, 0);
+                    g.rm.sprite(g.rm.menu_shade).setalpha(App::menuTransparency as u8);
+                    gp.rm.sprite(gp.rm.menu_shade).draw(g, 0, 0);
                     g.game_values.flags.exitinggame = true;
 
                     //Reset the keys each time we switch from menu to game and back
@@ -2187,8 +2185,8 @@ pub fn net_bullet_bill(g: &mut Game, p: usize) {
     let vel = if RANDOM_INT(gp.get(), 2) != 0 { speed } else { -speed };
     let obj = Ptr::new_box(MO_BulletBill::new(
         g,
-        spr(&mut gp.get().rm.spr_bulletbill),
-        spr(&mut gp.get().rm.spr_bulletbilldead),
+        gp.get().rm.spr_bulletbill,
+        gp.get().rm.spr_bulletbilldead,
         Vec2s::new(0, posy),
         vel,
         p as i16,
@@ -2306,7 +2304,7 @@ impl GameplayState {
         let menu_controls = if g.game_values.flags.exitinggame { 1 } else { 0 };
         g.game_values.playerInput.clear_pressed_keys(menu_controls);
 
-        while let Some(input) = crate::services::services(gp.get()).events.poll() {
+        while let Some(input) = crate::smw::input::poll(gp.get()) {
             if input.event == InputEvent::Quit {
                 clean_up(g);
                 g.game_values.appstate = AppState::Quit;
@@ -2843,8 +2841,8 @@ pub fn net_mystery_swap(g: &mut Game, iUsingPlayerID: i16) -> bool {
         spots[iPlayer].get_player(g, player, &mut gp.game_values.gamepowerups[gid]);
 
         if g.game_values.swapstyle != 1 {
-            gp.get().eyecandy[2].emplace(EC_SingleAnimation::new(
-                spr(&mut gp.get().rm.spr_fireballexplosion),
+            gp.get().eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
+                gp.get().rm.spr_fireballexplosion,
                 ((player.fNewSwapX as i16) as i32 + HALFPW - 16) as i16,
                 ((player.fNewSwapY as i16) as i32 + HALFPH - 16) as i16,
                 3,

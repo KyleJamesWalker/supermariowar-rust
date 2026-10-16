@@ -272,11 +272,11 @@ const PREVIEW_MS: u32 = 2500;
 /// Not in the C++: the match settings every client shows while it waits to start (`waiting_to_start`).
 pub fn draw_match_preview(g: &mut Game) {
         let mut gp = g.ptr();
-    gp.rm.menu_backdrop.draw(g, 0, 0);
-    gp.rm.menu_dialog.draw_src(g, 144, 100, &Rect { x: 0, y: 0, w: 336, h: 264 });
-    gp.rm.menu_dialog.draw_src(g, 480, 100, &Rect { x: 496, y: 0, w: 16, h: 264 });
-    gp.rm.menu_dialog.draw_src(g, 144, 364, &Rect { x: 0, y: 464, w: 336, h: 16 });
-    gp.rm.menu_dialog.draw_src(g, 480, 364, &Rect { x: 496, y: 464, w: 16, h: 16 });
+    gp.rm.sprite(gp.rm.menu_backdrop).draw(g, 0, 0);
+    gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, 144, 100, &Rect { x: 0, y: 0, w: 336, h: 264 });
+    gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, 480, 100, &Rect { x: 496, y: 0, w: 16, h: 264 });
+    gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, 144, 364, &Rect { x: 0, y: 464, w: 336, h: 16 });
+    gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, 480, 364, &Rect { x: 496, y: 464, w: 16, h: 16 });
 
     let gm = g.game_values.gamemode;
     let mut lines = vec![gm.szModeName.clone()];

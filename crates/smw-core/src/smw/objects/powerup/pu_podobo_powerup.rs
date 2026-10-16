@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/PU_PodoboPowerup.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::math::vec2::Vec2s;
@@ -21,7 +22,7 @@ impl_base!(PU_PodoboPowerup => mo_powerup: MO_Powerup);
 
 impl PU_PodoboPowerup {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, aniSpeed: i16, iCollisionWidth: i16, iCollisionHeight: i16, iCollisionOffsetX: i16, iCollisionOffsetY: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, pos: Vec2s, iNumSpr: i16, aniSpeed: i16, iCollisionWidth: i16, iCollisionHeight: i16, iCollisionOffsetX: i16, iCollisionOffsetY: i16) -> Self {
         let mut o = PU_PodoboPowerup { mo_powerup: MO_Powerup::new(g, nspr, pos, iNumSpr, aniSpeed, iCollisionWidth, iCollisionHeight, iCollisionOffsetX, iCollisionOffsetY) };
         o.velx = 0.0;
         o

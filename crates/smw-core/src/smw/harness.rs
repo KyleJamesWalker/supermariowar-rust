@@ -284,24 +284,6 @@ fn load_events(g: &mut Game, path: &str) -> Vec<ReplayEvent> {
     std::mem::take(events)
 }
 
-#[cfg(not(target_os = "emscripten"))]
-fn attach_joysticks(g: &mut Game) {
-    unsafe {
-        SDL_InitSubSystem(SDL_INIT_JOYSTICK);
-        for i in 0..h(g).joysticks {
-            if attach_virtual() != i {
-                fail(format!("cannot attach virtual joystick {}: {}", i, CStr::from_ptr(SDL_GetError()).to_string_lossy()));
-            }
-        }
-    }
-}
-
-/// Attaches a replay's virtual joystick; its SDL device index, or -1.
-#[cfg(not(target_os = "emscripten"))]
-pub fn attach_virtual() -> i32 {
-    unsafe { SDL_JoystickAttachVirtual(SDL_JoystickType::SDL_JOYSTICK_TYPE_GAMECONTROLLER, VIRTUAL_AXES, VIRTUAL_BUTTONS, VIRTUAL_HATS) }
-}
-
 /// Not in the C++. A replay's `jadd`/`jremove` lines for this frame: (device, connected).
 pub fn replay_device_changes(g: &mut Game) -> Vec<(usize, bool)> {
     let mut gp = g.ptr();
@@ -465,20 +447,6 @@ pub fn init(g: &mut Game) {
             start_recording(g, h(gp.get()).seed, Some(path));
         }
 
-        // Not in upstream: a connected pad must not join a replay's joysticks.
-        #[cfg(not(target_os = "emscripten"))]
-        if h(gp.get()).replay {
-            for hint in [c"SDL_JOYSTICK_HIDAPI", c"SDL_JOYSTICK_MFI", c"SDL_JOYSTICK_IOKIT"] {
-                SDL_SetHint(hint.as_ptr(), c"0".as_ptr());
-            }
-        }
-
-        // The browser's SDL has no virtual joysticks; there init_joysticks takes the count from replay_joysticks.
-        #[cfg(not(target_os = "emscripten"))]
-        if h(gp.get()).joysticks > 0 {
-            attach_joysticks(g);
-        }
-
         if let Some(dump) = env("SMW_DUMP") {
             let file = std::fs::OpenOptions::new()
                 .create(true)
@@ -527,12 +495,9 @@ pub fn libc_seed(g: &mut Game, fallback: u32) -> u32 {
 
 /// Not in upstream: in a browser replay, the number of joysticks the replay uses. They exist only as
 /// the device index its events carry (`which`), which is what the game compares with its bindings.
-pub fn replay_joysticks(g: &mut Game) -> Option<i16> {
-    #[cfg(target_os = "emscripten")]
-    if h(g).replay {
-        return Some(h(g).joysticks as i16);
-    }
-    None
+/// A replay's device count; a replay opens no backend pads.
+pub fn replay_joysticks(g: &mut Game) -> Option<usize> {
+    h(g).replay.then(|| h(g).joysticks.max(0) as usize)
 }
 
 /// Marks the recording as made with Android's touch controls on, before its first frame.
@@ -611,7 +576,7 @@ pub fn frame_start(g: &mut Game) {
         if h(gp.get()).events[h(gp.get()).nextEvent].frame == h(gp.get()).frame {
             let input = input_of(g, &h(gp.get()).events[h(gp.get()).nextEvent]);
             note_replay_key(g, &input);
-            crate::services::services(g).events.push(&input);
+            crate::smw::input::push_ready(g, input);
             copy_replay_event(g, &h(gp.get()).events[h(gp.get()).nextEvent]);
         }
         h(gp.get()).nextEvent += 1;
@@ -685,8 +650,8 @@ const SETTINGS_FILES: [(&str, &str); 3] = [("options_b64", "options.bin"), ("con
 struct Recorder {
     out: BufWriter<File>,
     path: String,
-    /// Raw OS input events held back by the event filter until the next frame start (or blocking wait).
-    pending: Vec<SDL_Event>,
+    /// Live input held back by `input::poll` until the next frame start (or blocking wait).
+    pending: Vec<Input>,
     quit: bool,
     /// The frame a window close arrived in; the recording ends before it.
     quitFrame: Option<u32>,
@@ -822,73 +787,47 @@ fn start_recording(g: &mut Game, seed: u32, to: Option<String>) {
     println!("[harness] recording to {}", path);
 
     let script = if live { env("SMW_LIVE_SCRIPT").map(|p| load_events(g, &p)).unwrap_or_default() } else { Vec::new() };
-    unsafe {
-        h(gp.get()).rec = Some(Recorder {
-            out,
-            path,
-            pending: Vec::new(),
-            quit: false,
-            quitFrame: None,
-            script,
-            nextScript: 0,
-            live,
-            state: String::new(),
-            matches: 0,
-            checkpoint: None,
-        });
-        if live {
-            smw_sdl2::events::set_filter(Some(record_filter), g as *mut Game as *mut std::ffi::c_void);
-        }
-    }
+    h(gp.get()).rec = Some(Recorder {
+        out,
+        path,
+        pending: Vec::new(),
+        quit: false,
+        quitFrame: None,
+        script,
+        nextScript: 0,
+        live,
+        state: String::new(),
+        matches: 0,
+        checkpoint: None,
+    });
     if live {
         prune_recordings(&dir);
     }
 }
 
-fn is_input_event(t: u32) -> bool {
-    use SDL_EventType::*;
-    [
-        SDL_KEYDOWN, SDL_KEYUP, SDL_TEXTEDITING, SDL_TEXTINPUT, SDL_KEYMAPCHANGED, SDL_MOUSEMOTION, SDL_MOUSEBUTTONDOWN, SDL_MOUSEBUTTONUP,
-        SDL_MOUSEWHEEL, SDL_JOYAXISMOTION, SDL_JOYBALLMOTION, SDL_JOYHATMOTION, SDL_JOYBUTTONDOWN, SDL_JOYBUTTONUP, SDL_JOYDEVICEADDED,
-        SDL_JOYDEVICEREMOVED, SDL_CONTROLLERAXISMOTION, SDL_CONTROLLERBUTTONDOWN, SDL_CONTROLLERBUTTONUP, SDL_CONTROLLERDEVICEADDED,
-        SDL_CONTROLLERDEVICEREMOVED, SDL_CONTROLLERDEVICEREMAPPED, SDL_FINGERDOWN, SDL_FINGERUP, SDL_FINGERMOTION, SDL_QUIT, SDL_USEREVENT,
-    ]
-    .iter()
-    .any(|&e| e as u32 == t)
+/// While recording, live input is held back here; the frame start (or a blocking wait) turns it into replay
+/// lines and queues those, so the game only ever sees input in the exact form a replay of the recording will produce.
+pub fn capture(g: &mut Game, input: Input) -> Option<Input> {
+    match rec(g).filter(|r| r.live) {
+        Some(r) if !matches!(input.event, InputEvent::Other(_)) => {
+            r.pending.push(input);
+            None
+        }
+        _ => Some(input),
+    }
 }
 
-/// While recording, every input event SDL queues is held back here; the frame start (or a blocking
-/// wait) turns the held events into replay lines and pushes those, so the game only ever sees input
-/// in the exact form a replay of the recording will produce.
-unsafe extern "C" fn record_filter(userdata: *mut std::ffi::c_void, event: *mut SDL_Event) -> i32 {
-    let g = &mut *(userdata as *mut Game);
-    let Some(r) = rec(g) else { return 1 };
-    if INJECTING.load(Ordering::Relaxed) || !is_input_event((*event).type_) {
-        return 1;
-    }
-    #[cfg(not(target_os = "emscripten"))]
-    if !crate::smw::pad::translate(g, &mut *event) {
-        return 0;
-    }
-    if (*event).type_ == SDL_EventType::SDL_MOUSEBUTTONUP as u32 {
-        smw_sdl2::button_to_logical(&mut (*event).button);
-    }
-    r.pending.push(*event);
-    0
-}
-
-/// The replay line for a raw SDL event, or None for input the replay format cannot express.
-fn to_replay_event(g: &mut Game, raw: &SDL_Event, frame: u32) -> Option<ReplayEvent> {
+/// The replay line for live input, or None for input the replay format cannot express.
+fn to_replay_event(g: &mut Game, input: &Input, frame: u32) -> Option<ReplayEvent> {
     let mut gp = g.ptr();
     let mut ev = ReplayEvent { frame, kind: EventKind::Key, down: false, keyName: String::new(), device: 0, index: 0, value: 0 };
-    let input = smw_sdl2::input::from_sdl(raw).event;
-    if let Some((x, y)) = input.tap() {
+    if let Some((x, y)) = input.event.tap() {
         ev.kind = EventKind::Tap;
         ev.index = x as i32;
         ev.value = y as i32;
         return Some(ev);
     }
-    let (which, kind, index, value) = match input {
+    let (which, kind, index, value) = match input.event {
         InputEvent::Key { key, down, .. } => {
             let kb = &crate::services::services(gp.get()).keyboard;
             let name = kb.key_name(key.0);
@@ -923,9 +862,8 @@ fn to_replay_event(g: &mut Game, raw: &SDL_Event, frame: u32) -> Option<ReplayEv
 fn device_index(g: &mut Game, which: i32) -> Option<i32> {
     let mut gp = g.ptr();
     unsafe {
-        let js = gp.joysticks;
-        for i in 0..gp.joystickcount.max(0) as usize {
-            let j = *js.add(i);
+        for i in 0..gp.devices.len() {
+            let j = gp.joystick(i);
             if !j.is_null() && SDL_JoystickInstanceID(j) == which {
                 return Some(i as i32);
             }
@@ -942,16 +880,6 @@ fn line_for(ev: &ReplayEvent) -> String {
         EventKind::JoyHat => format!("{} jhat {} {} {}", ev.frame, ev.device, ev.index, ev.value),
         EventKind::Tap => format!("{} tap {} {}", ev.frame, ev.index, ev.value),
     }
-}
-
-/// Set while the recorder pushes an event, so its filter lets that event through. Not a Recorder field:
-/// the compiler may drop a store through `&mut Recorder` that only the filter callback reads.
-static INJECTING: AtomicBool = AtomicBool::new(false);
-
-fn inject(g: &mut Game, input: &Input) {
-    INJECTING.store(true, Ordering::Relaxed);
-    crate::services::services(g).events.push(input);
-    INJECTING.store(false, Ordering::Relaxed);
 }
 
 /// SMW_LIVE_SCRIPT events due this frame enter SDL's queue like OS input, with the modifier and
@@ -979,9 +907,8 @@ fn push_live_script(g: &mut Game, r: &mut Recorder, frame: u32) {
 fn sdl_instance(g: &mut Game, device: i32) -> i32 {
     let mut gp = g.ptr();
     unsafe {
-        let js = gp.joysticks;
-        if device >= 0 && device < gp.joystickcount as i32 {
-            let j = *js.add(device as usize);
+        if device >= 0 {
+            let j = gp.joystick(device as usize);
             if !j.is_null() {
                 return SDL_JoystickInstanceID(j);
             }
@@ -993,7 +920,7 @@ fn sdl_instance(g: &mut Game, device: i32) -> i32 {
 fn record_event(g: &mut Game, r: &mut Recorder, ev: &ReplayEvent) {
     let _ = writeln!(r.out, "{}", line_for(ev));
     let input = input_of(g, ev);
-    inject(g, &input);
+    crate::smw::input::push_ready(g, input);
 }
 
 /// Not in upstream. Browsers report a standard-mapping pad's D-pad as buttons 12-15 (up, down, left,
@@ -1038,7 +965,7 @@ fn record_frame_start(g: &mut Game, frame: u32) {
     let mut gp = g.ptr();
     let Some(r) = rec(g).filter(|r| r.live) else { return };
     if frame == 0 {
-        for d in 0..gp.joystickcount.min(8) as i32 {
+        for d in 0..gp.devices.len().min(8) as i32 {
             let ev = ReplayEvent { frame: 0, kind: EventKind::JoyHat, down: false, keyName: String::new(), device: d, index: 0, value: 0 };
             record_event(g, r, &ev);
         }
@@ -1050,14 +977,15 @@ fn record_frame_start(g: &mut Game, frame: u32) {
         let _ = r.out.flush();
     }
     push_live_script(g, r, frame);
-    smw_sdl2::events::pump();
+    crate::services::services(g).events.pump();
+    crate::smw::input::drain(g);
     let held = std::mem::take(&mut r.pending);
-    for raw in held.iter() {
-        if unsafe { raw.type_ } == SDL_EventType::SDL_QUIT as u32 {
+    for input in held.iter() {
+        if input.event == InputEvent::Quit {
             r.quit = true;
             continue;
         }
-        if let Some(ev) = to_replay_event(g, raw, frame) {
+        if let Some(ev) = to_replay_event(g, input, frame) {
             #[cfg(target_os = "emscripten")]
             if let Some(hat) = web_dpad::hat_for(g, &ev) {
                 record_event(g, r, &hat);
@@ -1082,14 +1010,15 @@ fn record_wait_event(g: &mut Game) -> Input {
         let Some(r) = rec(g) else { return Input { timestamp: 0, event: InputEvent::Other(0) } };
         push_live_script(g, r, h(gp.get()).frame + 1);
         crate::services::services(gp.get()).events.pump();
+        crate::smw::input::drain(g);
         while !r.pending.is_empty() {
-            let raw = r.pending.remove(0);
-            if unsafe { raw.type_ } == SDL_EventType::SDL_QUIT as u32 {
+            let input = r.pending.remove(0);
+            if input.event == InputEvent::Quit {
                 r.quit = true;
-                r.pending.insert(0, raw);
+                r.pending.insert(0, input);
                 break;
             }
-            if let Some(ev) = to_replay_event(g, &raw, h(gp.get()).frame + 1) {
+            if let Some(ev) = to_replay_event(g, &input, h(gp.get()).frame + 1) {
                 let _ = writeln!(r.out, "{}", line_for(&ev));
                 return input_of(g, &ev);
             }
@@ -1109,19 +1038,14 @@ const UNFINISHED_TAIL_FRAMES: u32 = 188;
 /// Safe to call more than once.
 pub fn finish(g: &mut Game) {
     let mut gp = g.ptr();
-    unsafe {
-        if let Some(home) = h(gp.get()).watch_home.take() {
-            let _ = std::fs::remove_dir_all(home);
-        }
-        if let Some(mut r) = h(gp.get()).rec.take() {
-            if r.live {
-                smw_sdl2::events::set_filter(None, std::ptr::null_mut());
-            }
-            let frames = r.quitFrame.unwrap_or(h(gp.get()).frame);
-            let _ = writeln!(r.out, "#@ frames={}", frames);
-            let _ = r.out.flush();
-            println!("[harness] recorded {} frames to {}", frames, r.path);
-        }
+    if let Some(home) = h(gp.get()).watch_home.take() {
+        let _ = std::fs::remove_dir_all(home);
+    }
+    if let Some(mut r) = h(gp.get()).rec.take() {
+        let frames = r.quitFrame.unwrap_or(h(gp.get()).frame);
+        let _ = writeln!(r.out, "#@ frames={}", frames);
+        let _ = r.out.flush();
+        println!("[harness] recorded {} frames to {}", frames, r.path);
     }
 }
 

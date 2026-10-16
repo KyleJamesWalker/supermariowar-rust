@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_RaceGoal.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
@@ -41,7 +42,7 @@ pub struct OMO_RaceGoal {
 impl_base!(OMO_RaceGoal => io_over_map_object: IO_OverMapObject);
 
 impl OMO_RaceGoal {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, id: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, id: i16) -> Self {
         let mut gp = g.ptr();
         let mut this = OMO_RaceGoal {
             io_over_map_object: IO_OverMapObject::new(g, nspr, Vec2s::zero(), 2, 8, -1, -1, -1, -1, -1, -1, -1, -1),
@@ -55,8 +56,8 @@ impl OMO_RaceGoal {
             quantity: 0,
             isfinishline: false,
         };
-        this.iw = (this.spr.get_width() as i16 as i32 >> 1) as i16;
-        this.ih = (this.spr.get_height() as i16 as i32 >> 1) as i16;
+        this.iw = (g.rm.sprite(this.spr).get_width() as i16 as i32 >> 1) as i16;
+        this.ih = (g.rm.sprite(this.spr).get_height() as i16 as i32 >> 1) as i16;
         this.collisionWidth = 36;
         this.collisionHeight = 36;
         this.collisionOffsetX = 16;
@@ -141,19 +142,19 @@ impl CObjectTrait for OMO_RaceGoal {
         let y = self.iy as i32 - self.collisionOffsetY as i32;
 
         if self.isfinishline {
-            self.spr.draw_src(g, x, y, &Rect { x: self.drawframe as i32, y: 54, w: self.iw as i32, h: self.ih as i32 });
+            g.rm.sprite(self.spr).draw_src(g, x, y, &Rect { x: self.drawframe as i32, y: 54, w: self.iw as i32, h: self.ih as i32 });
         } else {
-            self.spr.draw_src(g, x, y, &Rect { x: self.drawframe as i32, y: 0, w: self.iw as i32, h: self.ih as i32 });
+            g.rm.sprite(self.spr).draw_src(g, x, y, &Rect { x: self.drawframe as i32, y: 0, w: self.iw as i32, h: self.ih as i32 });
 
             for k in 0..g.score_cnt {
                 if self.tagged[k as usize] > -1 {
                     let fp = &flagpositions[(g.score_cnt - 2) as usize][k as usize];
-                    gp.rm.spr_bonus.draw_src(g, x + fp[0] as i32, y + fp[1] as i32, &Rect { x: 0, y: self.tagged[k as usize] as i32 * 16, w: 16, h: 16 });
+                    gp.rm.sprite(gp.rm.spr_bonus).draw_src(g, x + fp[0] as i32, y + fp[1] as i32, &Rect { x: 0, y: self.tagged[k as usize] as i32 * 16, w: 16, h: 16 });
                 }
             }
         }
 
-        gp.rm.spr_racetext.draw_src(g, x + 26, y, &Rect { x: (self.goalID as i32 + 1) * 16, y: 0, w: 16, h: 16 });
+        gp.rm.sprite(gp.rm.spr_racetext).draw_src(g, x + 26, y, &Rect { x: (self.goalID as i32 + 1) * 16, y: 0, w: 16, h: 16 });
     }
 
     fn update(&mut self, g: &mut Game) {

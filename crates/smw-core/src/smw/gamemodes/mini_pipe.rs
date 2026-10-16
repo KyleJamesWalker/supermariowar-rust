@@ -113,16 +113,16 @@ impl CGameModeTrait for CGM_Pipe_MiniGame {
                 let iRandPowerup: i16 = RANDOM_INT(gp.get(), 50) as i16;
                 if self.iBonusType == 0 && iRandPowerup < 5 {
                     //bonuses
-                    let obj = Ptr::new_box(OMO_PipeBonus::new(g, Ptr::from_mut(&mut gp.get().rm.spr_pipegamebonus), vel, pos, iRandPowerup, 620, 15));
+                    let obj = Ptr::new_box(OMO_PipeBonus::new(g, gp.get().rm.spr_pipegamebonus, vel, pos, iRandPowerup, 620, 15));
                     gp.get().objectcontainer[1].add(g, obj);
                 } else if iRandPowerup < 10 {
                     //fireballs
-                    let obj = Ptr::new_box(OMO_PipeBonus::new(g, Ptr::from_mut(&mut gp.get().rm.spr_pipegamebonus), vel, pos, 5, 0, 15));
+                    let obj = Ptr::new_box(OMO_PipeBonus::new(g, gp.get().rm.spr_pipegamebonus, vel, pos, 5, 0, 15));
                     gp.get().objectcontainer[1].add(g, obj);
                 } else {
                     //coins
                     let iRandCoin: i16 = RANDOM_INT(gp.get(), 20) as i16;
-                    let obj = Ptr::new_box(OMO_PipeCoin::new(g, Ptr::from_mut(&mut gp.get().rm.spr_coin), vel, pos, -1, if iRandCoin < 16 { 2 } else if iRandCoin < 19 { 0 } else { 1 }, 15));
+                    let obj = Ptr::new_box(OMO_PipeCoin::new(g, gp.get().rm.spr_coin, vel, pos, -1, if iRandCoin < 16 { 2 } else if iRandCoin < 19 { 0 } else { 1 }, 15));
                     gp.get().objectcontainer[1].add(g, obj);
                 }
             } else if self.iBonusType == 1 {
@@ -137,11 +137,11 @@ impl CGameModeTrait for CGM_Pipe_MiniGame {
 
                 let iRandPlayer: i16 = g.game_values.teamids[iRandTeam as usize][RANDOM_INT(gp.get(), g.game_values.teamcounts[iRandTeam as usize] as i32) as usize];
 
-                let obj = Ptr::new_box(OMO_PipeCoin::new(g, Ptr::from_mut(&mut gp.get().rm.spr_coin), vel, pos, iRandTeam, gp.get().game_values.colorids[iRandPlayer as usize], 15));
+                let obj = Ptr::new_box(OMO_PipeCoin::new(g, gp.get().rm.spr_coin, vel, pos, iRandTeam, gp.get().game_values.colorids[iRandPlayer as usize], 15));
                 gp.get().objectcontainer[1].add(g, obj);
             } else if self.iBonusType == 3 {
                 self.iNextItemTimer = (RANDOM_INT(gp.get(), 5) + 10) as i16;
-                let obj = Ptr::new_box(OMO_PipeCoin::new(g, Ptr::from_mut(&mut gp.get().rm.spr_coin), vel, pos, -1, 0, 15));
+                let obj = Ptr::new_box(OMO_PipeCoin::new(g, gp.get().rm.spr_coin, vel, pos, -1, 0, 15));
                 gp.get().objectcontainer[1].add(g, obj);
             }
         }

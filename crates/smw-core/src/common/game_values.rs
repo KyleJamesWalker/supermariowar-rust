@@ -859,7 +859,7 @@ impl CGameConfig {
         for iPlayer in 0..MAX_PLAYERS as usize {
             let mut iDevice = controls.read_i16();
 
-            if iDevice >= g.joystickcount {
+            if iDevice as i32 >= g.devices.len() as i32 {
                 iDevice = DEVICE_KEYBOARD;
             }
 

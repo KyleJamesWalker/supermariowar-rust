@@ -1,4 +1,5 @@
 //! Port of src/common/IO_Block.h
+use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::math::vec2::Vec2s;
@@ -30,7 +31,7 @@ pub struct IO_Block {
 impl_base!(IO_Block => cobject: CObject);
 
 impl IO_Block {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, pos: Vec2s) -> Self {
         crate::smw::objects::blocks::io_block::io_block_new(g, nspr, pos)
     }
 }

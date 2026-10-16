@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/ThrowBlock.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::EC_FallingObject;
@@ -30,7 +31,7 @@ pub struct B_ThrowBlock {
 impl_base!(B_ThrowBlock => io_block: IO_Block);
 
 impl B_ThrowBlock {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, aniSpeed: i16, r#type: ThrowBlockType) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, pos: Vec2s, iNumSpr: i16, aniSpeed: i16, r#type: ThrowBlockType) -> Self {
         let mut b = B_ThrowBlock {
             io_block: IO_Block::new(g, nspr, pos),
             iNumSprites: 0,
@@ -46,7 +47,7 @@ impl B_ThrowBlock {
         b.animationSpeed = aniSpeed;
         b.animationTimer = 0;
         b.drawFrame = 0;
-        b.animationWidth = nspr.get_width() as i16;
+        b.animationWidth = g.rm.sprite(nspr).get_width() as i16;
         b.iType = r#type;
         b
     }
@@ -54,7 +55,7 @@ impl B_ThrowBlock {
     pub fn give_block_to_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) {
         let mut gp = g.ptr();
         let mut rm = g.rm;
-        let mut block = Ptr::new_box(CO_ThrowBlock::new(g, Ptr::from_mut(&mut rm.spr_blueblock), Vec2s::new(self.ix, self.iy), self.iType));
+        let mut block = Ptr::new_box(CO_ThrowBlock::new(g, rm.spr_blueblock, Vec2s::new(self.ix, self.iy), self.iType));
         let item: Ptr<dyn MO_CarriedObjectTrait> = Ptr::from_mut(block.get() as &mut dyn MO_CarriedObjectTrait);
         if player.accept_item(item) {
             self.dead = true;
@@ -77,7 +78,7 @@ impl CObjectTrait for B_ThrowBlock {
     }
 
     fn draw(&mut self, g: &mut Game) {
-        self.spr.draw_src(
+        g.rm.sprite(self.spr).draw_src(
             g,
             self.ix as i32,
             self.iy as i32,
@@ -177,12 +178,12 @@ impl IO_BlockTrait for B_ThrowBlock {
         g.g_map.update_tile_gap(self.col, self.row);
 
         let srcY = (self.iType as i32 * 16) as i16;
-        let spr = Ptr::from_mut(&mut g.rm.spr_brokenblueblock);
+        let spr = g.rm.spr_brokenblueblock;
         let (ix, iy) = (self.ix, self.iy);
-        g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy, -1.5f32, -7.0f32, 6, 2, 0, srcY, 16, 16));
-        g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy, 1.5f32, -7.0f32, 6, 2, 0, srcY, 16, 16));
-        g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy + 16, -1.5f32, -4.0f32, 6, 2, 0, srcY, 16, 16));
-        g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy + 16, 1.5f32, -4.0f32, 6, 2, 0, srcY, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, ix, iy, -1.5f32, -7.0f32, 6, 2, 0, srcY, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, ix + 16, iy, 1.5f32, -7.0f32, 6, 2, 0, srcY, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, ix, iy + 16, -1.5f32, -4.0f32, 6, 2, 0, srcY, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, ix + 16, iy + 16, 1.5f32, -4.0f32, 6, 2, 0, srcY, 16, 16));
 
         if_sound_on_play(g, &mut gp.rm.sfx_breakblock);
     }

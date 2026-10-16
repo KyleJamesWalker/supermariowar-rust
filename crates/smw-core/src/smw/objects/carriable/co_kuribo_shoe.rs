@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_KuriboShoe.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game_values::if_sound_on_play;
@@ -27,7 +28,7 @@ pub struct CO_KuriboShoe {
 impl_base!(CO_KuriboShoe => co_spring: CO_Spring);
 
 impl CO_KuriboShoe {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, sticky: bool) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, pos: Vec2s, sticky: bool) -> Self {
         let mut o = CO_KuriboShoe { co_spring: CO_Spring::new(g, nspr, pos + Vec2s::new(0, 15), false), fSticky: false };
 
         o.iw = 32;
@@ -87,8 +88,8 @@ impl CO_SpringTrait for CO_KuriboShoe {
             self.dead = true;
             player.set_kuribo_shoe(g, if self.fSticky { STICKY } else { NORMAL });
             if_sound_on_play(g, &mut gp.rm.sfx_transform);
-            g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
+                g.rm.spr_fireballexplosion,
                 (player.ix as i32 + HALFPW - 16) as i16,
                 (player.iy as i32 + HALFPH - 16) as i16,
                 3,

@@ -53,8 +53,8 @@ impl PlayerJail {
             self.timer = 0;
             self.owner_teamID = -1;
 
-            g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                Ptr::from_mut(&mut g.rm.spr_poof),
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
+                g.rm.spr_poof,
                 (player.center_x() as i32 - 24) as i16,
                 (player.center_y() as i32 - 24) as i16,
                 4,
@@ -70,8 +70,8 @@ impl PlayerJail {
         let mut gp = g.ptr();
         if self.is_active() {
             self.timer = 0;
-            g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
+                g.rm.spr_fireballexplosion,
                 (player.center_x() as i32 - 16) as i16,
                 (player.center_y() as i32 - 16) as i16,
                 3,
@@ -88,8 +88,8 @@ impl PlayerJail {
             if self.timer <= 0 {
                 self.timer = 0;
                 self.owner_teamID = -1;
-                g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
+                    g.rm.spr_fireballexplosion,
                     (player.center_x() as i32 - 16) as i16,
                     (player.center_y() as i32 - 16) as i16,
                     3,
@@ -109,9 +109,9 @@ impl PlayerJail {
                 let src = Rect { x: (self.color as i32 + 1) * 44, y: 0, w: 44, h: 44 };
                 if player.iswarping() {
                     let edge = std::mem::transmute::<i32, ClipEdge>((player.state as i16 % 4) as i32);
-                    gp.rm.spr_jail.draw_clip(g, x, y, &src, edge, player.get_warp_plane() as i32);
+                    gp.rm.sprite(gp.rm.spr_jail).draw_clip(g, x, y, &src, edge, player.get_warp_plane() as i32);
                 } else {
-                    gp.rm.spr_jail.draw_src(g, x, y, &src);
+                    gp.rm.sprite(gp.rm.spr_jail).draw_src(g, x, y, &src);
                 }
             }
         }

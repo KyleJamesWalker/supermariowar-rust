@@ -26,12 +26,12 @@ crate::impl_base!(UI_TourStopMenu => ui_menu: UI_Menu);
 impl UI_TourStopMenu {
     pub fn new(g: &mut Game) -> Box<Self> {
         let mut this = Box::<Self>::default();
-        let spr_selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
+        let spr_selectfield = g.rm.spr_selectfield;
 
         this.miTourStop = Ptr::new_box(MI_TourStop::new(g, 70, 45, false));
 
         // Exit tour dialog box
-        this.miTourStopExitDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
+        this.miTourStopExitDialogImage = Ptr::new_box(MI_Image::new(g.rm.spr_dialog, 224, 176, 0, 0, 192, 128, 1, 1, 0));
         this.miTourStopExitDialogExitTourText = Ptr::new_box(MI_HeaderText::new(g, "Exit Tour", 320, 205));
 
         this.miTourStopExitDialogYesButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 235, 250, "Yes", 80, TextAlign::CENTER));

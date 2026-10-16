@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_StraightPathHazard.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game::App;
@@ -27,7 +28,7 @@ impl_base!(OMO_StraightPathHazard => io_over_map_object: IO_OverMapObject);
 
 impl OMO_StraightPathHazard {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>,
+    pub fn new(g: &mut Game, nspr: SpriteId,
         pos: Vec2s,
         angle: f32,
         vel: f32,
@@ -96,8 +97,8 @@ impl CObjectTrait for OMO_StraightPathHazard {
 
     fn collide_player(&mut self, g: &mut Game, mut player: Ptr<CPlayer>) -> bool {
         if !player.is_shielded() {
-            g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(&g.rm, 
+                g.rm.spr_fireballexplosion,
                 (self.ix as i32 + (self.iw as i32 >> 2) - 16) as i16,
                 (self.iy as i32 + (self.ih as i32 >> 2) - 16) as i16,
                 3,

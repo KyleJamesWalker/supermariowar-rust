@@ -1,5 +1,6 @@
 //! Port of src/smw/ui/MI_StringScroll.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -32,7 +33,7 @@ pub struct MI_StringScroll {
     /// Index into `items` (the C++ iterator).
     pub current: usize,
 
-    pub spr: Ptr<gfxSprite>,
+    pub spr: SpriteId,
 
     pub iNumLines: i16,
     pub iSelectedLine: i16,
@@ -51,7 +52,7 @@ pub struct MI_StringScroll {
 crate::impl_base!(MI_StringScroll => ui_control: UI_Control);
 
 impl MI_StringScroll {
-    pub fn new(nspr: Ptr<gfxSprite>, x: i16, y: i16, width: i16, numlines: i16) -> Self {
+    pub fn new(nspr: SpriteId, x: i16, y: i16, width: i16, numlines: i16) -> Self {
         MI_StringScroll {
             ui_control: UI_Control::new(x, y),
             items: Vec::new(),
@@ -218,10 +219,10 @@ impl UI_ControlTrait for MI_StringScroll {
         let iWidth = self.iWidth as i32;
         let iNumLines = self.iNumLines as i32;
 
-        gp.rm.menu_dialog.draw_src(g, x, y, &Rect { x: 0, y: 0, w: iWidth - 16, h: iNumLines * 32 + 32 });
-        gp.rm.menu_dialog.draw_src(g, x + iWidth - 16, y, &Rect { x: 496, y: 0, w: 16, h: iNumLines * 32 + 32 });
-        gp.rm.menu_dialog.draw_src(g, x, y + iNumLines * 32 + 32, &Rect { x: 0, y: 464, w: iWidth - 16, h: 16 });
-        gp.rm.menu_dialog.draw_src(g, x + iWidth - 16, y + iNumLines * 32 + 32, &Rect { x: 496, y: 464, w: 16, h: 16 });
+        gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, x, y, &Rect { x: 0, y: 0, w: iWidth - 16, h: iNumLines * 32 + 32 });
+        gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, x + iWidth - 16, y, &Rect { x: 496, y: 0, w: 16, h: iNumLines * 32 + 32 });
+        gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, x, y + iNumLines * 32 + 32, &Rect { x: 0, y: 464, w: iWidth - 16, h: 16 });
+        gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, x + iWidth - 16, y + iNumLines * 32 + 32, &Rect { x: 496, y: 464, w: 16, h: 16 });
 
         gp.rm.menu_font_large.draw_centered(g, x + (iWidth >> 1), y + 5, &self.sTitle);
 
@@ -232,8 +233,8 @@ impl UI_ControlTrait for MI_StringScroll {
             let iHalfLineWidth: i16 = iLineWidth >> 1;
             let (lw, hlw, l) = (iLineWidth as i32, iHalfLineWidth as i32, iLine as i32);
             let selY = if self.iSelectedLine == iLine { 32 } else { 0 };
-            self.spr.draw_src(g, x + 16, y + 32 + l * 32, &Rect { x: 0, y: selY, w: hlw, h: 32 });
-            self.spr.draw_src(g, x + 16 + hlw, y + 32 + l * 32, &Rect { x: 512 - lw + hlw, y: selY, w: lw - hlw, h: 32 });
+            g.rm.sprite(self.spr).draw_src(g, x + 16, y + 32 + l * 32, &Rect { x: 0, y: selY, w: hlw, h: 32 });
+            g.rm.sprite(self.spr).draw_src(g, x + 16 + hlw, y + 32 + l * 32, &Rect { x: 512 - lw + hlw, y: selY, w: lw - hlw, h: 32 });
 
             self.items[(self.iOffset as i32 + l) as usize].draw(g, x, 32 + y + l * 32, (iWidth - 104) as u32);
             iLine += 1;

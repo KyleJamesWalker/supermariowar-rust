@@ -68,8 +68,8 @@ impl PlayerTanookiSuit {
             self.statue_timer = 123;
 
             // perform tansformation effects
-            g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                Ptr::from_mut(&mut g.rm.spr_poof),
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
+                g.rm.spr_poof,
                 (player.center_x() as i32 - 24) as i16,
                 (player.center_y() as i32 - 24) as i16,
                 4,
@@ -119,8 +119,8 @@ impl PlayerTanookiSuit {
                 }
 
                 // perform transformation effects
-                g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut g.rm.spr_poof),
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
+                    g.rm.spr_poof,
                     (player.center_x() as i32 - 24) as i16,
                     (player.center_y() as i32 - 24) as i16,
                     4,
@@ -206,9 +206,9 @@ impl PlayerTanookiSuit {
         unsafe {
             if player.iswarping() {
                 let edge: ClipEdge = std::mem::transmute::<i32, ClipEdge>((player.state as i16 % 4) as i32);
-                gp.rm.spr_statue.draw_clip(g, x, y, &src, edge, player.get_warp_plane() as i32);
+                gp.rm.sprite(gp.rm.spr_statue).draw_clip(g, x, y, &src, edge, player.get_warp_plane() as i32);
             } else {
-                gp.rm.spr_statue.draw_src(g, x, y, &src);
+                gp.rm.sprite(gp.rm.spr_statue).draw_src(g, x, y, &src);
             }
         }
     }

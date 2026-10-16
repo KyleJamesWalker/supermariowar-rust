@@ -54,7 +54,7 @@ impl CGM_Boxes_MiniGame {
 
             if_sound_on_play(g, &mut gp.rm.sfx_coin);
 
-            let obj = Ptr::new_box(MO_Coin::new(g, Ptr::from_mut(&mut gp.get().rm.spr_coin), vel, pos, 2, -1, 2, 30, false));
+            let obj = Ptr::new_box(MO_Coin::new(g, gp.get().rm.spr_coin, vel, pos, 2, -1, 2, 30, false));
             gp.get().objectcontainer[1].add(g, obj);
         }
     }

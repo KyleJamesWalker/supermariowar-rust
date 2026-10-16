@@ -1,6 +1,6 @@
 //! Not in upstream: with `SMW_PAD_TRANSLATE=1`, a game controller's raw joystick events renumbered through its mapping into `LAYOUT` (docs/PROGRESS.md, Deliberate deviations).
 
-use crate::game::Game;
+use crate::game::{Device, Game, MAX_DEVICES};
 use sdl2::sys::{SDL_Event, SDL_EventFilter, SDL_EventType, SDL_GameController, SDL_GameControllerAddMapping, SDL_GameControllerAxis, SDL_GameControllerBindType, SDL_GameControllerButton, SDL_GameControllerButtonBind, SDL_GameControllerClose, SDL_GameControllerGetBindForAxis, SDL_GameControllerGetBindForButton, SDL_GameControllerMappingForDeviceIndex, SDL_GameControllerOpen, SDL_GetError, SDL_InitSubSystem, SDL_IsGameController, SDL_Joystick, SDL_JoystickClose, SDL_JoystickGetAttached, SDL_JoystickGetDeviceInstanceID, SDL_JoystickGetGUID, SDL_JoystickOpen, SDL_JoystickGetGUIDString, SDL_JoystickInstanceID, SDL_JoystickNameForIndex, SDL_JoystickNumAxes, SDL_JoystickNumButtons, SDL_JoystickNumHats, SDL_NumJoysticks, SDL_bool, SDL_free, SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP, SDL_INIT_GAMECONTROLLER};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, AtomicUsize, Ordering};
@@ -93,7 +93,6 @@ fn st(g: &mut Game) -> &mut PadState {
 static HOTPLUG: AtomicBool = AtomicBool::new(false);
 static GENERATION: AtomicU32 = AtomicU32::new(0);
 /// The replay format's device limit.
-const MAX_JOYSTICKS: usize = 8;
 
 /// Logs every open joystick; with `translate`, reads the game controllers among them through their mapping.
 pub fn init(g: &mut Game, translate: bool) {
@@ -119,14 +118,13 @@ pub fn init(g: &mut Game, translate: bool) {
         if let Some(config) = std::env::var_os("SDL_GAMECONTROLLERCONFIG") {
             println!("[pad] SDL_GAMECONTROLLERCONFIG has {} mapping(s)", config.to_string_lossy().lines().filter(|l| l.contains(',')).count());
         }
-        for i in 0..g.joystickcount.max(0) as usize {
-            let js = *g.joysticks.add(i);
+        for i in 0..g.devices.len() {
+            let js = g.joystick(i);
             if !js.is_null() {
                 st(gp.get()).pads.push(open_pad(g, i as i32, js, i));
             }
         }
 
-        // The recorder's filter calls translate itself.
         let mut current: SDL_EventFilter = None;
         let mut userdata = std::ptr::null_mut();
         if (st(gp.get()).debug_input || translate || st(gp.get()).pads.iter().any(|p| p.controller)) && smw_sdl2::events::get_filter(&mut current, &mut userdata) == SDL_bool::SDL_FALSE {
@@ -190,8 +188,8 @@ pub fn hotplug(g: &mut Game) -> bool {
         if !st(gp.get()).translate_on || !HOTPLUG.swap(false, Ordering::Relaxed) {
             return false;
         }
-        for index in 0..g.joystickcount.max(0) as usize {
-            let js = *g.joysticks.add(index);
+        for index in 0..g.devices.len() {
+            let js = g.joystick(index);
             if !js.is_null() && SDL_JoystickGetAttached(js) == SDL_bool::SDL_FALSE {
                 close(g, index);
                 crate::smw::harness::record_device(g, index, false);
@@ -200,8 +198,8 @@ pub fn hotplug(g: &mut Game) -> bool {
         let mut added = false;
         for device in 0..SDL_NumJoysticks().max(0) {
             let instance = SDL_JoystickGetDeviceInstanceID(device);
-            let already = (0..gp.joystickcount.max(0) as usize).any(|i| {
-                let js = *g.joysticks.add(i);
+            let already = (0..gp.devices.len()).any(|i| {
+                let js = g.joystick(i);
                 !js.is_null() && SDL_JoystickInstanceID(js) == instance
             });
             if already {
@@ -219,30 +217,13 @@ pub fn hotplug(g: &mut Game) -> bool {
     }
 }
 
-/// Changes whenever `hotplug` opens or closes a joystick.
+/// Changes whenever the device table does.
 pub fn generation() -> u32 {
     GENERATION.load(Ordering::Relaxed)
 }
 
-/// A replay's `jadd` (`added`) or `jremove` line: attaches a virtual joystick as `index`, or closes it.
-pub fn replay_device(g: &mut Game, index: usize, added: bool) {
-    unsafe {
-        let open_now = index < g.joystickcount.max(0) as usize && !(*g.joysticks.add(index)).is_null();
-        if !added {
-            if open_now {
-                close(g, index);
-            }
-            return;
-        }
-        if open_now || index >= MAX_JOYSTICKS {
-            return;
-        }
-        let device = crate::smw::harness::attach_virtual();
-        if device >= 0 {
-            grow(g, index + 1);
-            open(g, device, index);
-        }
-    }
+pub fn devices_changed() {
+    GENERATION.fetch_add(1, Ordering::Relaxed);
 }
 
 /// Opens SDL device `device` as joystick `index`, which must be an empty slot.
@@ -252,7 +233,7 @@ unsafe fn open(g: &mut Game, device: i32, index: usize) -> bool {
     if js.is_null() {
         return false;
     }
-    *g.joysticks.add(index) = js;
+    g.devices[index] = Some(Device::Pad(js));
     st(gp.get()).pads.push(open_pad(g, device, js, index));
     GENERATION.fetch_add(1, Ordering::Relaxed);
     true
@@ -261,37 +242,23 @@ unsafe fn open(g: &mut Game, device: i32, index: usize) -> bool {
 unsafe fn close(g: &mut Game, index: usize) {
     let mut gp = g.ptr();
     println!("[pad] joystick {} removed", index);
-    SDL_JoystickClose(*g.joysticks.add(index));
-    *g.joysticks.add(index) = std::ptr::null_mut();
+    SDL_JoystickClose(g.joystick(index));
+    g.devices[index] = None;
     st(gp.get()).pads.retain(|p| p.index != index);
     GENERATION.fetch_add(1, Ordering::Relaxed);
 }
 
-/// The first empty slot in `joysticks`, growing it by one when every slot is taken.
-unsafe fn free_index(g: &mut Game) -> Option<usize> {
-    let count = g.joystickcount.max(0) as usize;
-    if let Some(i) = (0..count).find(|&i| (*g.joysticks.add(i)).is_null()) {
+/// The first empty slot in `devices`, growing it by one when every slot is taken.
+fn free_index(g: &mut Game) -> Option<usize> {
+    let count = g.devices.len();
+    if let Some(i) = (0..count).find(|&i| g.devices[i].is_none()) {
         return Some(i);
     }
-    if count >= MAX_JOYSTICKS {
+    if count >= MAX_DEVICES {
         return None;
     }
-    grow(g, count + 1);
+    g.devices.push(None);
     Some(count)
-}
-
-/// Makes `joysticks` at least `count` long; the new slots are empty.
-unsafe fn grow(g: &mut Game, count: usize) {
-    let old = g.joystickcount.max(0) as usize;
-    if count <= old {
-        return;
-    }
-    let mut grown = vec![std::ptr::null_mut::<SDL_Joystick>(); count];
-    for (i, slot) in grown.iter_mut().enumerate().take(old) {
-        *slot = *g.joysticks.add(i);
-    }
-    g.joysticks = Box::leak(grown.into_boxed_slice()).as_mut_ptr();
-    g.joystickcount = count as i16;
 }
 
 /// The raw input behind each controller button and axis. SDL2 derives controller events from raw joystick events in
@@ -357,13 +324,11 @@ fn apply_binds(pad: &mut Pad, buttons: &[Bind; DPAD_UP + 4], axes: &[Bind; 6]) {
 /// The joysticks players get: the translated controllers if there are any, otherwise every open joystick.
 pub fn player_pads(g: &mut Game) -> Vec<usize> {
     let mut gp = g.ptr();
-    unsafe {
-        let mut open: Vec<usize> = (0..gp.joystickcount.max(0) as usize).filter(|&i| !(*g.joysticks.add(i)).is_null()).collect();
-        if st(gp.get()).pads.iter().any(|p| p.controller) {
-            open.retain(|&i| st(gp.get()).pads.iter().any(|p| p.index == i && p.controller));
-        }
-        open
+    let mut open: Vec<usize> = (0..gp.devices.len()).filter(|&i| gp.devices[i].is_some()).collect();
+    if st(gp.get()).pads.iter().any(|p| p.controller) {
+        open.retain(|&i| st(gp.get()).pads.iter().any(|p| p.index == i && p.controller));
     }
+    open
 }
 
 unsafe extern "C" fn filter(userdata: *mut std::ffi::c_void, event: *mut SDL_Event) -> i32 {
@@ -372,14 +337,11 @@ unsafe extern "C" fn filter(userdata: *mut std::ffi::c_void, event: *mut SDL_Eve
 }
 
 /// Rewrites a controller's raw joystick event in place as the joystick event the game reads. False: drop the event.
-pub fn translate(g: &mut Game, event: &mut SDL_Event) -> bool {
+fn translate(g: &mut Game, event: &mut SDL_Event) -> bool {
     let mut gp = g.ptr();
     use SDL_EventType::*;
     unsafe {
         log_event(g, 0, event);
-        if !crate::smw::touch::filter(g, event) {
-            return false;
-        }
         let t = event.type_;
         let keep = if t == SDL_CONTROLLERBUTTONDOWN as u32 || t == SDL_CONTROLLERBUTTONUP as u32 || t == SDL_CONTROLLERAXISMOTION as u32 {
             !st(gp.get()).pads.iter().any(|p| p.controller)

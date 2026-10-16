@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_Spring.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game_values::if_sound_on_play;
@@ -26,7 +27,7 @@ pub struct CO_Spring {
 impl_base!(CO_Spring => mo_carried_object: MO_CarriedObject);
 
 impl CO_Spring {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, fsuper: bool) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, pos: Vec2s, fsuper: bool) -> Self {
         let mut o = CO_Spring { mo_carried_object: MO_CarriedObject::new(g, nspr, pos, 4, 4, 30, 31, 1, 0), fSuper: false, iOffsetY: 0 };
 
         o.fSuper = fsuper;
@@ -133,12 +134,12 @@ pub fn co_spring_draw<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T) {
         let src = Rect { x: o.animationOffsetX as i32, y: o.iOffsetY as i32, w: 32, h: 32 };
         if o.owner.iswarping() {
             let edge: ClipEdge = unsafe { std::mem::transmute::<i32, ClipEdge>(o.owner.get_warp_state() as i32) };
-            o.spr.draw_clip(g, x, y, &src, edge, o.owner.get_warp_plane() as i32);
+            g.rm.sprite(o.spr).draw_clip(g, x, y, &src, edge, o.owner.get_warp_plane() as i32);
         } else {
-            o.spr.draw_src(g, x, y, &src);
+            g.rm.sprite(o.spr).draw_src(g, x, y, &src);
         }
     } else {
-        o.spr.draw_src(g, x, y, &Rect { x: o.animationOffsetX as i32 + o.drawframe as i32, y: o.iOffsetY as i32, w: 32, h: 32 });
+        g.rm.sprite(o.spr).draw_src(g, x, y, &Rect { x: o.animationOffsetX as i32 + o.drawframe as i32, y: o.iOffsetY as i32, w: 32, h: 32 });
     }
 }
 

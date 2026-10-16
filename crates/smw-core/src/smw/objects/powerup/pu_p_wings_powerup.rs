@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/PU_PWingsPowerup.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::math::vec2::Vec2s;
@@ -20,7 +21,7 @@ impl_base!(PU_PWingsPowerup => mo_powerup: MO_Powerup);
 
 impl PU_PWingsPowerup {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, pos: Vec2s) -> Self {
         PU_PWingsPowerup { mo_powerup: MO_Powerup::new(g, nspr, pos, 1, 0, 30, 30, 1, 1) }
     }
 }

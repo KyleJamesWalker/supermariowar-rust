@@ -60,7 +60,7 @@ impl CGM_Collection {
 
             player.score().subscore[1] &= iCardMaskInverted;
 
-            let obj = Ptr::new_box(MO_CollectionCard::new(g, Ptr::from_mut(&mut gp.get().rm.spr_collectcards), 1, iValue, 30, vel, pos));
+            let obj = Ptr::new_box(MO_CollectionCard::new(g, gp.get().rm.spr_collectcards, 1, iValue, 30, vel, pos));
             gp.get().objectcontainer[1].add(g, obj);
         }
     }
@@ -76,7 +76,7 @@ fn spawn_card(g: &mut Game) {
         iRandomCard = 1;
     }
 
-    let obj = Ptr::new_box(MO_CollectionCard::new(g, Ptr::from_mut(&mut gp.get().rm.spr_collectcards), 0, iRandomCard, 0, Vec2f::zero(), Vec2s::zero()));
+    let obj = Ptr::new_box(MO_CollectionCard::new(g, gp.get().rm.spr_collectcards, 0, iRandomCard, 0, Vec2f::zero(), Vec2s::zero()));
     gp.get().objectcontainer[1].add(g, obj);
 }
 

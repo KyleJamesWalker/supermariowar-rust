@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/walkingenemy/WE_Goomba.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::{EC_Corpse, EC_FallingObject};
@@ -25,7 +26,7 @@ pub struct MO_Goomba {
 impl_base!(MO_Goomba => mo_walking_enemy: MO_WalkingEnemy);
 
 impl MO_Goomba {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, moveToRight: bool, fBouncing: bool) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, moveToRight: bool, fBouncing: bool) -> Self {
         let mut gp = g.ptr();
         let mut o = MO_Goomba {
             mo_walking_enemy: MO_WalkingEnemy::new(gp.get(), nspr, 2, 8, 30, 20, 1, 11, 0, if moveToRight { 0 } else { 32 }, 32, 32, moveToRight, true, fBouncing, true),
@@ -61,8 +62,8 @@ impl CObjectTrait for MO_Goomba {
         if self.frozen {
             let x = self.ix as i32 - self.collisionOffsetX as i32 + self.iw as i32 - 32;
             let y = self.iy as i32 - self.collisionOffsetY as i32 + self.ih as i32 - 32;
-            gp.rm.spr_goomba.draw_src(g, x, y, &Rect { x: 0, y: 0, w: 32, h: 32 });
-            gp.rm.spr_iceblock.draw_src(g, x, y, &Rect { x: 0, y: 0, w: 32, h: 32 });
+            gp.rm.sprite(gp.rm.spr_goomba).draw_src(g, x, y, &Rect { x: 0, y: 0, w: 32, h: 32 });
+            gp.rm.sprite(gp.rm.spr_iceblock).draw_src(g, x, y, &Rect { x: 0, y: 0, w: 32, h: 32 });
         } else {
             mo_walking_enemy_draw(g, self);
         }
@@ -100,7 +101,7 @@ impl IO_MovingObjectTrait for MO_Goomba {
         }
 
         self.dead = true;
-        g.eyecandy[2].emplace(EC_FallingObject::new(Ptr::from_mut(&mut g.rm.spr_goombadeadflying), self.ix, self.iy, 0.0f32, -VELJUMP / 2.0f32, 1, 0, 0, 0, 0, 0));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&g.rm, g.rm.spr_goombadeadflying, self.ix, self.iy, 0.0f32, -VELJUMP / 2.0f32, 1, 0, 0, 0, 0, 0));
     }
 }
 
@@ -138,15 +139,15 @@ impl MO_WalkingEnemyTrait for MO_Goomba {
             self.drawframe = 0;
 
             self.animationOffsetY = if self.velx > 0.0f32 { 0 } else { self.ih };
-            self.spr = Ptr::from_mut(&mut g.rm.spr_goomba);
+            self.spr = g.rm.spr_goomba;
         } else {
             self.dead = true;
 
             let killStyle = self.killStyle;
             player.add_killer_award(g, Ptr::null(), killStyle);
 
-            g.eyecandy[0].emplace(EC_Corpse::new(
-                Ptr::from_mut(&mut g.rm.spr_goombadead),
+            g.eyecandy[0].emplace(EC_Corpse::new(&gp.rm, 
+                g.rm.spr_goombadead,
                 (self.ix as i32 - self.collisionOffsetX as i32) as f32,
                 (self.iy as i32 + self.collisionHeight as i32 - 32) as f32,
                 0,

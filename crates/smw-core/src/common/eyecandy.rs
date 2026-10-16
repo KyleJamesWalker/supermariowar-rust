@@ -3,6 +3,7 @@
 //! Every class in the hierarchy below `EC_Animated` is a leaf, so `animate()` (virtual in C++)
 //! is resolved statically: each `update()` calls the `animate` of its own class.
 
+use crate::common::resource_manager::{CResourceManager, SpriteId};
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
@@ -55,17 +56,13 @@ macro_rules! impl_eyecandy {
     };
 }
 
-#[inline]
-fn spr(p: Ptr<gfxSprite>) -> &'static gfxSprite {
-    p.get()
-}
 
 //------------------------------------------------------------------------------
 // EC_StillImage
 //------------------------------------------------------------------------------
 pub struct EC_StillImage {
     pub c_eyecandy: CEyecandy,
-    pub spr: Ptr<gfxSprite>,
+    pub spr: SpriteId,
     pub iSrcX: i16,
     pub iSrcY: i16,
     pub ix: i16,
@@ -76,7 +73,7 @@ pub struct EC_StillImage {
 impl_base!(EC_StillImage => c_eyecandy: CEyecandy);
 
 impl EC_StillImage {
-    pub fn new(nspr: Ptr<gfxSprite>, dstx: i16, dsty: i16, srcx: i16, srcy: i16, w: i16, h: i16) -> Self {
+    pub fn new(rm: &CResourceManager, nspr: SpriteId, dstx: i16, dsty: i16, srcx: i16, srcy: i16, w: i16, h: i16) -> Self {
         let mut this = EC_StillImage {
             c_eyecandy: CEyecandy::default(),
             spr: nspr,
@@ -89,18 +86,18 @@ impl EC_StillImage {
         };
 
         if this.iw == 0 {
-            this.iw = this.spr.get_width() as i16;
+            this.iw = rm.sprite(this.spr).get_width() as i16;
         }
 
         if this.ih == 0 {
-            this.ih = this.spr.get_height() as i16;
+            this.ih = rm.sprite(this.spr).get_height() as i16;
         }
         this
     }
 
     pub fn draw(&self, g: &mut Game) {
         if !self.dead {
-            spr(self.spr).draw_part(g, self.ix as i32, self.iy as i32, self.iSrcX as i32, self.iSrcY as i32, self.iw as i32, self.ih as i32);
+            g.rm.sprite(self.spr).draw_part(g, self.ix as i32, self.iy as i32, self.iSrcX as i32, self.iSrcY as i32, self.iw as i32, self.ih as i32);
         }
     }
 }
@@ -110,7 +107,7 @@ impl EC_StillImage {
 //------------------------------------------------------------------------------
 pub struct EC_Animated {
     pub c_eyecandy: CEyecandy,
-    pub spr: Ptr<gfxSprite>,
+    pub spr: SpriteId,
 
     pub iAnimationX: i16,
     pub iAnimationY: i16,
@@ -128,7 +125,7 @@ pub struct EC_Animated {
 impl_base!(EC_Animated => c_eyecandy: CEyecandy);
 
 impl EC_Animated {
-    pub fn new(nspr: Ptr<gfxSprite>, dstx: i16, dsty: i16, srcx: i16, srcy: i16, w: i16, h: i16, speed: i16, frames: i16) -> Self {
+    pub fn new(rm: &CResourceManager, nspr: SpriteId, dstx: i16, dsty: i16, srcx: i16, srcy: i16, w: i16, h: i16, speed: i16, frames: i16) -> Self {
         let mut this = EC_Animated {
             c_eyecandy: CEyecandy::default(),
             spr: nspr,
@@ -145,11 +142,11 @@ impl EC_Animated {
         };
 
         if this.iAnimationW == 0 {
-            this.iAnimationW = this.spr.get_width() as i16;
+            this.iAnimationW = rm.sprite(this.spr).get_width() as i16;
         }
 
         if this.iAnimationH == 0 {
-            this.iAnimationH = this.spr.get_height() as i16;
+            this.iAnimationH = rm.sprite(this.spr).get_height() as i16;
         }
 
         this.iAnimationSpeed = speed;
@@ -184,7 +181,7 @@ impl EC_Animated {
     pub fn draw(&self, g: &mut Game) {
         let mut gp = g.ptr();
         if !self.dead {
-            spr(self.spr).draw_part(gp.get(), 
+            gp.rm.sprite(self.spr).draw_part(gp.get(), 
                 self.ix as i32,
                 self.iy as i32,
                 self.iAnimationFrame as i32,
@@ -207,8 +204,8 @@ pub struct EC_OscillatingAnimation {
 impl_base!(EC_OscillatingAnimation => ec_animated: EC_Animated);
 
 impl EC_OscillatingAnimation {
-    pub fn new(nspr: Ptr<gfxSprite>, dstx: i16, dsty: i16, srcx: i16, srcy: i16, w: i16, h: i16, speed: i16, frames: i16) -> Self {
-        EC_OscillatingAnimation { ec_animated: EC_Animated::new(nspr, dstx, dsty, srcx, srcy, w, h, speed, frames), fForward: true }
+    pub fn new(rm: &CResourceManager, nspr: SpriteId, dstx: i16, dsty: i16, srcx: i16, srcy: i16, w: i16, h: i16, speed: i16, frames: i16) -> Self {
+        EC_OscillatingAnimation { ec_animated: EC_Animated::new(rm, nspr, dstx, dsty, srcx, srcy, w, h, speed, frames), fForward: true }
     }
 
     pub fn animate(&mut self) {
@@ -257,8 +254,8 @@ pub struct EC_Cloud {
 impl_base!(EC_Cloud => ec_still_image: EC_StillImage);
 
 impl EC_Cloud {
-    pub fn new(nspr: Ptr<gfxSprite>, nx: f32, ny: f32, nvelx: f32, srcx: i16, srcy: i16, w: i16, h: i16) -> Self {
-        EC_Cloud { ec_still_image: EC_StillImage::new(nspr, nx as i16, ny as i16, srcx, srcy, w, h), dx: nx, dy: ny, velx: nvelx }
+    pub fn new(rm: &CResourceManager, nspr: SpriteId, nx: f32, ny: f32, nvelx: f32, srcx: i16, srcy: i16, w: i16, h: i16) -> Self {
+        EC_Cloud { ec_still_image: EC_StillImage::new(rm, nspr, nx as i16, ny as i16, srcx, srcy, w, h), dx: nx, dy: ny, velx: nvelx }
     }
 
     pub fn update(&mut self, _g: &mut Game) {
@@ -292,9 +289,9 @@ pub struct EC_Ghost {
 impl_base!(EC_Ghost => ec_animated: EC_Animated);
 
 impl EC_Ghost {
-    pub fn new(nspr: Ptr<gfxSprite>, nx: f32, ny: f32, nvelx: f32, ianimationspeed: i16, inumframes: i16, srcx: i16, srcy: i16, w: i16, h: i16) -> Self {
+    pub fn new(rm: &CResourceManager, nspr: SpriteId, nx: f32, ny: f32, nvelx: f32, ianimationspeed: i16, inumframes: i16, srcx: i16, srcy: i16, w: i16, h: i16) -> Self {
         EC_Ghost {
-            ec_animated: EC_Animated::new(nspr, nx as i16, ny as i16, srcx, srcy, w, h, ianimationspeed, inumframes),
+            ec_animated: EC_Animated::new(rm, nspr, nx as i16, ny as i16, srcx, srcy, w, h, ianimationspeed, inumframes),
             dx: nx,
             dy: ny,
             velx: nvelx,
@@ -336,9 +333,9 @@ pub struct EC_Leaf {
 impl_base!(EC_Leaf => ec_oscillating_animation: EC_OscillatingAnimation);
 
 impl EC_Leaf {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, nx: f32, ny: f32) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, nx: f32, ny: f32) -> Self {
         let mut this = EC_Leaf {
-            ec_oscillating_animation: EC_OscillatingAnimation::new(nspr, nx as i16, ny as i16, 0, 0, 16, 16, 16, 4),
+            ec_oscillating_animation: EC_OscillatingAnimation::new(&g.rm, nspr, nx as i16, ny as i16, 0, 0, 16, 16, 16, 4),
             dx: nx,
             dy: ny,
             velx: 0.0,
@@ -420,11 +417,11 @@ pub struct EC_Snow {
 impl_base!(EC_Snow => ec_still_image: EC_StillImage);
 
 impl EC_Snow {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, nx: f32, ny: f32, r#type: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, nx: f32, ny: f32, r#type: i16) -> Self {
         let mut gp = g.ptr();
         let srcx = ((RANDOM_BOOL(gp.get()) as i32) << 4) as i16;
         let mut this = EC_Snow {
-            ec_still_image: EC_StillImage::new(nspr, nx as i16, ny as i16, srcx, ((r#type as i32) << 4) as i16, 16, 16),
+            ec_still_image: EC_StillImage::new(&gp.rm, nspr, nx as i16, ny as i16, srcx, ((r#type as i32) << 4) as i16, 16, 16),
             dx: nx,
             dy: ny,
             velx: 0.0,
@@ -479,9 +476,9 @@ pub struct EC_Rain {
 impl_base!(EC_Rain => ec_still_image: EC_StillImage);
 
 impl EC_Rain {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, nx: f32, ny: f32) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, nx: f32, ny: f32) -> Self {
         let mut this = EC_Rain {
-            ec_still_image: EC_StillImage::new(nspr, nx as i16, ny as i16, 0, 16, 10, 10),
+            ec_still_image: EC_StillImage::new(&g.rm, nspr, nx as i16, ny as i16, 0, 16, 10, 10),
             dx: 0.0,
             dy: 0.0,
             velx: 0.0,
@@ -542,9 +539,9 @@ pub struct EC_Bubble {
 impl_base!(EC_Bubble => ec_oscillating_animation: EC_OscillatingAnimation);
 
 impl EC_Bubble {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, nx: f32, ny: f32) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, nx: f32, ny: f32) -> Self {
         let mut this = EC_Bubble {
-            ec_oscillating_animation: EC_OscillatingAnimation::new(nspr, nx as i16, ny as i16, 0, 0, 16, 8, 4, 4),
+            ec_oscillating_animation: EC_OscillatingAnimation::new(&g.rm, nspr, nx as i16, ny as i16, 0, 0, 16, 8, 4, 4),
             dx: 0.0,
             dy: 0.0,
             velx: 0.0,
@@ -612,9 +609,9 @@ pub struct EC_Corpse {
 impl_base!(EC_Corpse => ec_still_image: EC_StillImage);
 
 impl EC_Corpse {
-    pub fn new(nspr: Ptr<gfxSprite>, nx: f32, ny: f32, iSrcOffsetX: i16) -> Self {
+    pub fn new(rm: &CResourceManager, nspr: SpriteId, nx: f32, ny: f32, iSrcOffsetX: i16) -> Self {
         let mut this = EC_Corpse {
-            ec_still_image: EC_StillImage::new(nspr, nx as i16, ny as i16, iSrcOffsetX, 0, 32, 32),
+            ec_still_image: EC_StillImage::new(rm, nspr, nx as i16, ny as i16, iSrcOffsetX, 0, 32, 32),
             dx: nx,
             dy: ny,
             tx: 0,
@@ -768,7 +765,7 @@ impl_eyecandy!(EC_GravText);
 pub struct EC_Announcement {
     pub c_eyecandy: CEyecandy,
     font: Ptr<gfxFont>,
-    sprite: Ptr<gfxSprite>,
+    sprite: SpriteId,
 
     ix: i16,
     iy: i16,
@@ -787,7 +784,7 @@ pub struct EC_Announcement {
 impl_base!(EC_Announcement => c_eyecandy: CEyecandy);
 
 impl EC_Announcement {
-    pub fn new(nfont: Ptr<gfxFont>, nsprite: Ptr<gfxSprite>, ntext: String, icon: i16, time: i16, y: i16) -> Self {
+    pub fn new(nfont: Ptr<gfxFont>, nsprite: SpriteId, ntext: String, icon: i16, time: i16, y: i16) -> Self {
         let zero = Rect { x: 0, y: 0, w: 0, h: 0 };
         let mut this = EC_Announcement {
             c_eyecandy: CEyecandy::default(),
@@ -807,7 +804,7 @@ impl EC_Announcement {
 
         this.iFontY = (this.iy as i32 + 32 - (this.font.get_height() >> 1)) as i16;
 
-        this.iFontOffsetX = (16 + if !this.sprite.is_null() { 48 } else { 0 }) as i16;
+        this.iFontOffsetX = (16 + if !this.sprite.is_none() { 48 } else { 0 }) as i16;
 
         let iWidth = (16 + this.iFontOffsetX as i32 + this.font.get_width(&this.text)) as i16;
         let iHalfWidth = iWidth >> 1;
@@ -842,7 +839,7 @@ impl EC_Announcement {
     pub fn draw(&self, g: &mut Game) {
         let mut gp = g.ptr();
         for iRect in 0..4 {
-            gp.rm.menu_dialog.draw_part(
+            gp.rm.sprite(gp.rm.menu_dialog).draw_part(
                 g,
                 self.rDstRect[iRect].x,
                 self.rDstRect[iRect].y,
@@ -855,8 +852,8 @@ impl EC_Announcement {
 
         self.font.draw(g, self.ix as i32 + self.iFontOffsetX as i32, self.iFontY as i32, &self.text);
 
-        if !self.sprite.is_null() {
-            self.sprite.draw_part(g, self.ix as i32 + 16, self.iy as i32 + 16, (self.iIcon as i32) << 5, 0, 32, 32);
+        if !self.sprite.is_none() {
+            g.rm.sprite(self.sprite).draw_part(g, self.ix as i32 + 16, self.iy as i32 + 16, (self.iIcon as i32) << 5, 0, 32, 32);
         }
     }
 }
@@ -875,8 +872,8 @@ pub struct EC_FallingObject {
 impl_base!(EC_FallingObject => ec_animated: EC_Animated);
 
 impl EC_FallingObject {
-    pub fn new(
-        nspr: Ptr<gfxSprite>,
+    pub fn new(rm: &CResourceManager, 
+        nspr: SpriteId,
         x: i16,
         y: i16,
         nvelx: f32,
@@ -889,7 +886,7 @@ impl EC_FallingObject {
         h: i16,
     ) -> Self {
         EC_FallingObject {
-            ec_animated: EC_Animated::new(nspr, x, y, srcOffsetX, srcOffsetY, w, h, animationspeed, animationframes),
+            ec_animated: EC_Animated::new(rm, nspr, x, y, srcOffsetX, srcOffsetY, w, h, animationspeed, animationframes),
             fx: x as f32,
             fy: y as f32,
             velx: nvelx,
@@ -930,13 +927,13 @@ pub struct EC_SingleAnimation {
 impl_base!(EC_SingleAnimation => ec_animated: EC_Animated);
 
 impl EC_SingleAnimation {
-    pub fn new(nspr: Ptr<gfxSprite>, x: i16, y: i16, iframes: i16, irate: i16) -> Self {
-        let w = (nspr.get_width() as i16 as i32 / iframes as i32) as i16;
-        EC_SingleAnimation { ec_animated: EC_Animated::new(nspr, x, y, 0, 0, w, 0, irate, iframes) }
+    pub fn new(rm: &CResourceManager, nspr: SpriteId, x: i16, y: i16, iframes: i16, irate: i16) -> Self {
+        let w = (rm.sprite(nspr).get_width() as i16 as i32 / iframes as i32) as i16;
+        EC_SingleAnimation { ec_animated: EC_Animated::new(rm, nspr, x, y, 0, 0, w, 0, irate, iframes) }
     }
 
-    pub fn new_rect(nspr: Ptr<gfxSprite>, x: i16, y: i16, iframes: i16, irate: i16, offsetx: i16, offsety: i16, w: i16, h: i16) -> Self {
-        EC_SingleAnimation { ec_animated: EC_Animated::new(nspr, x, y, offsetx, offsety, w, h, irate, iframes) }
+    pub fn new_rect(rm: &CResourceManager, nspr: SpriteId, x: i16, y: i16, iframes: i16, irate: i16, offsetx: i16, offsety: i16, w: i16, h: i16) -> Self {
+        EC_SingleAnimation { ec_animated: EC_Animated::new(rm, nspr, x, y, offsetx, offsety, w, h, irate, iframes) }
     }
 
     pub fn update(&mut self, _g: &mut Game) {
@@ -966,9 +963,9 @@ pub struct EC_LoopingAnimation {
 impl_base!(EC_LoopingAnimation => ec_animated: EC_Animated);
 
 impl EC_LoopingAnimation {
-    pub fn new(nspr: Ptr<gfxSprite>, x: i16, y: i16, iframes: i16, irate: i16, loops: i16, ioffsetx: i16, ioffsety: i16, w: i16, h: i16) -> Self {
+    pub fn new(rm: &CResourceManager, nspr: SpriteId, x: i16, y: i16, iframes: i16, irate: i16, loops: i16, ioffsetx: i16, ioffsety: i16, w: i16, h: i16) -> Self {
         EC_LoopingAnimation {
-            ec_animated: EC_Animated::new(nspr, x, y, ioffsetx, ioffsety, w, h, irate, iframes),
+            ec_animated: EC_Animated::new(rm, nspr, x, y, ioffsetx, ioffsety, w, h, irate, iframes),
             iCountLoops: 0,
             iLoops: loops,
         }
@@ -996,8 +993,8 @@ impl_eyecandy!(EC_LoopingAnimation);
 
 /// `eyecandy[2].emplace<EC_SingleAnimation>(&rm->spr_fireballexplosion, x, y, 3, 8)`
 fn emplace_fireball_explosion(g: &mut Game, x: i16, y: i16) {
-    let spr = Ptr::from_mut(&mut g.rm.spr_fireballexplosion);
-    g.eyecandy[2].emplace(EC_SingleAnimation::new(spr, x, y, 3, 8));
+    let spr = g.rm.spr_fireballexplosion;
+    g.eyecandy[2].emplace(EC_SingleAnimation::new(&g.rm, spr, x, y, 3, 8));
 }
 
 //------------------------------------------------------------------------------
@@ -1005,7 +1002,7 @@ fn emplace_fireball_explosion(g: &mut Game, x: i16, y: i16) {
 //------------------------------------------------------------------------------
 pub struct EC_ExplodingAward {
     pub c_eyecandy: CEyecandy,
-    spr: Ptr<gfxSprite>,
+    spr: SpriteId,
     x: f32,
     y: f32,
     w: i16,
@@ -1019,7 +1016,7 @@ pub struct EC_ExplodingAward {
 impl_base!(EC_ExplodingAward => c_eyecandy: CEyecandy);
 
 impl EC_ExplodingAward {
-    pub fn new(nspr: Ptr<gfxSprite>, nx: i16, ny: i16, nvelx: f32, nvely: f32, timetolive: i16, awardID: i16) -> Self {
+    pub fn new(nspr: SpriteId, nx: i16, ny: i16, nvelx: f32, nvely: f32, timetolive: i16, awardID: i16) -> Self {
         let w: i16 = 16;
         EC_ExplodingAward {
             c_eyecandy: CEyecandy::default(),
@@ -1055,7 +1052,7 @@ impl EC_ExplodingAward {
 
     pub fn draw(&self, g: &mut Game) {
         let mut gp = g.ptr();
-        spr(self.spr).draw_part(gp.get(), self.x as i16 as i32, self.y as i16 as i32, self.id as i32, 0, self.w as i32, self.h as i32);
+        gp.rm.sprite(self.spr).draw_part(gp.get(), self.x as i16 as i32, self.y as i16 as i32, self.id as i32, 0, self.w as i32, self.h as i32);
     }
 }
 impl_eyecandy!(EC_ExplodingAward);
@@ -1065,7 +1062,7 @@ impl_eyecandy!(EC_ExplodingAward);
 //------------------------------------------------------------------------------
 pub struct EC_SwirlingAward {
     pub c_eyecandy: CEyecandy,
-    spr: Ptr<gfxSprite>,
+    spr: SpriteId,
     x: i16,
     y: i16,
     w: i16,
@@ -1088,7 +1085,7 @@ impl_base!(EC_SwirlingAward => c_eyecandy: CEyecandy);
 
 impl EC_SwirlingAward {
     pub fn new(
-        nspr: Ptr<gfxSprite>,
+        nspr: SpriteId,
         nx: i16,
         ny: i16,
         nangle: f32,
@@ -1156,7 +1153,7 @@ impl EC_SwirlingAward {
         let awardx = (self.x as i32 + (self.radius * cosf(self.angle)) as i16 as i32) as i16;
         let awardy = (self.y as i32 + (self.radius * sinf(self.angle)) as i16 as i32) as i16;
 
-        spr(self.spr).draw_part(gp.get(), awardx as i32, awardy as i32, self.iAnimationFrame as i32, self.iSrcY as i32, self.w as i32, self.h as i32);
+        gp.rm.sprite(self.spr).draw_part(gp.get(), awardx as i32, awardy as i32, self.iAnimationFrame as i32, self.iSrcY as i32, self.w as i32, self.h as i32);
     }
 }
 impl_eyecandy!(EC_SwirlingAward);
@@ -1166,7 +1163,7 @@ impl_eyecandy!(EC_SwirlingAward);
 //------------------------------------------------------------------------------
 pub struct EC_RocketAward {
     pub c_eyecandy: CEyecandy,
-    spr: Ptr<gfxSprite>,
+    spr: SpriteId,
     x: f32,
     y: f32,
     w: i16,
@@ -1188,7 +1185,7 @@ impl_base!(EC_RocketAward => c_eyecandy: CEyecandy);
 
 impl EC_RocketAward {
     pub fn new(
-        nspr: Ptr<gfxSprite>,
+        nspr: SpriteId,
         nx: i16,
         ny: i16,
         nvelx: f32,
@@ -1256,7 +1253,7 @@ impl EC_RocketAward {
 
     pub fn draw(&self, g: &mut Game) {
         let mut gp = g.ptr();
-        spr(self.spr).draw_part(gp.get(), 
+        gp.rm.sprite(self.spr).draw_part(gp.get(), 
             self.x as i16 as i32,
             self.y as i16 as i32,
             self.iAnimationFrame as i32,
@@ -1273,7 +1270,7 @@ impl_eyecandy!(EC_RocketAward);
 //------------------------------------------------------------------------------
 pub struct EC_FloatingObject {
     pub c_eyecandy: CEyecandy,
-    spr: Ptr<gfxSprite>,
+    spr: SpriteId,
     x: f32,
     y: f32,
     w: i16,
@@ -1289,7 +1286,7 @@ impl_base!(EC_FloatingObject => c_eyecandy: CEyecandy);
 
 impl EC_FloatingObject {
     pub fn new(
-        nspr: Ptr<gfxSprite>,
+        nspr: SpriteId,
         nx: i16,
         ny: i16,
         nvelx: f32,
@@ -1335,7 +1332,7 @@ impl EC_FloatingObject {
 
     pub fn draw(&self, g: &mut Game) {
         let mut gp = g.ptr();
-        spr(self.spr).draw_part(gp.get(), self.x as i16 as i32, self.y as i16 as i32, self.srcx as i32, self.srcy as i32, self.w as i32, self.h as i32);
+        gp.rm.sprite(self.spr).draw_part(gp.get(), self.x as i16 as i32, self.y as i16 as i32, self.srcx as i32, self.srcy as i32, self.w as i32, self.h as i32);
     }
 }
 impl_eyecandy!(EC_FloatingObject);
@@ -1345,8 +1342,8 @@ impl_eyecandy!(EC_FloatingObject);
 //------------------------------------------------------------------------------
 pub struct EC_SoulsAward {
     pub c_eyecandy: CEyecandy,
-    spr: Ptr<gfxSprite>,
-    spawnspr: Ptr<gfxSprite>,
+    spr: SpriteId,
+    spawnspr: SpriteId,
 
     x: i16,
     y: i16,
@@ -1366,7 +1363,7 @@ pub struct EC_SoulsAward {
 impl_base!(EC_SoulsAward => c_eyecandy: CEyecandy);
 
 impl EC_SoulsAward {
-    pub fn new(nspr: Ptr<gfxSprite>, nspr2: Ptr<gfxSprite>, nx: i16, ny: i16, timetolive: i16, nSpeed: f32, nSouls: i16, nSoulArray: &[i16]) -> Self {
+    pub fn new(rm: &CResourceManager, nspr: SpriteId, nspr2: SpriteId, nx: i16, ny: i16, timetolive: i16, nSpeed: f32, nSouls: i16, nSoulArray: &[i16]) -> Self {
         let mut this = EC_SoulsAward {
             c_eyecandy: CEyecandy::default(),
             spr: nspr,
@@ -1406,8 +1403,8 @@ impl EC_SoulsAward {
         this.frame = 0;
         this.endmode = false;
 
-        this.w = (nspr2.get_width() as i16 as i32 / 7) as i16;
-        this.h = nspr2.get_height() as i16;
+        this.w = (rm.sprite(nspr2).get_width() as i16 as i32 / 7) as i16;
+        this.h = rm.sprite(nspr2).get_height() as i16;
         this
     }
 
@@ -1426,7 +1423,7 @@ impl EC_SoulsAward {
             let velx = self.speed * cosf(angle);
             let vely = self.speed * sinf(angle);
 
-            let spr = Ptr::from_mut(&mut g.rm.spr_awardsouls);
+            let spr = g.rm.spr_awardsouls;
             g.eyecandy[2].emplace(EC_RocketAward::new(
                 spr,
                 (self.x as i32 - 8) as i16,
@@ -1465,7 +1462,7 @@ impl EC_SoulsAward {
 
     pub fn draw(&self, g: &mut Game) {
         let mut gp = g.ptr();
-        spr(self.spawnspr).draw_part(gp.get(), 
+        gp.rm.sprite(self.spawnspr).draw_part(gp.get(), 
             self.x as i32 - 16,
             self.y as i32 - 16,
             self.frame as i32 * self.w as i32,
@@ -1482,8 +1479,8 @@ impl_eyecandy!(EC_SoulsAward);
 //------------------------------------------------------------------------------
 pub struct EC_Door {
     pub c_eyecandy: CEyecandy,
-    spr: Ptr<gfxSprite>,
-    mariospr: Ptr<gfxSprite>,
+    spr: SpriteId,
+    mariospr: SpriteId,
 
     x: i16,
     y: i16,
@@ -1500,7 +1497,7 @@ pub struct EC_Door {
 impl_base!(EC_Door => c_eyecandy: CEyecandy);
 
 impl EC_Door {
-    pub fn new(nspr: Ptr<gfxSprite>, nmariospr: Ptr<gfxSprite>, nx: i16, ny: i16, irate: i16, xOffset: i16, iColor: i16) -> Self {
+    pub fn new(nspr: SpriteId, nmariospr: SpriteId, nx: i16, ny: i16, irate: i16, xOffset: i16, iColor: i16) -> Self {
         let ih: i16 = 32;
         EC_Door {
             c_eyecandy: CEyecandy::default(),
@@ -1562,10 +1559,10 @@ impl EC_Door {
     pub fn draw(&self, g: &mut Game) {
         let mut gp = g.ptr();
         let (x, y, iw, ih, offsety) = (self.x as i32, self.y as i32, self.iw as i32, self.ih as i32, self.offsety as i32);
-        spr(self.spr).draw_part(gp.get(), x, y + offsety, 0, self.colorOffset as i32, iw, ih - offsety);
+        gp.rm.sprite(self.spr).draw_part(gp.get(), x, y + offsety, 0, self.colorOffset as i32, iw, ih - offsety);
 
         if self.state == 1 {
-            spr(self.mariospr).draw_part(gp.get(), 
+            gp.rm.sprite(self.mariospr).draw_part(gp.get(), 
                 x + 16 - HALFPW - PWOFFSET,
                 y + 16 - HALFPH - PHOFFSET + offsety,
                 self.offsetx as i32,
@@ -1575,7 +1572,7 @@ impl EC_Door {
             );
         }
 
-        spr(self.spr).draw_part(gp.get(), x, y + offsety, self.frame as i32 * iw, self.colorOffset as i32, iw, ih - offsety);
+        gp.rm.sprite(self.spr).draw_part(gp.get(), x, y + offsety, self.frame as i32 * iw, self.colorOffset as i32, iw, ih - offsety);
     }
 }
 impl_eyecandy!(EC_Door);
@@ -1585,7 +1582,7 @@ impl_eyecandy!(EC_Door);
 //------------------------------------------------------------------------------
 pub struct EC_SuperStompExplosion {
     pub c_eyecandy: CEyecandy,
-    spr: Ptr<gfxSprite>,
+    spr: SpriteId,
     ix: i16,
     iy: i16,
     iAnimationFrame: i16,
@@ -1616,7 +1613,7 @@ static rectSuperStompRightDst: [Rect; 8] =
     [r(0, -40, 48, 40), r(2, -42, 54, 42), r(18, -58, 48, 58), r(26, -70, 42, 70), r(28, -78, 44, 78), r(30, -82, 44, 82), r(32, -76, 42, 76), r(36, -74, 34, 74)];
 
 impl EC_SuperStompExplosion {
-    pub fn new(nspr: Ptr<gfxSprite>, x: i16, y: i16, irate: i16) -> Self {
+    pub fn new(nspr: SpriteId, x: i16, y: i16, irate: i16) -> Self {
         EC_SuperStompExplosion { c_eyecandy: CEyecandy::default(), spr: nspr, iRate: irate, ix: x, iy: y, iAnimationFrame: 0, iAnimationTimer: 0 }
     }
 
@@ -1638,8 +1635,8 @@ impl EC_SuperStompExplosion {
         }
 
         let f = self.iAnimationFrame as usize;
-        spr(self.spr).draw_src(g, rectSuperStompLeftDst[f].x + self.ix as i32, rectSuperStompLeftDst[f].y + self.iy as i32, &rectSuperStompLeftSrc[f]);
-        spr(self.spr).draw_src(g, rectSuperStompRightDst[f].x + self.ix as i32, rectSuperStompRightDst[f].y + self.iy as i32, &rectSuperStompRightSrc[f]);
+        g.rm.sprite(self.spr).draw_src(g, rectSuperStompLeftDst[f].x + self.ix as i32, rectSuperStompLeftDst[f].y + self.iy as i32, &rectSuperStompLeftSrc[f]);
+        g.rm.sprite(self.spr).draw_src(g, rectSuperStompRightDst[f].x + self.ix as i32, rectSuperStompRightDst[f].y + self.iy as i32, &rectSuperStompRightSrc[f]);
     }
 }
 impl_eyecandy!(EC_SuperStompExplosion);
@@ -1790,14 +1787,14 @@ impl Spotlight {
     pub fn draw(&mut self, g: &mut Game) {
         let (ix, iy, hw, w) = (self.ix as i32, self.iy as i32, self.iHalfWidth as i32, self.iWidth as i32);
         let rDst = Rect { x: ix - hw, y: iy - hw, w, h: w };
-        g.rm.spr_overlayhole.draw_src_to(&self.rSrc, g.rm.spr_overlay.get_surface(), &rDst);
+        g.rm.sprite(g.rm.spr_overlayhole).draw_src_to(&self.rSrc, g.rm.sprite(g.rm.spr_overlay).get_surface(), &rDst);
 
         if ix - hw < 0 {
             let rDstWrap = Rect { x: ix - hw + screenWidth, y: iy - hw, w, h: w };
-            g.rm.spr_overlayhole.draw_src_to(&self.rSrc, g.rm.spr_overlay.get_surface(), &rDstWrap);
+            g.rm.sprite(g.rm.spr_overlayhole).draw_src_to(&self.rSrc, g.rm.sprite(g.rm.spr_overlay).get_surface(), &rDstWrap);
         } else if ix + hw >= screenWidth {
             let rDstWrap = Rect { x: ix - hw - screenWidth, y: iy - hw, w, h: w };
-            g.rm.spr_overlayhole.draw_src_to(&self.rSrc, g.rm.spr_overlay.get_surface(), &rDstWrap);
+            g.rm.sprite(g.rm.spr_overlayhole).draw_src_to(&self.rSrc, g.rm.sprite(g.rm.spr_overlay).get_surface(), &rDstWrap);
         }
     }
 
@@ -1831,7 +1828,7 @@ impl SpotlightManager {
         let mut gp = g.ptr();
         unsafe {
             // Clear the overlay surface again with black
-            crate::common::gfx::blit::fill_rect(g.rm.spr_overlay.get_surface(), null(), 0x0);
+            crate::common::gfx::blit::fill_rect(g.rm.sprite(g.rm.spr_overlay).get_surface(), null(), 0x0);
         }
 
         let mut i = 0;
@@ -1849,7 +1846,7 @@ impl SpotlightManager {
         }
 
         // Draw the overlay
-        gp.rm.spr_overlay.draw(g, 0, 0);
+        gp.rm.sprite(gp.rm.spr_overlay).draw(g, 0, 0);
     }
 
     pub fn clear_spotlights(&mut self) {

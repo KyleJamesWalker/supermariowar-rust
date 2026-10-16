@@ -8,6 +8,7 @@ pub mod projectile_options_menu;
 pub mod sound_options_menu;
 pub mod team_options_menu;
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::ui::mi_select_field::MI_SelectField;
 use crate::globals::*;
@@ -15,7 +16,7 @@ use crate::globals::*;
 /// `new MI_SelectField<T>(spr, x, y, name, width, indent)`, `add` of each item, `setOutputPtr(output)`,
 /// `setCurrentValue(*output)`: the construction sequence every options menu field uses.
 pub(crate) unsafe fn select_field<T: Copy + PartialEq + 'static>(
-    spr: Ptr<gfxSprite>,
+    spr: SpriteId,
     x: i16,
     y: i16,
     name: &str,

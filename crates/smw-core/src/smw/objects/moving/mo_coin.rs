@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_Coin.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
@@ -35,7 +36,7 @@ impl_base!(MO_Coin => io_moving_object: IO_MovingObject);
 
 impl MO_Coin {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, vel: Vec2f, pos: Vec2s, color: i16, team: i16, r#type: i16, uncollectabletime: i16, placecoin: bool) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, vel: Vec2f, pos: Vec2s, color: i16, team: i16, r#type: i16, uncollectabletime: i16, placecoin: bool) -> Self {
         let mut o = MO_Coin {
             io_moving_object: IO_MovingObject::new(g, nspr, pos, 4, 8, 30, 30, 1, 1, 0, ((color as i32) << 5) as i16, 32, 32),
             timer: 0,
@@ -120,7 +121,7 @@ impl CObjectTrait for MO_Coin {
             gp.game_values.gamemode.check_winner(g, player);
         }
 
-        g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_coinsparkle), self.ix, self.iy, 7, 4));
+        g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, g.rm.spr_coinsparkle, self.ix, self.iy, 7, 4));
 
         if_sound_on_play(g, &mut gp.rm.sfx_coin);
 
@@ -159,7 +160,7 @@ impl CObjectTrait for MO_Coin {
             self.iUncollectableTime -= 1;
 
             if self.iType == 1 && (self.iUncollectableTime as i32) < -(g.game_values.gamemodesettings.greed.coinlife as i32) {
-                g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(&g.rm, g.rm.spr_fireballexplosion, self.ix, self.iy, 3, 8));
                 self.dead = true;
             }
         }
@@ -171,7 +172,7 @@ impl CObjectTrait for MO_Coin {
 
         // Draw sparkles
         if self.iType != 1 {
-            gp.rm.spr_shinesparkle.draw_src(
+            gp.rm.sprite(gp.rm.spr_shinesparkle).draw_src(
                 g,
                 self.ix as i32 - self.collisionOffsetX as i32,
                 self.iy as i32 - self.collisionOffsetY as i32,

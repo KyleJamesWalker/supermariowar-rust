@@ -173,7 +173,7 @@ impl UI_ControlTrait for MI_MapBrowser {
                     self.mapSurfaces[i].draw_src_to(&rSrc, g.blitdest, &rDst);
 
                     if self.iType == 0 && self.node_filter(g, i) {
-                        gp.rm.menu_map_filter.draw_src(g, rDst.x, rDst.y, &filterSrc);
+                        gp.rm.sprite(gp.rm.menu_map_filter).draw_src(g, rDst.x, rDst.y, &filterSrc);
                     }
 
                     gp.rm.menu_font_large.draw_chop_right(g, rDst.x, rDst.y + 120, 165, &self.mapNames[i]);
@@ -185,16 +185,16 @@ impl UI_ControlTrait for MI_MapBrowser {
         rDst.y = self.iSelectedRow as i32 * 150 + 30;
         rDst.x = self.iSelectedCol as i32 * 200 + 40;
 
-        gp.rm.menu_dialog.draw_src(g, rDst.x - 16, rDst.y - 16, &Rect { x: 0, y: 0, w: 176, h: 148 });
-        gp.rm.menu_dialog.draw_src(g, rDst.x + 160, rDst.y - 16, &Rect { x: 496, y: 0, w: 16, h: 148 });
-        gp.rm.menu_dialog.draw_src(g, rDst.x - 16, rDst.y + 132, &Rect { x: 0, y: 464, w: 176, h: 16 });
-        gp.rm.menu_dialog.draw_src(g, rDst.x + 160, rDst.y + 132, &Rect { x: 496, y: 464, w: 16, h: 16 });
+        gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, rDst.x - 16, rDst.y - 16, &Rect { x: 0, y: 0, w: 176, h: 148 });
+        gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, rDst.x + 160, rDst.y - 16, &Rect { x: 496, y: 0, w: 16, h: 148 });
+        gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, rDst.x - 16, rDst.y + 132, &Rect { x: 0, y: 464, w: 176, h: 16 });
+        gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, rDst.x + 160, rDst.y + 132, &Rect { x: 496, y: 464, w: 16, h: 16 });
 
         let sel = (self.iSelectedRow * 3 + self.iSelectedCol) as usize;
         self.mapSurfaces[sel].draw_src_to(&rSrc, g.blitdest, &rDst);
 
         if self.iType == 0 && self.node_filter(g, sel) {
-            gp.rm.menu_map_filter.draw_src(g, rDst.x, rDst.y, &filterSrc);
+            gp.rm.sprite(gp.rm.menu_map_filter).draw_src(g, rDst.x, rDst.y, &filterSrc);
         }
 
         gp.rm.menu_font_large.draw_chop_right(g, rDst.x, rDst.y + 120, 165, &self.mapNames[sel]);

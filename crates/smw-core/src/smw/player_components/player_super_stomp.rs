@@ -52,7 +52,7 @@ impl PlayerSuperStomp {
         //If they were super stomping and they are not in the air anymore (i.e. on the ground), then create the
         //super stomp attack zone, play the sound and show the stomp gfx
         if self.is_stomping {
-            g.eyecandy[2].emplace(EC_SuperStompExplosion::new(Ptr::from_mut(&mut g.rm.spr_superstomp), player.center_x(), player.bottom_y(), 4));
+            g.eyecandy[2].emplace(EC_SuperStompExplosion::new(g.rm.spr_superstomp, player.center_x(), player.bottom_y(), 4));
             if_sound_on_play(g, &mut gp.rm.sfx_bobombsound);
             self.is_stomping = false;
 

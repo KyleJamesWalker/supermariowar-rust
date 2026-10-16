@@ -55,8 +55,8 @@ impl CGameModeTrait for CGM_Jail {
 }
 
 fn emplace_poof(g: &mut Game, player: Ptr<CPlayer>) {
-    g.eyecandy[2].emplace(EC_SingleAnimation::new(
-        Ptr::from_mut(&mut g.rm.spr_poof),
+    g.eyecandy[2].emplace(EC_SingleAnimation::new(&g.rm, 
+        g.rm.spr_poof,
         (player.center_x() as i32 - 24) as i16,
         (player.center_y() as i32 - 24) as i16,
         4,

@@ -52,7 +52,7 @@ impl PlayerOutOfArenaTimer {
 
         if player.top_y() < 0 {
             if player.bottom_y() < -1 || (player.bottom_y() <= 0 && player.vely <= 1.0f32) {
-                gp.rm.spr_abovearrows.draw_src(
+                gp.rm.sprite(gp.rm.spr_abovearrows).draw_src(
                     g,
                     player.left_x() as i32 - PWOFFSET,
                     0,
@@ -61,7 +61,7 @@ impl PlayerOutOfArenaTimer {
 
                 //This displays the out of arena timer before the player is killed
                 if g.game_values.outofboundstime > 0 && self.displaytimer >= 0 {
-                    gp.rm.spr_awardkillsinrow.draw_src(
+                    gp.rm.sprite(gp.rm.spr_awardkillsinrow).draw_src(
                         g,
                         player.left_x() as i32 - PWOFFSET + 8,
                         18,

@@ -253,7 +253,7 @@ impl MI_World {
         let mut parent = self.m_parentMenu;
         parent.eyeCandy.emplace(EC_Announcement::new(
             Ptr::from_mut(&mut g.rm.menu_font_large),
-            Ptr::from_mut(&mut g.rm.spr_announcementicons),
+            g.rm.spr_announcementicons,
             szMessage,
             g.game_values.colorids[self.iControllingPlayerId as usize],
             120,
@@ -504,8 +504,8 @@ impl MI_World {
                 self.update_tile_both(g, iDest.x - self.iMapDrawOffsetCol, iDest.y - self.iMapDrawOffsetRow);
 
                 let mut parent = self.m_parentMenu;
-                parent.eyeCandy.emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut g.rm.spr_poof),
+                parent.eyeCandy.emplace(EC_SingleAnimation::new(&gp.rm, 
+                    g.rm.spr_poof,
                     (((iDest.x as i32) << 5) + self.iMapOffsetX as i32 - 8) as i16,
                     (((iDest.y as i32) << 5) + self.iMapOffsetY as i32 - 8) as i16,
                     4,
@@ -530,28 +530,28 @@ impl MI_World {
 
                 if iDoorsOpened & 0x1 != 0 {
                     let mut parent = self.m_parentMenu;
-                    parent.eyeCandy.emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), iPlayerX - ts, iPlayerY, 3, 8));
+                    parent.eyeCandy.emplace(EC_SingleAnimation::new(&g.rm, g.rm.spr_fireballexplosion, iPlayerX - ts, iPlayerY, 3, 8));
 
                     self.update_tile_both(g, col - 1, row);
                 }
 
                 if iDoorsOpened & 0x2 != 0 {
                     let mut parent = self.m_parentMenu;
-                    parent.eyeCandy.emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), iPlayerX + ts, iPlayerY, 3, 8));
+                    parent.eyeCandy.emplace(EC_SingleAnimation::new(&g.rm, g.rm.spr_fireballexplosion, iPlayerX + ts, iPlayerY, 3, 8));
 
                     self.update_tile_both(g, col + 1, row);
                 }
 
                 if iDoorsOpened & 0x4 != 0 {
                     let mut parent = self.m_parentMenu;
-                    parent.eyeCandy.emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), iPlayerX, iPlayerY - ts, 3, 8));
+                    parent.eyeCandy.emplace(EC_SingleAnimation::new(&g.rm, g.rm.spr_fireballexplosion, iPlayerX, iPlayerY - ts, 3, 8));
 
                     self.update_tile_both(g, col, row - 1);
                 }
 
                 if iDoorsOpened & 0x8 != 0 {
                     let mut parent = self.m_parentMenu;
-                    parent.eyeCandy.emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), iPlayerX, iPlayerY + ts, 3, 8));
+                    parent.eyeCandy.emplace(EC_SingleAnimation::new(&g.rm, g.rm.spr_fireballexplosion, iPlayerX, iPlayerY + ts, 3, 8));
 
                     self.update_tile_both(g, col, row + 1);
                 }
@@ -614,8 +614,8 @@ impl MI_World {
 
         let iPlayerDrawPos = g.g_worldmap.get_player_position();
         let mut parent = self.m_parentMenu;
-        parent.eyeCandy.emplace(EC_SingleAnimation::new(
-            Ptr::from_mut(&mut g.rm.spr_poof),
+        parent.eyeCandy.emplace(EC_SingleAnimation::new(&gp.rm, 
+            g.rm.spr_poof,
             (iPlayerDrawPos.x as i32 + self.iMapOffsetX as i32 - 8) as i16,
             (iPlayerDrawPos.y as i32 + self.iMapOffsetY as i32 - 8) as i16,
             4,
@@ -852,12 +852,12 @@ impl UI_ControlTrait for MI_World {
 
         //Draw the cloud if the player is one
         if self.fUsingCloud && self.iState == -1 {
-            gp.rm.spr_worlditems.draw_src(g, px, py, &Rect { x: 32, y: 0, w: 32, h: 32 });
+            gp.rm.sprite(gp.rm.spr_worlditems).draw_src(g, px, py, &Rect { x: 32, y: 0, w: 32, h: 32 });
         }
 
         //If a points modifier is in place, display it
         if g.game_values.worldpointsbonus >= 0 {
-            gp.rm.spr_worlditems.draw_src(g, 603, 5, &Rect { x: (gp.game_values.worldpointsbonus as i32 + 9) << 5, y: 0, w: 32, h: 32 });
+            gp.rm.sprite(gp.rm.spr_worlditems).draw_src(g, 603, 5, &Rect { x: (gp.game_values.worldpointsbonus as i32 + 9) << 5, y: 0, w: 32, h: 32 });
         }
 
         //Draw the teleport/warp stars effect
@@ -867,7 +867,7 @@ impl UI_ControlTrait for MI_World {
                 let iStarX = (self.dTeleportStarRadius * cosf(dAngle)) as i16;
                 let iStarY = (self.dTeleportStarRadius * sinf(dAngle)) as i16;
 
-                gp.rm.spr_teleportstar.draw_src(g, iStarX as i32 + px, iStarY as i32 + py, &Rect { x: self.iTeleportStarAnimationFrame as i32, y: 0, w: 32, h: 32 });
+                gp.rm.sprite(gp.rm.spr_teleportstar).draw_src(g, iStarX as i32 + px, iStarY as i32 + py, &Rect { x: self.iTeleportStarAnimationFrame as i32, y: 0, w: 32, h: 32 });
             }
         }
 
@@ -884,14 +884,14 @@ impl UI_ControlTrait for MI_World {
                 for iMemberStore in 0..g.game_values.teamcounts[iTeamStore] {
                     let iPlayerId = g.game_values.teamids[iTeamStore][iMemberStore as usize] as usize;
 
-                    gp.rm.spr_worlditempopup.draw_src(
+                    gp.rm.sprite(gp.rm.spr_worlditempopup).draw_src(
                         g,
                         iStoredPowerupBoxX as i32,
                         self.iStoredItemPopupDrawY as i32,
                         &Rect { x: gp.game_values.colorids[iPlayerId] as i32 * 48, y: 256, w: 48, h: 48 },
                     );
 
-                    gp.rm.spr_storedpoweruplarge.draw_src(
+                    gp.rm.sprite(gp.rm.spr_storedpoweruplarge).draw_src(
                         g,
                         iStoredPowerupBoxX as i32 + 8,
                         self.iStoredItemPopupDrawY as i32 + 8,
@@ -907,14 +907,14 @@ impl UI_ControlTrait for MI_World {
                     let iColorId = g.game_values.colorids[g.game_values.teamids[t][0] as usize] as i32;
                     let drawY = self.iItemPopupDrawY[t] as i32;
                     let offCur = self.iPopupOffsetsCurrent[t] as i32;
-                    gp.rm.spr_worlditempopup.draw_src(g, 0, 448 - drawY - offCur, &Rect { x: 0, y: iColorId * 64 + 32 - drawY, w: 320, h: drawY << 1 });
-                    gp.rm.spr_worlditempopup.draw_src(g, 320, 448 - drawY - offCur, &Rect { x: 192, y: iColorId * 64 + 32 - drawY, w: 320, h: drawY << 1 });
+                    gp.rm.sprite(gp.rm.spr_worlditempopup).draw_src(g, 0, 448 - drawY - offCur, &Rect { x: 0, y: iColorId * 64 + 32 - drawY, w: 320, h: drawY << 1 });
+                    gp.rm.sprite(gp.rm.spr_worlditempopup).draw_src(g, 320, 448 - drawY - offCur, &Rect { x: 192, y: iColorId * 64 + 32 - drawY, w: 320, h: drawY << 1 });
 
                     if self.iStateTransition[t] == 3 {
                         let iNumPowerups = g.game_values.worldpowerupcount[t];
 
                         if iNumPowerups > 0 {
-                            gp.rm.spr_worlditempopup.draw_src(g, self.iItemCol[t] as i32 * 52 + 114, 424 - offCur, &Rect { x: iColorId * 48, y: 256, w: 48, h: 48 });
+                            gp.rm.sprite(gp.rm.spr_worlditempopup).draw_src(g, self.iItemCol[t] as i32 * 52 + 114, 424 - offCur, &Rect { x: iColorId * 48, y: 256, w: 48, h: 48 });
                         }
 
                         let iStartItem: i16 = self.iItemPage[t] << 3;
@@ -923,9 +923,9 @@ impl UI_ControlTrait for MI_World {
                             let iPowerup = g.game_values.worldpowerups[t][iItem as usize] as i32;
                             let x = (iItem as i32 - self.iItemPage[t] as i32 * 8) * 52 + 122;
                             if iPowerup >= NUM_POWERUPS {
-                                gp.rm.spr_worlditems.draw_src(g, x, 432 - offCur, &Rect { x: (iPowerup - NUM_POWERUPS) << 5, y: 0, w: 32, h: 32 });
+                                gp.rm.sprite(gp.rm.spr_worlditems).draw_src(g, x, 432 - offCur, &Rect { x: (iPowerup - NUM_POWERUPS) << 5, y: 0, w: 32, h: 32 });
                             } else {
-                                gp.rm.spr_storedpoweruplarge.draw_src(g, x, 432 - offCur, &Rect { x: iPowerup << 5, y: 0, w: 32, h: 32 });
+                                gp.rm.sprite(gp.rm.spr_storedpoweruplarge).draw_src(g, x, 432 - offCur, &Rect { x: iPowerup << 5, y: 0, w: 32, h: 32 });
                             }
                             iItem += 1;
                         }
@@ -935,8 +935,8 @@ impl UI_ControlTrait for MI_World {
         }
 
         if self.iState == 4 || self.iState == 5 {
-            g.rm.menu_shade.setalpha(self.iScreenfade as u8);
-            gp.rm.menu_shade.draw(g, 0, 0);
+            g.rm.sprite(g.rm.menu_shade).setalpha(self.iScreenfade as u8);
+            gp.rm.sprite(gp.rm.menu_shade).draw(g, 0, 0);
         }
     }
 

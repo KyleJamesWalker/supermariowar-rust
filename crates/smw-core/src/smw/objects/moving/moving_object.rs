@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MovingObject.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
@@ -65,7 +66,7 @@ impl_base!(IO_MovingObject => cobject: CObject);
 impl IO_MovingObject {
     /// Pass `-1` for the C++ default arguments.
     #[allow(clippy::too_many_arguments)]
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>,
+    pub fn new(g: &mut Game, nspr: SpriteId,
         pos: Vec2s,
         iNumSpr: i16,
         aniSpeed: i16,
@@ -108,8 +109,8 @@ impl IO_MovingObject {
 
         if iAnimationWidth > -1 {
             o.iw = iAnimationWidth;
-        } else if !o.spr.is_null() {
-            o.iw = (o.spr.get_width() as i16) / o.iNumSprites;
+        } else if !o.spr.is_none() {
+            o.iw = (g.rm.sprite(o.spr).get_width() as i16) / o.iNumSprites;
         }
 
         if iAnimationHeight > -1 {
@@ -118,8 +119,8 @@ impl IO_MovingObject {
 
         o.animationtimer = 0;
 
-        if !o.spr.is_null() {
-            o.animationWidth = o.spr.get_width() as i16;
+        if !o.spr.is_none() {
+            o.animationWidth = g.rm.sprite(o.spr).get_width() as i16;
         }
 
         o.fOldX = o.fx;
@@ -217,7 +218,7 @@ impl IO_MovingObject {
 
 pub fn io_moving_object_draw<T: IO_MovingObjectTrait + ?Sized>(g: &mut Game, this: &mut T) {
     let o = this.mo();
-    o.spr.draw_src(
+    g.rm.sprite(o.spr).draw_src(
         g,
         (o.ix - o.collisionOffsetX) as i32,
         (o.iy - o.collisionOffsetY) as i32,
@@ -878,8 +879,8 @@ pub fn io_moving_object_kill_object_map_hazard<T: IO_MovingObjectTrait + ?Sized>
     {
         let o = this.mo_mut();
         o.dead = true;
-        g.eyecandy[2].emplace(EC_SingleAnimation::new(
-            Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+        g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
+            g.rm.spr_fireballexplosion,
             (o.ix as i32 + (o.iw as i32 >> 1) - 16) as i16,
             (o.iy as i32 + (o.ih as i32 >> 1) - 16) as i16,
             3,

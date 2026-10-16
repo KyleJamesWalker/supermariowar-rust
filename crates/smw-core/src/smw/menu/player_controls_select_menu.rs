@@ -32,8 +32,8 @@ crate::impl_base!(UI_PlayerControlsSelectMenu => ui_menu: UI_Menu);
 impl UI_PlayerControlsSelectMenu {
     pub fn new(g: &mut Game) -> Box<Self> {
         let mut this = Box::<Self>::default();
-        let spr_selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
-        let menu_plain_field = Ptr::from_mut(&mut g.rm.menu_plain_field);
+        let spr_selectfield = g.rm.spr_selectfield;
+        let menu_plain_field = g.rm.menu_plain_field;
 
         this.miPlayer1ControlsButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 120, 140, "Player 1", 400, TextAlign::CENTER));
         this.miPlayer1ControlsButton.set_code(MENU_CODE_TO_PLAYER_1_CONTROLS);

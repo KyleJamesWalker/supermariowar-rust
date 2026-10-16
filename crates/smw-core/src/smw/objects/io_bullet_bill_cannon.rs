@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/IO_BulletBillCannon.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::math::vec2::Vec2s;
@@ -26,7 +27,7 @@ impl_base!(IO_BulletBillCannon => cobject: CObject);
 impl IO_BulletBillCannon {
     pub fn new(g: &mut Game, pos: Vec2s, freq: i16, vel: f32, preview: bool) -> Self {
         let mut gp = g.ptr();
-        let mut this = IO_BulletBillCannon { cobject: CObject::new(gp.get(), Ptr::null(), pos), m_freq: freq, m_timer: 0, m_vel: vel, m_preview: preview };
+        let mut this = IO_BulletBillCannon { cobject: CObject::new(gp.get(), SpriteId::NONE, pos), m_freq: freq, m_timer: 0, m_vel: vel, m_preview: preview };
         this.objectType = object_bulletbillcannon;
         this.set_new_timer(g);
         this
@@ -63,8 +64,8 @@ impl IO_BulletBillCannon {
         let pos = Vec2s::new((self.ix as i32 + if self.m_vel < 0.0f32 { 32 } else { -32 }) as i16, self.iy);
         let obj = Ptr::new_box(MO_BulletBill::new(
             g,
-            Ptr::from_mut(&mut gp.get().rm.spr_hazard_bulletbill[if self.m_preview { 1 } else { 0 }]),
-            Ptr::from_mut(&mut gp.get().rm.spr_hazard_bulletbilldead),
+            gp.get().rm.spr_hazard_bulletbill[if self.m_preview { 1 } else { 0 }],
+            gp.get().rm.spr_hazard_bulletbilldead,
             pos,
             self.m_vel,
             0,

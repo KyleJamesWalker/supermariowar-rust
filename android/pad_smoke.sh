@@ -27,7 +27,11 @@ wait_for() {
 }
 fail() {
     echo "pad smoke: $1"
-    adb logcat -d > "$out/logcat.txt"
+    if [[ -n "${pid:-}" ]]; then
+        adb logcat -d --pid="$pid" > "$out/logcat.txt"
+    else
+        adb logcat -d -s smw SDL > "$out/logcat.txt"
+    fi
     grep -E ' (smw|SDL|AndroidRuntime|DEBUG|libc) ' "$out/logcat.txt" | grep -v 'I smw *: loading' | tail -n 40
     finish
     exit 1
@@ -46,6 +50,7 @@ sleep 2
 adb shell cat "$input.log" | grep -q created || fail "cannot create the virtual pad: $(adb shell cat "$input.log")"
 adb logcat -c
 adb shell am start -W -n "$pkg/.MainActivity" --es SMW_DEBUG_INPUT 1 > /dev/null
+pid="$(adb shell pidof "$pkg" | tr -d '\r')"
 
 wait_for 1 '\[pad\] joystick 0: .*\(translated\)' || fail "the pad at launch was not translated"
 wait_for 1 '\[loop\] frame 240' || fail "the game did not reach frame 240"

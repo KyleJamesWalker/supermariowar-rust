@@ -34,8 +34,8 @@ impl UI_NetLobbyMenu {
     pub fn new(g: &mut Game) -> Box<Self> {
         let mut gp = g.ptr();
         let mut this = Box::<Self>::default();
-        let selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
-        let plain = Ptr::from_mut(&mut g.rm.menu_plain_field);
+        let selectfield = g.rm.spr_selectfield;
+        let plain = g.rm.menu_plain_field;
 
         this.miNetLobbyNewRoomButton = Ptr::new_box(MI_Button::new(g, selectfield, 320 + 20, 80, "New room", 320 - 30, TextAlign::CENTER));
         this.miNetLobbyNewRoomButton.set_code(MENU_CODE_TO_NET_NEW_ROOM_LEVEL_SELECT_MENU);
@@ -64,7 +64,7 @@ impl UI_NetLobbyMenu {
 
         g.netplay.client.set_room_list_ui_control(this.miNetLobbyScroll);
 
-        this.miNetLobbyJoiningDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
+        this.miNetLobbyJoiningDialogImage = Ptr::new_box(MI_Image::new(g.rm.spr_dialog, 224, 176, 0, 0, 192, 128, 1, 1, 0));
         this.miNetLobbyJoiningDialogText = Ptr::new_box(MI_HeaderText::new(g, "Joining...", 320, 240 - 12));
 
         this.miNetLobbyJoiningDialogImage.set_visible(false);

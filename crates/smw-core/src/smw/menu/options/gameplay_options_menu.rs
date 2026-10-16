@@ -42,8 +42,8 @@ impl UI_GameplayOptionsMenu {
     pub fn new(g: &mut Game) -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let spr_selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
-            let menu_plain_field = Ptr::from_mut(&mut g.rm.menu_plain_field);
+            let spr_selectfield = g.rm.spr_selectfield;
+            let menu_plain_field = g.rm.menu_plain_field;
 
             this.miRespawnField = select_field(spr_selectfield, 70, 40, "Respawn Time", 500, 220,
                 &[

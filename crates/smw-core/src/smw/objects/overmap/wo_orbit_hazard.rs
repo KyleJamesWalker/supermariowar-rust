@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_OrbitHazard.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::TWO_PI;
@@ -28,7 +29,7 @@ impl_base!(OMO_OrbitHazard => io_over_map_object: IO_OverMapObject);
 
 impl OMO_OrbitHazard {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>,
+    pub fn new(g: &mut Game, nspr: SpriteId,
         pos: Vec2s,
         radius: f32,
         vel: f32,

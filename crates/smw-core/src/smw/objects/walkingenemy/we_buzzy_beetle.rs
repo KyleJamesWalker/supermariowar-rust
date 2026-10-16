@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/walkingenemy/WE_BuzzyBeetle.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::eyecandy::EC_FallingObject;
 use crate::common::game_mode::game_mode_stomp;
@@ -27,7 +28,7 @@ pub struct MO_BuzzyBeetle {
 impl_base!(MO_BuzzyBeetle => mo_walking_enemy: MO_WalkingEnemy);
 
 impl MO_BuzzyBeetle {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, moveToRight: bool) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, moveToRight: bool) -> Self {
         let mut gp = g.ptr();
         let mut o = MO_BuzzyBeetle {
             mo_walking_enemy: MO_WalkingEnemy::new(gp.get(), nspr, 2, 8, 30, 20, 1, 11, 0, if moveToRight { 0 } else { 32 }, 32, 32, moveToRight, false, false, true),
@@ -81,7 +82,7 @@ impl IO_MovingObjectTrait for MO_BuzzyBeetle {
         }
 
         self.dead = true;
-        g.eyecandy[2].emplace(EC_FallingObject::new(Ptr::from_mut(&mut g.rm.spr_shelldead), self.ix, self.iy, 0.0f32, -VELJUMP / 2.0f32, 1, 0, 96, 0, 32, 32));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&g.rm, g.rm.spr_shelldead, self.ix, self.iy, 0.0f32, -VELJUMP / 2.0f32, 1, 0, 96, 0, 32, 32));
     }
 }
 

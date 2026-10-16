@@ -1,5 +1,6 @@
 //! Port of src/smw/ui/MI_TournamentScoreboard.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
@@ -39,8 +40,8 @@ pub struct MI_TournamentScoreboard {
     iWinnerTextCounter: i16,
     iExplosionCounter: i16,
 
-    sprBackground: Ptr<gfxSprite>,
-    sprIcons: Ptr<gfxSprite>,
+    sprBackground: SpriteId,
+    sprIcons: SpriteId,
 
     iTeamIDs: [[i16; 3]; 4],
     iTeamCounts: [i16; 4],
@@ -60,7 +61,7 @@ crate::impl_base!(MI_TournamentScoreboard => ui_control: UI_Control);
 
 impl MI_TournamentScoreboard {
     //Call with x = 70 and y == 80
-    pub fn new(spr_background: Ptr<gfxSprite>, x: i16, y: i16) -> Self {
+    pub fn new(spr_background: SpriteId, x: i16, y: i16) -> Self {
         MI_TournamentScoreboard {
             ui_control: UI_Control::new(x, y),
             fCreated: false,
@@ -77,7 +78,7 @@ impl MI_TournamentScoreboard {
             iWinnerTextCounter: 0,
             iExplosionCounter: 0,
             sprBackground: spr_background,
-            sprIcons: Ptr::null(),
+            sprIcons: SpriteId::NONE,
             iTeamIDs: [[0; 3]; 4],
             iTeamCounts: [0; 4],
             tourScores: Default::default(),
@@ -122,7 +123,7 @@ impl MI_TournamentScoreboard {
         self.worldScoreModifier = None;
     }
 
-    pub fn create_scoreboard(&mut self, g: &mut Game, numTeams: i16, numGames: i16, spr_icons_ref: Ptr<gfxSprite>) {
+    pub fn create_scoreboard(&mut self, g: &mut Game, numTeams: i16, numGames: i16, spr_icons_ref: SpriteId) {
         self.free_scoreboard();
 
         self.sprIcons = spr_icons_ref;
@@ -204,7 +205,7 @@ impl MI_TournamentScoreboard {
             for iPlayer in 0..self.iTeamCounts[t] {
                 let p = iPlayer as usize;
                 self.miPlayerImages[t].push(Box::new(MI_Image::new(
-                    Ptr::from_mut(&mut g.rm.spr_player[self.iTeamIDs[t][p] as usize][PGFX_STANDING_R as usize]),
+                    g.rm.spr_player[self.iTeamIDs[t][p] as usize][PGFX_STANDING_R as usize],
                     (x + iScoreboardPlayerOffsetsX[(self.iTeamCounts[t] - 1) as usize][p] as i32 - if fTour { 40 } else { 0 }) as i16,
                     iTeamY + 16,
                     0,
@@ -226,7 +227,7 @@ impl MI_TournamentScoreboard {
                 self.worldPlace[t] = Some(Box::new(MI_Image::new(self.sprIcons, (x + 102) as i16, iTeamY + 14, 0, 0, 32, 32, 4, 1, 8)));
 
                 for iBonus in 0..MWB {
-                    let mut bonus = Box::new(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_worlditems), (x + 180 + 38 * iBonus as i32) as i16, iTeamY + 14, 0, 0, 32, 32, 1, 1, 0));
+                    let mut bonus = Box::new(MI_Image::new(g.rm.spr_worlditems, (x + 180 + 38 * iBonus as i32) as i16, iTeamY + 14, 0, 0, 32, 32, 1, 1, 0));
                     bonus.set_visible(false);
                     self.worldBonus[t][iBonus] = Some(bonus);
                 }
@@ -234,7 +235,7 @@ impl MI_TournamentScoreboard {
         }
 
         if g.game_values.matchtype == MatchType::World {
-            self.worldScoreModifier = Some(Box::new(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_worlditems), 0, 0, 0, 0, 32, 32, 1, 1, 0)));
+            self.worldScoreModifier = Some(Box::new(MI_Image::new(g.rm.spr_worlditems, 0, 0, 0, 0, 32, 32, 1, 1, 0)));
             self.worldScore = Some(Box::new(MI_ScoreText::new(0, 0)));
         }
 
@@ -275,9 +276,7 @@ impl MI_TournamentScoreboard {
                 let p = iPlayer as usize;
                 let img = &mut self.miPlayerImages[t][p];
                 img.set_position((x + iScoreboardPlayerOffsetsX[(self.iTeamCounts[t] - 1) as usize][p] as i32 - 40) as i16, iTeamY + 16);
-                img.set_image_source(Ptr::from_mut(
-                    &mut g.rm.spr_player[self.iTeamIDs[t][p] as usize][iPlaceSprite[g.game_values.tournament_scores[t].wins as usize] as usize],
-                ));
+                img.set_image_source(g.rm.spr_player[self.iTeamIDs[t][p] as usize][iPlaceSprite[g.game_values.tournament_scores[t].wins as usize] as usize]);
             }
 
             let ts = self.tourScores[t].as_mut().unwrap();
@@ -351,9 +350,7 @@ impl MI_TournamentScoreboard {
                 let p = iPlayer as usize;
                 let img = &mut self.miPlayerImages[t][p];
                 img.set_position((x + iScoreboardPlayerOffsetsX[(self.iTeamCounts[t] - 1) as usize][p] as i32 - 40) as i16, iTeamY + 16);
-                img.set_image_source(Ptr::from_mut(
-                    &mut g.rm.spr_player[self.iTeamIDs[t][p] as usize][iPlaceSprite[g.game_values.tournament_scores[t].wins as usize] as usize],
-                ));
+                img.set_image_source(g.rm.spr_player[self.iTeamIDs[t][p] as usize][iPlaceSprite[g.game_values.tournament_scores[t].wins as usize] as usize]);
             }
 
             for iGame in 0..g.game_values.tourstopcurrent {

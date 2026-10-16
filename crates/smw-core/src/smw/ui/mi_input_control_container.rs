@@ -1,5 +1,6 @@
 //! Port of src/smw/ui/MI_InputControlContainer.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::keys::*;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -28,7 +29,7 @@ const MenuInputNames: [&str; NUM_KEYS] = ["Up", "Down", "Left", "Right", "Select
 pub struct MI_InputControlField {
     pub ui_control: UI_Control,
 
-    pub spr: Ptr<gfxSprite>,
+    pub spr: SpriteId,
     pub szName: String,
 
     pub iWidth: i16,
@@ -49,7 +50,7 @@ impl MI_InputControlField {
         "Button 9", "Button 10", "Button 11", "Button 12", "Button 13", "Button 14", "Button 15", "Button 16", "Button 17", "Button 18",
     ];
 
-    pub fn new(nspr: Ptr<gfxSprite>, x: i16, y: i16, name: impl Into<String>, width: i16, indent: i16) -> Self {
+    pub fn new(nspr: SpriteId, x: i16, y: i16, name: impl Into<String>, width: i16, indent: i16) -> Self {
         let mut this = MI_InputControlField {
             ui_control: UI_Control::new(x, y),
             spr: nspr,
@@ -271,9 +272,9 @@ impl UI_ControlTrait for MI_InputControlField {
         let iWidth = self.iWidth as i32;
 
         unsafe {
-            self.spr.draw_src(g, x, y, &Rect { x: 0, y: if self.fSelected { 32 } else { 0 }, w: iIndent - 16, h: 32 });
-            self.spr.draw_src(g, x + iIndent - 16, y, &Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
-            self.spr.draw_src(g, x + iIndent + 16, y, &Rect { x: 528 - iWidth + iIndent, y: if self.fSelected { 32 } else { 0 }, w: iWidth - iIndent - 16, h: 32 });
+            g.rm.sprite(self.spr).draw_src(g, x, y, &Rect { x: 0, y: if self.fSelected { 32 } else { 0 }, w: iIndent - 16, h: 32 });
+            g.rm.sprite(self.spr).draw_src(g, x + iIndent - 16, y, &Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
+            g.rm.sprite(self.spr).draw_src(g, x + iIndent + 16, y, &Rect { x: 528 - iWidth + iIndent, y: if self.fSelected { 32 } else { 0 }, w: iWidth - iIndent - 16, h: 32 });
 
             gp.rm.menu_font_large.draw_chop_right(g, x + 16, y + 5, iIndent - 8, &self.szName);
 
@@ -318,8 +319,8 @@ pub struct MI_InputControlContainer {
 crate::impl_base!(MI_InputControlContainer => ui_control: UI_Control);
 
 unsafe fn add_joysticks(g: &mut Game, field: &mut MI_SelectField<i16>) {
-    for iJoystick in 0..g.joystickcount {
-        let js = if g.joysticks.is_null() { std::ptr::null_mut() } else { *g.joysticks.add(iJoystick as usize) };
+    for iJoystick in 0..g.devices.len() as i16 {
+        let js = g.joystick(iJoystick as usize);
         let p = if js.is_null() { SDL_JoystickNameForIndex(iJoystick as i32) } else { SDL_JoystickName(js) };
         let name = if harness::replay_joysticks(g).is_some() {
             "Virtual Controller".to_string()
@@ -343,7 +344,7 @@ fn key_ptr(g: &mut Game, iPlayerID: i16, iType: usize, iKey: usize) -> *mut Keyc
 
 impl MI_InputControlContainer {
     //call with x = 94, y = 19
-    pub fn new(g: &mut Game, spr_button: Ptr<gfxSprite>, x: i16, y: i16, playerID: i16) -> Self {
+    pub fn new(g: &mut Game, spr_button: SpriteId, x: i16, y: i16, playerID: i16) -> Self {
         let mut gp = g.ptr();
         unsafe {
             let iPlayerID = playerID;
@@ -395,7 +396,7 @@ impl MI_InputControlContainer {
                 miMenuInputControlFields[iKey] = f;
             }
 
-            let mut miBackButton = Ptr::new_box(MI_Button::new(g, Ptr::from_mut(&mut gp.rm.spr_selectfield), 544, 432, "Back", 80, TextAlign::CENTER));
+            let mut miBackButton = Ptr::new_box(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
             miBackButton.set_code(MENU_CODE_BACK_TO_CONTROLS_MENU);
 
             let mut this = MI_InputControlContainer {

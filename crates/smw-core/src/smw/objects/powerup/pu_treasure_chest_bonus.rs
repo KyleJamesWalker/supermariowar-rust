@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/PU_TreasureChestBonus.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
@@ -33,7 +34,7 @@ impl_base!(PU_TreasureChestBonus => mo_powerup: MO_Powerup);
 
 impl PU_TreasureChestBonus {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, iNumSpr: i16, aniSpeed: i16, iCollisionWidth: i16, iCollisionHeight: i16, iCollisionOffsetX: i16, iCollisionOffsetY: i16, iBonusItem: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, iNumSpr: i16, aniSpeed: i16, iCollisionWidth: i16, iCollisionHeight: i16, iCollisionOffsetX: i16, iCollisionOffsetY: i16, iBonusItem: i16) -> Self {
         let mut gp = g.ptr();
         let mut o = PU_TreasureChestBonus {
             mo_powerup: MO_Powerup::new(g, nspr, Vec2s::zero(), iNumSpr, aniSpeed, iCollisionWidth, iCollisionHeight, iCollisionOffsetX, iCollisionOffsetY),
@@ -96,7 +97,7 @@ impl CObjectTrait for PU_TreasureChestBonus {
                 self.state = 4;
             }
         } else if self.state == 4 {
-            g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), self.ix, self.drawbonusitemy, 3, 8));
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(&g.rm, g.rm.spr_fireballexplosion, self.ix, self.drawbonusitemy, 3, 8));
             self.dead = true;
         }
     }
@@ -107,7 +108,7 @@ impl CObjectTrait for PU_TreasureChestBonus {
             mo_powerup_draw(g, self);
 
             // Draw sparkles
-            gp.rm.spr_shinesparkle.draw_src(
+            gp.rm.sprite(gp.rm.spr_shinesparkle).draw_src(
                 g,
                 self.ix as i32 - self.collisionOffsetX as i32,
                 self.iy as i32 - self.collisionOffsetY as i32,
@@ -115,14 +116,14 @@ impl CObjectTrait for PU_TreasureChestBonus {
             );
         } else {
             if self.bonusitem as i32 >= NUM_POWERUPS {
-                gp.rm.spr_worlditems.draw_src(
+                gp.rm.sprite(gp.rm.spr_worlditems).draw_src(
                     g,
                     self.drawbonusitemx as i32,
                     self.drawbonusitemy as i32,
                     &Rect { x: (self.bonusitem as i32 - NUM_POWERUPS) << 5, y: 0, w: 32, h: 32 },
                 );
             } else {
-                gp.rm.spr_storedpoweruplarge.draw_src(
+                gp.rm.sprite(gp.rm.spr_storedpoweruplarge).draw_src(
                     g,
                     self.drawbonusitemx as i32,
                     self.drawbonusitemy as i32,
@@ -147,7 +148,7 @@ impl CObjectTrait for PU_TreasureChestBonus {
             self.drawbonusitemy = self.iy;
             self.drawbonusitemtimer = 60;
 
-            g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_fireballexplosion), self.ix, self.iy, 3, 8));
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, g.rm.spr_fireballexplosion, self.ix, self.iy, 3, 8));
 
             g.game_values.flags.noexit = false;
         }

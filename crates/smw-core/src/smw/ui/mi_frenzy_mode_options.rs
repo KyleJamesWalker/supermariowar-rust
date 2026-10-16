@@ -64,7 +64,7 @@ impl MI_FrenzyModeOptions {
             miDownArrow: Ptr::null(),
         };
 
-        let spr_selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
+        let spr_selectfield = g.rm.spr_selectfield;
 
         this.miQuantityField = Ptr::new_box(MI_SelectField::<i16>::new(spr_selectfield, 120, 40, "Limit", 400, 180));
         this.miQuantityField.add("Single Powerup", 0);
@@ -106,8 +106,8 @@ impl MI_FrenzyModeOptions {
         for iPowerup in 0..NF {
             let mut slider = Ptr::new_box(MI_PowerupSlider::new(
                 spr_selectfield,
-                Ptr::from_mut(&mut g.rm.menu_slider_bar),
-                Ptr::from_mut(&mut g.rm.spr_storedpoweruplarge),
+                g.rm.menu_slider_bar,
+                g.rm.spr_storedpoweruplarge,
                 if iPowerup < 10 { 65 } else { 330 },
                 0,
                 245,
@@ -125,8 +125,8 @@ impl MI_FrenzyModeOptions {
         this.miBackButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
         this.miBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
-        this.miUpArrow = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_verticalarrows), 310, 162, 20, 0, 20, 20, 1, 4, 8));
-        this.miDownArrow = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_verticalarrows), 310, 402, 0, 0, 20, 20, 1, 4, 8));
+        this.miUpArrow = Ptr::new_box(MI_Image::new(g.rm.menu_verticalarrows, 310, 162, 20, 0, 20, 20, 1, 4, 8));
+        this.miDownArrow = Ptr::new_box(MI_Image::new(g.rm.menu_verticalarrows, 310, 402, 0, 0, 20, 20, 1, 4, 8));
         this.miUpArrow.set_visible(false);
 
         let null: ControlPtr = Ptr::null();

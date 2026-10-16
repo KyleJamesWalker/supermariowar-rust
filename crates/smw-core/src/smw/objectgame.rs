@@ -95,33 +95,33 @@ fn new_powerup<T: MO_PowerupTrait>(v: T) -> Spawned {
 fn spawn_regular_powerup(g: &mut Game, r#type: PowerupType, spawnPos: Vec2s, movesRight: bool) -> Spawned {
     let mut rm = g.rm;
     match r#type {
-        PowerupType::PoisonMushroom => new_powerup(PU_PoisonPowerup::new(g, Ptr::from_mut(&mut rm.spr_poisonpowerup), spawnPos, 1, movesRight, 0, 30, 30, 1, 1)),
-        PowerupType::ExtraLife1 => new_powerup(PU_ExtraGuyPowerup::new(g, Ptr::from_mut(&mut rm.spr_1uppowerup), spawnPos, 1, movesRight, 0, 30, 30, 1, 1, 1)),
-        PowerupType::ExtraLife2 => new_powerup(PU_ExtraGuyPowerup::new(g, Ptr::from_mut(&mut rm.spr_2uppowerup), spawnPos, 1, movesRight, 0, 30, 30, 1, 1, 2)),
-        PowerupType::ExtraLife3 => new_powerup(PU_ExtraGuyPowerup::new(g, Ptr::from_mut(&mut rm.spr_3uppowerup), spawnPos, 1, movesRight, 0, 30, 30, 1, 1, 3)),
-        PowerupType::ExtraLife5 => new_powerup(PU_ExtraGuyPowerup::new(g, Ptr::from_mut(&mut rm.spr_5uppowerup), spawnPos, 1, movesRight, 0, 30, 30, 1, 1, 5)),
-        PowerupType::Fire => new_powerup(PU_FirePowerup::new(g, Ptr::from_mut(&mut rm.spr_firepowerup), spawnPos, 1, movesRight, 0, 30, 30, 1, 1)),
-        PowerupType::Star => new_powerup(PU_StarPowerup::new(g, Ptr::from_mut(&mut rm.spr_starpowerup), spawnPos, 4, movesRight, 2, 30, 30, 1, 1)),
-        PowerupType::Clock => new_powerup(PU_ClockPowerup::new(g, Ptr::from_mut(&mut rm.spr_clockpowerup), spawnPos, 1, movesRight, 0, 30, 30, 1, 1)),
-        PowerupType::Bobomb => new_powerup(PU_BobombPowerup::new(g, Ptr::from_mut(&mut rm.spr_bobombpowerup), spawnPos, 1, movesRight, 0, 30, 30, 1, 1)),
-        PowerupType::Pow => new_powerup(PU_PowPowerup::new(g, Ptr::from_mut(&mut rm.spr_powpowerup), spawnPos, 8, movesRight, 8, 30, 30, 1, 1)),
-        PowerupType::BulletBill => new_powerup(PU_BulletBillPowerup::new(g, Ptr::from_mut(&mut rm.spr_bulletbillpowerup), spawnPos, 1, movesRight, 0, 30, 30, 1, 1)),
-        PowerupType::Hammer => new_powerup(PU_HammerPowerup::new(g, Ptr::from_mut(&mut rm.spr_hammerpowerup), spawnPos, 1, movesRight, 0, 30, 30, 1, 1)),
+        PowerupType::PoisonMushroom => new_powerup(PU_PoisonPowerup::new(g, rm.spr_poisonpowerup, spawnPos, 1, movesRight, 0, 30, 30, 1, 1)),
+        PowerupType::ExtraLife1 => new_powerup(PU_ExtraGuyPowerup::new(g, rm.spr_1uppowerup, spawnPos, 1, movesRight, 0, 30, 30, 1, 1, 1)),
+        PowerupType::ExtraLife2 => new_powerup(PU_ExtraGuyPowerup::new(g, rm.spr_2uppowerup, spawnPos, 1, movesRight, 0, 30, 30, 1, 1, 2)),
+        PowerupType::ExtraLife3 => new_powerup(PU_ExtraGuyPowerup::new(g, rm.spr_3uppowerup, spawnPos, 1, movesRight, 0, 30, 30, 1, 1, 3)),
+        PowerupType::ExtraLife5 => new_powerup(PU_ExtraGuyPowerup::new(g, rm.spr_5uppowerup, spawnPos, 1, movesRight, 0, 30, 30, 1, 1, 5)),
+        PowerupType::Fire => new_powerup(PU_FirePowerup::new(g, rm.spr_firepowerup, spawnPos, 1, movesRight, 0, 30, 30, 1, 1)),
+        PowerupType::Star => new_powerup(PU_StarPowerup::new(g, rm.spr_starpowerup, spawnPos, 4, movesRight, 2, 30, 30, 1, 1)),
+        PowerupType::Clock => new_powerup(PU_ClockPowerup::new(g, rm.spr_clockpowerup, spawnPos, 1, movesRight, 0, 30, 30, 1, 1)),
+        PowerupType::Bobomb => new_powerup(PU_BobombPowerup::new(g, rm.spr_bobombpowerup, spawnPos, 1, movesRight, 0, 30, 30, 1, 1)),
+        PowerupType::Pow => new_powerup(PU_PowPowerup::new(g, rm.spr_powpowerup, spawnPos, 8, movesRight, 8, 30, 30, 1, 1)),
+        PowerupType::BulletBill => new_powerup(PU_BulletBillPowerup::new(g, rm.spr_bulletbillpowerup, spawnPos, 1, movesRight, 0, 30, 30, 1, 1)),
+        PowerupType::Hammer => new_powerup(PU_HammerPowerup::new(g, rm.spr_hammerpowerup, spawnPos, 1, movesRight, 0, 30, 30, 1, 1)),
         PowerupType::ShellGreen => Spawned::Shell(Ptr::new_box(CO_Shell::new(g, ShellType::Green, spawnPos, true, true, true, false))),
         PowerupType::ShellRed => Spawned::Shell(Ptr::new_box(CO_Shell::new(g, ShellType::Red, spawnPos, false, true, true, false))),
         PowerupType::ShellSpiny => Spawned::Shell(Ptr::new_box(CO_Shell::new(g, ShellType::Spiny, spawnPos, false, false, true, true))),
         PowerupType::ShellBuzzy => Spawned::Shell(Ptr::new_box(CO_Shell::new(g, ShellType::Buzzy, spawnPos, false, true, false, false))),
-        PowerupType::Mod => new_powerup(PU_ModPowerup::new(g, Ptr::from_mut(&mut rm.spr_modpowerup), spawnPos, 8, movesRight, 8, 30, 30, 1, 1)),
-        PowerupType::Feather => Spawned::Feather(Ptr::new_box(PU_FeatherPowerup::new(g, Ptr::from_mut(&mut rm.spr_featherpowerup), spawnPos, 1, 0, 30, 30, 1, 1))),
-        PowerupType::MysteryMushroom => new_powerup(PU_MysteryMushroomPowerup::new(g, Ptr::from_mut(&mut rm.spr_mysterymushroompowerup), spawnPos, 1, movesRight, 0, 30, 30, 1, 1)),
-        PowerupType::Boomerang => new_powerup(PU_BoomerangPowerup::new(g, Ptr::from_mut(&mut rm.spr_boomerangpowerup), spawnPos, 1, movesRight, 0, 30, 26, 1, 5)),
+        PowerupType::Mod => new_powerup(PU_ModPowerup::new(g, rm.spr_modpowerup, spawnPos, 8, movesRight, 8, 30, 30, 1, 1)),
+        PowerupType::Feather => Spawned::Feather(Ptr::new_box(PU_FeatherPowerup::new(g, rm.spr_featherpowerup, spawnPos, 1, 0, 30, 30, 1, 1))),
+        PowerupType::MysteryMushroom => new_powerup(PU_MysteryMushroomPowerup::new(g, rm.spr_mysterymushroompowerup, spawnPos, 1, movesRight, 0, 30, 30, 1, 1)),
+        PowerupType::Boomerang => new_powerup(PU_BoomerangPowerup::new(g, rm.spr_boomerangpowerup, spawnPos, 1, movesRight, 0, 30, 26, 1, 5)),
         PowerupType::Tanooki => new_powerup(PU_Tanooki::new(g, spawnPos)),
-        PowerupType::IceWand => new_powerup(PU_IceWandPowerup::new(g, Ptr::from_mut(&mut rm.spr_icewandpowerup), spawnPos, 1, 0, 30, 30, 1, 1)),
-        PowerupType::Podobo => new_powerup(PU_PodoboPowerup::new(g, Ptr::from_mut(&mut rm.spr_podobopowerup), spawnPos, 1, 0, 30, 30, 1, 1)),
-        PowerupType::Bomb => new_powerup(PU_BombPowerup::new(g, Ptr::from_mut(&mut rm.spr_bombpowerup), spawnPos, 1, 0, 30, 30, 1, 1)),
-        PowerupType::Leaf => Spawned::Leaf(Ptr::new_box(PU_LeafPowerup::new(g, Ptr::from_mut(&mut rm.spr_leafpowerup), spawnPos, 1, 0, 30, 30, 1, 1))),
-        PowerupType::PWings => new_powerup(PU_PWingsPowerup::new(g, Ptr::from_mut(&mut rm.spr_pwingspowerup), spawnPos)),
-        PowerupType::JailKey => new_powerup(PU_JailKeyPowerup::new(g, Ptr::from_mut(&mut rm.spr_jailkeypowerup), spawnPos)),
+        PowerupType::IceWand => new_powerup(PU_IceWandPowerup::new(g, rm.spr_icewandpowerup, spawnPos, 1, 0, 30, 30, 1, 1)),
+        PowerupType::Podobo => new_powerup(PU_PodoboPowerup::new(g, rm.spr_podobopowerup, spawnPos, 1, 0, 30, 30, 1, 1)),
+        PowerupType::Bomb => new_powerup(PU_BombPowerup::new(g, rm.spr_bombpowerup, spawnPos, 1, 0, 30, 30, 1, 1)),
+        PowerupType::Leaf => Spawned::Leaf(Ptr::new_box(PU_LeafPowerup::new(g, rm.spr_leafpowerup, spawnPos, 1, 0, 30, 30, 1, 1))),
+        PowerupType::PWings => new_powerup(PU_PWingsPowerup::new(g, rm.spr_pwingspowerup, spawnPos)),
+        PowerupType::JailKey => new_powerup(PU_JailKeyPowerup::new(g, rm.spr_jailkeypowerup, spawnPos)),
     }
 }
 
@@ -132,9 +132,9 @@ fn spawn_special_powerup(g: &mut Game, r#type: i16, spawnPos: Vec2s) -> Spawned 
     static iGreedValue: [i16; 4] = [10, 15, 5, 20];
 
     match r#type as i32 {
-        HEALTH_POWERUP => new_powerup(PU_ExtraHeartPowerup::new(g, Ptr::from_mut(&mut rm.spr_extraheartpowerup), spawnPos)),
-        TIME_POWERUP => new_powerup(PU_ExtraTimePowerup::new(g, Ptr::from_mut(&mut rm.spr_extratimepowerup), spawnPos)),
-        JAIL_KEY_POWERUP => new_powerup(PU_JailKeyPowerup::new(g, Ptr::from_mut(&mut rm.spr_jailkeypowerup), spawnPos)),
+        HEALTH_POWERUP => new_powerup(PU_ExtraHeartPowerup::new(g, rm.spr_extraheartpowerup, spawnPos)),
+        TIME_POWERUP => new_powerup(PU_ExtraTimePowerup::new(g, rm.spr_extratimepowerup, spawnPos)),
+        JAIL_KEY_POWERUP => new_powerup(PU_JailKeyPowerup::new(g, rm.spr_jailkeypowerup, spawnPos)),
         COIN_POWERUP => {
             let iRandCoin = RANDOM_INT(gp.get(), 9) as i16;
             let mut color = CoinColor::Yellow;
@@ -150,11 +150,11 @@ fn spawn_special_powerup(g: &mut Game, r#type: i16, spawnPos: Vec2s) -> Spawned 
             let colorIdx = color as usize;
 
             let value = if g.game_values.gamemode.gamemode == game_mode_greed { iGreedValue[colorIdx] } else { iCoinValue[colorIdx] };
-            new_powerup(PU_CoinPowerup::new(g, Ptr::from_mut(&mut rm.spr_coin), spawnPos, color, value))
+            new_powerup(PU_CoinPowerup::new(g, rm.spr_coin, spawnPos, color, value))
         }
         MINIGAME_COIN => Spawned::Coin(Ptr::new_box(MO_Coin::new(
             g,
-            Ptr::from_mut(&mut gp.rm.spr_coin),
+            gp.rm.spr_coin,
             Vec2f::new(0.0, (-VELJUMP as f64 / 2.0) as f32),
             spawnPos,
             2,
@@ -163,10 +163,10 @@ fn spawn_special_powerup(g: &mut Game, r#type: i16, spawnPos: Vec2s) -> Spawned 
             0,
             false,
         ))),
-        SECRET1_POWERUP => new_powerup(PU_SecretPowerup::new(g, Ptr::from_mut(&mut gp.rm.spr_secret1), spawnPos, 0)),
-        SECRET2_POWERUP => new_powerup(PU_SecretPowerup::new(g, Ptr::from_mut(&mut gp.rm.spr_secret2), spawnPos, 1)),
-        SECRET3_POWERUP => new_powerup(PU_SecretPowerup::new(g, Ptr::from_mut(&mut gp.rm.spr_secret3), spawnPos, 2)),
-        SECRET4_POWERUP => new_powerup(PU_SecretPowerup::new(g, Ptr::from_mut(&mut gp.rm.spr_secret4), spawnPos, 3)),
+        SECRET1_POWERUP => new_powerup(PU_SecretPowerup::new(g, gp.rm.spr_secret1, spawnPos, 0)),
+        SECRET2_POWERUP => new_powerup(PU_SecretPowerup::new(g, gp.rm.spr_secret2, spawnPos, 1)),
+        SECRET3_POWERUP => new_powerup(PU_SecretPowerup::new(g, gp.rm.spr_secret3, spawnPos, 2)),
+        SECRET4_POWERUP => new_powerup(PU_SecretPowerup::new(g, gp.rm.spr_secret4, spawnPos, 3)),
         _ => Spawned::None,
     }
 }
@@ -208,8 +208,8 @@ pub fn removeifprojectile(g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait
             }
 
             object.dead = true;
-            g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
+                g.rm.spr_fireballexplosion,
                 (object.x() + (object.iw as i32 >> 1) - 16) as i16,
                 (object.y() + (object.ih as i32 >> 1) - 16) as i16,
                 3,
@@ -288,7 +288,7 @@ pub fn createpowerup(g: &mut Game, iType: i16, pos: Vec2s, side: bool, spawn: bo
             let dVelY = -(RANDOM_INT(gp.get(), 5) as f32 / 2.0) - 6.0;
             let podobo = Ptr::new_box(MO_Podobo::new(
                 g,
-                Ptr::from_mut(&mut rm.spr_podobo),
+                rm.spr_podobo,
                 Vec2s::new((pos.x as i32 + 2) as i16, pos.y),
                 dVelY,
                 -1,
@@ -306,7 +306,7 @@ pub fn createpowerup(g: &mut Game, iType: i16, pos: Vec2s, side: bool, spawn: bo
 
 fn check_secret_poof(g: &mut Game, object: Ptr<dyn IO_MovingObjectTrait>) {
     if !object.is_null() {
-        g.eyecandy[2].emplace(EC_SingleAnimation::new(Ptr::from_mut(&mut g.rm.spr_poof), (object.x() - 8) as i16, (object.y() - 8) as i16, 4, 5));
+        g.eyecandy[2].emplace(EC_SingleAnimation::new(&g.rm, g.rm.spr_poof, (object.x() - 8) as i16, (object.y() - 8) as i16, 4, 5));
     }
 }
 

@@ -5,6 +5,7 @@ pub mod gs_gameplay;
 pub mod gs_menu;
 pub mod gs_splash_screen;
 pub mod harness;
+pub mod input;
 pub mod main;
 pub mod net;
 pub mod net_outcomes;

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_Yoshi.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
@@ -28,7 +29,7 @@ pub struct MO_Yoshi {
 impl_base!(MO_Yoshi => io_moving_object: IO_MovingObject);
 
 impl MO_Yoshi {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, iColor: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, iColor: i16) -> Self {
         let mut o = MO_Yoshi {
             io_moving_object: IO_MovingObject::new(g, nspr, Vec2s::zero(), 2, 8, 52, 56, 0, 0, 0, (iColor as i32 * 56) as i16, 56, 52),
             timer: 0,

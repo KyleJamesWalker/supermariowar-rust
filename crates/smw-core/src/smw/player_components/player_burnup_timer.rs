@@ -34,8 +34,8 @@ impl PlayerBurnupTimer {
                     if self.timer > 80 {
                         player.kill_player_map_hazard(g, true, KillStyle::Environment, false, -1);
                     } else {
-                        g.eyecandy[0].emplace(EC_SingleAnimation::new(
-                            Ptr::from_mut(&mut g.rm.spr_burnup),
+                        g.eyecandy[0].emplace(EC_SingleAnimation::new(&gp.rm, 
+                            g.rm.spr_burnup,
                             (player.center_x() as i32 - 16) as i16,
                             (player.center_y() as i32 - 16) as i16,
                             5,

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/WO_Phanto.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::game::App;
 use crate::common::game_mode::game_mode_chase;
@@ -55,7 +56,7 @@ impl OMO_Phanto {
         self.set_yi(yi as i16);
     }
 
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, dVelX: f32, dVelY: f32, r#type: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, pos: Vec2s, dVelX: f32, dVelY: f32, r#type: i16) -> Self {
         let mut this = OMO_Phanto {
             io_over_map_object: IO_OverMapObject::new(g, nspr, pos, 1, 0, 30, 32, 1, 0, ((r#type as i32) << 5) as i16, 0, 32, 32),
             iType: r#type,

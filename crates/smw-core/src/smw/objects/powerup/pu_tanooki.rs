@@ -22,7 +22,7 @@ impl PU_Tanooki {
     #[allow(clippy::too_many_arguments)]
     pub fn new(g: &mut Game, pos: Vec2s) -> Self {
         let mut rm = g.rm;
-        PU_Tanooki { mo_powerup: MO_Powerup::new(g, Ptr::from_mut(&mut rm.spr_tanooki), pos, 1, 0, 30, 30, 1, 1) }
+        PU_Tanooki { mo_powerup: MO_Powerup::new(g, rm.spr_tanooki, pos, 1, 0, 30, 30, 1, 1) }
     }
 }
 

@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_Bomb.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::Spotlight;
@@ -31,7 +32,7 @@ impl_base!(CO_Bomb => mo_carried_object: MO_CarriedObject);
 
 impl CO_Bomb {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, vel: Vec2f, aniSpeed: i16, iGlobalID: i16, teamID: i16, iColorID: i16, timetolive: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, pos: Vec2s, vel: Vec2f, aniSpeed: i16, iGlobalID: i16, teamID: i16, iColorID: i16, timetolive: i16) -> Self {
         let mut o = CO_Bomb {
             mo_carried_object: MO_CarriedObject::new(g, nspr, pos, 5, aniSpeed, 24, 24, 4, 13),
             iColorOffsetY: 0,
@@ -134,9 +135,9 @@ impl CObjectTrait for CO_Bomb {
         let src = Rect { x: self.drawframe as i32, y: self.iColorOffsetY as i32, w: self.iw as i32, h: self.ih as i32 };
         if !self.owner.is_null() && self.owner.iswarping() {
             let edge: ClipEdge = unsafe { std::mem::transmute::<i32, ClipEdge>(self.owner.get_warp_state() as i32) };
-            self.spr.draw_clip(g, x, y, &src, edge, self.owner.get_warp_plane() as i32);
+            g.rm.sprite(self.spr).draw_clip(g, x, y, &src, edge, self.owner.get_warp_plane() as i32);
         } else {
-            self.spr.draw_src(g, x, y, &src);
+            g.rm.sprite(self.spr).draw_src(g, x, y, &src);
         }
     }
 }
@@ -164,7 +165,7 @@ impl IO_MovingObjectTrait for CO_Bomb {
         self.dead = true;
         let obj = Ptr::new_box(MO_Explosion::new(
             g,
-            Ptr::from_mut(&mut rm.spr_explosion),
+            rm.spr_explosion,
             Vec2s::new((self.ix as i32 + (self.iw as i32 >> 2) - 96) as i16, (self.iy as i32 + (self.ih as i32 >> 2) - 64) as i16),
             2,
             4,

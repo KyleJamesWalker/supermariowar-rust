@@ -159,9 +159,9 @@ impl PlayerTail {
                 };
                 if player.iswarping() {
                     let edge: ClipEdge = std::mem::transmute::<i32, ClipEdge>((player.state as i16 % 4) as i32);
-                    gp.rm.spr_tail.draw_clip(g, x, y, &src, edge, player.get_warp_plane() as i32);
+                    gp.rm.sprite(gp.rm.spr_tail).draw_clip(g, x, y, &src, edge, player.get_warp_plane() as i32);
                 } else {
-                    gp.rm.spr_tail.draw_src(g, x, y, &src);
+                    gp.rm.sprite(gp.rm.spr_tail).draw_src(g, x, y, &src);
                 }
             }
         }

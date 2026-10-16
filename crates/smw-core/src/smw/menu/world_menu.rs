@@ -28,7 +28,7 @@ crate::impl_base!(UI_WorldMenu => ui_menu: UI_Menu);
 impl UI_WorldMenu {
     pub fn new(g: &mut Game) -> Box<Self> {
         let mut this = Box::<Self>::default();
-        let spr_selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
+        let spr_selectfield = g.rm.spr_selectfield;
 
         this.miWorld = Ptr::new_box(MI_World::new(g));
         this.miWorld.set_auto_modify(true);
@@ -37,7 +37,7 @@ impl UI_WorldMenu {
         this.miWorldStop.set_visible(false);
 
         // Exit tour dialog box
-        this.miWorldExitDialogImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.spr_dialog), 224, 176, 0, 0, 192, 128, 1, 1, 0));
+        this.miWorldExitDialogImage = Ptr::new_box(MI_Image::new(g.rm.spr_dialog, 224, 176, 0, 0, 192, 128, 1, 1, 0));
         this.miWorldExitDialogExitTourText = Ptr::new_box(MI_HeaderText::new(g, "Exit World", 320, 205));
 
         this.miWorldExitDialogYesButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 235, 250, "Yes", 80, TextAlign::CENTER));

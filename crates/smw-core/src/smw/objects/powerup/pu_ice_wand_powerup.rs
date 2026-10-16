@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/powerup/PU_IceWandPowerup.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
@@ -25,7 +26,7 @@ impl_base!(PU_IceWandPowerup => mo_powerup: MO_Powerup);
 
 impl PU_IceWandPowerup {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, aniSpeed: i16, iCollisionWidth: i16, iCollisionHeight: i16, iCollisionOffsetX: i16, iCollisionOffsetY: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, pos: Vec2s, iNumSpr: i16, aniSpeed: i16, iCollisionWidth: i16, iCollisionHeight: i16, iCollisionOffsetX: i16, iCollisionOffsetY: i16) -> Self {
         let mut o = PU_IceWandPowerup {
             mo_powerup: MO_Powerup::new(g, nspr, pos, iNumSpr, aniSpeed, iCollisionWidth, iCollisionHeight, iCollisionOffsetX, iCollisionOffsetY),
             sparkleanimationtimer: 0,
@@ -61,7 +62,7 @@ impl CObjectTrait for PU_IceWandPowerup {
 
         // Draw sparkles
         if self.state == 1 {
-            gp.rm.spr_shinesparkle.draw_src(
+            gp.rm.sprite(gp.rm.spr_shinesparkle).draw_src(
                 g,
                 self.ix as i32 - self.collisionOffsetX as i32,
                 self.iy as i32 - self.collisionOffsetY as i32,

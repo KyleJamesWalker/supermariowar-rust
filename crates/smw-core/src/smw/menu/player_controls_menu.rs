@@ -24,7 +24,7 @@ impl UI_PlayerControlsMenu {
         let mut gp = g.ptr();
         let mut this = Box::<Self>::default();
 
-        this.miInputContainer = Ptr::new_box(MI_InputControlContainer::new(g, Ptr::from_mut(&mut gp.rm.menu_plain_field), 94, 10, 0));
+        this.miInputContainer = Ptr::new_box(MI_InputControlContainer::new(g, gp.rm.menu_plain_field, 94, 10, 0));
         this.miInputContainer.set_auto_modify(true);
 
         let c = ctl_ptr(this.miInputContainer);

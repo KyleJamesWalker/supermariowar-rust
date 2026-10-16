@@ -35,11 +35,11 @@ crate::impl_base!(UI_MainMenu => ui_menu: UI_Menu);
 impl UI_MainMenu {
     pub fn new(g: &mut Game) -> Box<Self> {
         let mut this = Box::<Self>::default();
-        let selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
+        let selectfield = g.rm.spr_selectfield;
 
         this.miSMWTitle = Ptr::new_box(MI_Image::new(
-            Ptr::from_mut(&mut g.rm.menu_smw),
-            (320 - ((g.rm.menu_smw.get_width() as i16) >> 1) as i32) as i16,
+            g.rm.menu_smw,
+            (320 - ((g.rm.sprite(g.rm.menu_smw).get_width() as i16) >> 1) as i32) as i16,
             30,
             0,
             0,
@@ -50,13 +50,13 @@ impl UI_MainMenu {
             0,
         ));
         this.miSMWVersion = Ptr::new_box(MI_Image::new(
-            Ptr::from_mut(&mut g.rm.menu_version),
-            (628 - g.rm.menu_version.get_width()) as i16,
+            g.rm.menu_version,
+            (628 - g.rm.sprite(g.rm.menu_version).get_width()) as i16,
             10,
             0,
             0,
-            g.rm.menu_version.get_width() as i16,
-            g.rm.menu_version.get_height() as i16,
+            g.rm.sprite(g.rm.menu_version).get_width() as i16,
+            g.rm.sprite(g.rm.menu_version).get_height() as i16,
             1,
             1,
             0,
@@ -69,7 +69,7 @@ impl UI_MainMenu {
         this.miQuickGameButton = Ptr::new_box(MI_Button::new(g, selectfield, 440, 210, "Go!", 80, TextAlign::LEFT));
         this.miQuickGameButton.set_code(MENU_CODE_QUICK_GAME_START);
 
-        this.miPlayerSelect = Ptr::new_box(MI_PlayerSelect::new(Ptr::from_mut(&mut g.rm.menu_player_select), 120, 250, "Players", 400, 140));
+        this.miPlayerSelect = Ptr::new_box(MI_PlayerSelect::new(g.rm.menu_player_select, 120, 250, "Players", 400, 140));
 
         // Upstream's web build disables Multiplayer, stacks Options over Controls and has no Exit. Here every
         // build uses the native layout, so replays navigate the same; on the web Exit ends the session.

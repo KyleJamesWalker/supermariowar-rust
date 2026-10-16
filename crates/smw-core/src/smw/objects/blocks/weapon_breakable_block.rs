@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/WeaponBreakableBlock.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::EC_FallingObject;
@@ -50,7 +51,7 @@ pub struct B_WeaponBreakableBlock {
 impl_base!(B_WeaponBreakableBlock => io_block: IO_Block);
 
 impl B_WeaponBreakableBlock {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, r#type: WeaponDamageType) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, pos: Vec2s, r#type: WeaponDamageType) -> Self {
         let mut b = B_WeaponBreakableBlock { io_block: IO_Block::new(g, nspr, pos), iType: r#type, iDrawOffsetX: (r#type as i16) * 32 };
         b.iw = TILESIZE as i16;
         b.ih = TILESIZE as i16;
@@ -64,12 +65,12 @@ impl B_WeaponBreakableBlock {
     pub fn trigger_behavior_player(&mut self, g: &mut Game, iPlayerID: i16, iTeamID: i16) {
         let mut gp = g.ptr();
         if self.state == 0 {
-            let spr = Ptr::from_mut(&mut g.rm.spr_brokengrayblock);
+            let spr = g.rm.spr_brokengrayblock;
             let (ix, iy) = (self.ix, self.iy);
-            g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy, -2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
-            g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy, 2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
-            g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy + 16, -2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
-            g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy + 16, 2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, ix, iy, -2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, ix + 16, iy, 2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, ix, iy + 16, -2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, ix + 16, iy + 16, 2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
 
             self.state = 1;
             if_sound_on_play(g, &mut gp.rm.sfx_breakblock);
@@ -129,7 +130,7 @@ impl CObjectTrait for B_WeaponBreakableBlock {
 
     fn draw(&mut self, g: &mut Game) {
         if self.state == 0 {
-            self.spr.draw_src(
+            g.rm.sprite(self.spr).draw_src(
                 g,
                 self.ix as i32,
                 self.iy as i32,

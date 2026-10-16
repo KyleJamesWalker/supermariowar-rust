@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/DonutBlock.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::TILESETNONE;
@@ -25,7 +26,7 @@ pub struct B_DonutBlock {
 impl_base!(B_DonutBlock => io_block: IO_Block);
 
 impl B_DonutBlock {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, pos: Vec2s) -> Self {
         B_DonutBlock { io_block: IO_Block::new(g, nspr, pos), counter: 0, jigglex: 0, jigglecounter: 0 }
     }
 
@@ -39,7 +40,7 @@ impl B_DonutBlock {
         let mut platform = MovingPlatform::new(g, vec![tile], vec![r#type], 1, 1, 2, path, false);
         platform.set_player_id(iPlayerId);
         let spr = self.spr;
-        platform.paint_sprite_at(&*spr, 0, 0);
+        platform.paint_sprite_at(g.rm.sprite(spr), 0, 0);
 
         g.g_map.add_temporary_platform(platform);
 
@@ -56,7 +57,7 @@ impl CObjectTrait for B_DonutBlock {
     }
 
     fn draw(&mut self, g: &mut Game) {
-        self.spr.draw(g, self.ix as i32 + self.jigglex as i32, self.iy as i32);
+        g.rm.sprite(self.spr).draw(g, self.ix as i32 + self.jigglex as i32, self.iy as i32);
     }
 
     fn update(&mut self, g: &mut Game) {

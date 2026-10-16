@@ -18,7 +18,7 @@ fn save_bmp(s: *mut Surface, path: &str) {
 unsafe fn draw_map(g: &mut smw::game::Game) {
     let mut gp = g.ptr();
     gp.blitdest = gp.screen;
-    gp.rm.spr_backmap[gp.g_iCurrentDrawIndex as usize].draw(gp.get(), 0, 0);
+    gp.rm.sprite(gp.rm.spr_backmap[gp.g_iCurrentDrawIndex as usize]).draw(gp.get(), 0, 0);
     gp.get().g_map.draw_platforms(gp.get(), 0);
     gp.get().g_map.draw_platforms(gp.get(), 1);
     gp.get().g_map.draw_platforms(gp.get(), 2);
@@ -60,10 +60,10 @@ fn main() {
             gp.get().g_map.load_map(gp.get(), file, read_type_full);
             load_current_map_background(gp.get());
             let rmp = gp.rm;
-            gp.get().g_map.predrawbackground(gp.get(), &rmp.spr_background, &rmp.spr_backmap[0]);
-            gp.get().g_map.predrawforeground(gp.get(), &rmp.spr_frontmap[0]);
-            gp.get().g_map.predrawbackground(gp.get(), &rmp.spr_background, &rmp.spr_backmap[1]);
-            gp.get().g_map.predrawforeground(gp.get(), &rmp.spr_frontmap[1]);
+            gp.get().g_map.predrawbackground(gp.get(), rmp.sprite(rmp.spr_background), rmp.sprite(rmp.spr_backmap[0]));
+            gp.get().g_map.predrawforeground(gp.get(), rmp.sprite(rmp.spr_frontmap[0]));
+            gp.get().g_map.predrawbackground(gp.get(), rmp.sprite(rmp.spr_background), rmp.sprite(rmp.spr_backmap[1]));
+            gp.get().g_map.predrawforeground(gp.get(), rmp.sprite(rmp.spr_frontmap[1]));
             gp.get().g_map.setup_animated_tiles(gp.get());
 
             smw::common::gfx::blit::fill_rect(gp.screen, std::ptr::null(), 0);

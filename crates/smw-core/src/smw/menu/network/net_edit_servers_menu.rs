@@ -56,8 +56,8 @@ impl UI_NetEditServersMenu {
         this.dialogTextData.clear();
 
         unsafe {
-            let selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
-            let plain = Ptr::from_mut(&mut g.rm.menu_plain_field);
+            let selectfield = g.rm.spr_selectfield;
+            let plain = g.rm.menu_plain_field;
 
             this.miBackButton = Ptr::new_box(MI_Button::new(g, selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
             this.miBackButton.set_code(MENU_CODE_TO_NET_SERVERS_MENU);

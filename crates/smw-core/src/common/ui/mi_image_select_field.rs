@@ -1,5 +1,6 @@
 //! Port of src/common/ui/MI_ImageSelectField.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -12,7 +13,7 @@ use crate::globals::*;
 pub struct MI_ImageSelectField {
     pub mi_select_field: MI_SelectField<i16>,
 
-    spr_image: Ptr<gfxSprite>,
+    spr_image: SpriteId,
     iImageWidth: i16,
     iImageHeight: i16,
 }
@@ -21,8 +22,8 @@ crate::impl_base!(MI_ImageSelectField => mi_select_field: MI_SelectField<i16>);
 impl MI_ImageSelectField {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        nspr: Ptr<gfxSprite>,
-        nspr_image: Ptr<gfxSprite>,
+        nspr: SpriteId,
+        nspr_image: SpriteId,
         x: i16,
         y: i16,
         name: impl Into<String>,
@@ -69,9 +70,9 @@ impl UI_ControlTrait for MI_ImageSelectField {
         let indent = self.m_indent as i32;
         let selY = if self.fSelected { 32 } else { 0 };
 
-        self.m_spr.draw_src(g, x, y, &Rect { x: 0, y: selY, w: indent - 16, h: 32 });
-        self.m_spr.draw_src(g, x + indent - 16, y, &Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
-        self.m_spr.draw_src(g, x + indent + 16, y, &Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
+        g.rm.sprite(self.m_spr).draw_src(g, x, y, &Rect { x: 0, y: selY, w: indent - 16, h: 32 });
+        g.rm.sprite(self.m_spr).draw_src(g, x + indent - 16, y, &Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
+        g.rm.sprite(self.m_spr).draw_src(g, x + indent + 16, y, &Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
 
         gp.rm.menu_font_large.draw_chop_right(g, x + 16, y + 5, indent - 8, &self.m_name);
 
@@ -81,7 +82,7 @@ impl UI_ControlTrait for MI_ImageSelectField {
 
         let item = self.current_item();
         let srcIndex = (if item.iconOverride >= 0 { item.iconOverride } else { item.value }) as i32;
-        self.spr_image.draw_src(
+        g.rm.sprite(self.spr_image).draw_src(
             g,
             x + indent + 8,
             y + 16 - (self.iImageHeight as i32 >> 1),

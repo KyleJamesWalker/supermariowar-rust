@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/IO_Block.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
@@ -15,7 +16,7 @@ use crate::smw::objects::carriable::co_shell::CO_Shell;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::player::{get_player_from_global_id, CPlayer};
 
-pub fn io_block_new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s) -> IO_Block {
+pub fn io_block_new(g: &mut Game, nspr: SpriteId, pos: Vec2s) -> IO_Block {
     let mut gp = g.ptr();
     let cobject = CObject::new(gp.get(), nspr, pos);
     let mut b = IO_Block {
@@ -54,7 +55,7 @@ pub fn io_block_new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s) -> IO_Block 
 
 pub fn io_block_draw<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T) {
     let b = this.block();
-    b.spr.draw(g, b.ix as i32, b.iy as i32);
+    g.rm.sprite(b.spr).draw(g, b.ix as i32, b.iy as i32);
 }
 
 pub fn io_block_update<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T) {

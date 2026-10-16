@@ -137,7 +137,7 @@ pub fn setup_score_board_now(g: &mut Game, fOrderMatters: bool) {
         for iBonus in 0..iNumBonuses {
             if tourStop.wsbBonuses[iBonus as usize].iWinnerPlace == 0 {
                 let iBonusType: i16 = tourStop.wsbBonuses[iBonus as usize].iBonus;
-                let obj = Ptr::new_box(PU_TreasureChestBonus::new(g, Ptr::from_mut(&mut gp.get().rm.spr_bonuschest), 1, 0, 30, 30, 1, 1, iBonusType));
+                let obj = Ptr::new_box(PU_TreasureChestBonus::new(g, gp.get().rm.spr_bonuschest, 1, 0, 30, 30, 1, 1, iBonusType));
                 gp.get().objectcontainer[0].add(g, obj);
                 g.game_values.flags.noexittimer = 0;
                 g.game_values.flags.noexit = false;
@@ -214,7 +214,7 @@ pub fn remove_team_now(g: &mut Game, teamid: i16) -> bool {
     if g.game_values.deadteamnotice && (g.game_values.flags.teamdeadcounter as i32) < g.score_cnt as i32 - 1 {
         g.eyecandy[2].emplace(EC_Announcement::new(
             Ptr::from_mut(&mut g.rm.game_font_large),
-            Ptr::from_mut(&mut g.rm.spr_announcementicons),
+            g.rm.spr_announcementicons,
             "Team Removed!".to_string(),
             iAnnouncementColor,
             90,

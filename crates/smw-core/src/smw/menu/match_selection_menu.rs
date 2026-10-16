@@ -37,8 +37,8 @@ crate::impl_base!(UI_MatchSelectionMenu => ui_menu: UI_Menu);
 impl UI_MatchSelectionMenu {
     pub fn new(g: &mut Game) -> Box<Self> {
         let mut this = Box::<Self>::default();
-        let spr_selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
-        let menu_plain_field = Ptr::from_mut(&mut g.rm.menu_plain_field);
+        let spr_selectfield = g.rm.spr_selectfield;
+        let menu_plain_field = g.rm.menu_plain_field;
 
         this.miMatchSelectionStartButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 270, 420, "Start", 100, TextAlign::LEFT));
         this.miMatchSelectionStartButton.set_code(MENU_CODE_MATCH_SELECTION_START);
@@ -106,7 +106,7 @@ impl UI_MatchSelectionMenu {
         this.miMatchSelectionMenuRightHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
         this.miMatchSelectionMenuHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Match Type Menu", 320, 5));
 
-        this.miMatchSelectionDisplayImage = Ptr::new_box(MI_Image::new(Ptr::from_mut(&mut g.rm.menu_match_select), 160, 80, 0, 0, 320, 240, 1, 1, 0));
+        this.miMatchSelectionDisplayImage = Ptr::new_box(MI_Image::new(g.rm.menu_match_select, 160, 80, 0, 0, 320, 240, 1, 1, 0));
         this.miWorldPreviewDisplay = Ptr::new_box(MI_WorldPreviewDisplay::new(g, 160, 80, 20, 15));
         this.miWorldPreviewDisplay.set_visible(false);
 

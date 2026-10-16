@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/IO_FlameCannon.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game_values::if_sound_on_play;
@@ -30,7 +31,7 @@ impl_base!(IO_FlameCannon => cobject: CObject);
 
 impl IO_FlameCannon {
     pub fn new(g: &mut Game, pos: Vec2s, freq: i16, direction: i16) -> Self {
-        let mut this = IO_FlameCannon { cobject: CObject::new(g, Ptr::null(), pos), iFreq: freq, iTimer: 0, iCycle: 0, iFrame: 0, iDirection: direction };
+        let mut this = IO_FlameCannon { cobject: CObject::new(g, SpriteId::NONE, pos), iFreq: freq, iTimer: 0, iCycle: 0, iFrame: 0, iDirection: direction };
         this.objectType = object_flamecannon;
 
         this.set_new_timer(g);
@@ -58,7 +59,7 @@ impl IO_FlameCannon {
             let rect = &g_rFlameRects[self.iDirection as usize][self.iFrame as usize];
             gfx_drawpreview(
                 g,
-                &gp.rm.spr_hazard_flame[1],
+                &gp.rm.sprite(gp.rm.spr_hazard_flame[1]),
                 (((self.ix as i32) >> 1) + iOffsetX as i32) as i16,
                 (((self.iy as i32) >> 1) + iOffsetY as i32) as i16,
                 (rect.x >> 1) as i16,
@@ -149,7 +150,7 @@ impl CObjectTrait for IO_FlameCannon {
         let mut gp = g.ptr();
         if self.state > 0 {
             let rect = &g_rFlameRects[self.iDirection as usize][self.iFrame as usize];
-            gp.rm.spr_hazard_flame[0].draw_src(g, self.ix as i32, self.iy as i32, rect);
+            gp.rm.sprite(gp.rm.spr_hazard_flame[0]).draw_src(g, self.ix as i32, self.iy as i32, rect);
         }
     }
 

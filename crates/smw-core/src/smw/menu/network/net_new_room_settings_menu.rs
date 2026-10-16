@@ -37,7 +37,7 @@ crate::impl_base!(UI_NetNewRoomSettingsMenu => ui_menu: UI_Menu);
 impl UI_NetNewRoomSettingsMenu {
     pub fn new(g: &mut Game, gsm: &UI_GameSettingsMenu) -> Box<Self> {
         let mut this = Box::<Self>::default();
-        let selectfield = Ptr::from_mut(&mut g.rm.spr_selectfield);
+        let selectfield = g.rm.spr_selectfield;
 
         this.miContinueButton = Ptr::new_box(MI_Button::new_left(g, selectfield, 70, 45, "Continue", 500));
         this.miContinueButton.set_code(MENU_CODE_TO_NET_NEW_ROOM_SETTINGS_MENU);
@@ -78,7 +78,7 @@ impl UI_NetNewRoomSettingsMenu {
         this.add_control(randomize, settings, map, settings, null);
         this.add_control(map, goals[GM_LAST - 1], cont, null, null);
 
-        let plain = Ptr::from_mut(&mut g.rm.menu_plain_field);
+        let plain = g.rm.menu_plain_field;
         this.miLeftHeaderBar = Ptr::new_box(MI_Image::new(plain, 0, 0, 0, 0, 320, 32, 1, 1, 0));
         this.miRightHeaderBar = Ptr::new_box(MI_Image::new(plain, 320, 0, 192, 0, 320, 32, 1, 1, 0));
         this.miHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Multiplayer Level Select Menu", 320, 5));

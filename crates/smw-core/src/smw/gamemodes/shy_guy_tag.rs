@@ -54,8 +54,8 @@ impl CGM_ShyGuyTag {
                     "Shyguy!".to_string(),
                     (-(VELJUMP as f64) * 1.5) as f32,
                 ));
-                g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
+                    g.rm.spr_fireballexplosion,
                     (player.center_x() as i32 - 16) as i16,
                     (player.center_y() as i32 - 16) as i16,
                     3,
@@ -77,8 +77,8 @@ impl CGM_ShyGuyTag {
         for &player in g.players.iter() {
             let mut player = player;
             player.shyguy = false;
-            g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
+                g.rm.spr_fireballexplosion,
                 (player.center_x() as i32 - 16) as i16,
                 (player.center_y() as i32 - 16) as i16,
                 3,

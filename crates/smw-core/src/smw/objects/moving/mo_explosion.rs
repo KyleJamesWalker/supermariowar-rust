@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_Explosion.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::game::App;
 use crate::common::gameplay_styles::TeamCollisionStyle;
@@ -27,7 +28,7 @@ pub struct MO_Explosion {
 impl_base!(MO_Explosion => io_moving_object: IO_MovingObject);
 
 impl MO_Explosion {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, aniSpeed: i16, playerid: i16, teamid: i16, style: KillStyle) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, pos: Vec2s, iNumSpr: i16, aniSpeed: i16, playerid: i16, teamid: i16, style: KillStyle) -> Self {
         let mut o = MO_Explosion {
             io_moving_object: IO_MovingObject::new(g, nspr, pos, iNumSpr, aniSpeed, -1, -1, -1, -1, -1, -1, -1, -1),
             timer: 0,

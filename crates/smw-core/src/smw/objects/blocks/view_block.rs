@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/ViewBlock.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -24,7 +25,7 @@ pub struct B_ViewBlock {
 impl_base!(B_ViewBlock => b_powerup_block: B_PowerupBlock);
 
 impl B_ViewBlock {
-    pub fn new(g: &mut Game, nspr1: Ptr<gfxSprite>, pos: Vec2s, fHidden: bool, piSettings: &[i16]) -> Self {
+    pub fn new(g: &mut Game, nspr1: SpriteId, pos: Vec2s, fHidden: bool, piSettings: &[i16]) -> Self {
         let mut gp = g.ptr();
         let mut b = B_ViewBlock {
             b_powerup_block: B_PowerupBlock::new(g, nspr1, pos, 1, 32000, fHidden, piSettings),
@@ -81,7 +82,7 @@ impl CObjectTrait for B_ViewBlock {
 
         //Draw powerup behind block
         if self.state == 0 && !self.fNoPowerupsSelected {
-            gp.rm.spr_storedpoweruplarge.draw_src(
+            gp.rm.sprite(gp.rm.spr_storedpoweruplarge).draw_src(
                 g,
                 self.ix as i32,
                 self.iy as i32,

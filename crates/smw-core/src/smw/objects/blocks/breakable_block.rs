@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/blocks/BreakableBlock.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::EC_FallingObject;
@@ -36,7 +37,7 @@ pub struct B_BreakableBlock {
 impl_base!(B_BreakableBlock => io_block: IO_Block);
 
 impl B_BreakableBlock {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, iNumSpr: i16, aniSpeed: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, pos: Vec2s, iNumSpr: i16, aniSpeed: i16) -> Self {
         let mut b = B_BreakableBlock {
             io_block: IO_Block::new(g, nspr, pos),
             iNumSprites: 0,
@@ -45,11 +46,11 @@ impl B_BreakableBlock {
             animationTimer: 0,
             animationWidth: 0,
         };
-        b.iw = (nspr.get_width() as i16) >> 2;
+        b.iw = (g.rm.sprite(nspr).get_width() as i16) >> 2;
         b.iNumSprites = iNumSpr;
         b.animationSpeed = aniSpeed;
         b.animationTimer = 0;
-        b.animationWidth = nspr.get_width() as i16;
+        b.animationWidth = g.rm.sprite(nspr).get_width() as i16;
         b.drawFrame = 0;
         b
     }
@@ -63,7 +64,7 @@ impl CObjectTrait for B_BreakableBlock {
 
     fn draw(&mut self, g: &mut Game) {
         if self.state == 0 {
-            self.spr.draw_src(
+            g.rm.sprite(self.spr).draw_src(
                 g,
                 self.ix as i32,
                 self.iy as i32,
@@ -219,12 +220,12 @@ impl IO_BlockTrait for B_BreakableBlock {
     fn trigger_behavior(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         if self.state == 0 {
-            let spr = Ptr::from_mut(&mut g.rm.spr_brokenyellowblock);
+            let spr = g.rm.spr_brokenyellowblock;
             let (ix, iy) = (self.ix, self.iy);
-            g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy, -2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
-            g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy, 2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
-            g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix, iy + 16, -2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
-            g.eyecandy[2].emplace(EC_FallingObject::new(spr, ix + 16, iy + 16, 2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, ix, iy, -2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, ix + 16, iy, 2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, ix, iy + 16, -2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
+            g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, ix + 16, iy + 16, 2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
 
             self.state = 1;
             if_sound_on_play(g, &mut gp.rm.sfx_breakblock);

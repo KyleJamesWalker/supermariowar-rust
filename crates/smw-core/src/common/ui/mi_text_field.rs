@@ -1,5 +1,6 @@
 //! Port of src/common/ui/MI_TextField.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::keys::*;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -60,7 +61,7 @@ pub struct MI_TextField {
     pub iNumChars: i16,
     pub iMaxChars: i16,
 
-    pub spr: Ptr<gfxSprite>,
+    pub spr: SpriteId,
     pub szName: String,
     pub szTempValue: String,
     pub szOutValue: *mut String,
@@ -88,7 +89,7 @@ pub struct MI_TextField {
 crate::impl_base!(MI_TextField => ui_control: UI_Control);
 
 impl MI_TextField {
-    pub fn new(nspr: Ptr<gfxSprite>, x: i16, y: i16, name: &str, width: i16, indent: i16) -> Self {
+    pub fn new(nspr: SpriteId, x: i16, y: i16, name: &str, width: i16, indent: i16) -> Self {
         let ui_control = UI_Control::new(x, y);
         let mut miModifyCursor = Box::new(MI_Image::new(nspr, ui_control.m_pos.x + indent, ui_control.m_pos.y + 4, 136, 64, 15, 24, 4, 1, 8));
         miModifyCursor.set_blink(true, 20);
@@ -285,17 +286,17 @@ impl MI_TextField {
         let top = if (self.m_pos.y as i32) < 240 { 480 - OSK_H - 8 } else { 8 };
         // The dialog image is 512 wide, so the panel is its left and right halves.
         let half = OSK_W / 2;
-        gp.rm.menu_dialog.draw_src(g, OSK_X, top, &Rect { x: 0, y: 0, w: half, h: OSK_H - 16 });
-        gp.rm.menu_dialog.draw_src(g, OSK_X + half, top, &Rect { x: 512 - half, y: 0, w: half, h: OSK_H - 16 });
-        gp.rm.menu_dialog.draw_src(g, OSK_X, top + OSK_H - 16, &Rect { x: 0, y: 464, w: half, h: 16 });
-        gp.rm.menu_dialog.draw_src(g, OSK_X + half, top + OSK_H - 16, &Rect { x: 512 - half, y: 464, w: half, h: 16 });
-        let mut key = |spr: &Ptr<gfxSprite>, col: i16, row: i16, span: i16, selected: bool, label: &str| {
+        gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, OSK_X, top, &Rect { x: 0, y: 0, w: half, h: OSK_H - 16 });
+        gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, OSK_X + half, top, &Rect { x: 512 - half, y: 0, w: half, h: OSK_H - 16 });
+        gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, OSK_X, top + OSK_H - 16, &Rect { x: 0, y: 464, w: half, h: 16 });
+        gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, OSK_X + half, top + OSK_H - 16, &Rect { x: 512 - half, y: 464, w: half, h: 16 });
+        let mut key = |spr: SpriteId, col: i16, row: i16, span: i16, selected: bool, label: &str| {
             let x = OSK_X + 16 + col as i32 * OSK_CELL;
             let y = top + 12 + row as i32 * OSK_ROW_H;
             let w = span as i32 * OSK_CELL - 4;
             let srcY = if selected { 32 } else { 0 };
-            spr.draw_src(g, x, y, &Rect { x: 0, y: srcY, w: w - 8, h: 32 });
-            spr.draw_src(g, x + w - 8, y, &Rect { x: 504, y: srcY, w: 8, h: 32 });
+            g.rm.sprite(spr).draw_src(g, x, y, &Rect { x: 0, y: srcY, w: w - 8, h: 32 });
+            g.rm.sprite(spr).draw_src(g, x + w - 8, y, &Rect { x: 504, y: srcY, w: 8, h: 32 });
             gp.rm.menu_font_large.draw_centered(g, x + w / 2, y + 5, label);
         };
         let rows = if self.fOskShift { OSK_SHIFTED } else { OSK_KEYS };
@@ -303,13 +304,13 @@ impl MI_TextField {
             for col in 0..OSK_COLS {
                 let c = rows[row as usize][col as usize];
                 let label = if self.szDisallowedChars.as_bytes().contains(&c) { String::new() } else { (c as char).to_string() };
-                key(&self.spr, col, row, 1, row == self.iOskRow && col == self.iOskCol, &label);
+                key(self.spr, col, row, 1, row == self.iOskRow && col == self.iOskCol, &label);
             }
         }
         let selected = if self.iOskRow == OSK_ROWS - 1 { Some(self.osk_bottom_key()) } else { None };
         for (i, &(start, span, label)) in OSK_BOTTOM.iter().enumerate() {
             let label = if i == 0 && self.fOskShift { "SHIFT" } else { label };
-            key(&self.spr, start, OSK_ROWS - 1, span, selected == Some(i), label);
+            key(self.spr, start, OSK_ROWS - 1, span, selected == Some(i), label);
         }
     }
 
@@ -486,9 +487,9 @@ impl UI_ControlTrait for MI_TextField {
         let selY = (if self.fSelected { 32 } else { 0 }) + self.iAdjustmentY as i32;
 
         unsafe {
-            self.spr.draw_src(g, x, y, &Rect { x: 0, y: selY, w: indent - 16, h: 32 });
-            self.spr.draw_src(g, x + indent - 16, y, &Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
-            self.spr.draw_src(g, x + indent + 16, y, &Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
+            g.rm.sprite(self.spr).draw_src(g, x, y, &Rect { x: 0, y: selY, w: indent - 16, h: 32 });
+            g.rm.sprite(self.spr).draw_src(g, x + indent - 16, y, &Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
+            g.rm.sprite(self.spr).draw_src(g, x + indent + 16, y, &Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
 
             gp.rm.menu_font_large.draw_chop_right(g, x + 16, y + 5, indent - 8, &self.szName);
 

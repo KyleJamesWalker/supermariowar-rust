@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_SledgeBrother.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::EC_FallingObject;
@@ -122,7 +123,7 @@ pub struct MO_SledgeBrother {
 impl_base!(MO_SledgeBrother => io_moving_object: IO_MovingObject);
 
 impl MO_SledgeBrother {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, platformY: i16, r#type: Boss) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, platformY: i16, r#type: Boss) -> Self {
         let mut o = MO_SledgeBrother {
             io_moving_object: IO_MovingObject::new(g, nspr, Vec2s::zero(), 8, 0, 32, 56, 8, 8, -1, -1, -1, -1),
             iType: 0,
@@ -153,7 +154,7 @@ impl MO_SledgeBrother {
         o.iActionState = 0;
         o.location = 2;
 
-        o.ih = (o.spr.get_height() / 3) as i16;
+        o.ih = (g.rm.sprite(o.spr).get_height() / 3) as i16;
 
         o.movingObjectType = movingobject_sledgebrother;
 
@@ -328,7 +329,7 @@ impl MO_SledgeBrother {
             let pos = Vec2s::new(((if self.face_right { ix + 32 } else { ix }) - self.collisionOffsetX as i32) as i16, self.iy);
             let obj = Ptr::new_box(MO_SledgeHammer::new(
                 g,
-                Ptr::from_mut(&mut rm.spr_sledgehammer),
+                rm.spr_sledgehammer,
                 pos,
                 8,
                 Vec2f::new(fHammerVelX, -HAMMERTHROW),
@@ -346,7 +347,7 @@ impl MO_SledgeBrother {
             let timetolive = (RANDOM_INT(gp.get(), 60) + 120) as i16;
             let obj = Ptr::new_box(CO_Bomb::new(
                 g,
-                Ptr::from_mut(&mut rm.spr_bomb),
+                rm.spr_bomb,
                 pos,
                 Vec2f::new(fBombVelX, fBombVelY),
                 4,
@@ -362,7 +363,7 @@ impl MO_SledgeBrother {
             let pos = Vec2s::new((if self.face_right { ix + iw - 32 } else { ix - 16 }) as i16, iy as i16);
             let obj = Ptr::new_box(MO_SuperFireball::new(
                 g,
-                Ptr::from_mut(&mut rm.spr_superfireball),
+                rm.spr_superfireball,
                 pos,
                 4,
                 Vec2f::new(fFireVelX, fFireVelY),
@@ -429,7 +430,7 @@ impl CObjectTrait for MO_SledgeBrother {
 
     fn draw(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        self.spr.draw_src(
+        g.rm.sprite(self.spr).draw_src(
             g,
             self.ix as i32 - self.collisionOffsetX as i32,
             self.iy as i32 - self.collisionOffsetY as i32,
@@ -443,7 +444,7 @@ impl CObjectTrait for MO_SledgeBrother {
 
         if self.hit_timer != 0 {
             for iHeart in 0..self.hit_points {
-                gp.rm.spr_scorehearts.draw_src(
+                gp.rm.sprite(gp.rm.spr_scorehearts).draw_src(
                     g,
                     self.ix as i32 - self.collisionOffsetX as i32 + iHeart as i32 * 8,
                     self.iy as i32 - self.collisionOffsetY as i32 - 18,
@@ -490,7 +491,7 @@ impl CObjectTrait for MO_SledgeBrother {
                     for _iThwomp in 0..numThwomps {
                         let x = RANDOM_INT(gp.get(), 591) as i16;
                         let nspeed = 2.0f32 + RANDOM_INT(gp.get(), 20) as f32 / 10.0f32;
-                        let obj = Ptr::new_box(OMO_Thwomp::new(g, Ptr::from_mut(&mut rm.spr_thwomp), x, nspeed));
+                        let obj = Ptr::new_box(OMO_Thwomp::new(g, rm.spr_thwomp, x, nspeed));
                         gp.objectcontainer[2].add(g, obj);
                     }
                 } else if self.iType == 2 {
@@ -504,7 +505,7 @@ impl CObjectTrait for MO_SledgeBrother {
                         let dVelY = -(RANDOM_INT(gp.get(), 9) as f32 / 2.0f32) - 9.0f32;
                         let obj = Ptr::new_box(MO_Podobo::new(
                             g,
-                            Ptr::from_mut(&mut rm.spr_podobo),
+                            rm.spr_podobo,
                             Vec2s::new(x, App::screenHeight as i16),
                             dVelY,
                             -1,
@@ -695,8 +696,8 @@ impl IO_MovingObjectTrait for MO_SledgeBrother {
 
     fn die(&mut self, g: &mut Game) {
         self.dead = true;
-        g.eyecandy[2].emplace(EC_FallingObject::new(
-            Ptr::from_mut(&mut g.rm.spr_sledgebrothersdead),
+        g.eyecandy[2].emplace(EC_FallingObject::new(&g.rm, 
+            g.rm.spr_sledgebrothersdead,
             self.ix,
             self.iy,
             0.0f32,

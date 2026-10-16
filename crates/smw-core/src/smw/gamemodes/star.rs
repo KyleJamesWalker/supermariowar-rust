@@ -79,7 +79,7 @@ impl CGM_Star {
             while (iStar as i32) < iNumPlayers as i32 - 1 {
                 self.starPlayer[iStar as usize] = rankedPlayers[iStar as usize];
 
-                self.starItem[iStar as usize] = Ptr::new_box(CO_Star::new(g, Ptr::from_mut(&mut gp.rm.spr_star), 1, iStar));
+                self.starItem[iStar as usize] = Ptr::new_box(CO_Star::new(g, gp.rm.spr_star, 1, iStar));
                 self.starItem[iStar as usize].set_player_color(self.starPlayer[iStar as usize].get_color_id());
                 gp.objectcontainer[1].add(g, self.starItem[iStar as usize]);
                 iStar += 1;
@@ -89,7 +89,7 @@ impl CGM_Star {
             let fGetHighest = !self.fReverseScoring && self.iCurrentModeType == StarStyle::Ztar;
             self.starPlayer[0] = self.get_highest_score_player(g, fGetHighest);
 
-            self.starItem[0] = Ptr::new_box(CO_Star::new(g, Ptr::from_mut(&mut gp.rm.spr_star), if self.iCurrentModeType == StarStyle::Ztar { 0 } else { 1 }, 0));
+            self.starItem[0] = Ptr::new_box(CO_Star::new(g, gp.rm.spr_star, if self.iCurrentModeType == StarStyle::Ztar { 0 } else { 1 }, 0));
             gp.objectcontainer[1].add(g, self.starItem[0]);
         }
     }
@@ -112,8 +112,8 @@ impl CGM_Star {
         if !self.starPlayer[id as usize].is_null() {
             oldstar = self.starPlayer[id as usize];
             oldstar.shield().turn_on(g);
-            g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+            g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
+                g.rm.spr_fireballexplosion,
                 (oldstar.center_x() as i32 - 16) as i16,
                 (oldstar.center_y() as i32 - 16) as i16,
                 3,
@@ -147,8 +147,8 @@ impl CGM_Star {
             ));
         }
 
-        g.eyecandy[2].emplace(EC_SingleAnimation::new(
-            Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+        g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
+            g.rm.spr_fireballexplosion,
             (player.center_x() as i32 - 16) as i16,
             (player.center_y() as i32 - 16) as i16,
             3,

@@ -35,8 +35,8 @@ impl UI_TeamOptionsMenu {
     pub fn new(g: &mut Game) -> Box<Self> {
         let mut this = Box::<Self>::default();
         unsafe {
-            let spr = Ptr::from_mut(&mut g.rm.spr_selectfield);
-            let menu_plain_field = Ptr::from_mut(&mut g.rm.menu_plain_field);
+            let spr = g.rm.spr_selectfield;
+            let menu_plain_field = g.rm.menu_plain_field;
 
             this.miTeamKillsField = select_field(spr, 70, 180, "Player Collision", 500, 220,
                 &[("Off", TeamCollisionStyle::Off), ("Assist", TeamCollisionStyle::Assist), ("On", TeamCollisionStyle::On)],

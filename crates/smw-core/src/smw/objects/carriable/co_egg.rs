@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_Egg.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
@@ -40,7 +41,7 @@ pub struct CO_Egg {
 impl_base!(CO_Egg => mo_carried_object: MO_CarriedObject);
 
 impl CO_Egg {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, iColor: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, iColor: i16) -> Self {
         let mut o = CO_Egg {
             mo_carried_object: MO_CarriedObject::new_anim(g, nspr, Vec2s::zero(), 2, 16, 28, 30, 2, 1, 0, ((iColor as i32) << 5) as i16, 32, 32),
             relocatetimer: 0,
@@ -197,7 +198,7 @@ impl CObjectTrait for CO_Egg {
                 if self.explosiondrawframe < 0 {
                     let obj = Ptr::new_box(MO_Explosion::new(
                         g,
-                        Ptr::from_mut(&mut rm.spr_explosion),
+                        rm.spr_explosion,
                         Vec2s::new((self.ix as i32 + (self.iw as i32 >> 1) - 96) as i16, (self.iy as i32 + (self.ih as i32 >> 1) - 64) as i16),
                         2,
                         4,
@@ -232,9 +233,9 @@ impl CObjectTrait for CO_Egg {
                 let src = Rect { x: (self.explosiondrawframe as i32) << 5, y: (self.color as i32) << 5, w: 32, h: 32 };
                 if !self.owner.is_null() && self.owner.iswarping() {
                     let edge: ClipEdge = std::mem::transmute::<i32, ClipEdge>(self.owner.get_warp_state() as i32);
-                    gp.rm.spr_eggnumbers.draw_clip(g, x, y, &src, edge, self.owner.get_warp_plane() as i32);
+                    gp.rm.sprite(gp.rm.spr_eggnumbers).draw_clip(g, x, y, &src, edge, self.owner.get_warp_plane() as i32);
                 } else {
-                    gp.rm.spr_eggnumbers.draw_src(g, x, y, &src);
+                    gp.rm.sprite(gp.rm.spr_eggnumbers).draw_src(g, x, y, &src);
                 }
             }
         }

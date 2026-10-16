@@ -1,5 +1,6 @@
 //! Port of src/smw/ui/MI_PlayerSelect.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -12,7 +13,7 @@ use crate::globals::*;
 pub struct MI_PlayerSelect {
     pub ui_control: UI_Control,
 
-    pub spr: Ptr<gfxSprite>,
+    pub spr: SpriteId,
 
     pub szName: String,
     pub iWidth: i16,
@@ -26,7 +27,7 @@ pub struct MI_PlayerSelect {
 crate::impl_base!(MI_PlayerSelect => ui_control: UI_Control);
 
 impl MI_PlayerSelect {
-    pub fn new(nspr: Ptr<gfxSprite>, x: i16, y: i16, name: impl Into<String>, width: i16, indent: i16) -> Self {
+    pub fn new(nspr: SpriteId, x: i16, y: i16, name: impl Into<String>, width: i16, indent: i16) -> Self {
         let ui_control = UI_Control::new(x, y);
         let mut miModifyImage = Box::new(MI_Image::new(nspr, ui_control.m_pos.x, ui_control.m_pos.y - 6, 32, 128, 78, 78, 4, 1, 8));
         miModifyImage.set_visible(false);
@@ -184,16 +185,16 @@ impl UI_ControlTrait for MI_PlayerSelect {
         let iIndent = self.iIndent as i32;
         let iWidth = self.iWidth as i32;
 
-        self.spr.draw_src(g, x, y, &Rect { x: 0, y: if self.fSelected { 64 } else { 0 }, w: iIndent - 16, h: 64 });
-        self.spr.draw_src(g, x + iIndent - 16, y, &Rect { x: 0, y: if self.fSelected { 192 } else { 128 }, w: 32, h: 64 });
-        self.spr.draw_src(g, x + iIndent + 16, y, &Rect { x: 528 - iWidth + iIndent, y: if self.fSelected { 64 } else { 0 }, w: iWidth - iIndent - 16, h: 64 });
+        g.rm.sprite(self.spr).draw_src(g, x, y, &Rect { x: 0, y: if self.fSelected { 64 } else { 0 }, w: iIndent - 16, h: 64 });
+        g.rm.sprite(self.spr).draw_src(g, x + iIndent - 16, y, &Rect { x: 0, y: if self.fSelected { 192 } else { 128 }, w: 32, h: 64 });
+        g.rm.sprite(self.spr).draw_src(g, x + iIndent + 16, y, &Rect { x: 528 - iWidth + iIndent, y: if self.fSelected { 64 } else { 0 }, w: iWidth - iIndent - 16, h: 64 });
 
         gp.rm.menu_font_large.draw_chop_right(g, x + 16, y + 20, iIndent - 8, &self.szName);
 
         self.miModifyImage.draw(g);
 
         for iPlayer in 0..4usize {
-            self.spr.draw_src(
+            g.rm.sprite(self.spr).draw_src(
                 g,
                 x + self.iPlayerPosition[iPlayer] as i32,
                 y + 16,

@@ -1,5 +1,6 @@
 //! Port of src/smw/ui/MI_TeamSelect.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
@@ -17,7 +18,7 @@ pub struct MI_TeamSelect {
     pub ui_control: UI_Control,
 
     pub miImage: Box<MI_Image>,
-    pub spr: Ptr<gfxSprite>,
+    pub spr: SpriteId,
 
     pub iTeamIDs: [[i16; 3]; 4],
     pub iTeamCounts: [i16; 4],
@@ -36,7 +37,7 @@ pub struct MI_TeamSelect {
 crate::impl_base!(MI_TeamSelect => ui_control: UI_Control);
 
 impl MI_TeamSelect {
-    pub fn new(g: &mut Game, spr_background_ref: Ptr<gfxSprite>, x: i16, y: i16) -> Self {
+    pub fn new(g: &mut Game, spr_background_ref: SpriteId, x: i16, y: i16) -> Self {
         let ui_control = UI_Control::new(x, y);
         let spr = spr_background_ref;
         let miImage = Box::new(MI_Image::new(spr, ui_control.m_pos.x, ui_control.m_pos.y, 0, 0, 416, 256, 1, 1, 0));
@@ -335,7 +336,7 @@ impl UI_ControlTrait for MI_TeamSelect {
                 let pid = iPlayerID as usize;
 
                 if g.game_values.randomskin[pid] {
-                    self.spr.draw_src(
+                    g.rm.sprite(self.spr).draw_src(
                         g,
                         iTeam * 96 + 43 + px,
                         iTeamItem * 36 + 52 + py,
@@ -343,10 +344,10 @@ impl UI_ControlTrait for MI_TeamSelect {
                     );
                 } else {
                     let frame = if self.fReady[pid] { 0 } else { self.iAnimationFrame as usize };
-                    gp.rm.spr_player[pid][frame].draw_src(g, iTeam * 96 + 48 + px, iTeamItem * 36 + 52 + py, &Rect { x: 0, y: 0, w: 32, h: 32 });
+                    gp.rm.sprite(gp.rm.spr_player[pid][frame]).draw_src(g, iTeam * 96 + 48 + px, iTeamItem * 36 + 52 + py, &Rect { x: 0, y: 0, w: 32, h: 32 });
                 }
 
-                gp.rm.spr_menu_boxed_numbers.draw_src(
+                gp.rm.sprite(gp.rm.spr_menu_boxed_numbers).draw_src(
                     g,
                     iTeam * 96 + 44 + px,
                     iTeamItem * 36 + 72 + py,
@@ -356,9 +357,9 @@ impl UI_ControlTrait for MI_TeamSelect {
 
             let t = iTeam as usize;
             if g.game_values.playercontrol[t] > 0 {
-                gp.rm.spr_player_select_ready.draw_src(g, iTeam * 160 + 16, 368, &Rect { x: 0, y: 0, w: 128, h: 96 });
+                gp.rm.sprite(gp.rm.spr_player_select_ready).draw_src(g, iTeam * 160 + 16, 368, &Rect { x: 0, y: 0, w: 128, h: 96 });
 
-                gp.rm.spr_menu_boxed_numbers.draw_src(g, iTeam * 160 + 32, 388, &Rect { x: iTeam * 16, y: gp.game_values.colorids[t] as i32 * 16, w: 16, h: 16 });
+                gp.rm.sprite(gp.rm.spr_menu_boxed_numbers).draw_src(g, iTeam * 160 + 32, 388, &Rect { x: iTeam * 16, y: gp.game_values.colorids[t] as i32 * 16, w: 16, h: 16 });
                 let skinlist = g.skinlist;
                 let name: &str = if g.game_values.randomskin[t] { "Random" } else { &skinlist.at(g.game_values.skinids[t] as usize).name };
                 gp.rm.menu_font_small.draw_chop_right(g, iTeam * 160 + 52, 404 - gp.rm.menu_font_small.get_height(), 80, name);
@@ -370,15 +371,15 @@ impl UI_ControlTrait for MI_TeamSelect {
                 } else {
                     64
                 };
-                gp.rm.spr_player_select_ready.draw_src(g, iTeam * 160 + 64, 408, &Rect { x: 128, y: srcy, w: 34, h: 32 });
+                gp.rm.sprite(gp.rm.spr_player_select_ready).draw_src(g, iTeam * 160 + 64, 408, &Rect { x: 128, y: srcy, w: 34, h: 32 });
             }
         }
         let _ = iPlayerCount;
 
         if self.fAllReady {
             let fy = (py as f32 + App::screenHeight as f32 * 0.47f32) as i32;
-            gp.rm.menu_plain_field.draw_src(g, px + 108, fy, &Rect { x: 0, y: 160, w: 100, h: 32 });
-            gp.rm.menu_plain_field.draw_src(g, px + 208, fy, &Rect { x: 412, y: 160, w: 100, h: 32 });
+            gp.rm.sprite(gp.rm.menu_plain_field).draw_src(g, px + 108, fy, &Rect { x: 0, y: 160, w: 100, h: 32 });
+            gp.rm.sprite(gp.rm.menu_plain_field).draw_src(g, px + 208, fy, &Rect { x: 412, y: 160, w: 100, h: 32 });
             gp.rm.menu_font_large.draw_centered(g, App::screenWidth / 2, (py as f32 + App::screenHeight as f32 * 0.48f32) as i32, "Continue");
         }
     }

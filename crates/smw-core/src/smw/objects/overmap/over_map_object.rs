@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/overmap/OverMapObject.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::gfx_drawpreview;
@@ -30,7 +31,7 @@ impl_base!(IO_OverMapObject => cobject: CObject);
 impl IO_OverMapObject {
     /// Pass `-1` for the C++ default arguments.
     #[allow(clippy::too_many_arguments)]
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>,
+    pub fn new(g: &mut Game, nspr: SpriteId,
         pos: Vec2s,
         iNumSpr: i16,
         aniSpeed: i16,
@@ -61,8 +62,8 @@ impl IO_OverMapObject {
 
         if iAnimationWidth > -1 {
             o.iw = iAnimationWidth;
-        } else if !o.spr.is_null() {
-            o.iw = (o.spr.get_width() as i16) / o.iNumSprites;
+        } else if !o.spr.is_none() {
+            o.iw = (g.rm.sprite(o.spr).get_width() as i16) / o.iNumSprites;
         }
 
         if iAnimationHeight > -1 {
@@ -72,8 +73,8 @@ impl IO_OverMapObject {
         o.animationspeed = aniSpeed;
         o.animationtimer = 0;
 
-        if !o.spr.is_null() {
-            o.animationWidth = o.spr.get_width() as i16;
+        if !o.spr.is_none() {
+            o.animationWidth = g.rm.sprite(o.spr).get_width() as i16;
         }
 
         if iCollisionWidth > -1 {
@@ -103,7 +104,7 @@ impl IO_OverMapObject {
 
 pub fn io_over_map_object_draw<T: IO_OverMapObjectTrait + ?Sized>(g: &mut Game, this: &mut T) {
     let o = this.omo();
-    o.spr.draw_src(
+    g.rm.sprite(o.spr).draw_src(
         g,
         (o.ix - o.collisionOffsetX) as i32,
         (o.iy - o.collisionOffsetY) as i32,
@@ -113,9 +114,10 @@ pub fn io_over_map_object_draw<T: IO_OverMapObjectTrait + ?Sized>(g: &mut Game, 
 
 pub fn io_over_map_object_draw_offset<T: IO_OverMapObjectTrait + ?Sized>(g: &mut Game, this: &mut T, iOffsetX: i16, iOffsetY: i16) {
     let o = this.omo();
+    let rm = g.rm;
     gfx_drawpreview(
         g,
-        &*o.spr,
+        rm.sprite(o.spr),
         (((o.ix - o.collisionOffsetX) as i32 >> 1) + iOffsetX as i32) as i16,
         (((o.iy - o.collisionOffsetY) as i32 >> 1) + iOffsetY as i32) as i16,
         o.drawframe >> 1,

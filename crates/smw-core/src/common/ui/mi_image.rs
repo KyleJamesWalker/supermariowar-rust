@@ -1,5 +1,6 @@
 //! Port of src/common/ui/MI_Image.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -10,7 +11,7 @@ use crate::globals::*;
 pub struct MI_Image {
     pub ui_control: UI_Control,
 
-    spr: Ptr<gfxSprite>,
+    spr: SpriteId,
 
     iNumXFrames: i16,
     iNumYFrames: i16,
@@ -43,7 +44,7 @@ crate::impl_base!(MI_Image => ui_control: UI_Control);
 
 impl MI_Image {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(nspr: Ptr<gfxSprite>, x: i16, y: i16, srcx: i16, srcy: i16, w: i16, h: i16, numxframes: i16, numyframes: i16, speed: i16) -> Self {
+    pub fn new(nspr: SpriteId, x: i16, y: i16, srcx: i16, srcy: i16, w: i16, h: i16, numxframes: i16, numyframes: i16, speed: i16) -> Self {
         MI_Image {
             ui_control: UI_Control::new(x, y),
             spr: nspr,
@@ -84,7 +85,7 @@ impl MI_Image {
         self.iXFrame = srcx;
         self.iYFrame = srcy;
     }
-    pub fn set_image_source(&mut self, nspr: Ptr<gfxSprite>) {
+    pub fn set_image_source(&mut self, nspr: SpriteId) {
         self.spr = nspr;
     }
 
@@ -203,9 +204,9 @@ impl UI_ControlTrait for MI_Image {
                 w: self.iw as i32 + (pv << 1),
                 h: self.ih as i32 + (pv << 1),
             };
-            self.spr.draw_stretch(&src, g.blitdest, &dst);
+            g.rm.sprite(self.spr).draw_stretch(&src, g.blitdest, &dst);
         } else {
-            self.spr.draw_src(g, self.m_pos.x as i32 + iXOffset as i32, self.m_pos.y as i32 + iYOffset as i32, &src);
+            g.rm.sprite(self.spr).draw_src(g, self.m_pos.x as i32 + iXOffset as i32, self.m_pos.y as i32 + iYOffset as i32, &src);
         }
     }
 }

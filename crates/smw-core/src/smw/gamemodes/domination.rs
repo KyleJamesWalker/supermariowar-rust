@@ -71,7 +71,7 @@ pub fn cgm_domination_init<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut 
     }
 
     for _k in 0..iNumAreas {
-        let obj = Ptr::new_box(OMO_Area::new(g, Ptr::from_mut(&mut gp.get().rm.spr_areas), iNumAreas));
+        let obj = Ptr::new_box(OMO_Area::new(g, gp.get().rm.spr_areas, iNumAreas));
         gp.get().objectcontainer[0].add(g, obj);
     }
 }

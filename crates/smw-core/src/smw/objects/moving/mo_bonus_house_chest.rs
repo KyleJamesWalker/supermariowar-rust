@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/moving/MO_BonusHouseChest.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
@@ -27,7 +28,7 @@ pub struct MO_BonusHouseChest {
 impl_base!(MO_BonusHouseChest => io_moving_object: IO_MovingObject);
 
 impl MO_BonusHouseChest {
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, pos: Vec2s, iBonusItem: i16) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, pos: Vec2s, iBonusItem: i16) -> Self {
         let mut o = MO_BonusHouseChest {
             io_moving_object: IO_MovingObject::new(g, nspr, pos, 1, 0, 64, 64, 0, 0, -1, -1, -1, -1),
             bonusitem: 0,
@@ -65,8 +66,8 @@ impl CObjectTrait for MO_BonusHouseChest {
 
             self.drawbonusitemtimer -= 1;
             if self.drawbonusitemtimer <= 0 {
-                g.eyecandy[2].emplace(EC_SingleAnimation::new(
-                    Ptr::from_mut(&mut g.rm.spr_fireballexplosion),
+                g.eyecandy[2].emplace(EC_SingleAnimation::new(&g.rm, 
+                    g.rm.spr_fireballexplosion,
                     (self.ix as i32 + 16) as i16,
                     self.drawbonusitemy,
                     3,
@@ -85,11 +86,11 @@ impl CObjectTrait for MO_BonusHouseChest {
         let ih = self.ih as i32;
 
         if self.state < 2 {
-            self.spr.draw_src(g, ix, iy, &Rect { x: 0, y: 0, w: iw, h: ih });
+            g.rm.sprite(self.spr).draw_src(g, ix, iy, &Rect { x: 0, y: 0, w: iw, h: ih });
         }
 
         if self.state >= 2 {
-            self.spr.draw_src(g, ix, iy, &Rect { x: 128, y: 0, w: iw, h: ih });
+            g.rm.sprite(self.spr).draw_src(g, ix, iy, &Rect { x: 128, y: 0, w: iw, h: ih });
         }
 
         if self.state == 2 {
@@ -99,18 +100,18 @@ impl CObjectTrait for MO_BonusHouseChest {
                 let iBonus: i16 = (bonusitem - NUM_POWERUPS - NUM_WORLD_POWERUPS) as i16;
                 let iBonusX: i16 = ((iBonus as i32 % 10) << 5) as i16;
                 let iBonusY: i16 = (((iBonus as i32 / 10) << 5) + 32) as i16;
-                gp.rm.spr_worlditems.draw_src(g, ix + 16, self.drawbonusitemy as i32, &Rect { x: iBonusX as i32, y: iBonusY as i32, w: 32, h: 32 });
+                gp.rm.sprite(gp.rm.spr_worlditems).draw_src(g, ix + 16, self.drawbonusitemy as i32, &Rect { x: iBonusX as i32, y: iBonusY as i32, w: 32, h: 32 });
             } else if bonusitem >= NUM_POWERUPS {
                 // World Item
-                gp.rm.spr_worlditems.draw_src(g, ix + 16, self.drawbonusitemy as i32, &Rect { x: (bonusitem - NUM_POWERUPS) << 5, y: 0, w: 32, h: 32 });
+                gp.rm.sprite(gp.rm.spr_worlditems).draw_src(g, ix + 16, self.drawbonusitemy as i32, &Rect { x: (bonusitem - NUM_POWERUPS) << 5, y: 0, w: 32, h: 32 });
             } else {
                 // Normal Powerup
-                gp.rm.spr_storedpoweruplarge.draw_src(g, ix + 16, self.drawbonusitemy as i32, &Rect { x: bonusitem << 5, y: 0, w: 32, h: 32 });
+                gp.rm.sprite(gp.rm.spr_storedpoweruplarge).draw_src(g, ix + 16, self.drawbonusitemy as i32, &Rect { x: bonusitem << 5, y: 0, w: 32, h: 32 });
             }
         }
 
         if self.state >= 2 {
-            self.spr.draw_src(g, ix, iy, &Rect { x: 64, y: 0, w: iw, h: ih });
+            g.rm.sprite(self.spr).draw_src(g, ix, iy, &Rect { x: 64, y: 0, w: iw, h: ih });
         }
     }
 

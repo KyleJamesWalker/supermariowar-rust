@@ -1,5 +1,6 @@
 //! Port of src/smw/objects/carriable/CO_Flag.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game_values::if_sound_on_play;
@@ -34,7 +35,7 @@ impl_base!(CO_Flag => mo_carried_object: MO_CarriedObject);
 
 impl CO_Flag {
     /// Returns the heap object: the constructor hands `this` to `flagbase->setFlag`, so it must not move afterwards.
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, base: Ptr<MO_FlagBase>, iTeamID: i16, iColorID: i16) -> Ptr<CO_Flag> {
+    pub fn new(g: &mut Game, nspr: SpriteId, base: Ptr<MO_FlagBase>, iTeamID: i16, iColorID: i16) -> Ptr<CO_Flag> {
         let mut o = Ptr::new_box(CO_Flag {
             mo_carried_object: MO_CarriedObject::new_anim(g, nspr, Vec2s::zero(), 4, 8, 30, 30, 1, 1, 0, ((iColorID as i32) << 6) as i16, 32, 32),
             timer: 0,
@@ -212,12 +213,12 @@ impl CObjectTrait for CO_Flag {
 
             if self.owner.iswarping() {
                 let edge: ClipEdge = unsafe { std::mem::transmute::<i32, ClipEdge>(self.owner.get_warp_state() as i32) };
-                self.spr.draw_clip(g, x, y, &srcRect, edge, self.owner.get_warp_plane() as i32);
+                g.rm.sprite(self.spr).draw_clip(g, x, y, &srcRect, edge, self.owner.get_warp_plane() as i32);
             } else {
-                self.spr.draw_src(g, x, y, &srcRect);
+                g.rm.sprite(self.spr).draw_src(g, x, y, &srcRect);
             }
         } else {
-            self.spr.draw_src(g, x, y, &srcRect);
+            g.rm.sprite(self.spr).draw_src(g, x, y, &srcRect);
         }
     }
 }

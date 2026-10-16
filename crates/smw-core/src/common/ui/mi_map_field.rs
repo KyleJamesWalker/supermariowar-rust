@@ -1,5 +1,6 @@
 //! Port of src/common/ui/MI_MapField.cpp
 
+use crate::common::resource_manager::SpriteId;
 use crate::common::keys::*;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -36,7 +37,7 @@ crate::impl_base!(MI_MapField => mi_map_preview: MI_MapPreview);
 
 impl MI_MapField {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(g: &mut Game, nspr: Ptr<gfxSprite>, x: i16, y: i16, name: impl Into<String>, width: i16, indent: i16, showtags: bool) -> Self {
+    pub fn new(g: &mut Game, nspr: SpriteId, x: i16, y: i16, name: impl Into<String>, width: i16, indent: i16, showtags: bool) -> Self {
         let mut gp = g.ptr();
         let mi_map_preview = MI_MapPreview::new(gp.get(), nspr, x, y, width, indent);
         let (px, py, iWidth) = (mi_map_preview.m_pos.x, mi_map_preview.m_pos.y, mi_map_preview.iWidth);
@@ -253,9 +254,9 @@ impl UI_ControlTrait for MI_MapField {
         let selY = if self.fSelected { 32 } else { 0 };
 
         //Draw the select field background
-        self.spr.draw_src(g, x, y, &Rect { x: 0, y: selY, w: indent - 16, h: 32 });
-        self.spr.draw_src(g, x + indent - 16, y, &Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
-        self.spr.draw_src(g, x + indent + 16, y, &Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
+        g.rm.sprite(self.spr).draw_src(g, x, y, &Rect { x: 0, y: selY, w: indent - 16, h: 32 });
+        g.rm.sprite(self.spr).draw_src(g, x + indent - 16, y, &Rect { x: 0, y: if self.fSelected { 96 } else { 64 }, w: 32, h: 32 });
+        g.rm.sprite(self.spr).draw_src(g, x + indent + 16, y, &Rect { x: 528 - width + indent, y: selY, w: width - indent - 16, h: 32 });
 
         gp.rm.menu_font_large.draw_chop_right(g, x + 16, y + 5, indent - 8, &self.szName);
         gp.rm.menu_font_large.draw_chop_right(g, x + indent + 8, y + 5, width - indent - 24, &self.szMapName);
