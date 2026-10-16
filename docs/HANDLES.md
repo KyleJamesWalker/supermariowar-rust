@@ -1,6 +1,6 @@
 # Typed handles replace the `Ptr` object graph
 
-Status: proposed. This is decision 9 of `ARCHITECTURE_V2.md`, which it left to a separate document.
+Status: accepted. This is decision 9 of `ARCHITECTURE_V2.md`, which it left to a separate document.
 
 ## Summary
 

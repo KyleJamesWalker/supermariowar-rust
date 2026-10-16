@@ -1,6 +1,6 @@
 # Pads and the recorder move into the backend
 
-Status: proposed. It finishes phase 3 of `ARCHITECTURE_V2.md` and unblocks phase 6 (`smw-sdl3`).
+Status: accepted. It finishes phase 3 of `ARCHITECTURE_V2.md` and unblocks phase 6 (`smw-sdl3`).
 
 ## Summary
 
