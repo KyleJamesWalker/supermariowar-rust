@@ -105,9 +105,9 @@ fn main() {
 
             match stage {
                 0 if game().netplay.connectSuccessful && role == "connect" => {
-                    let (sent, recv) = (game().netplay.client.lastSentMessage, game().netplay.client.lastReceivedMessage);
-                    let advances = sent.packageType == NET_NOTICE_SKIN_CHANGE && recv.packageType == NET_RESPONSE_CONNECT_OK && sent.timestamp >= recv.timestamp;
-                    println!("EV servers menu advances {} (sent {}@{}, received {}@{})", advances, sent.packageType, sent.timestamp, recv.packageType, recv.timestamp);
+                    let (sent, reply) = (game().netplay.client.lastSentMessage, game().netplay.client.lastReply);
+                    let advances = sent.packageType == NET_NOTICE_SKIN_CHANGE && reply.packageType == NET_RESPONSE_CONNECT_OK;
+                    println!("EV servers menu advances {} (sent {}@{}, reply {}@{})", advances, sent.packageType, sent.timestamp, reply.packageType, reply.timestamp);
                     net_close(game().get());
                     std::process::exit(if advances { 0 } else { 1 });
                 }

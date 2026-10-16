@@ -376,6 +376,8 @@ fn host_to_string(host: u32) -> String {
 pub struct NetClient {
     pub lastSentMessage: LastMessage,
     pub lastReceivedMessage: LastMessage,
+    /// The reply a waiting menu acts on; later messages in the same poll cannot overwrite it.
+    pub lastReply: LastMessage,
 
     pub local_gamehost: NetGameHost,
 
@@ -392,6 +394,7 @@ impl NetClient {
         NetClient {
             lastSentMessage: LastMessage::default(),
             lastReceivedMessage: LastMessage::default(),
+            lastReply: LastMessage::default(),
             local_gamehost: NetGameHost::new(),
             foreign_lobbyserver: Ptr::null(),
             foreign_gamehost: Ptr::null(),
@@ -1047,11 +1050,26 @@ impl NetClient {
     pub fn set_as_last_sent_message(&mut self, packageType: u8) {
         self.lastSentMessage.packageType = packageType;
         self.lastSentMessage.timestamp = ticks();
+        if matches!(packageType, NET_REQUEST_CONNECT | NET_REQUEST_JOIN_ROOM | NET_REQUEST_CREATE_ROOM | NET_P2G_SYNC_OK) {
+            self.lastReply = LastMessage::default();
+        }
     }
 
     pub fn set_as_last_received_message(&mut self, packageType: u8) {
         self.lastReceivedMessage.packageType = packageType;
         self.lastReceivedMessage.timestamp = ticks();
+        if matches!(packageType, NET_RESPONSE_CONNECT_OK | NET_RESPONSE_JOIN_OK | NET_RESPONSE_CREATE_OK | NET_G2E_GAME_START) {
+            self.lastReply = self.lastReceivedMessage;
+        }
+    }
+
+    /// Takes the reply a waiting menu was waiting for, so it moves on once.
+    pub fn take_reply(&mut self, packageType: u8) -> bool {
+        let found = self.lastReply.packageType == packageType;
+        if found {
+            self.lastReply = LastMessage::default();
+        }
+        found
     }
 }
 

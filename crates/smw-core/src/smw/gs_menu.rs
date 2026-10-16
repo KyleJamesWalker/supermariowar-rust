@@ -958,10 +958,7 @@ impl MenuState {
         unsafe {
             // Shortcut to game start
             if g.netplay.active {
-                let lastSendType = g.netplay.client.lastSentMessage.packageType;
-                let lastRecvType = g.netplay.client.lastReceivedMessage.packageType;
-
-                if lastSendType == NET_P2G_SYNC_OK && lastRecvType == NET_G2E_GAME_START {
+                if g.netplay.client.take_reply(NET_G2E_GAME_START) {
                     code = MENU_CODE_NET_ROOM_GO;
                 }
             }
@@ -1343,22 +1340,15 @@ impl MenuState {
             }
 
             if g.netplay.active {
-                let lastSent = g.netplay.client.lastSentMessage;
-                let lastRecv = g.netplay.client.lastReceivedMessage;
-
                 // Override menu code if response has arrived
                 if g.netplay.operationInProgress {
                     let previousCode = code;
+                    let client = &mut gp.netplay.client;
 
-                    // if sent connect request,
-                    // received connect_ok
-                    // then sent skin change
-                    if lastSent.packageType == NET_NOTICE_SKIN_CHANGE && lastRecv.packageType == NET_RESPONSE_CONNECT_OK && lastSent.timestamp >= lastRecv.timestamp {
+                    // The CONNECT_OK handler sends the skin before returning, so the lobby gets it first.
+                    if client.take_reply(NET_RESPONSE_CONNECT_OK) {
                         code = MENU_CODE_TO_NET_LOBBY_MENU;
-                    } else if lastSent.packageType == NET_REQUEST_JOIN_ROOM && lastRecv.packageType == NET_RESPONSE_JOIN_OK && lastSent.timestamp < lastRecv.timestamp {
-                        // ensure that the incoming message arrived after the request
-                        code = MENU_CODE_TO_NET_ROOM_MENU;
-                    } else if lastSent.packageType == NET_NOTICE_GAMEMODESETTINGS && lastRecv.packageType == NET_RESPONSE_CREATE_OK {
+                    } else if client.take_reply(NET_RESPONSE_JOIN_OK) || client.take_reply(NET_RESPONSE_CREATE_OK) {
                         code = MENU_CODE_TO_NET_ROOM_MENU;
                     }
 
