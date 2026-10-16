@@ -466,7 +466,7 @@ pub fn flush(g: &mut Game) {
     let mut gp = g.ptr();
     unsafe {
         let Some(t) = st(gp.get()).touch.as_mut() else { return };
-        if SDL_GetKeyboardFocus().is_null() {
+        if !crate::services::services(gp.get()).keyboard.has_focus() {
             t.controls.release_all();
         }
         st(gp.get()).pushing = true;

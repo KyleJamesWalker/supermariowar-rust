@@ -417,7 +417,7 @@ pub fn keyboard_state(g: &mut Game) -> *const u8 {
         if h(gp.get()).active {
             h(gp.get()).keys.as_ptr()
         } else {
-            sdl2::sys::SDL_GetKeyboardState(std::ptr::null_mut())
+            crate::services::services(gp.get()).keyboard.state().as_ptr()
         }
     }
 }
@@ -429,7 +429,7 @@ pub fn mouse_state(g: &mut Game) -> u32 {
         if h(gp.get()).active {
             h(gp.get()).buttons
         } else {
-            sdl2::sys::SDL_GetMouseState(std::ptr::null_mut(), std::ptr::null_mut())
+            crate::services::services(gp.get()).keyboard.mouse_buttons()
         }
     }
 }

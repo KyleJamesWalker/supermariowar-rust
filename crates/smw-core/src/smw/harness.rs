@@ -389,7 +389,7 @@ pub fn keyboard_state(g: &mut Game) -> *const u8 {
         if h(gp.get()).replay {
             (&raw const h(gp.get()).replay_keys).cast()
         } else {
-            sdl2::sys::SDL_GetKeyboardState(std::ptr::null_mut())
+            crate::services::services(gp.get()).keyboard.state().as_ptr()
         }
     }
 }
@@ -907,6 +907,7 @@ unsafe extern "C" fn record_filter(userdata: *mut std::ffi::c_void, event: *mut 
 
 /// The replay line for a raw SDL event, or None for input the replay format cannot express.
 fn to_replay_event(g: &mut Game, raw: &SDL_Event, frame: u32) -> Option<ReplayEvent> {
+    let mut gp = g.ptr();
     let mut ev = ReplayEvent { frame, kind: EventKind::Key, down: false, keyName: String::new(), device: 0, index: 0, value: 0 };
     let input = smw_sdl2::input::from_sdl(raw).event;
     if let Some((x, y)) = input.tap() {
@@ -917,8 +918,9 @@ fn to_replay_event(g: &mut Game, raw: &SDL_Event, frame: u32) -> Option<ReplayEv
     }
     let (which, kind, index, value) = match input {
         InputEvent::Key { key, down, .. } => unsafe {
-            let name = CStr::from_ptr(SDL_GetKeyName(key.0)).to_string_lossy().into_owned();
-            if name.is_empty() || SDL_GetKeyFromName(CString::new(name.as_bytes()).ok()?.as_ptr()) != key.0 {
+            let kb = &crate::services::services(gp.get()).keyboard;
+            let name = kb.key_name(key.0);
+            if name.is_empty() || kb.key_from_name(&name) != key.0 {
                 return None;
             }
             ev.down = down;

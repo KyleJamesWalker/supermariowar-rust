@@ -19,6 +19,35 @@ impl smw_platform::Events for Sdl2Events {
     }
 }
 
+/// SDL's keyboard and mouse state.
+pub struct Sdl2Keyboard;
+
+impl smw_platform::Keyboard for Sdl2Keyboard {
+    fn scancode_from_key(&self, key: i32) -> i32 {
+        unsafe { sdl2::sys::SDL_GetScancodeFromKey(key) as i32 }
+    }
+    fn key_from_name(&self, name: &str) -> i32 {
+        let Ok(c) = std::ffi::CString::new(name) else { return 0 };
+        unsafe { sdl2::sys::SDL_GetKeyFromName(c.as_ptr()) }
+    }
+    fn key_name(&self, key: i32) -> String {
+        unsafe { std::ffi::CStr::from_ptr(sdl2::sys::SDL_GetKeyName(key)).to_string_lossy().into_owned() }
+    }
+    fn state(&self) -> &[u8] {
+        unsafe {
+            let mut n = 0;
+            let p = sdl2::sys::SDL_GetKeyboardState(&mut n);
+            std::slice::from_raw_parts(p, n as usize)
+        }
+    }
+    fn mouse_buttons(&self) -> u32 {
+        unsafe { sdl2::sys::SDL_GetMouseState(std::ptr::null_mut(), std::ptr::null_mut()) }
+    }
+    fn has_focus(&self) -> bool {
+        unsafe { !sdl2::sys::SDL_GetKeyboardFocus().is_null() }
+    }
+}
+
 pub fn poll_input() -> Option<smw_platform::Input> {
     unsafe {
         let mut event: SDL_Event = std::mem::zeroed();

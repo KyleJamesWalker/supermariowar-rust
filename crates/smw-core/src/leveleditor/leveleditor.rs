@@ -418,8 +418,8 @@ fn get_mouse_state(g: &mut Game) -> u32 {
     editor_harness::mouse_state(g)
 }
 
-pub fn check_key(keystate: *const u8, key: Keycode) -> bool {
-    unsafe { *keystate.add(SDL_GetScancodeFromKey(key) as usize) != 0 }
+pub fn check_key(g: &mut Game, keystate: *const u8, key: Keycode) -> bool {
+    unsafe { *keystate.add(crate::services::services(g).keyboard.scancode_from_key(key) as usize) != 0 }
 }
 
 pub fn set_tileset_tile(tile: &mut TilesetTile, iTileset: i16, iCol: i16, iRow: i16) {
@@ -934,7 +934,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                             g.rm.spr_background = ImageLoader::new(ed(gp.get()).backgroundlist.current_path()).without_color_key().create(g);
                             g.g_map.szBackgroundFile = get_filename_from_path(&ed(gp.get()).backgroundlist.current_path().to_string_lossy());
 
-                            if !check_key(keystate, SDLK_LSHIFT) && !check_key(keystate, SDLK_RSHIFT) {
+                            if !check_key(gp.get(), keystate, SDLK_LSHIFT) && !check_key(gp.get(), keystate, SDLK_RSHIFT) {
                                 //Set music to background default
                                 set_music_category_from_background(g);
                             }
@@ -952,7 +952,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                         }
 
                         if key == SDLK_s {
-                            if check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT) {
+                            if check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT) {
                                 return SAVE_AS;
                             }
 
@@ -960,14 +960,14 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                         }
 
                         if key == SDLK_f {
-                            if check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT) || ed(gp.get()).findstring.is_empty() {
+                            if check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT) || ed(gp.get()).findstring.is_empty() {
                                 return FIND;
                             }
 
                             findcurrentstring(g);
                         }
 
-                        if key == SDLK_DELETE && (check_key(keystate, SDLK_LCTRL) || check_key(keystate, SDLK_RCTRL)) {
+                        if key == SDLK_DELETE && (check_key(gp.get(), keystate, SDLK_LCTRL) || check_key(gp.get(), keystate, SDLK_RCTRL)) {
                             return CLEAR_MAP;
                         }
 
@@ -1153,7 +1153,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                                             clearselectedmaptiles(g);
                                         }
                                     } else {
-                                        if !check_key(keystate, SDLK_LSHIFT) && !check_key(keystate, SDLK_RSHIFT) && !check_key(keystate, SDLK_LCTRL) {
+                                        if !check_key(gp.get(), keystate, SDLK_LSHIFT) && !check_key(gp.get(), keystate, SDLK_RSHIFT) && !check_key(gp.get(), keystate, SDLK_LCTRL) {
                                             resetselectedtiles(g);
                                         }
 
@@ -2031,7 +2031,7 @@ pub fn editor_properties(g: &mut Game, iBlockCol: i16, iBlockRow: i16) -> i32 {
                         }
 
                         let keystate = get_keyboard_state(g);
-                        if check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT) {
+                        if check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT) {
                             for iSetting in 0..NUM_BLOCK_SETTINGS as usize {
                                 if ed(gp.get()).event.key_sym() == SDLK_d {
                                     iValue = default_powerup_setting(0, iSetting);
@@ -2599,17 +2599,17 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
                         }
                     } else if PLATFORM_EDIT_STATE_PATH == ed(gp.get()).iPlatformEditState {
                         let keystate = get_keyboard_state(g);
-                        if ed(gp.get()).g_Platforms[ep].iPathType == PlatformPathType::Ellipse && (check_key(keystate, SDLK_z) || check_key(keystate, SDLK_x) || check_key(keystate, SDLK_c)) {
+                        if ed(gp.get()).g_Platforms[ep].iPathType == PlatformPathType::Ellipse && (check_key(gp.get(), keystate, SDLK_z) || check_key(gp.get(), keystate, SDLK_x) || check_key(gp.get(), keystate, SDLK_c)) {
                             update_platform_path_radius(g, 
                                 ed(gp.get()).iEditPlatform,
                                 ed(gp.get()).event.button_x() as i16,
                                 ed(gp.get()).event.button_y() as i16,
-                                check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT),
-                                check_key(keystate, SDLK_z),
-                                check_key(keystate, SDLK_c),
+                                check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT),
+                                check_key(gp.get(), keystate, SDLK_z),
+                                check_key(gp.get(), keystate, SDLK_c),
                             );
                         } else {
-                            update_platform_path_start(g, ed(gp.get()).iEditPlatform, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16, check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT));
+                            update_platform_path_start(g, ed(gp.get()).iEditPlatform, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16, check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT));
                         }
                     }
                 } else {
@@ -2625,9 +2625,9 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
                         } else if PLATFORM_EDIT_STATE_PATH == ed(gp.get()).iPlatformEditState {
                             let keystate = get_keyboard_state(g);
                             if ed(gp.get()).g_Platforms[ep].iPathType == PlatformPathType::Straight {
-                                update_platform_path_end(g, ed(gp.get()).iEditPlatform, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16, check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT));
+                                update_platform_path_end(g, ed(gp.get()).iEditPlatform, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16, check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT));
                             } else if ed(gp.get()).g_Platforms[ep].iPathType == PlatformPathType::StraightContinuous || ed(gp.get()).g_Platforms[ep].iPathType == PlatformPathType::Ellipse {
-                                update_platform_path_angle(g, ed(gp.get()).iEditPlatform, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16, check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT));
+                                update_platform_path_angle(g, ed(gp.get()).iEditPlatform, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16, check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT));
                             }
                         }
                     }
@@ -2677,24 +2677,24 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
                 } else if PLATFORM_EDIT_STATE_PATH == ed(gp.get()).iPlatformEditState {
                     if ed(gp.get()).event.motion_state() == sdl_button(SDL_BUTTON_LEFT) {
                         let keystate = get_keyboard_state(g);
-                        if ed(gp.get()).g_Platforms[ep].iPathType == PlatformPathType::Ellipse && (check_key(keystate, SDLK_z) || check_key(keystate, SDLK_x) || check_key(keystate, SDLK_c)) {
+                        if ed(gp.get()).g_Platforms[ep].iPathType == PlatformPathType::Ellipse && (check_key(gp.get(), keystate, SDLK_z) || check_key(gp.get(), keystate, SDLK_x) || check_key(gp.get(), keystate, SDLK_c)) {
                             update_platform_path_radius(g, 
                                 ed(gp.get()).iEditPlatform,
                                 ed(gp.get()).event.button_x() as i16,
                                 ed(gp.get()).event.button_y() as i16,
-                                check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT),
-                                check_key(keystate, SDLK_z),
-                                check_key(keystate, SDLK_c),
+                                check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT),
+                                check_key(gp.get(), keystate, SDLK_z),
+                                check_key(gp.get(), keystate, SDLK_c),
                             );
                         } else {
-                            update_platform_path_start(g, ed(gp.get()).iEditPlatform, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16, check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT));
+                            update_platform_path_start(g, ed(gp.get()).iEditPlatform, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16, check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT));
                         }
                     } else if ed(gp.get()).event.motion_state() == sdl_button(SDL_BUTTON_RIGHT) {
                         let keystate = get_keyboard_state(g);
                         if ed(gp.get()).g_Platforms[ep].iPathType == PlatformPathType::Straight {
-                            update_platform_path_end(g, ed(gp.get()).iEditPlatform, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16, check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT));
+                            update_platform_path_end(g, ed(gp.get()).iEditPlatform, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16, check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT));
                         } else if ed(gp.get()).g_Platforms[ep].iPathType == PlatformPathType::StraightContinuous || ed(gp.get()).g_Platforms[ep].iPathType == PlatformPathType::Ellipse {
-                            update_platform_path_angle(g, ed(gp.get()).iEditPlatform, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16, check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT));
+                            update_platform_path_angle(g, ed(gp.get()).iEditPlatform, ed(gp.get()).event.button_x() as i16, ed(gp.get()).event.button_y() as i16, check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT));
                         }
                     }
                 }
@@ -3474,6 +3474,7 @@ pub fn draw_map_hazard_controls(g: &mut Game, hazard: &MapHazard) {
 }
 
 pub fn adjust_map_hazard_radius(g: &mut Game, hazard: &mut MapHazard, iClickX: i16, iClickY: i16) {
+    let mut gp = g.ptr();
     let iDiffX: i16 = (iClickX as i32 - (((hazard.ix as i32) << 4) + 16)) as i16;
     let iDiffY: i16 = (iClickY as i32 - (((hazard.iy as i32) << 4) + 16)) as i16;
 
@@ -3485,7 +3486,7 @@ pub fn adjust_map_hazard_radius(g: &mut Game, hazard: &mut MapHazard, iClickX: i
     }
 
     let keystate = get_keyboard_state(g);
-    if check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT) {
+    if check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT) {
         angle = snap_angle(angle);
     }
 
@@ -3501,7 +3502,7 @@ pub fn adjust_map_hazard_radius(g: &mut Game, hazard: &mut MapHazard, iClickX: i
         hazard.dparam[1] = angle;
 
         if radius > 32.0f32 {
-            if check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT) {
+            if check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT) {
                 //Snap radius to every 16 pixels
                 hazard.dparam[2] = ((((radius - 16.0f32) as i32) >> 4) << 4) as f32;
             } else {
@@ -3941,7 +3942,7 @@ pub fn editor_modeitems(g: &mut Game) -> i32 {
                 bound_mouse_motion_coords(g);
                 if ed(gp.get()).dragmodeitem >= 0 && ed(gp.get()).event.motion_state() == sdl_button(SDL_BUTTON_LEFT) {
                     let keystate = get_keyboard_state(g);
-                    let fShiftDown = check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT);
+                    let fShiftDown = check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT);
 
                     let d = ed(gp.get()).dragmodeitem as usize;
                     let loc = if ed(gp.get()).modeitemmode == 0 {
@@ -4531,7 +4532,7 @@ pub fn dialog(g: &mut Game, title: &str, instructions: &str, input: &mut String,
                             let mut key: u8 = sym as u8;
 
                             let keystate = get_keyboard_state(g);
-                            if check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT) {
+                            if check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT) {
                                 if sym == 45 {
                                     key = 95;
                                 } else if (95..=122).contains(&sym) {

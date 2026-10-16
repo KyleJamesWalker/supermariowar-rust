@@ -268,8 +268,8 @@ fn bound_mouse_motion_coords(g: &mut Game) {
     }
 }
 
-fn check_key(keystate: *const u8, key: Keycode) -> bool {
-    unsafe { *keystate.add(SDL_GetScancodeFromKey(key) as usize) != 0 }
+fn check_key(g: &mut Game, keystate: *const u8, key: Keycode) -> bool {
+    unsafe { *keystate.add(crate::services::services(g).keyboard.scancode_from_key(key) as usize) != 0 }
 }
 
 //Sets up default mode options
@@ -1246,7 +1246,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                         }
 
                         T_KEYDOWN => {
-                            let keystate = SDL_GetKeyboardState(null_mut());
+                            let keystate = crate::services::services(gp.get()).keyboard.state().as_ptr();
                             if key_sym(g) == SDLK_ESCAPE {
                                 if ed(gp.get()).g_musiccategorydisplaytimer > 0 {
                                     ed(gp.get()).g_musiccategorydisplaytimer = 0;
@@ -1359,7 +1359,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                             }
 
                             if key_sym(g) == SDLK_s {
-                                if check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT) {
+                                if check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT) {
                                     return SAVE_AS;
                                 }
 
@@ -1367,14 +1367,14 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                             }
 
                             if key_sym(g) == SDLK_f {
-                                if check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT) || ed(gp.get()).findstring.is_empty() {
+                                if check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT) || ed(gp.get()).findstring.is_empty() {
                                     return FIND;
                                 }
 
                                 findcurrentstring(g);
                             }
 
-                            if key_sym(g) == SDLK_DELETE && (check_key(keystate, SDLK_LCTRL) || check_key(keystate, SDLK_RCTRL)) {
+                            if key_sym(g) == SDLK_DELETE && (check_key(gp.get(), keystate, SDLK_LCTRL) || check_key(gp.get(), keystate, SDLK_RCTRL)) {
                                 return CLEAR_WORLD;
                             }
 
@@ -4237,8 +4237,8 @@ pub fn dialog(g: &mut Game, title: &str, instructions: &str, input: &mut String,
                                 //insert character into fileName and onScreenText and increment current char
                                 let mut key: u8 = sym as u8;
 
-                                let keystate = SDL_GetKeyboardState(null_mut());
-                                if check_key(keystate, SDLK_LSHIFT) || check_key(keystate, SDLK_RSHIFT) {
+                                let keystate = crate::services::services(gp.get()).keyboard.state().as_ptr();
+                                if check_key(gp.get(), keystate, SDLK_LSHIFT) || check_key(gp.get(), keystate, SDLK_RSHIFT) {
                                     if sym == 45 {
                                         key = 95;
                                     } else if sym >= 95 && sym <= 122 {

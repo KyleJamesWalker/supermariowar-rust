@@ -91,5 +91,6 @@ pub fn services() -> Services {
         video: Box::new(Sdl2Video::new()),
         audio: Box::new(Sdl2Audio::new()),
         events: Box::new(events::Sdl2Events),
+        keyboard: Box::new(events::Sdl2Keyboard),
     }
 }

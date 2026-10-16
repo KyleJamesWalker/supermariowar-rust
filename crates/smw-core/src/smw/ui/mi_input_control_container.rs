@@ -288,7 +288,7 @@ impl UI_ControlTrait for MI_InputControlField {
             } else if self.fModifying {
                 gp.rm.menu_font_large.draw_chop_right(g, x + iIndent + 8, y + 5, iWidth - iIndent - 16, "(Press Button)");
             } else if self.iDevice == DEVICE_KEYBOARD {
-                let name = CStr::from_ptr(SDL_GetKeyName(*self.iKey)).to_string_lossy();
+                let name = crate::services::services(gp.get()).keyboard.key_name(*self.iKey);
                 gp.rm.menu_font_large.draw_chop_right(g, x + iIndent + 8, y + 5, iWidth - iIndent - 16, &name);
             } else {
                 gp.rm.menu_font_large.draw_chop_right(g, x + iIndent + 8, y + 5, iWidth - iIndent - 16, Self::Joynames[*self.iKey as usize]);

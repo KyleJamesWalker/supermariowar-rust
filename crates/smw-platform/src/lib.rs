@@ -58,6 +58,22 @@ pub trait Events {
     fn poll(&mut self) -> Option<Input>;
 }
 
+/// Keyboard and mouse queries, in SDL2's key and scancode values under the current keyboard layout.
+pub trait Keyboard {
+    /// `SDL_GetScancodeFromKey`.
+    fn scancode_from_key(&self, key: i32) -> i32;
+    /// `SDL_GetKeyFromName`: 0 for an unknown name.
+    fn key_from_name(&self, name: &str) -> i32;
+    /// `SDL_GetKeyName`: empty for a key without one.
+    fn key_name(&self, key: i32) -> String;
+    /// `SDL_GetKeyboardState`: one byte per scancode, nonzero while held.
+    fn state(&self) -> &[u8];
+    /// `SDL_GetMouseState`'s button mask.
+    fn mouse_buttons(&self) -> u32;
+    /// Whether a window has keyboard focus.
+    fn has_focus(&self) -> bool;
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct SoundId(pub u32);
 
@@ -113,6 +129,7 @@ pub struct Services {
     pub video: Box<dyn Video>,
     pub audio: Box<dyn AudioOut>,
     pub events: Box<dyn Events>,
+    pub keyboard: Box<dyn Keyboard>,
 }
 
 /// A pad as SDL's events name it (`which`): the device index for added events, the instance ID otherwise. The game
@@ -225,6 +242,27 @@ mod tests {
         }
     }
 
+    impl Keyboard for Null {
+        fn scancode_from_key(&self, _: i32) -> i32 {
+            0
+        }
+        fn key_from_name(&self, _: &str) -> i32 {
+            0
+        }
+        fn key_name(&self, _: i32) -> String {
+            String::new()
+        }
+        fn state(&self) -> &[u8] {
+            &[]
+        }
+        fn mouse_buttons(&self) -> u32 {
+            0
+        }
+        fn has_focus(&self) -> bool {
+            false
+        }
+    }
+
     struct Log(Rc<RefCell<Vec<String>>>);
 
     impl AudioOut for Log {
@@ -272,7 +310,7 @@ mod tests {
     #[test]
     fn services_hold_trait_objects() {
         let log = Rc::new(RefCell::new(Vec::new()));
-        let mut services = Services { clock: Box::new(Null), storage: Box::new(Null), video: Box::new(Null), audio: Box::new(Log(log.clone())), events: Box::new(Null) };
+        let mut services = Services { clock: Box::new(Null), storage: Box::new(Null), video: Box::new(Null), audio: Box::new(Log(log.clone())), events: Box::new(Null), keyboard: Box::new(Null) };
         assert_eq!(services.clock.now_ms(), 1000);
         services.storage.persist();
         assert_eq!(services.storage.root_dir(), PathBuf::from("root"));
