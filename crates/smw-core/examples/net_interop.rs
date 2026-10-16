@@ -49,7 +49,7 @@ fn bits(c: &COutputControl) -> String {
 }
 
 fn main() {
-    let g = game().get();
+    let g = smw::game::Game::create();
     let mut gp = g.ptr();
     let args: Vec<String> = std::env::args().collect();
     let role = args[1].clone();

@@ -52,7 +52,7 @@ const GIT_DATE: &str = "";
 
 #[cfg(target_os = "emscripten")]
 extern "C" {
-    fn emscripten_set_main_loop(func: unsafe extern "C-unwind" fn(), fps: i32, simulate_infinite_loop: i32);
+    fn emscripten_set_main_loop_arg(func: unsafe extern "C-unwind" fn(*mut std::ffi::c_void), arg: *mut std::ffi::c_void, fps: i32, simulate_infinite_loop: i32);
     fn emscripten_get_now() -> f64;
     fn emscripten_cancel_main_loop();
     fn emscripten_run_script(script: *const std::ffi::c_char);
@@ -68,11 +68,11 @@ pub fn gameloop(g: &mut Game) {
         }
 
         #[cfg(target_os = "emscripten")]
-        emscripten_set_main_loop(gameloop_frame_web, 0, 1);
+        emscripten_set_main_loop_arg(gameloop_frame_web, g as *mut Game as *mut std::ffi::c_void, 0, 1);
 
         #[cfg(not(target_os = "emscripten"))]
         while g.game_values.appstate != crate::common::game_values::AppState::Quit {
-            gameloop_frame();
+            gameloop_frame(g);
         }
     }
 }
@@ -82,15 +82,15 @@ pub fn gameloop(g: &mut Game) {
 /// as the native frame limiter paces it, and presents once per animation frame. Under SMW_NOLIMIT
 /// (replays) every callback runs exactly one frame, so the dumps stay deterministic.
 #[cfg(target_os = "emscripten")]
-unsafe extern "C-unwind" fn gameloop_frame_web() {
+unsafe extern "C-unwind" fn gameloop_frame_web(arg: *mut std::ffi::c_void) {
     const MAX_CATCH_UP_FRAMES: u32 = 5;
-    let g = game().get();
+    let g = &mut *(arg as *mut Game);
     let mut gp = g.ptr();
     let ml = &mut gp.get().main_loop;
 
     let frame_ms = gp.game_values.framelimiter as f64;
     if harness::no_limit(g) || frame_ms <= 0.0 {
-        gameloop_frame();
+        gameloop_frame(gp.get());
         web_quit_if_done(gp.get());
         return;
     }
@@ -133,8 +133,7 @@ unsafe fn web_quit_if_done(g: &mut Game) {
     emscripten_run_script(c"Module.onGameQuit && Module.onGameQuit()".as_ptr());
 }
 
-unsafe extern "C-unwind" fn gameloop_frame() {
-    let g = game().get();
+unsafe fn gameloop_frame(g: &mut Game) {
     let mut gp = g.ptr();
     #[cfg(not(target_os = "emscripten"))]
     use crate::smw::pad::phase;
@@ -468,7 +467,7 @@ pub fn main() {
 }
 
 pub fn run(argv: Vec<String>) {
-    let g = game().get();
+    let g = Game::create();
     crate::globals::init_globals(g);
 
     let cmd = cmd::parse_args(&argv);
@@ -490,7 +489,8 @@ pub fn run(argv: Vec<String>) {
     }
 
     // C++ catches `const char*`, `std::string`, `std::exception` and `...` around main_game().
-    let result = std::panic::catch_unwind(main_game);
+    let mut gp = g.ptr();
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| main_game(gp.get())));
     if let Err(payload) = result {
         let what = payload
             .downcast_ref::<String>()
@@ -503,8 +503,7 @@ pub fn run(argv: Vec<String>) {
     }
 }
 
-pub fn main_game() {
-    let g = game().get();
+pub fn main_game(g: &mut Game) {
     let mut gp = g.ptr();
     unsafe {
         println!("-------------------------------------------------------------------------------");

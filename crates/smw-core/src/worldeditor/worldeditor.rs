@@ -388,7 +388,7 @@ fn dump_editor_state(g: &mut Game, out: &mut dyn Write) {
 
 //main main main
 pub fn main() {
-    let g = game().get();
+    let g = Game::create();
     cmd::attach_parent_console();
     crate::globals::init_globals(g);
 
@@ -413,7 +413,8 @@ pub fn main() {
     }
 
     // C++ catches `const char*`, `std::string`, `std::exception` and `...` around inner_main().
-    let result = std::panic::catch_unwind(inner_main);
+    let mut gp = g.ptr();
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| inner_main(gp.get())));
     if let Err(payload) = result {
         let what = payload
             .downcast_ref::<String>()
@@ -425,8 +426,7 @@ pub fn main() {
     }
 }
 
-pub fn inner_main() {
-    let g = game().get();
+pub fn inner_main(g: &mut Game) {
     let mut gp = g.ptr();
     unsafe {
         ensure_settings_dir(g);

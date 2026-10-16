@@ -36,7 +36,7 @@ unsafe fn draw_map(g: &mut smw::game::Game) {
 }
 
 fn main() {
-    let g = game().get();
+    let g = smw::game::Game::create();
 
     let mut gp = g.ptr();    let args: Vec<String> = std::env::args().collect();
     smw::globals::init_globals(gp.get());

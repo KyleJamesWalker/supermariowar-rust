@@ -8,7 +8,7 @@ use smw::game::game;
 use smw::smw::network::net_config_manager::NetConfigManager;
 
 fn main() {
-    let g = game().get();
+    let g = smw::game::Game::create();
 
     let mut gp = g.ptr();    smw::globals::init_globals(gp.get());
     unsafe {

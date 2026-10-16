@@ -11,7 +11,7 @@ use smw::globals::*;
 use std::path::Path;
 
 fn main() {
-    let g = game().get();
+    let g = smw::game::Game::create();
 
     let mut gp = g.ptr();    let args: Vec<String> = std::env::args().collect();
     let data = args.get(1).cloned().unwrap_or_else(|| concat!(env!("CARGO_MANIFEST_DIR"), "/../../data").to_string());
