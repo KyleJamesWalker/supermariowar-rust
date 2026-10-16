@@ -130,8 +130,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo test --release --locked --package smw_relay --package smw-netplay
 
-  parity:
-    name: parity (${{ matrix.os }})
+  parity-build:
+    name: parity build (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
@@ -140,13 +140,12 @@ jobs:
             runner: ubuntu-24.04
           - os: macos
             runner: macos-15
+          - os: windows
+            runner: windows-latest
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 90
+    timeout-minutes: 60
     env:
       SMW_REF_DIR: ${{ github.workspace }}/../cpp-reference
-      SMW_EDITOR_REF_DIR: ${{ github.workspace }}/../cpp-reference
-      JOBS: '4'
-      CARD: /mnt/sdcard
     steps:
       - uses: actions/checkout@v7
         with:
@@ -156,9 +155,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - id: ref
+        if: runner.os != 'Windows'
         run: echo "sha=$(git ls-remote "$CPP_REF_REPO" "refs/heads/$CPP_REF_BRANCH" | cut -f 1)" >> "$GITHUB_OUTPUT"
 
       - id: ref-cache
+        if: runner.os != 'Windows'
         uses: actions/cache@v6
         with:
           path: |
@@ -168,7 +169,7 @@ jobs:
           key: cpp-ref-${{ runner.os }}-${{ runner.arch }}-${{ steps.ref.outputs.sha }}-v2
 
       - name: Build the C++ reference
-        if: steps.ref-cache.outputs.cache-hit != 'true'
+        if: runner.os != 'Windows' && steps.ref-cache.outputs.cache-hit != 'true'
         run: |
           git clone --branch "$CPP_REF_BRANCH" "$CPP_REF_REPO" "$SMW_REF_DIR"
           test "$(git -C "$SMW_REF_DIR" rev-parse HEAD)" = '${{ steps.ref.outputs.sha }}'
@@ -183,7 +184,99 @@ jobs:
           fi
           "$SMW_REF_DIR/build-reference.sh"
 
-      - if: runner.os == 'Linux'
+      - name: Build
+        run: cargo build --release --locked --bins
+
+      - name: Pack
+        run: |
+          exe="${{ runner.os == 'Windows' && '.exe' || '' }}"
+          tar -cf rust-bin.tar -C target/release "smw$exe" "leveleditor$exe" "worldeditor$exe"
+          if [[ $RUNNER_OS != Windows ]]; then
+            tar -cf cpp-ref.tar -C "$SMW_REF_DIR" build/smw build/smw-leveledit build/smw-worldedit
+          fi
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: parity-bin-${{ matrix.os }}
+          path: |
+            rust-bin.tar
+            cpp-ref.tar
+          if-no-files-found: error
+          retention-days: 1
+
+  parity:
+    name: parity (${{ matrix.os }}, ${{ matrix.check }})
+    needs: parity-build
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [linux, macos, windows]
+        check: [goldens, cpp, segment, sweep-1, sweep-2]
+        exclude:
+          - os: windows
+            check: cpp
+          - os: windows
+            check: segment
+        include:
+          - os: linux
+            runner: ubuntu-24.04
+            card: /mnt/sdcard
+          - os: macos
+            runner: macos-15
+          - os: windows
+            runner: windows-latest
+            card: S
+          - check: goldens
+            suites: game editor
+          - check: sweep-1
+            suites: sweep
+            shard: 1/2
+          - check: sweep-2
+            suites: sweep
+            shard: 2/2
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    env:
+      SMW_REF_DIR: ${{ github.workspace }}/../cpp-reference
+      SMW_EDITOR_REF_DIR: ${{ github.workspace }}/../cpp-reference
+      JOBS: '4'
+      CARD: ${{ matrix.card }}
+      LABEL: ${{ (matrix.check == 'goldens' || matrix.os == 'windows') && 'parity' || 'sweep' }}-${{ matrix.os }}
+    steps:
+      # The goldens' text files are compared byte for byte.
+      - if: runner.os == 'Windows'
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+      - uses: ./.github/actions/setup-native
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: parity-bin-${{ matrix.os }}
+
+      - name: Unpack
+        run: |
+          mkdir -p target/release
+          tar -xf rust-bin.tar -C target/release
+          if [[ -f cpp-ref.tar ]]; then
+            mkdir -p "$SMW_REF_DIR"
+            tar -xf cpp-ref.tar -C "$SMW_REF_DIR"
+          fi
+
+      - name: libc++ for the C++ reference
+        if: runner.os == 'Linux' && matrix.check == 'cpp'
+        run: sudo apt-get install -y libc++-dev libc++abi-dev
+
+      - name: python3 for the tools
+        if: runner.os == 'Windows'
+        run: |
+          mkdir -p "$RUNNER_TEMP/bin"
+          printf '#!/bin/sh\nexec python "$@"\n' > "$RUNNER_TEMP/bin/python3"
+          chmod +x "$RUNNER_TEMP/bin/python3"
+          cygpath -w "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      - if: runner.os != 'macOS'
         uses: ./.github/actions/fat32-card
         with:
           path: ${{ env.CARD }}
@@ -196,11 +289,13 @@ jobs:
           echo "TMPDIR=$CARD/tmp" >> "$GITHUB_ENV"
           echo "SDL_RENDER_DRIVER=software" >> "$GITHUB_ENV"
 
-      - name: Build
-        run: cargo build --release --locked --bins
+      - if: runner.os == 'Windows'
+        run: |
+          echo "TMPDIR=$CARD:/tmp" >> "$GITHUB_ENV"
+          echo "SDL_RENDER_DRIVER=software" >> "$GITHUB_ENV"
 
       - name: Game parity
-        id: game
+        if: matrix.check == 'goldens'
         env:
           SMW_NO_BUILD: '1'
           PARITY_OUT: ${{ runner.temp }}/parity/game
@@ -219,8 +314,27 @@ jobs:
           [[ -s game-summary.txt ]] || exit 1
           exit $status
 
+      - name: Editor parity
+        if: ${{ !cancelled() && matrix.check == 'goldens' }}
+        env:
+          SMW_NO_BUILD: '1'
+          PARITY_OUT: ${{ runner.temp }}/parity/editor
+        run: |
+          status=0
+          tools/editor_parity.sh > editor.log || status=$?
+          sed -n '/^=== summary/,$p' editor.log > summary.txt
+          {
+            echo "### Editor parity vs the committed goldens (${{ matrix.os }})"
+            echo '```'
+            grep -v -E 'dump MATCH, shots ([0-9]+)/\1, files ([0-9]+)/\2$' summary.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat editor.log
+          [[ -s summary.txt ]] || exit 1
+          exit $status
+
       - name: C++ goldens
-        if: ${{ !cancelled() && steps.game.outcome != 'skipped' }}
+        if: matrix.check == 'cpp'
         env:
           GOLDEN_ROOT: ${{ runner.temp }}/cpp-goldens
           SMW_DATA_DIR: ${{ github.workspace }}/data
@@ -242,7 +356,7 @@ jobs:
           du -sh "$GOLDEN_ROOT"/*
 
       - name: Game parity vs the C++ built here
-        if: ${{ !cancelled() && steps.game.outcome != 'skipped' }}
+        if: ${{ !cancelled() && matrix.check == 'cpp' }}
         env:
           SMW_NO_BUILD: '1'
           GOLDEN_ROOT: ${{ runner.temp }}/cpp-goldens
@@ -265,27 +379,10 @@ jobs:
           fi
           exit $status
 
-      - name: Editor parity
-        if: ${{ !cancelled() && steps.game.outcome != 'skipped' }}
-        env:
-          PARITY_OUT: ${{ runner.temp }}/parity/editor
-        run: |
-          status=0
-          tools/editor_parity.sh > editor.log || status=$?
-          sed -n '/^=== summary/,$p' editor.log > summary.txt
-          {
-            echo "### Editor parity vs the committed goldens (${{ matrix.os }})"
-            echo '```'
-            grep -v -E 'dump MATCH, shots ([0-9]+)/\1, files ([0-9]+)/\2$' summary.txt
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-          cat editor.log
-          [[ -s summary.txt ]] || exit 1
-          exit $status
-
       - name: Editor parity vs the C++ built here
-        if: ${{ !cancelled() && steps.game.outcome != 'skipped' }}
+        if: ${{ !cancelled() && matrix.check == 'cpp' }}
         env:
+          SMW_NO_BUILD: '1'
           GOLDEN_ROOT: ${{ runner.temp }}/cpp-goldens
           PARITY_OUT: ${{ runner.temp }}/parity/editor-cpp
         run: |
@@ -305,7 +402,7 @@ jobs:
           exit $status
 
       - name: Segment check
-        if: ${{ !cancelled() && steps.game.outcome != 'skipped' }}
+        if: matrix.check == 'segment'
         env:
           SMW_NO_BUILD: '1'
         run: |
@@ -315,85 +412,18 @@ jobs:
             tail -n 1 segment.log
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: SDL fallbacks
-        if: ${{ !cancelled() && steps.game.outcome != 'skipped' }}
-        run: |
-          tools/blit_fallbacks.sh "$RUNNER_TEMP/parity/game" "$RUNNER_TEMP/parity/editor" > fallbacks.txt && { cat fallbacks.txt; exit 0; }
-          { echo "### SDL fallbacks"; echo '```'; cat fallbacks.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-          cat fallbacks.txt
-          echo "::error::The software blitter handed draws to SDL; see the job summary."
-          exit 1
-
-      - name: Determinism manifest
-        if: ${{ !cancelled() && steps.game.outcome != 'skipped' }}
-        run: python3 tools/determinism.py manifest parity-${{ matrix.os }} game "$RUNNER_TEMP/parity/game" editor "$RUNNER_TEMP/parity/editor" > "$RUNNER_TEMP/determinism-parity-${{ matrix.os }}.txt"
-
-      - uses: actions/upload-artifact@v7
-        if: ${{ !cancelled() && steps.game.outcome != 'skipped' }}
-        with:
-          name: determinism-parity-${{ matrix.os }}
-          path: ${{ runner.temp }}/determinism-parity-${{ matrix.os }}.txt
-          if-no-files-found: ignore
-          retention-days: 7
-
-      - uses: actions/upload-artifact@v7
-        if: failure()
-        with:
-          name: parity-${{ matrix.os }}
-          path: |
-            ${{ runner.temp }}/parity
-            *.log
-          retention-days: 7
-
-  sweep:
-    name: sweep (${{ matrix.os }})
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: linux
-            runner: ubuntu-24.04
-          - os: macos
-            runner: macos-15
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 90
-    env:
-      JOBS: '4'
-      CARD: /mnt/sdcard
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          submodules: recursive
-      - uses: ./.github/actions/setup-native
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-
-      - if: runner.os == 'Linux'
-        uses: ./.github/actions/fat32-card
-        with:
-          path: ${{ env.CARD }}
-
-      - name: Data on the FAT32 card
-        if: runner.os == 'Linux'
-        run: |
-          python3 tools/apfs_order.py data "$CARD/data"
-          sudo mount --bind "$CARD/data" data
-          echo "TMPDIR=$CARD/tmp" >> "$GITHUB_ENV"
-          echo "SDL_RENDER_DRIVER=software" >> "$GITHUB_ENV"
-
-      - name: Build
-        run: cargo build --release --locked --bin smw
-
       - name: Sweep parity
+        if: matrix.shard
         env:
           SMW_NO_BUILD: '1'
+          SHARD: ${{ matrix.shard }}
           PARITY_OUT: ${{ runner.temp }}/parity/sweep
         run: |
           status=0
           tools/parity_sweep.sh > sweep.log || status=$?
           sed -n '/^=== summary/,$p' sweep.log > summary.txt
           {
-            echo "### Map sweep vs the committed goldens (${{ matrix.os }})"
+            echo "### Map sweep vs the committed goldens (${{ matrix.os }}, shard $SHARD)"
             echo "$(grep -c 'MATCH all' summary.txt) of $(($(wc -l < summary.txt) - 1)) dumps match"
             echo '```'
             grep -v -E 'MATCH all .* shots ([0-9]+)/\1$' summary.txt
@@ -404,141 +434,35 @@ jobs:
           exit $status
 
       - name: SDL fallbacks
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && matrix.suites }}
         run: |
-          tools/blit_fallbacks.sh "$RUNNER_TEMP/parity/sweep" > fallbacks.txt && { cat fallbacks.txt; exit 0; }
+          dirs=()
+          for suite in ${{ matrix.suites }}; do dirs+=("$RUNNER_TEMP/parity/$suite"); done
+          tools/blit_fallbacks.sh "${dirs[@]}" > fallbacks.txt && { cat fallbacks.txt; exit 0; }
           { echo "### SDL fallbacks"; echo '```'; cat fallbacks.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           cat fallbacks.txt
           echo "::error::The software blitter handed draws to SDL; see the job summary."
           exit 1
 
       - name: Determinism manifest
-        if: ${{ !cancelled() }}
-        run: python3 tools/determinism.py manifest sweep-${{ matrix.os }} sweep "$RUNNER_TEMP/parity/sweep" > "$RUNNER_TEMP/determinism-sweep-${{ matrix.os }}.txt"
+        if: ${{ !cancelled() && matrix.suites }}
+        run: |
+          args=()
+          for suite in ${{ matrix.suites }}; do args+=("$suite" "$RUNNER_TEMP/parity/$suite"); done
+          python3 tools/determinism.py manifest "$LABEL" "${args[@]}" > "$RUNNER_TEMP/determinism-$LABEL-${{ matrix.check }}.txt"
 
       - uses: actions/upload-artifact@v7
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && matrix.suites }}
         with:
-          name: determinism-sweep-${{ matrix.os }}
-          path: ${{ runner.temp }}/determinism-sweep-${{ matrix.os }}.txt
-          if-no-files-found: ignore
-          retention-days: 7
-
-  parity-windows:
-    runs-on: windows-latest
-    timeout-minutes: 90
-    env:
-      JOBS: '4'
-      SDL_RENDER_DRIVER: software
-      CARD: S
-    steps:
-      # The goldens' text files are compared byte for byte.
-      - run: git config --global core.autocrlf false
-      - uses: actions/checkout@v7
-        with:
-          submodules: recursive
-      - uses: ./.github/actions/setup-native
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-
-      - name: Build
-        run: cargo build --release --locked --bins
-
-      - name: python3 for the tools
-        run: |
-          mkdir -p "$RUNNER_TEMP/bin"
-          printf '#!/bin/sh\nexec python "$@"\n' > "$RUNNER_TEMP/bin/python3"
-          chmod +x "$RUNNER_TEMP/bin/python3"
-          cygpath -w "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
-
-      - uses: ./.github/actions/fat32-card
-        with:
-          path: ${{ env.CARD }}
-
-      - run: echo "TMPDIR=$CARD:/tmp" >> "$GITHUB_ENV"
-
-      - name: Game parity
-        id: game
-        env:
-          SMW_NO_BUILD: '1'
-          PARITY_OUT: ${{ runner.temp }}/parity/game
-        run: |
-          status=0
-          tools/parity.sh > game.log || status=$?
-          sed -n '/^=== summary/,$p' game.log > summary.txt
-          {
-            echo "### Game parity vs the committed goldens (windows)"
-            echo "$(grep -c 'MATCH all' summary.txt) of $(($(wc -l < summary.txt) - 1)) dumps match"
-            echo '```'
-            grep -v -E 'MATCH all .* shots ([0-9]+)/\1$' summary.txt
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-          cat game.log
-          exit $status
-
-      - name: Editor parity
-        if: ${{ !cancelled() && steps.game.outcome != 'skipped' }}
-        env:
-          PARITY_OUT: ${{ runner.temp }}/parity/editor
-        run: |
-          status=0
-          tools/editor_parity.sh > editor.log || status=$?
-          sed -n '/^=== summary/,$p' editor.log > summary.txt
-          {
-            echo "### Editor parity vs the committed goldens (windows)"
-            echo '```'
-            grep -v -E 'dump MATCH, shots ([0-9]+)/\1, files ([0-9]+)/\2$' summary.txt
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-          cat editor.log
-          [[ -s summary.txt ]] || exit 1
-          exit $status
-
-      - name: Sweep parity
-        if: ${{ !cancelled() && steps.game.outcome != 'skipped' }}
-        env:
-          SMW_NO_BUILD: '1'
-          PARITY_OUT: ${{ runner.temp }}/parity/sweep
-        run: |
-          status=0
-          tools/parity_sweep.sh > sweep.log || status=$?
-          sed -n '/^=== summary/,$p' sweep.log > summary.txt
-          {
-            echo "### Map sweep vs the committed goldens (windows)"
-            echo "$(grep -c 'MATCH all' summary.txt) of $(($(wc -l < summary.txt) - 1)) dumps match"
-            echo '```'
-            grep -v -E 'MATCH all .* shots ([0-9]+)/\1$' summary.txt
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-          grep -v -E 'MATCH all .* shots ([0-9]+)/\1$' sweep.log | grep -v -E '^(=== |OK: )' || true
-          [[ -s summary.txt ]] || exit 1
-          exit $status
-
-      - name: SDL fallbacks
-        if: ${{ !cancelled() && steps.game.outcome != 'skipped' }}
-        run: |
-          tools/blit_fallbacks.sh "$RUNNER_TEMP/parity/game" "$RUNNER_TEMP/parity/editor" "$RUNNER_TEMP/parity/sweep" > fallbacks.txt && { cat fallbacks.txt; exit 0; }
-          { echo "### SDL fallbacks"; echo '```'; cat fallbacks.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-          cat fallbacks.txt
-          echo "::error::The software blitter handed draws to SDL; see the job summary."
-          exit 1
-
-      - name: Determinism manifest
-        if: ${{ !cancelled() }}
-        run: python3 tools/determinism.py manifest parity-windows game "$RUNNER_TEMP/parity/game" editor "$RUNNER_TEMP/parity/editor" sweep "$RUNNER_TEMP/parity/sweep" > "$RUNNER_TEMP/determinism-parity-windows.txt"
-
-      - uses: actions/upload-artifact@v7
-        if: ${{ !cancelled() }}
-        with:
-          name: determinism-parity-windows
-          path: ${{ runner.temp }}/determinism-parity-windows.txt
+          name: determinism-${{ env.LABEL }}-${{ matrix.check }}
+          path: ${{ runner.temp }}/determinism-${{ env.LABEL }}-${{ matrix.check }}.txt
           if-no-files-found: ignore
           retention-days: 7
 
       - uses: actions/upload-artifact@v7
-        if: failure()
+        if: failure() && !matrix.shard
         with:
-          name: parity-windows
+          name: parity-${{ matrix.os }}-${{ matrix.check }}
           path: |
             ${{ runner.temp }}/parity
             *.log
@@ -659,7 +583,7 @@ jobs:
 
   determinism:
     name: determinism (report-only)
-    needs: [parity, sweep, parity-windows, web]
+    needs: [parity, web]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
     steps:
