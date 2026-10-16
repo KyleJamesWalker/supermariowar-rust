@@ -318,8 +318,8 @@ pub struct MI_InputControlContainer {
 crate::impl_base!(MI_InputControlContainer => ui_control: UI_Control);
 
 unsafe fn add_joysticks(g: &mut Game, field: &mut MI_SelectField<i16>) {
-    for iJoystick in 0..g.joystickcount {
-        let js = if g.joysticks.is_null() { std::ptr::null_mut() } else { *g.joysticks.add(iJoystick as usize) };
+    for iJoystick in 0..g.devices.len() as i16 {
+        let js = g.joystick(iJoystick as usize);
         let p = if js.is_null() { SDL_JoystickNameForIndex(iJoystick as i32) } else { SDL_JoystickName(js) };
         let name = if harness::replay_joysticks(g).is_some() {
             "Virtual Controller".to_string()

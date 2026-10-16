@@ -38,6 +38,15 @@ use crate::smw::touch::TouchState;
 use crate::smw::world::WorldMap;
 use crate::worldeditor::worldeditor::WorldEditorState;
 
+pub const MAX_DEVICES: usize = 8;
+
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum Device {
+    Pad(*mut sdl2::sys::SDL_Joystick),
+    /// A replay's pad: nothing is open, and its events carry the device number.
+    Replay,
+}
+
 pub struct Game {
     pub _alias: Aliased,
     pub game_values: Global<CGameValues>,
@@ -121,8 +130,8 @@ pub struct Game {
     pub RootDataDirectory: String,
     pub SMW_Root_Data_Dir: String,
     pub are_paths_initialized: bool,
-    pub joysticks: *mut *mut sdl2::sys::SDL_Joystick,
-    pub joystickcount: i16,
+    /// Indexed by the device number in bindings and replay lines; `None` is an empty slot.
+    pub devices: Vec<Option<Device>>,
     #[cfg(target_os = "emscripten")]
     pub relay: crate::smw::platform::network::websocket::network_layer_websocket::Relay,
     #[cfg(target_os = "emscripten")]
@@ -130,6 +139,14 @@ pub struct Game {
 }
 
 impl Game {
+    /// The backend joystick open as device `index`, or null.
+    pub fn joystick(&self, index: usize) -> *mut sdl2::sys::SDL_Joystick {
+        match self.devices.get(index) {
+            Some(Some(Device::Pad(js))) => *js,
+            _ => std::ptr::null_mut(),
+        }
+    }
+
     /// A copyable handle to this game, for reaching a field while `self` is also passed on.
     #[inline(always)]
     pub fn ptr(&mut self) -> Ptr<Game> {
@@ -212,8 +229,7 @@ impl Game {
             RootDataDirectory: String::new(),
             SMW_Root_Data_Dir: String::new(),
             are_paths_initialized: false,
-            joysticks: std::ptr::null_mut(),
-            joystickcount: 0,
+            devices: Vec::new(),
             #[cfg(target_os = "emscripten")]
             relay: crate::smw::platform::network::websocket::network_layer_websocket::Relay::new(),
             #[cfg(target_os = "emscripten")]

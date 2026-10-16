@@ -394,7 +394,7 @@ fn save_mode(g: &mut Game, mode: Mode) {
 /// After `init_joysticks`, which `touch_first` depends on.
 pub fn init(g: &mut Game) {
     let mut gp = g.ptr();
-    let pads = gp.joystickcount > 0;
+    let pads = !gp.devices.is_empty();
     let live = std::env::var_os("SMW_TOUCH").is_some() && !crate::smw::harness::replaying(g);
     st(gp.get()).debug = std::env::var_os("SMW_DEBUG_INPUT").is_some();
     st(gp.get()).session_on = live || crate::smw::harness::replay_touch(g);

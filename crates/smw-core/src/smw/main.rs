@@ -1,6 +1,6 @@
 //! Port of src/smw/main.cpp
 
-use crate::game::Game;
+use crate::game::{Device, Game, MAX_DEVICES};
 use crate::common::cmd_args as cmd;
 use crate::common::file_list::*;
 use crate::common::game::{ensure_settings_dir, App};
@@ -201,22 +201,12 @@ pub fn create_globals(g: &mut Game) {
 
 pub fn init_joysticks(g: &mut Game) {
     unsafe {
-        // Not in upstream: a browser replay opens no pads, so a connected one cannot act in it.
-        if let Some(count) = harness::replay_joysticks(g) {
-            g.joystickcount = count;
-            g.joysticks = Box::leak(vec![null_mut::<SDL_Joystick>(); count.max(0) as usize].into_boxed_slice()).as_mut_ptr();
-            SDL_JoystickEventState(SDL_ENABLE as i32);
-            return;
-        }
-
         SDL_InitSubSystem(SDL_INIT_JOYSTICK);
-        g.joystickcount = SDL_NumJoysticks() as i16;
-        g.joysticks = Box::leak(vec![null_mut::<SDL_Joystick>(); g.joystickcount.max(0) as usize].into_boxed_slice()).as_mut_ptr();
-
-        for i in 0..g.joystickcount as usize {
-            *g.joysticks.add(i) = SDL_JoystickOpen(i as i32);
-        }
-
+        // Not in upstream: a replay opens no pads, so a connected one cannot act in it.
+        g.devices = match harness::replay_joysticks(g) {
+            Some(count) => vec![Some(Device::Replay); count],
+            None => (0..SDL_NumJoysticks().max(0)).map(|i| Some(SDL_JoystickOpen(i)).filter(|js| !js.is_null()).map(Device::Pad)).collect(),
+        };
         SDL_JoystickEventState(SDL_ENABLE as i32);
         #[cfg(not(target_os = "emscripten"))]
         {
@@ -243,7 +233,7 @@ fn assign_inputs(g: &mut Game) {
     #[cfg(not(target_os = "emscripten"))]
     let mut pads = crate::smw::pad::player_pads(g);
     #[cfg(target_os = "emscripten")]
-    let mut pads: Vec<usize> = (0..gp.joystickcount.max(0) as usize).filter(|k| !g.main_loop.web_removed.contains(k)).collect();
+    let mut pads: Vec<usize> = (0..gp.devices.len()).filter(|&k| gp.devices[k].is_some()).collect();
     pads.retain(|&k| k < MAX_PLAYERS as usize);
     let touch_session = touch_session(g);
     if pads.is_empty() && !touch_session {
@@ -306,10 +296,7 @@ fn assign_hotplugged(g: &mut Game) {
         let mut gp = g.ptr();
     let pending = &mut gp.main_loop.hotplug_pending;
     for (index, added) in harness::replay_device_changes(g) {
-        #[cfg(not(target_os = "emscripten"))]
-        crate::smw::pad::replay_device(g, index, added);
-        #[cfg(target_os = "emscripten")]
-        unsafe { web_replay_device(g, index, added) };
+        replay_device(g, index, added);
         *pending |= added;
     }
     #[cfg(not(target_os = "emscripten"))]
@@ -330,9 +317,6 @@ pub struct MainLoopState {
     #[cfg(target_os = "emscripten")]
     web_accumulated: f64,
     hotplug_pending: bool,
-    /// A browser replay's joysticks exist only as the device index its events carry.
-    #[cfg(target_os = "emscripten")]
-    web_removed: Vec<usize>,
 }
 
 impl MainLoopState {
@@ -343,22 +327,24 @@ impl MainLoopState {
             #[cfg(target_os = "emscripten")]
             web_accumulated: 0.0,
             hotplug_pending: false,
-            #[cfg(target_os = "emscripten")]
-            web_removed: Vec::new(),
         }
     }
 }
 
-#[cfg(target_os = "emscripten")]
-unsafe fn web_replay_device(g: &mut Game, index: usize, added: bool) {
-    let web_removed = &mut g.main_loop.web_removed;
-    web_removed.retain(|&i| i != index);
-    if !added {
-        web_removed.push(index);
-    } else if index >= g.joystickcount.max(0) as usize {
-        g.joystickcount = index as i16 + 1;
-        g.joysticks = Box::leak(vec![null_mut::<SDL_Joystick>(); index + 1].into_boxed_slice()).as_mut_ptr();
+/// A replay's `jadd` (`added`) or `jremove` line.
+fn replay_device(g: &mut Game, index: usize, added: bool) {
+    if index >= MAX_DEVICES || (!added && index >= g.devices.len()) {
+        return;
     }
+    if index >= g.devices.len() {
+        g.devices.resize(index + 1, None);
+    }
+    if g.devices[index].is_some() == added {
+        return;
+    }
+    g.devices[index] = added.then_some(Device::Replay);
+    #[cfg(not(target_os = "emscripten"))]
+    crate::smw::pad::devices_changed();
 }
 
 fn touch_session(g: &mut Game) -> bool {

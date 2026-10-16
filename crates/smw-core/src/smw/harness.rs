@@ -284,24 +284,6 @@ fn load_events(g: &mut Game, path: &str) -> Vec<ReplayEvent> {
     std::mem::take(events)
 }
 
-#[cfg(not(target_os = "emscripten"))]
-fn attach_joysticks(g: &mut Game) {
-    unsafe {
-        SDL_InitSubSystem(SDL_INIT_JOYSTICK);
-        for i in 0..h(g).joysticks {
-            if attach_virtual() != i {
-                fail(format!("cannot attach virtual joystick {}: {}", i, CStr::from_ptr(SDL_GetError()).to_string_lossy()));
-            }
-        }
-    }
-}
-
-/// Attaches a replay's virtual joystick; its SDL device index, or -1.
-#[cfg(not(target_os = "emscripten"))]
-pub fn attach_virtual() -> i32 {
-    unsafe { SDL_JoystickAttachVirtual(SDL_JoystickType::SDL_JOYSTICK_TYPE_GAMECONTROLLER, VIRTUAL_AXES, VIRTUAL_BUTTONS, VIRTUAL_HATS) }
-}
-
 /// Not in the C++. A replay's `jadd`/`jremove` lines for this frame: (device, connected).
 pub fn replay_device_changes(g: &mut Game) -> Vec<(usize, bool)> {
     let mut gp = g.ptr();
@@ -465,20 +447,6 @@ pub fn init(g: &mut Game) {
             start_recording(g, h(gp.get()).seed, Some(path));
         }
 
-        // Not in upstream: a connected pad must not join a replay's joysticks.
-        #[cfg(not(target_os = "emscripten"))]
-        if h(gp.get()).replay {
-            for hint in [c"SDL_JOYSTICK_HIDAPI", c"SDL_JOYSTICK_MFI", c"SDL_JOYSTICK_IOKIT"] {
-                SDL_SetHint(hint.as_ptr(), c"0".as_ptr());
-            }
-        }
-
-        // The browser's SDL has no virtual joysticks; there init_joysticks takes the count from replay_joysticks.
-        #[cfg(not(target_os = "emscripten"))]
-        if h(gp.get()).joysticks > 0 {
-            attach_joysticks(g);
-        }
-
         if let Some(dump) = env("SMW_DUMP") {
             let file = std::fs::OpenOptions::new()
                 .create(true)
@@ -527,12 +495,9 @@ pub fn libc_seed(g: &mut Game, fallback: u32) -> u32 {
 
 /// Not in upstream: in a browser replay, the number of joysticks the replay uses. They exist only as
 /// the device index its events carry (`which`), which is what the game compares with its bindings.
-pub fn replay_joysticks(g: &mut Game) -> Option<i16> {
-    #[cfg(target_os = "emscripten")]
-    if h(g).replay {
-        return Some(h(g).joysticks as i16);
-    }
-    None
+/// A replay's device count; a replay opens no backend pads.
+pub fn replay_joysticks(g: &mut Game) -> Option<usize> {
+    h(g).replay.then(|| h(g).joysticks.max(0) as usize)
 }
 
 /// Marks the recording as made with Android's touch controls on, before its first frame.
@@ -611,7 +576,7 @@ pub fn frame_start(g: &mut Game) {
         if h(gp.get()).events[h(gp.get()).nextEvent].frame == h(gp.get()).frame {
             let input = input_of(g, &h(gp.get()).events[h(gp.get()).nextEvent]);
             note_replay_key(g, &input);
-            crate::services::services(g).events.push(&input);
+            crate::smw::input::push_ready(g, input);
             copy_replay_event(g, &h(gp.get()).events[h(gp.get()).nextEvent]);
         }
         h(gp.get()).nextEvent += 1;
@@ -897,9 +862,8 @@ fn to_replay_event(g: &mut Game, input: &Input, frame: u32) -> Option<ReplayEven
 fn device_index(g: &mut Game, which: i32) -> Option<i32> {
     let mut gp = g.ptr();
     unsafe {
-        let js = gp.joysticks;
-        for i in 0..gp.joystickcount.max(0) as usize {
-            let j = *js.add(i);
+        for i in 0..gp.devices.len() {
+            let j = gp.joystick(i);
             if !j.is_null() && SDL_JoystickInstanceID(j) == which {
                 return Some(i as i32);
             }
@@ -943,9 +907,8 @@ fn push_live_script(g: &mut Game, r: &mut Recorder, frame: u32) {
 fn sdl_instance(g: &mut Game, device: i32) -> i32 {
     let mut gp = g.ptr();
     unsafe {
-        let js = gp.joysticks;
-        if device >= 0 && device < gp.joystickcount as i32 {
-            let j = *js.add(device as usize);
+        if device >= 0 {
+            let j = gp.joystick(device as usize);
             if !j.is_null() {
                 return SDL_JoystickInstanceID(j);
             }
@@ -1002,7 +965,7 @@ fn record_frame_start(g: &mut Game, frame: u32) {
     let mut gp = g.ptr();
     let Some(r) = rec(g).filter(|r| r.live) else { return };
     if frame == 0 {
-        for d in 0..gp.joystickcount.min(8) as i32 {
+        for d in 0..gp.devices.len().min(8) as i32 {
             let ev = ReplayEvent { frame: 0, kind: EventKind::JoyHat, down: false, keyName: String::new(), device: d, index: 0, value: 0 };
             record_event(g, r, &ev);
         }
