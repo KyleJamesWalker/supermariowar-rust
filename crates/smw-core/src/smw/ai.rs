@@ -930,6 +930,14 @@ fn wrap_open(g: &Game, y: i32) -> bool {
     (first..=last).all(|row| (g.g_map.map(0, row) | g.g_map.map(MAPWIDTH - 1, row)) & tile_flag_solid as i32 == 0)
 }
 
+/// Modes won by collecting or holding a goal, where a nearby player should not pull the AI off it.
+fn objective_mode(mode: GameModeType) -> bool {
+    matches!(
+        mode,
+        game_mode_coins | game_mode_eggs | game_mode_ctf | game_mode_domination | game_mode_koth | game_mode_race | game_mode_collection
+    )
+}
+
 /// Whether a solid tile or block touches the side of the player at (`x`, `y`) that it is walking toward.
 fn wall_ahead(g: &mut Game, x: i32, y: i32, left: bool, right: bool) -> bool {
     if left == right {
@@ -1075,9 +1083,11 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
 
         let actionType: i16;
         let no = &this.nearestObjects;
+        let objective = !no.goal.is_none() && objective_mode(g.mode().gamemode);
+        let (stomp_range, attack_range) = if objective { (3600, 2025) } else { (14400, 8100) };
         if !no.threat.is_none() && no.threatdistance < 14400 && !g.player(pPlayer).is_invincible() {
             actionType = 2;
-        } else if !no.stomp.is_none() && no.stompdistance < 14400 {
+        } else if !no.stomp.is_none() && no.stompdistance < stomp_range {
             actionType = 4;
         } else if !no.goal.is_none() && !no.teammate.is_none() {
             if no.goaldistance < no.teammatedistance {
@@ -1088,7 +1098,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
         } else if !no.teammate.is_none() {
             actionType = 3;
         } else if !no.goal.is_none() {
-            if no.playerdistance < 8100 {
+            if no.playerdistance < attack_range {
                 actionType = 0;
             } else {
                 actionType = 1;
