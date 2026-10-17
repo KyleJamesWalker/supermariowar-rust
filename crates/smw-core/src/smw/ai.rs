@@ -962,7 +962,7 @@ fn wrap_open(g: &Game, y: i32) -> bool {
 }
 
 /// How much farther `opponent` counts when `me` picks whom to chase: each other CPU already chasing it doubles,
-/// triples and so on its distance, and the score leader counts at three quarters.
+/// triples and so on its distance, the score leader counts at three quarters, and a flag carrier at half.
 fn spread_weight(g: &mut Game, me: PlayerId, opponent: PlayerId) -> (i64, i64) {
     let mut chasers = 0;
     let mut leader = true;
@@ -984,7 +984,9 @@ fn spread_weight(g: &mut Game, me: PlayerId, opponent: PlayerId) -> (i64, i64) {
             }
         }
     }
-    (if leader { 3 } else { 4 } * (1 + chasers), 4)
+    let carried = g.carried_item(opponent);
+    let carrier = !carried.is_null() && carried.get_moving_object_type() == movingobject_flag;
+    (if leader { 3 } else { 4 } * (1 + chasers), if carrier { 8 } else { 4 })
 }
 
 /// Modes won by collecting or holding a goal, where a nearby player should not pull the AI off it.
@@ -1154,7 +1156,14 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
         let actionType: i16;
         let no = &this.nearestObjects;
         let objective = !no.goal.is_none() && objective_mode(g.mode().gamemode);
-        let (stomp_range, attack_range) = if objective { (3600, 2025) } else { (14400, 8100) };
+        let carrying_flag = !g.carried_item(pPlayer).is_null() && g.carried_item(pPlayer).get_moving_object_type() == movingobject_flag;
+        let (stomp_range, attack_range) = if carrying_flag && !no.goal.is_none() {
+            (0, 0)
+        } else if objective {
+            (3600, 2025)
+        } else {
+            (14400, 8100)
+        };
         if !no.threat.is_none() && no.threatdistance < 14400 && !g.player(pPlayer).is_invincible() {
             actionType = 2;
         } else if !no.stomp.is_none() && no.stompdistance < stomp_range {
