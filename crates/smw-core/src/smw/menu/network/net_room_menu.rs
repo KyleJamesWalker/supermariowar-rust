@@ -1,5 +1,6 @@
 //! Port of src/smw/menu/network/NetRoomMenu.cpp
 
+use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
 
 use crate::common::path::{file_exists, get_home_directory};
@@ -9,7 +10,7 @@ use crate::common::ui::mi_image::MI_Image;
 use crate::common::ui::mi_map_preview::MI_MapPreview;
 use crate::common::ui::mi_text::{MI_HeaderText, MI_Text};
 use crate::common::ui::mi_text_field::MI_TextField;
-use crate::common::uicontrol::{ctl_ptr, TextAlign};
+use crate::common::uicontrol::{TextAlign};
 use crate::common::uimenu::UI_Menu;
 use crate::common_netplay::protocol_definitions::NET_MAX_CHAT_MSG_LENGTH;
 use crate::globals::Ptr;
@@ -21,24 +22,24 @@ use std::path::Path;
 pub struct UI_NetRoomMenu {
     pub ui_menu: UI_Menu,
 
-    miNetRoomName: Ptr<MI_Text>,
-    miNetRoomPlayerName: [Ptr<MI_Text>; 4],
-    miSkinSelector: [Ptr<MI_NetRoomTeamSelect>; 4],
+    miNetRoomName: Ctl<MI_Text>,
+    miNetRoomPlayerName: [Ctl<MI_Text>; 4],
+    miSkinSelector: [Ctl<MI_NetRoomTeamSelect>; 4],
 
-    miNetRoomMessages: Ptr<MI_ChatMessageBox>,
-    miNetRoomMessageField: Ptr<MI_TextField>,
-    miNetRoomMapPreview: Ptr<MI_MapPreview>,
+    miNetRoomMessages: Ctl<MI_ChatMessageBox>,
+    miNetRoomMessageField: Ctl<MI_TextField>,
+    miNetRoomMapPreview: Ctl<MI_MapPreview>,
 
-    miNetRoomStartButton: Ptr<MI_Button>,
-    miNetRoomSendButton: Ptr<MI_Button>,
-    miNetRoomBackButton: Ptr<MI_Button>,
+    miNetRoomStartButton: Ctl<MI_Button>,
+    miNetRoomSendButton: Ctl<MI_Button>,
+    miNetRoomBackButton: Ctl<MI_Button>,
 
-    miNetRoomStartingDialogImage: Ptr<MI_Image>,
-    miNetRoomStartingDialogText: Ptr<MI_Text>,
+    miNetRoomStartingDialogImage: Ctl<MI_Image>,
+    miNetRoomStartingDialogText: Ctl<MI_Text>,
 
-    miNetRoomLeftHeaderBar: Ptr<MI_Image>,
-    miNetRoomRightHeaderBar: Ptr<MI_Image>,
-    miNetRoomHeaderText: Ptr<MI_Text>,
+    miNetRoomLeftHeaderBar: Ctl<MI_Image>,
+    miNetRoomRightHeaderBar: Ctl<MI_Image>,
+    miNetRoomHeaderText: Ctl<MI_Text>,
 }
 crate::impl_base!(UI_NetRoomMenu => ui_menu: UI_Menu);
 
@@ -49,32 +50,32 @@ impl UI_NetRoomMenu {
         let selectfield = g.rm.spr_selectfield;
         let plain = g.rm.menu_plain_field;
 
-        this.miNetRoomName = Ptr::new_box(MI_Text::new(g, "", 40, 50, 0, true, TextAlign::LEFT));
+        this.miNetRoomName = Ctl::new(MI_Text::new(g, "", 40, 50, 0, true, TextAlign::LEFT), g);
 
-        this.miNetRoomStartButton = Ptr::new_box(MI_Button::new(g, selectfield, 300, 310, "(waiting)", 331, TextAlign::CENTER));
-        this.miNetRoomStartButton.set_code(MENU_CODE_TO_NET_ROOM_START_IN_PROGRESS);
+        this.miNetRoomStartButton = Ctl::new(MI_Button::new(g, selectfield, 300, 310, "(waiting)", 331, TextAlign::CENTER), g);
+        g.ctl(this.miNetRoomStartButton).set_code(MENU_CODE_TO_NET_ROOM_START_IN_PROGRESS);
 
-        this.miNetRoomMessages = Ptr::new_box(MI_ChatMessageBox::new(20, 350, 640 - 2 * 26, 1));
-        this.miNetRoomMapPreview = Ptr::new_box(MI_MapPreview::new(g, selectfield, 264, 2, 400, 120));
+        this.miNetRoomMessages = Ctl::new(MI_ChatMessageBox::new(20, 350, 640 - 2 * 26, 1), g);
+        this.miNetRoomMapPreview = Ctl::new(MI_MapPreview::new(g, selectfield, 264, 2, 400, 120), g);
 
-        this.miNetRoomMessageField = Ptr::new_box(MI_TextField::new(plain, 26, 432, "Say", 464 - 36, 60));
-        this.miNetRoomMessageField.set_data(g, &mut gp.netplay.mychatmessage, NET_MAX_CHAT_MSG_LENGTH as i16);
+        this.miNetRoomMessageField = Ctl::new(MI_TextField::new(plain, 26, 432, "Say", 464 - 36, 60), g);
+        g.ctl(this.miNetRoomMessageField).set_data(g, &mut gp.netplay.mychatmessage, NET_MAX_CHAT_MSG_LENGTH as i16);
 
-        this.miNetRoomSendButton = Ptr::new_box(MI_Button::new(g, selectfield, 464, 432, "Send", 80, TextAlign::CENTER));
-        this.miNetRoomSendButton.set_code(MENU_CODE_NET_CHAT_SEND);
+        this.miNetRoomSendButton = Ctl::new(MI_Button::new(g, selectfield, 464, 432, "Send", 80, TextAlign::CENTER), g);
+        g.ctl(this.miNetRoomSendButton).set_code(MENU_CODE_NET_CHAT_SEND);
 
-        this.miNetRoomBackButton = Ptr::new_box(MI_Button::new(g, selectfield, 544, 432, "Leave", 80, TextAlign::CENTER));
-        this.miNetRoomBackButton.set_code(MENU_CODE_TO_NET_LOBBY_MENU);
+        this.miNetRoomBackButton = Ctl::new(MI_Button::new(g, selectfield, 544, 432, "Leave", 80, TextAlign::CENTER), g);
+        g.ctl(this.miNetRoomBackButton).set_code(MENU_CODE_TO_NET_LOBBY_MENU);
 
-        let field = ctl_ptr(this.miNetRoomMessageField);
-        let start = ctl_ptr(this.miNetRoomStartButton);
-        let null = Ptr::null();
+        let field = this.miNetRoomMessageField.id();
+        let start = this.miNetRoomStartButton.id();
+        let null = ControlId::NONE;
         for p in 0..4i16 {
-            this.miNetRoomPlayerName[p as usize] = Ptr::new_box(MI_Text::new(g, "", 60, 80 + p * 60, 0, true, TextAlign::LEFT));
-            let name = ctl_ptr(this.miNetRoomPlayerName[p as usize]);
+            this.miNetRoomPlayerName[p as usize] = Ctl::new(MI_Text::new(g, "", 60, 80 + p * 60, 0, true, TextAlign::LEFT), g);
+            let name = this.miNetRoomPlayerName[p as usize].id();
             this.add_non_control(name);
 
-            this.miSkinSelector[p as usize] = Ptr::new_box(MI_NetRoomTeamSelect::new(
+            this.miSkinSelector[p as usize] = Ctl::new(MI_NetRoomTeamSelect::new(
                 g,
                 16,
                 72 + p * 60,
@@ -83,38 +84,38 @@ impl UI_NetRoomMenu {
                     let mut gp = g.ptr();
                     gp.netplay.client.send_skin_change(g)
                 }),
-            ));
-            let sel = ctl_ptr(this.miSkinSelector[p as usize]);
-            this.add_control(sel, field, start, null, null);
+            ), g);
+            let sel = this.miSkinSelector[p as usize].id();
+            this.add_control(g, sel, field, start, null, null);
         }
 
-        let (msgs, preview) = (ctl_ptr(this.miNetRoomMessages), ctl_ptr(this.miNetRoomMapPreview));
+        let (msgs, preview) = (this.miNetRoomMessages.id(), this.miNetRoomMapPreview.id());
         this.add_non_control(msgs);
         this.add_non_control(preview);
 
-        let send = ctl_ptr(this.miNetRoomSendButton);
-        let back = ctl_ptr(this.miNetRoomBackButton);
-        this.add_control(start, field, field, field, field);
-        this.add_control(field, start, start, back, send);
-        this.add_control(send, start, start, field, back);
-        this.add_control(back, start, start, send, field);
+        let send = this.miNetRoomSendButton.id();
+        let back = this.miNetRoomBackButton.id();
+        this.add_control(g, start, field, field, field, field);
+        this.add_control(g, field, start, start, back, send);
+        this.add_control(g, send, start, start, field, back);
+        this.add_control(g, back, start, start, send, field);
 
-        this.miNetRoomStartingDialogImage = Ptr::new_box(MI_Image::new(g.rm.spr_dialog, 224, 176, 0, 0, 192, 128, 1, 1, 0));
-        this.miNetRoomStartingDialogText = Ptr::new_box(MI_HeaderText::new(g, "Starting...", 320, 240 - 40));
+        this.miNetRoomStartingDialogImage = Ctl::new(MI_Image::new(g.rm.spr_dialog, 224, 176, 0, 0, 192, 128, 1, 1, 0), g);
+        this.miNetRoomStartingDialogText = Ctl::new(MI_HeaderText::new(g, "Starting...", 320, 240 - 40), g);
 
-        this.miNetRoomStartingDialogImage.set_visible(false);
-        this.miNetRoomStartingDialogText.set_visible(false);
+        g.ctl(this.miNetRoomStartingDialogImage).set_visible(false);
+        g.ctl(this.miNetRoomStartingDialogText).set_visible(false);
 
-        let (di, dt) = (ctl_ptr(this.miNetRoomStartingDialogImage), ctl_ptr(this.miNetRoomStartingDialogText));
+        let (di, dt) = (this.miNetRoomStartingDialogImage.id(), this.miNetRoomStartingDialogText.id());
         this.add_non_control(di);
         this.add_non_control(dt);
 
         let plain = g.rm.menu_plain_field;
-        this.miNetRoomLeftHeaderBar = Ptr::new_box(MI_Image::new(plain, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-        this.miNetRoomRightHeaderBar = Ptr::new_box(MI_Image::new(plain, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-        this.miNetRoomHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Multiplayer Room Menu", 320, 5));
+        this.miNetRoomLeftHeaderBar = Ctl::new(MI_Image::new(plain, 0, 0, 0, 0, 320, 32, 1, 1, 0), g);
+        this.miNetRoomRightHeaderBar = Ctl::new(MI_Image::new(plain, 320, 0, 192, 0, 320, 32, 1, 1, 0), g);
+        this.miNetRoomHeaderText = Ctl::new(MI_HeaderText::new(g, "Multiplayer Room Menu", 320, 5), g);
 
-        let (l, r, h) = (ctl_ptr(this.miNetRoomLeftHeaderBar), ctl_ptr(this.miNetRoomRightHeaderBar), ctl_ptr(this.miNetRoomHeaderText));
+        let (l, r, h) = (this.miNetRoomLeftHeaderBar.id(), this.miNetRoomRightHeaderBar.id(), this.miNetRoomHeaderText.id());
         this.add_non_control(l);
         this.add_non_control(r);
         this.add_non_control(h);
@@ -127,15 +128,15 @@ impl UI_NetRoomMenu {
     pub fn refresh(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         let name = g.netplay.currentRoom.name.clone();
-        self.miNetRoomHeaderText.set_text(name);
+        g.ctl(self.miNetRoomHeaderText).set_text(name);
 
-        let me = ctl_ptr(self.miSkinSelector[g.netplay.remotePlayerNumber as usize]);
-        self.miNetRoomStartButton.set_neighbor(MenuNavDirection::Up, me);
-        self.miNetRoomMessageField.set_neighbor(MenuNavDirection::Down, me);
+        let me = self.miSkinSelector[g.netplay.remotePlayerNumber as usize].id();
+        g.ctl(self.miNetRoomStartButton).set_neighbor(MenuNavDirection::Up, me);
+        g.ctl(self.miNetRoomMessageField).set_neighbor(MenuNavDirection::Down, me);
 
         for p in 0..4i16 {
             let pname = g.netplay.currentRoom.playerNames[p as usize].clone();
-            self.miNetRoomPlayerName[p as usize].set_text(pname);
+            g.ctl(self.miNetRoomPlayerName[p as usize]).set_text(pname);
 
             let path = format!("{}net_skin{}.bmp", get_home_directory(g), p);
             if p == g.netplay.remotePlayerNumber as i16 {
@@ -153,9 +154,9 @@ impl UI_NetRoomMenu {
         }
 
         if g.netplay.theHostIsMe && g.netplay.currentRoom.player_count() > 1 {
-            self.miNetRoomStartButton.set_name(g, "Start");
+            g.ctl(self.miNetRoomStartButton).set_name(g, "Start");
         } else {
-            self.miNetRoomStartButton.set_name(g, "(waiting)");
+            g.ctl(self.miNetRoomStartButton).set_name(g, "(waiting)");
         }
 
         let path = g.netplay.mapfilepath.clone();
@@ -168,11 +169,11 @@ impl UI_NetRoomMenu {
             gp.netplay.client.local_gamehost.send_start_room_message(g);
             g.netplay.operationInProgress = true;
 
-            self.miNetRoomStartingDialogImage.set_visible(true);
-            self.miNetRoomStartingDialogText.set_visible(true);
+            g.ctl(self.miNetRoomStartingDialogImage).set_visible(true);
+            g.ctl(self.miNetRoomStartingDialogText).set_visible(true);
             self.remember_current();
 
-            let t = ctl_ptr(self.miNetRoomStartingDialogText);
+            let t = self.miNetRoomStartingDialogText.id();
             self.set_initial_focus(g, t);
             self.set_cancel_code(MENU_CODE_TO_NET_ROOM_MENU);
             self.reset_menu(g);
@@ -181,15 +182,15 @@ impl UI_NetRoomMenu {
 
     pub fn restore(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        self.miNetRoomStartingDialogImage.set_visible(false);
-        self.miNetRoomStartingDialogText.set_visible(false);
+        g.ctl(self.miNetRoomStartingDialogImage).set_visible(false);
+        g.ctl(self.miNetRoomStartingDialogText).set_visible(false);
 
-        let f = ctl_ptr(self.miNetRoomMessageField);
+        let f = self.miNetRoomMessageField.id();
         self.set_initial_focus(gp.get(), f);
         self.set_cancel_code(MENU_CODE_TO_NET_LOBBY_MENU);
     }
 
     pub fn set_preview_map_path(&mut self, g: &mut Game, path: &str) {
-        self.miNetRoomMapPreview.load_map(g, path);
+        g.ctl(self.miNetRoomMapPreview).load_map(g, path);
     }
 }

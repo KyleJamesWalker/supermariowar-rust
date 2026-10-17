@@ -4,6 +4,7 @@ use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
+use crate::common::map::PlatformId;
 use crate::common::eyecandy::{EC_FallingObject, EC_SingleAnimation};
 use crate::common::game::App;
 use crate::common::game_mode::game_mode_stomp;
@@ -241,9 +242,9 @@ pub fn mo_walking_enemy_update<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, t
         let mut probeFrontX: i16 = (o.ix as i32 + if o.velx > 0.0f32 { o.collisionWidth as i32 + 1 } else { -1 }) as i16;
         let mut probeY: i16 = (o.iy as i32 + o.collisionHeight as i32 + 5) as i16;
 
-        if !o.platform.is_null() {
-            let iFrontTileType: i32 = o.platform.get_tile_type_from_coord(probeFrontX, probeY);
-            let iCenterTileType: i32 = o.platform.get_tile_type_from_coord(probeCenterX, probeY);
+        if !o.platform.is_none() {
+            let iFrontTileType: i32 = g.g_map.platform(o.platform).get_tile_type_from_coord(probeFrontX, probeY);
+            let iCenterTileType: i32 = g.g_map.platform(o.platform).get_tile_type_from_coord(probeCenterX, probeY);
 
             let fFrontGap = iFrontTileType == tile_flag_nonsolid || iFrontTileType == tile_flag_super_death_top;
             let fCenterGap = iCenterTileType == tile_flag_nonsolid || iCenterTileType == tile_flag_super_death_top;
@@ -276,8 +277,8 @@ pub fn mo_walking_enemy_update<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, t
                 probeCenterX = (probeCenterX as i32 / TILESIZE) as i16;
                 probeY = (probeY as i32 / TILESIZE) as i16;
 
-                let mut frontBlock = g.g_map.block(probeFrontX, probeY);
-                let mut centerBlock = g.g_map.block(probeCenterX, probeY);
+                let mut frontBlock = g.map_block(probeFrontX, probeY);
+                let mut centerBlock = g.map_block(probeCenterX, probeY);
 
                 let fFoundFrontBlock = !frontBlock.is_null() && !frontBlock.is_transparent() && !frontBlock.is_hidden();
                 let fFoundCenterBlock = !centerBlock.is_null() && !centerBlock.is_transparent() && !centerBlock.is_hidden();

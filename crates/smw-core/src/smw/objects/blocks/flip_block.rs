@@ -99,7 +99,7 @@ impl B_FlipBlock {
                 io_block_kill_players_and_objects_inside_block(g, self, iBumpPlayerID);
             }
 
-            g.g_map.update_tile_gap(self.col, self.row);
+            g.update_tile_gap(self.col, self.row);
 
             self.trigger_behavior(g);
             return false;
@@ -147,7 +147,7 @@ impl CObjectTrait for B_FlipBlock {
             self.timer += 1;
             if self.timer >= 240 {
                 self.reset();
-                g.g_map.update_tile_gap(self.col, self.row);
+                g.update_tile_gap(self.col, self.row);
 
                 let iBumpPlayerID = self.iBumpPlayerID;
                 io_block_kill_players_and_objects_inside_block(g, self, iBumpPlayerID);
@@ -157,8 +157,8 @@ impl CObjectTrait for B_FlipBlock {
             self.state = 3;
         } else if self.state == 3 {
             self.dead = true;
-            g.g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
-            g.g_map.update_tile_gap(self.col, self.row);
+            g.g_map.blockdata[self.col as usize][self.row as usize] = crate::smw::object_container::ObjectId::NONE;
+            g.update_tile_gap(self.col, self.row);
         }
     }
 }
@@ -239,7 +239,7 @@ impl IO_BlockTrait for B_FlipBlock {
                 io_block_kill_players_and_objects_inside_block(g, self, iBumpPlayerID);
             }
 
-            g.g_map.update_tile_gap(self.col, self.row);
+            g.update_tile_gap(self.col, self.row);
 
             self.trigger_behavior(g);
             return false;
@@ -328,7 +328,7 @@ impl IO_BlockTrait for B_FlipBlock {
             self.state = 1;
             self.frame = self.iw;
 
-            g.g_map.update_tile_gap(self.col, self.row);
+            g.update_tile_gap(self.col, self.row);
         }
     }
 }

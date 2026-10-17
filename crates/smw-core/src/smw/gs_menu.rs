@@ -60,7 +60,7 @@ use crate::smw::menu::network::net_servers_menu::UI_NetServersMenu;
 use crate::common::path::get_home_directory;
 use crate::common_netplay::protocol_definitions::*;
 use crate::smw::net::{net_end_session, net_start_session};
-use std::ops::DerefMut;
+use std::ops::{Deref, DerefMut};
 use std::path::Path;
 
 pub type DisplayError = i32;
@@ -69,20 +69,67 @@ pub const DISPLAY_ERROR_READ_TOUR_FILE: DisplayError = 1;
 pub const DISPLAY_ERROR_READ_WORLD_FILE: DisplayError = 2;
 pub const DISPLAY_ERROR_MAP_FILTER: DisplayError = 3;
 
-/// `menu.get()` as the `UI_Menu*` base, null for an empty slot.
-fn menu<T: DerefMut<Target = UI_Menu>>(p: Ptr<T>) -> Ptr<UI_Menu> {
-    if p.is_null() {
-        Ptr::null()
-    } else {
-        Ptr::from_mut(&mut **p.get())
+/// Which menu `MenuState` shows; the mode options menu's sub-menus are numbered by game mode.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum MenuId {
+    None,
+    Main,
+    Options,
+    GameplayOptions,
+    TeamOptions,
+    PowerupDropRates,
+    PowerupSettings,
+    ProjectileLimits,
+    ProjectileOptions,
+    GraphicsOptions,
+    EyeCandyOptions,
+    SoundOptions,
+    PlayerControlsSelect,
+    PlayerControls,
+    ModeOptions,
+    MatchSelection,
+    GameSettings,
+    MapFilterEdit,
+    TourStop,
+    World,
+    TeamSelect,
+    TournamentScoreboard,
+    BonusWheel,
+    NetServers,
+    NetEditServers,
+    NetLobby,
+    NetNewRoom,
+    NetNewRoomSettings,
+    NetRoom,
+    ModeSettings(u8),
+    BossSettings,
+}
+
+/// A menu that `init` builds.
+struct Slot<T>(Option<Box<T>>);
+
+impl<T> Slot<T> {
+    const fn empty() -> Self {
+        Slot(None)
+    }
+}
+
+impl<T> Deref for Slot<T> {
+    type Target = T;
+    fn deref(&self) -> &T {
+        self.0.as_deref().expect("menu not built")
+    }
+}
+
+impl<T> DerefMut for Slot<T> {
+    fn deref_mut(&mut self) -> &mut T {
+        self.0.as_deref_mut().expect("menu not built")
     }
 }
 
 /// `unique_ptr = std::make_unique<T>()`: the new object exists before the old one is deleted.
-fn assign<T>(slot: &mut Ptr<T>, value: Box<T>) {
-    let old = *slot;
-    *slot = Ptr::from_box(value);
-    old.delete();
+fn assign<T>(slot: &mut Slot<T>, value: Box<T>) {
+    slot.0 = Some(value);
 }
 
 fn rect(x: i32, y: i32, w: i32, h: i32) -> Rect {
@@ -90,43 +137,43 @@ fn rect(x: i32, y: i32, w: i32, h: i32) -> Rect {
 }
 
 pub struct MenuState {
-    mCurrentMenu: Ptr<UI_Menu>,
-    mMainMenu: Ptr<UI_MainMenu>,
+    mCurrentMenu: MenuId,
+    mMainMenu: Slot<UI_MainMenu>,
 
     // Options menu
-    mOptionsMenu: Ptr<UI_OptionsMenu>,
-    mGameplayOptionsMenu: Ptr<UI_GameplayOptionsMenu>,
-    mTeamOptionsMenu: Ptr<UI_TeamOptionsMenu>,
-    mPowerupDropRatesMenu: Ptr<UI_PowerupDropRatesMenu>,
-    mPowerupSettingsMenu: Ptr<UI_PowerupSettingsMenu>,
-    mProjectileLimitsMenu: Ptr<UI_ProjectileLimitsMenu>,
-    mProjectileOptionsMenu: Ptr<UI_ProjectileOptionsMenu>,
-    mGraphicsOptionsMenu: Ptr<UI_GraphicsOptionsMenu>,
-    mEyeCandyOptionsMenu: Ptr<UI_EyeCandyOptionsMenu>,
-    mSoundOptionsMenu: Ptr<UI_SoundOptionsMenu>,
+    mOptionsMenu: Slot<UI_OptionsMenu>,
+    mGameplayOptionsMenu: Slot<UI_GameplayOptionsMenu>,
+    mTeamOptionsMenu: Slot<UI_TeamOptionsMenu>,
+    mPowerupDropRatesMenu: Slot<UI_PowerupDropRatesMenu>,
+    mPowerupSettingsMenu: Slot<UI_PowerupSettingsMenu>,
+    mProjectileLimitsMenu: Slot<UI_ProjectileLimitsMenu>,
+    mProjectileOptionsMenu: Slot<UI_ProjectileOptionsMenu>,
+    mGraphicsOptionsMenu: Slot<UI_GraphicsOptionsMenu>,
+    mEyeCandyOptionsMenu: Slot<UI_EyeCandyOptionsMenu>,
+    mSoundOptionsMenu: Slot<UI_SoundOptionsMenu>,
 
     // Controls menu
-    mPlayerControlsSelectMenu: Ptr<UI_PlayerControlsSelectMenu>,
-    mPlayerControlsMenu: Ptr<UI_PlayerControlsMenu>,
+    mPlayerControlsSelectMenu: Slot<UI_PlayerControlsSelectMenu>,
+    mPlayerControlsMenu: Slot<UI_PlayerControlsMenu>,
 
     // Gameplay menus
-    mModeOptionsMenu: Ptr<UI_ModeOptionsMenu>,
-    mMatchSelectionMenu: Ptr<UI_MatchSelectionMenu>,
-    mGameSettingsMenu: Ptr<UI_GameSettingsMenu>,
-    mMapFilterEditMenu: Ptr<UI_MapFilterEditMenu>,
-    mTourStopMenu: Ptr<UI_TourStopMenu>,
-    mWorldMenu: Ptr<UI_WorldMenu>,
-    mTeamSelectMenu: Ptr<UI_TeamSelectMenu>,
-    mTournamentScoreboardMenu: Ptr<UI_TournamentScoreboardMenu>,
-    mBonusWheelMenu: Ptr<UI_BonusWheelMenu>,
+    mModeOptionsMenu: Slot<UI_ModeOptionsMenu>,
+    mMatchSelectionMenu: Slot<UI_MatchSelectionMenu>,
+    mGameSettingsMenu: Slot<UI_GameSettingsMenu>,
+    mMapFilterEditMenu: Slot<UI_MapFilterEditMenu>,
+    mTourStopMenu: Slot<UI_TourStopMenu>,
+    mWorldMenu: Slot<UI_WorldMenu>,
+    mTeamSelectMenu: Slot<UI_TeamSelectMenu>,
+    mTournamentScoreboardMenu: Slot<UI_TournamentScoreboardMenu>,
+    mBonusWheelMenu: Slot<UI_BonusWheelMenu>,
 
     // Multiplayer menus
-    mNetServersMenu: Ptr<UI_NetServersMenu>,
-    mNetEditServersMenu: Ptr<UI_NetEditServersMenu>,
-    mNetLobbyMenu: Ptr<UI_NetLobbyMenu>,
-    mNetNewRoomMenu: Ptr<UI_NetNewRoomMenu>,
-    mNetNewRoomSettingsMenu: Ptr<UI_NetNewRoomSettingsMenu>,
-    mNetRoomMenu: Ptr<UI_NetRoomMenu>,
+    mNetServersMenu: Slot<UI_NetServersMenu>,
+    mNetEditServersMenu: Slot<UI_NetEditServersMenu>,
+    mNetLobbyMenu: Slot<UI_NetLobbyMenu>,
+    mNetNewRoomMenu: Slot<UI_NetNewRoomMenu>,
+    mNetNewRoomSettingsMenu: Slot<UI_NetNewRoomSettingsMenu>,
+    mNetRoomMenu: Slot<UI_NetRoomMenu>,
 
     iDisplayError: DisplayError,
     iDisplayErrorTimer: i16,
@@ -143,38 +190,44 @@ pub struct MenuState {
     _alias: Aliased,
 }
 
+impl MenuId {
+    fn mode_settings(iMode: i16) -> MenuId {
+        MenuId::ModeSettings(iMode as u8)
+    }
+}
+
 impl MenuState {
     fn new() -> Self {
         MenuState {
-            mCurrentMenu: Ptr::null(),
-            mMainMenu: Ptr::null(),
-            mOptionsMenu: Ptr::null(),
-            mGameplayOptionsMenu: Ptr::null(),
-            mTeamOptionsMenu: Ptr::null(),
-            mPowerupDropRatesMenu: Ptr::null(),
-            mPowerupSettingsMenu: Ptr::null(),
-            mProjectileLimitsMenu: Ptr::null(),
-            mProjectileOptionsMenu: Ptr::null(),
-            mGraphicsOptionsMenu: Ptr::null(),
-            mEyeCandyOptionsMenu: Ptr::null(),
-            mSoundOptionsMenu: Ptr::null(),
-            mPlayerControlsSelectMenu: Ptr::null(),
-            mPlayerControlsMenu: Ptr::null(),
-            mModeOptionsMenu: Ptr::null(),
-            mMatchSelectionMenu: Ptr::null(),
-            mGameSettingsMenu: Ptr::null(),
-            mMapFilterEditMenu: Ptr::null(),
-            mTourStopMenu: Ptr::null(),
-            mWorldMenu: Ptr::null(),
-            mTeamSelectMenu: Ptr::null(),
-            mTournamentScoreboardMenu: Ptr::null(),
-            mBonusWheelMenu: Ptr::null(),
-            mNetServersMenu: Ptr::null(),
-            mNetEditServersMenu: Ptr::null(),
-            mNetLobbyMenu: Ptr::null(),
-            mNetNewRoomMenu: Ptr::null(),
-            mNetNewRoomSettingsMenu: Ptr::null(),
-            mNetRoomMenu: Ptr::null(),
+            mCurrentMenu: MenuId::None,
+            mMainMenu: Slot::empty(),
+            mOptionsMenu: Slot::empty(),
+            mGameplayOptionsMenu: Slot::empty(),
+            mTeamOptionsMenu: Slot::empty(),
+            mPowerupDropRatesMenu: Slot::empty(),
+            mPowerupSettingsMenu: Slot::empty(),
+            mProjectileLimitsMenu: Slot::empty(),
+            mProjectileOptionsMenu: Slot::empty(),
+            mGraphicsOptionsMenu: Slot::empty(),
+            mEyeCandyOptionsMenu: Slot::empty(),
+            mSoundOptionsMenu: Slot::empty(),
+            mPlayerControlsSelectMenu: Slot::empty(),
+            mPlayerControlsMenu: Slot::empty(),
+            mModeOptionsMenu: Slot::empty(),
+            mMatchSelectionMenu: Slot::empty(),
+            mGameSettingsMenu: Slot::empty(),
+            mMapFilterEditMenu: Slot::empty(),
+            mTourStopMenu: Slot::empty(),
+            mWorldMenu: Slot::empty(),
+            mTeamSelectMenu: Slot::empty(),
+            mTournamentScoreboardMenu: Slot::empty(),
+            mBonusWheelMenu: Slot::empty(),
+            mNetServersMenu: Slot::empty(),
+            mNetEditServersMenu: Slot::empty(),
+            mNetLobbyMenu: Slot::empty(),
+            mNetNewRoomMenu: Slot::empty(),
+            mNetNewRoomSettingsMenu: Slot::empty(),
+            mNetRoomMenu: Slot::empty(),
             iDisplayError: DISPLAY_ERROR_NONE,
             iDisplayErrorTimer: 0,
             fNeedMenuMusicReset: false,
@@ -186,40 +239,83 @@ impl MenuState {
         }
     }
 
+    /// The menu `mCurrentMenu` names.
+    fn current(&mut self) -> &'static mut UI_Menu {
+        let this: *mut MenuState = self;
+        let this = unsafe { &mut *this };
+        match this.mCurrentMenu {
+            MenuId::None => panic!("no current menu"),
+            MenuId::Main => &mut **this.mMainMenu,
+            MenuId::Options => &mut **this.mOptionsMenu,
+            MenuId::GameplayOptions => &mut **this.mGameplayOptionsMenu,
+            MenuId::TeamOptions => &mut **this.mTeamOptionsMenu,
+            MenuId::PowerupDropRates => &mut **this.mPowerupDropRatesMenu,
+            MenuId::PowerupSettings => &mut **this.mPowerupSettingsMenu,
+            MenuId::ProjectileLimits => &mut **this.mProjectileLimitsMenu,
+            MenuId::ProjectileOptions => &mut **this.mProjectileOptionsMenu,
+            MenuId::GraphicsOptions => &mut **this.mGraphicsOptionsMenu,
+            MenuId::EyeCandyOptions => &mut **this.mEyeCandyOptionsMenu,
+            MenuId::SoundOptions => &mut **this.mSoundOptionsMenu,
+            MenuId::PlayerControlsSelect => &mut **this.mPlayerControlsSelectMenu,
+            MenuId::PlayerControls => &mut **this.mPlayerControlsMenu,
+            MenuId::ModeOptions => &mut **this.mModeOptionsMenu,
+            MenuId::MatchSelection => &mut **this.mMatchSelectionMenu,
+            MenuId::GameSettings => &mut **this.mGameSettingsMenu,
+            MenuId::MapFilterEdit => &mut **this.mMapFilterEditMenu,
+            MenuId::TourStop => &mut **this.mTourStopMenu,
+            MenuId::World => &mut **this.mWorldMenu,
+            MenuId::TeamSelect => &mut **this.mTeamSelectMenu,
+            MenuId::TournamentScoreboard => &mut **this.mTournamentScoreboardMenu,
+            MenuId::BonusWheel => &mut **this.mBonusWheelMenu,
+            MenuId::NetServers => &mut **this.mNetServersMenu,
+            MenuId::NetEditServers => &mut **this.mNetEditServersMenu,
+            MenuId::NetLobby => &mut **this.mNetLobbyMenu,
+            MenuId::NetNewRoom => &mut **this.mNetNewRoomMenu,
+            MenuId::NetNewRoomSettings => &mut **this.mNetNewRoomSettingsMenu,
+            MenuId::NetRoom => &mut **this.mNetRoomMenu,
+            MenuId::ModeSettings(mode) => unsafe { &mut *this.mModeOptionsMenu.get_options_menu(mode as i16).as_ptr() },
+            MenuId::BossSettings => unsafe { &mut *this.mModeOptionsMenu.get_boss_options_menu().as_ptr() },
+        }
+    }
+
+    pub fn world_menu(&mut self) -> Ptr<UI_WorldMenu> {
+        Ptr::from_mut(&mut *self.mWorldMenu)
+    }
+
     pub fn instance(g: &mut Game) -> &'static mut MenuState {
         g.ptr().get().ms.get_or_insert_with(MenuState::new)
     }
 
     pub fn harness_menu_name(&self) -> &'static str {
-        let names: [(Ptr<UI_Menu>, &'static str); 28] = [
-            (menu(self.mMainMenu), "main"),
-            (menu(self.mOptionsMenu), "options"),
-            (menu(self.mGameplayOptionsMenu), "gameplay_options"),
-            (menu(self.mTeamOptionsMenu), "team_options"),
-            (menu(self.mPowerupDropRatesMenu), "powerup_drop_rates"),
-            (menu(self.mPowerupSettingsMenu), "powerup_settings"),
-            (menu(self.mProjectileLimitsMenu), "projectile_limits"),
-            (menu(self.mProjectileOptionsMenu), "projectile_options"),
-            (menu(self.mGraphicsOptionsMenu), "graphics_options"),
-            (menu(self.mEyeCandyOptionsMenu), "eyecandy_options"),
-            (menu(self.mSoundOptionsMenu), "sound_options"),
-            (menu(self.mPlayerControlsSelectMenu), "player_controls_select"),
-            (menu(self.mPlayerControlsMenu), "player_controls"),
-            (menu(self.mModeOptionsMenu), "mode_options"),
-            (menu(self.mMatchSelectionMenu), "match_selection"),
-            (menu(self.mGameSettingsMenu), "game_settings"),
-            (menu(self.mMapFilterEditMenu), "map_filter_edit"),
-            (menu(self.mTourStopMenu), "tour_stop"),
-            (menu(self.mWorldMenu), "world"),
-            (menu(self.mTeamSelectMenu), "team_select"),
-            (menu(self.mTournamentScoreboardMenu), "tournament_scoreboard"),
-            (menu(self.mBonusWheelMenu), "bonus_wheel"),
-            (menu(self.mNetServersMenu), "net_servers"),
-            (menu(self.mNetEditServersMenu), "net_edit_servers"),
-            (menu(self.mNetLobbyMenu), "net_lobby"),
-            (menu(self.mNetNewRoomMenu), "net_new_room"),
-            (menu(self.mNetNewRoomSettingsMenu), "net_new_room_settings"),
-            (menu(self.mNetRoomMenu), "net_room"),
+        let names: [(MenuId, &'static str); 28] = [
+            (MenuId::Main, "main"),
+            (MenuId::Options, "options"),
+            (MenuId::GameplayOptions, "gameplay_options"),
+            (MenuId::TeamOptions, "team_options"),
+            (MenuId::PowerupDropRates, "powerup_drop_rates"),
+            (MenuId::PowerupSettings, "powerup_settings"),
+            (MenuId::ProjectileLimits, "projectile_limits"),
+            (MenuId::ProjectileOptions, "projectile_options"),
+            (MenuId::GraphicsOptions, "graphics_options"),
+            (MenuId::EyeCandyOptions, "eyecandy_options"),
+            (MenuId::SoundOptions, "sound_options"),
+            (MenuId::PlayerControlsSelect, "player_controls_select"),
+            (MenuId::PlayerControls, "player_controls"),
+            (MenuId::ModeOptions, "mode_options"),
+            (MenuId::MatchSelection, "match_selection"),
+            (MenuId::GameSettings, "game_settings"),
+            (MenuId::MapFilterEdit, "map_filter_edit"),
+            (MenuId::TourStop, "tour_stop"),
+            (MenuId::World, "world"),
+            (MenuId::TeamSelect, "team_select"),
+            (MenuId::TournamentScoreboard, "tournament_scoreboard"),
+            (MenuId::BonusWheel, "bonus_wheel"),
+            (MenuId::NetServers, "net_servers"),
+            (MenuId::NetEditServers, "net_edit_servers"),
+            (MenuId::NetLobby, "net_lobby"),
+            (MenuId::NetNewRoom, "net_new_room"),
+            (MenuId::NetNewRoomSettings, "net_new_room_settings"),
+            (MenuId::NetRoom, "net_room"),
         ];
         for (m, name) in names.iter() {
             if *m == self.mCurrentMenu {
@@ -229,16 +325,16 @@ impl MenuState {
         "unknown"
     }
 
-    pub fn harness_focus_index(&self) -> i32 {
-        if !self.mCurrentMenu.is_null() {
-            self.mCurrentMenu.current_focus_index()
+    pub fn harness_focus_index(&mut self) -> i32 {
+        if self.mCurrentMenu != MenuId::None {
+            self.current().current_focus_index()
         } else {
             -1
         }
     }
 
-    pub fn harness_modifying(&self) -> bool {
-        !self.mCurrentMenu.is_null() && self.mCurrentMenu.is_modifying()
+    pub fn harness_modifying(&mut self) -> bool {
+        self.mCurrentMenu != MenuId::None && self.current().is_modifying()
     }
 
     fn read_tour_file(&mut self, g: &mut Game) -> bool {
@@ -288,7 +384,7 @@ impl MenuState {
         }
 
         if !g.game_values.tourstops.is_empty() {
-            self.mTourStopMenu.miTourStop.refresh(g, g.game_values.tourstopcurrent as i16);
+            g.ctl(self.mTourStopMenu.miTourStop).refresh(g, g.game_values.tourstopcurrent as i16);
 
             //For old tours, turn on the bonus wheel at the end
             if version.major == 1 && version.minor == 7 && version.patch == 0 && version.build <= 1 {
@@ -405,8 +501,8 @@ impl MenuState {
 
         self.mModeOptionsMenu.set_controlling_team(iControlTeam);
 
-        self.mGameSettingsMenu.miMapFilterScroll.set_controlling_team(iControlTeam);
-        self.mMapFilterEditMenu.miMapBrowser.set_controlling_team(iControlTeam);
+        g.ctl(self.mGameSettingsMenu.miMapFilterScroll).set_controlling_team(iControlTeam);
+        g.ctl(self.mMapFilterEditMenu.miMapBrowser).set_controlling_team(iControlTeam);
 
         if fDisplayMessage {
             self.display_controlling_team_message(g, iControlTeam);
@@ -444,7 +540,7 @@ impl MenuState {
         };
 
         let iIcon: i16 = if iControlTeam < 0 { 4 } else { g.game_values.colorids[g.game_values.teamids[iControlTeam as usize][0] as usize] };
-        self.mCurrentMenu.eyeCandy.emplace(EC_Announcement::new(
+        self.current().eyeCandy.emplace(EC_Announcement::new(
             Ptr::from_mut(&mut g.rm.menu_font_large),
             g.rm.spr_announcementicons,
             szMessage,
@@ -470,8 +566,8 @@ impl MenuState {
 
     fn reset_tournament_back_to_main_menu(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        self.mCurrentMenu = menu(self.mMainMenu);
-        self.mCurrentMenu.reset_menu(g);
+        self.mCurrentMenu = MenuId::Main;
+        self.current().reset_menu(g);
 
         if g.game_values.matchtype != MatchType::SingleGame && g.game_values.matchtype != MatchType::QuickGame && g.game_values.matchtype != MatchType::MiniGame && g.game_values.matchtype != MatchType::NetGame {
             if self.fNeedMenuMusicReset {
@@ -494,7 +590,7 @@ impl MenuState {
 
         if MatchType::MiniGame == g.game_values.matchtype {
             println!(" Match type: Minigame");
-            let minigame: Minigame = self.mMatchSelectionMenu.get_minigame();
+            let minigame: Minigame = self.mMatchSelectionMenu.get_minigame(g);
             match minigame {
                 Minigame::PipeCoin => {
                     g.pipegamemode.goal = 50;
@@ -548,7 +644,7 @@ impl MenuState {
                     fErrorReadingTourFile = true;
                 } else {
                     let numGames = g.game_values.tourstops.len() as i16;
-                    self.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(g, gp.score_cnt, numGames, gp.rm.spr_tour_markers);
+                    g.ctl(self.mTournamentScoreboardMenu.miTournamentScoreboard).create_scoreboard(g, gp.score_cnt, numGames, gp.rm.spr_tour_markers);
                 }
             } else if g.game_values.matchtype == MatchType::Tournament {
                 println!("  Match type: Tournament");
@@ -567,7 +663,7 @@ impl MenuState {
                 g.game_values.tournamentnextcontrol = 1; //if round robin is selected, choose the next team next
 
                 let numGames = g.game_values.tournamentgames;
-                self.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(g, gp.score_cnt, numGames, gp.rm.menu_mode_large);
+                g.ctl(self.mTournamentScoreboardMenu.miTournamentScoreboard).create_scoreboard(g, gp.score_cnt, numGames, gp.rm.menu_mode_large);
             } else if g.game_values.matchtype == MatchType::World {
                 println!("  Match type: World");
                 let this = Ptr::from_mut(self);
@@ -575,7 +671,7 @@ impl MenuState {
                     let mut this = this;
                     gp.get().g_worldmap.init(WorldMap::new_path(g, &gp.get().worldlist.at(gp.get().game_values.worldindex as usize).to_string_lossy(), TILESIZE as i16));
 
-                    this.mTournamentScoreboardMenu.miTournamentScoreboard.create_scoreboard(g, gp.score_cnt, 0, gp.rm.spr_tour_markers);
+                    g.ctl(this.mTournamentScoreboardMenu.miTournamentScoreboard).create_scoreboard(g, gp.score_cnt, 0, gp.rm.spr_tour_markers);
 
                     gp.g_worldmap.set_initial_powerups(g);
 
@@ -593,9 +689,9 @@ impl MenuState {
                         }
                     }
 
-                    this.mWorldMenu.miWorld.init(g);
+                    g.ctl(this.mWorldMenu.miWorld).init(g);
                     let team = RANDOM_INT(gp.get(), g.score_cnt as i32) as i16;
-                    this.mWorldMenu.miWorld.set_controlling_team(g, team);
+                    g.ctl(this.mWorldMenu.miWorld).set_controlling_team(g, team);
                 }));
                 if result.is_err() {
                     self.iDisplayError = DISPLAY_ERROR_READ_WORLD_FILE;
@@ -622,28 +718,28 @@ impl MenuState {
                     println!("current map: {}", *self.szCurrentMapName);
                     let szCurrentMapName = (*self.szCurrentMapName).clone();
                     g.maplist.findexact(&szCurrentMapName, false);
-                    self.mGameSettingsMenu.miMapField.load_current_map(g);
+                    g.ctl(self.mGameSettingsMenu.miMapField).load_current_map(g);
 
-                    g.game_values.gamemode = g.gamemodes[self.mGameSettingsMenu.get_current_game_mode_id() as usize];
+                    g.game_values.gamemode = g.gamemodes[self.mGameSettingsMenu.get_current_game_mode_id(g) as usize];
 
                     for iMode in 0..GAMEMODE_LAST as usize {
-                        g.gamemodes[iMode].goal = self.mGameSettingsMenu.miGoalField[iMode].current_value();
+                        g.gamemodes[iMode].goal = g.ctl(self.mGameSettingsMenu.miGoalField[iMode]).current_value();
                     }
 
-                    if self.mGameSettingsMenu.get_current_game_mode_id() as GameModeType == game_mode_owned {
-                        self.mGameSettingsMenu.hide_gm_settings_btn();
+                    if self.mGameSettingsMenu.get_current_game_mode_id(g) as GameModeType == game_mode_owned {
+                        self.mGameSettingsMenu.hide_gm_settings_btn(g);
                     }
 
-                    self.mCurrentMenu = menu(self.mGameSettingsMenu);
-                    self.mCurrentMenu.reset_menu(g);
+                    self.mCurrentMenu = MenuId::GameSettings;
+                    self.current().reset_menu(g);
 
                     //If it is a tournament, then set the controlling team
                     if MatchType::Tournament == g.game_values.matchtype {
                         self.set_controlling_team_for_settings_menu(g, g.game_values.tournamentcontrolteam, true);
                     }
                 } else if MatchType::Tour == g.game_values.matchtype {
-                    self.mCurrentMenu = menu(self.mTourStopMenu);
-                    self.mCurrentMenu.reset_menu(g);
+                    self.mCurrentMenu = MenuId::TourStop;
+                    self.current().reset_menu(g);
                 } else if MatchType::World == g.game_values.matchtype {
                     g.game_values.screenfadespeed = 8;
                     g.game_values.screenfade = 8;
@@ -655,17 +751,17 @@ impl MenuState {
 
                 //Setup items on next menu
                 for iGameMode in 0..GAMEMODE_LAST as usize {
-                    self.mGameSettingsMenu.miGoalField[iGameMode].hide_item(-1, g.game_values.matchtype == MatchType::Tournament);
+                    g.ctl(self.mGameSettingsMenu.miGoalField[iGameMode]).hide_item(-1, g.game_values.matchtype == MatchType::Tournament);
                 }
 
                 if g.game_values.matchtype == MatchType::World {
-                    self.mGameSettingsMenu.set_header_text("World Game Menu");
+                    self.mGameSettingsMenu.set_header_text(g, "World Game Menu");
                 } else if g.game_values.matchtype == MatchType::Tour {
-                    self.mGameSettingsMenu.set_header_text("Tour Game Menu");
+                    self.mGameSettingsMenu.set_header_text(g, "Tour Game Menu");
                 } else if g.game_values.matchtype == MatchType::Tournament {
-                    self.mGameSettingsMenu.set_header_text("Tournament Game Menu");
+                    self.mGameSettingsMenu.set_header_text(g, "Tournament Game Menu");
                 } else {
-                    self.mGameSettingsMenu.set_header_text("Single Game Menu");
+                    self.mGameSettingsMenu.set_header_text(g, "Single Game Menu");
                 }
             }
         }
@@ -887,7 +983,7 @@ impl MenuState {
 pub fn roll_net_game_mode_settings(g: &mut Game) {
         let mut gp = g.ptr();
     if let Some(state) = gp.get().ms.as_mut() {
-        if !state.mModeOptionsMenu.is_null() {
+        if state.mModeOptionsMenu.0.is_some() {
             state.mModeOptionsMenu.set_random_game_mode_settings(g, gp.get().currentgamemode);
         }
     }
@@ -897,7 +993,7 @@ pub fn roll_net_game_mode_settings(g: &mut Game) {
 pub fn describe_net_game_mode_settings(g: &mut Game) -> Vec<String> {
         let mut gp = g.ptr();
     match gp.ms.as_ref() {
-        Some(state) if !state.mModeOptionsMenu.is_null() => state.mModeOptionsMenu.describe_game_mode_settings(g, gp.currentgamemode),
+        Some(state) if state.mModeOptionsMenu.0.is_some() => state.mModeOptionsMenu.describe_game_mode_settings(g, gp.currentgamemode),
         _ => Vec::new(),
     }
 }
@@ -947,15 +1043,15 @@ impl MenuState {
             self.iDisplayErrorTimer = 0;
             net_end_session(g);
 
-            self.mCurrentMenu = menu(self.mMainMenu);
+            self.mCurrentMenu = MenuId::Main;
         } else if MENU_CODE_BACK_TO_MATCH_SELECTION_MENU == code {
-            self.mCurrentMenu = menu(self.mMatchSelectionMenu);
+            self.mCurrentMenu = MenuId::MatchSelection;
             self.iUnlockMinigameOptionIndex = 0;
         } else if MENU_CODE_TO_MATCH_SELECTION_MENU == code {
             self.mMatchSelectionMenu.world_map_changed(g);
 
-            self.mCurrentMenu = menu(self.mMatchSelectionMenu);
-            self.mCurrentMenu.reset_menu(g);
+            self.mCurrentMenu = MenuId::MatchSelection;
+            self.current().reset_menu(g);
             self.iUnlockMinigameOptionIndex = 0;
         } else if MENU_CODE_MATCH_SELECTION_START == code || MENU_CODE_QUICK_GAME_START == code {
             println!("itt vagyok");
@@ -963,12 +1059,12 @@ impl MenuState {
             if MENU_CODE_QUICK_GAME_START == code {
                 g.game_values.matchtype = MatchType::QuickGame;
             } else {
-                g.game_values.matchtype = self.mMatchSelectionMenu.get_selected_match_type();
+                g.game_values.matchtype = self.mMatchSelectionMenu.get_selected_match_type(g);
             }
 
             self.mTeamSelectMenu.reset_team_select(g);
-            self.mCurrentMenu = menu(self.mTeamSelectMenu);
-            self.mCurrentMenu.reset_menu(g);
+            self.mCurrentMenu = MenuId::TeamSelect;
+            self.current().reset_menu(g);
             println!("Hello");
 
             if g.game_values.matchtype != MatchType::Tournament {
@@ -980,37 +1076,37 @@ impl MenuState {
         } else if MENU_CODE_WORLD_MAP_CHANGED == code {
             self.mMatchSelectionMenu.world_map_changed(g);
         } else if MENU_CODE_TO_OPTIONS_MENU == code {
-            self.mCurrentMenu = menu(self.mOptionsMenu);
-            self.mCurrentMenu.reset_menu(g);
+            self.mCurrentMenu = MenuId::Options;
+            self.current().reset_menu(g);
         } else if MENU_CODE_BACK_TO_OPTIONS_MENU == code {
-            self.mCurrentMenu = menu(self.mOptionsMenu);
+            self.mCurrentMenu = MenuId::Options;
         } else if MENU_CODE_TO_NET_SERVERS_MENU == code {
-            self.mCurrentMenu = menu(self.mNetServersMenu);
-            self.mCurrentMenu.reset_menu(g);
+            self.mCurrentMenu = MenuId::NetServers;
+            self.current().reset_menu(g);
             net_start_session(g);
         } else if MENU_CODE_BACK_TO_GRAPHIC_OPTIONS_MENU == code {
-            self.mCurrentMenu = menu(self.mGraphicsOptionsMenu);
+            self.mCurrentMenu = MenuId::GraphicsOptions;
         } else if MENU_CODE_TO_CONTROLS_MENU == code {
-            self.mCurrentMenu = menu(self.mPlayerControlsSelectMenu);
-            self.mCurrentMenu.reset_menu(g);
+            self.mCurrentMenu = MenuId::PlayerControlsSelect;
+            self.current().reset_menu(g);
         } else if MENU_CODE_BACK_TO_CONTROLS_MENU == code {
-            self.mCurrentMenu = menu(self.mPlayerControlsSelectMenu);
+            self.mCurrentMenu = MenuId::PlayerControlsSelect;
         } else if MENU_CODE_TO_PLAYER_1_CONTROLS == code {
             self.mPlayerControlsMenu.set_player(g, 0);
-            self.mCurrentMenu = menu(self.mPlayerControlsMenu);
-            self.mCurrentMenu.reset_menu(g);
+            self.mCurrentMenu = MenuId::PlayerControls;
+            self.current().reset_menu(g);
         } else if MENU_CODE_TO_PLAYER_2_CONTROLS == code {
             self.mPlayerControlsMenu.set_player(g, 1);
-            self.mCurrentMenu = menu(self.mPlayerControlsMenu);
-            self.mCurrentMenu.reset_menu(g);
+            self.mCurrentMenu = MenuId::PlayerControls;
+            self.current().reset_menu(g);
         } else if MENU_CODE_TO_PLAYER_3_CONTROLS == code {
             self.mPlayerControlsMenu.set_player(g, 2);
-            self.mCurrentMenu = menu(self.mPlayerControlsMenu);
-            self.mCurrentMenu.reset_menu(g);
+            self.mCurrentMenu = MenuId::PlayerControls;
+            self.current().reset_menu(g);
         } else if MENU_CODE_TO_PLAYER_4_CONTROLS == code {
             self.mPlayerControlsMenu.set_player(g, 3);
-            self.mCurrentMenu = menu(self.mPlayerControlsMenu);
-            self.mCurrentMenu.reset_menu(g);
+            self.mCurrentMenu = MenuId::PlayerControls;
+            self.current().reset_menu(g);
         } else if MENU_CODE_TOGGLE_FULLSCREEN == code {
             gfx_changefullscreen(g, g.game_values.fullscreen);
             g.blitdest = g.screen;
@@ -1022,11 +1118,11 @@ impl MenuState {
                 if g.game_values.tournamentwinner == -2 || (g.game_values.tournamentwinner >= 0 && g.game_values.bonuswheel == 0) {
                     self.reset_tournament_back_to_main_menu(g);
                 } else if g.game_values.tournamentwinner >= 0 {
-                    self.mBonusWheelMenu.miBonusWheel.reset(g, true);
-                    self.mCurrentMenu = menu(self.mBonusWheelMenu);
+                    g.ctl(self.mBonusWheelMenu.miBonusWheel).reset(g, true);
+                    self.mCurrentMenu = MenuId::BonusWheel;
                 } else {
-                    self.mCurrentMenu = menu(self.mWorldMenu);
-                    self.mWorldMenu.miWorldStop.refresh(g, g.game_values.tourstopcurrent as i16);
+                    self.mCurrentMenu = MenuId::World;
+                    g.ctl(self.mWorldMenu.miWorldStop).refresh(g, g.game_values.tourstopcurrent as i16);
 
                     fNeedTeamAnnouncement = true;
                 }
@@ -1038,19 +1134,19 @@ impl MenuState {
                 if g.game_values.bonuswheel == 0 || (g.game_values.matchtype == MatchType::Tour && g.game_values.tourstops[g.game_values.tourstopcurrent - 1].iBonusType == 0) {
                     self.reset_tournament_back_to_main_menu(g);
                 } else {
-                    self.mBonusWheelMenu.miBonusWheel.reset(g, true);
-                    self.mCurrentMenu = menu(self.mBonusWheelMenu);
+                    g.ctl(self.mBonusWheelMenu.miBonusWheel).reset(g, true);
+                    self.mCurrentMenu = MenuId::BonusWheel;
                 }
             } else {
                 //Next Tour/Tourament Game
                 if g.game_values.matchtype == MatchType::Tour {
-                    self.mCurrentMenu = menu(self.mTourStopMenu);
+                    self.mCurrentMenu = MenuId::TourStop;
                 } else {
-                    self.mCurrentMenu = menu(self.mGameSettingsMenu);
+                    self.mCurrentMenu = MenuId::GameSettings;
                 }
             }
 
-            self.mCurrentMenu.reset_menu(g);
+            self.current().reset_menu(g);
 
             //Set the controlling team for tournament mode
             if MatchType::Tournament == g.game_values.matchtype && g.game_values.tournamentwinner == -1 {
@@ -1058,18 +1154,18 @@ impl MenuState {
             }
 
             if fNeedTeamAnnouncement {
-                self.mWorldMenu.miWorld.display_team_control_announcement(g);
+                g.ctl(self.mWorldMenu.miWorld).display_team_control_announcement(g);
             }
         } else if MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS == code {
             if g.netplay.active {
-                self.mCurrentMenu = menu(self.mNetNewRoomSettingsMenu);
+                self.mCurrentMenu = MenuId::NetNewRoomSettings;
             } else {
-                self.mCurrentMenu = menu(self.mGameSettingsMenu);
+                self.mCurrentMenu = MenuId::GameSettings;
             }
         } else if MENU_CODE_MODE_CHANGED == code {
-            g.game_values.gamemode = g.gamemodes[self.mGameSettingsMenu.get_current_game_mode_id() as usize];
-            self.mGameSettingsMenu.refresh_game_mode_buttons();
-            self.mNetNewRoomSettingsMenu.refresh_game_mode_buttons();
+            g.game_values.gamemode = g.gamemodes[self.mGameSettingsMenu.get_current_game_mode_id(g) as usize];
+            self.mGameSettingsMenu.refresh_game_mode_buttons(g);
+            self.mNetNewRoomSettingsMenu.refresh_game_mode_buttons(g);
         } else if MENU_CODE_BACK_TEAM_SELECT_MENU == code {
             if g.game_values.matchtype == MatchType::World {
                 self.mWorldMenu.open_exit_dialog(g);
@@ -1082,8 +1178,8 @@ impl MenuState {
                     self.set_controlling_team_for_settings_menu(g, -1, false);
                 }
             } else {
-                self.mCurrentMenu = menu(self.mTeamSelectMenu);
-                self.mCurrentMenu.reset_menu(g);
+                self.mCurrentMenu = MenuId::TeamSelect;
+                self.current().reset_menu(g);
             }
         } else if MENU_CODE_SOUND_VOLUME_CHANGED == code {
             g.game_values.sound = g.game_values.soundvolume > 0;
@@ -1125,13 +1221,13 @@ impl MenuState {
                 }
 
                 self.reset_tournament_back_to_main_menu(g);
-                self.mWorldMenu.miWorldStop.set_visible(false);
+                g.ctl(self.mWorldMenu.miWorldStop).set_visible(false);
             }
         } else if MENU_CODE_BONUS_DONE == code {
-            if self.mBonusWheelMenu.miBonusWheel.get_powerup_selection_done() {
+            if g.ctl(self.mBonusWheelMenu.miBonusWheel).get_powerup_selection_done() {
                 if g.game_values.matchtype == MatchType::World {
                     if g.game_values.tournamentwinner == -1 {
-                        self.mCurrentMenu = menu(self.mTournamentScoreboardMenu);
+                        self.mCurrentMenu = MenuId::TournamentScoreboard;
                     } else {
                         self.reset_tournament_back_to_main_menu(g);
                     }
@@ -1140,51 +1236,51 @@ impl MenuState {
                     && ((g.game_values.matchtype != MatchType::Tour && g.game_values.bonuswheel == 2)
                         || (g.game_values.matchtype == MatchType::Tour && g.game_values.tourstops[g.game_values.tourstopcurrent - 1].iBonusType != 0))
                 {
-                    self.mCurrentMenu = menu(self.mTournamentScoreboardMenu);
+                    self.mCurrentMenu = MenuId::TournamentScoreboard;
                 } else if g.game_values.matchtype == MatchType::SingleGame {
-                    self.mCurrentMenu = menu(self.mGameSettingsMenu);
-                    self.mCurrentMenu.reset_menu(g);
-                    self.mGameSettingsMenu.miMapField.load_current_map(g);
+                    self.mCurrentMenu = MenuId::GameSettings;
+                    self.current().reset_menu(g);
+                    g.ctl(self.mGameSettingsMenu.miMapField).load_current_map(g);
                 } else {
                     self.reset_tournament_back_to_main_menu(g);
                 }
             }
         } else if MENU_CODE_TO_POWERUP_SELECTION_MENU == code {
-            self.mCurrentMenu = menu(self.mPowerupDropRatesMenu);
-            self.mCurrentMenu.reset_menu(g);
+            self.mCurrentMenu = MenuId::PowerupDropRates;
+            self.current().reset_menu(g);
         } else if MENU_CODE_TO_POWERUP_SETTINGS_MENU == code {
-            self.mCurrentMenu = menu(self.mPowerupSettingsMenu);
-            self.mCurrentMenu.reset_menu(g);
+            self.mCurrentMenu = MenuId::PowerupSettings;
+            self.current().reset_menu(g);
         } else if MENU_CODE_TO_GRAPHICS_OPTIONS_MENU == code {
-            self.mCurrentMenu = menu(self.mGraphicsOptionsMenu);
-            self.mCurrentMenu.reset_menu(g);
+            self.mCurrentMenu = MenuId::GraphicsOptions;
+            self.current().reset_menu(g);
         } else if MENU_CODE_TO_EYECANDY_OPTIONS_MENU == code {
-            self.mCurrentMenu = menu(self.mEyeCandyOptionsMenu);
-            self.mCurrentMenu.reset_menu(g);
+            self.mCurrentMenu = MenuId::EyeCandyOptions;
+            self.current().reset_menu(g);
         } else if MENU_CODE_TO_SOUND_OPTIONS_MENU == code {
-            self.mCurrentMenu = menu(self.mSoundOptionsMenu);
-            self.mCurrentMenu.reset_menu(g);
+            self.mCurrentMenu = MenuId::SoundOptions;
+            self.current().reset_menu(g);
         } else if MENU_CODE_TO_GAMEPLAY_OPTIONS_MENU == code {
-            self.mCurrentMenu = menu(self.mGameplayOptionsMenu);
-            self.mCurrentMenu.reset_menu(g);
+            self.mCurrentMenu = MenuId::GameplayOptions;
+            self.current().reset_menu(g);
         } else if MENU_CODE_TO_TEAM_OPTIONS_MENU == code {
-            self.mCurrentMenu = menu(self.mTeamOptionsMenu);
-            self.mCurrentMenu.reset_menu(g);
+            self.mCurrentMenu = MenuId::TeamOptions;
+            self.current().reset_menu(g);
         } else if MENU_CODE_TO_PROJECTILES_OPTIONS_MENU == code {
-            self.mCurrentMenu = menu(self.mProjectileOptionsMenu);
-            self.mCurrentMenu.reset_menu(g);
+            self.mCurrentMenu = MenuId::ProjectileOptions;
+            self.current().reset_menu(g);
         } else if MENU_CODE_TO_PROJECTILES_LIMITS_MENU == code {
-            self.mCurrentMenu = menu(self.mProjectileLimitsMenu);
-            self.mCurrentMenu.reset_menu(g);
+            self.mCurrentMenu = MenuId::ProjectileLimits;
+            self.current().reset_menu(g);
         } else if MENU_CODE_TO_MODE_SETTINGS_MENU == code {
             if g.netplay.active {
-                self.mCurrentMenu = self.mModeOptionsMenu.get_options_menu(self.mNetNewRoomSettingsMenu.get_selected_game_mode_id());
-                self.mCurrentMenu.reset_menu(g);
+                self.mCurrentMenu = MenuId::mode_settings(self.mNetNewRoomSettingsMenu.get_selected_game_mode_id(g));
+                self.current().reset_menu(g);
             } else {
                 for iGameMode in 0..GAMEMODE_LAST as i16 {
-                    if self.mGameSettingsMenu.miGoalField[iGameMode as usize].is_visible() {
-                        self.mCurrentMenu = self.mModeOptionsMenu.get_options_menu(iGameMode);
-                        self.mCurrentMenu.reset_menu(g);
+                    if g.ctl(self.mGameSettingsMenu.miGoalField[iGameMode as usize]).is_visible() {
+                        self.mCurrentMenu = MenuId::mode_settings(iGameMode);
+                        self.current().reset_menu(g);
                         break;
                     }
                 }
@@ -1221,14 +1317,15 @@ impl MenuState {
         } else if MENU_CODE_WORLD_STAGE_NO_START == code {
             self.mWorldMenu.close_stage_start(g);
         } else if MENU_CODE_WORLD_MUSIC_CHANGED == code {
-            g.worldmusiclist.set_current(self.mSoundOptionsMenu.get_current_world_music_id() as usize);
+            let music = self.mSoundOptionsMenu.get_current_world_music_id(g) as usize;
+            g.worldmusiclist.set_current(music);
         } else if MENU_CODE_TOUR_STOP_CONTINUE == code || MENU_CODE_TOUR_STOP_CONTINUE_FORCED == code {
             //If this tour stop is forced, we need to load the map first
             if MENU_CODE_TOUR_STOP_CONTINUE_FORCED == code {
-                self.mWorldMenu.miWorldStop.refresh(g, g.game_values.tourstopcurrent as i16);
+                g.ctl(self.mWorldMenu.miWorldStop).refresh(g, g.game_values.tourstopcurrent as i16);
             }
 
-            self.mWorldMenu.miWorld.clear_cloud();
+            g.ctl(self.mWorldMenu.miWorld).clear_cloud();
 
             //Tour bonus house
             if g.game_values.matchtype == MatchType::World && g.game_values.tourstops[g.game_values.tourstopcurrent].iStageType == 1 {
@@ -1256,13 +1353,13 @@ impl MenuState {
                 g.game_values.storedpowerups[iPlayer] = -1;
             }
         } else if MENU_CODE_MAP_CHANGED == code {
-            if self.mCurrentMenu == menu(self.mNetNewRoomSettingsMenu) {
+            if self.mCurrentMenu == MenuId::NetNewRoomSettings {
                 debug_assert!(g.netplay.active);
                 g.netplay.mapfilepath = self.mNetNewRoomSettingsMenu.get_current_map_path(g);
                 println!("[net] Selected map: {}", g.netplay.mapfilepath);
                 self.mNetRoomMenu.set_preview_map_path(g, &gp.netplay.mapfilepath);
             } else if g.game_values.matchtype != MatchType::Tour {
-                self.szCurrentMapName = Ptr::from_mut(&mut self.mGameSettingsMenu.miMapField.szMapName);
+                self.szCurrentMapName = Ptr::from_mut(&mut g.ctl(self.mGameSettingsMenu.miMapField).szMapName);
             }
         } else if MENU_CODE_MAP_FILTER_EXIT == code {
             let gv = gp;
@@ -1270,8 +1367,8 @@ impl MenuState {
 
             //If the filtered map list has at least 1 map in it, then allow exiting the filter menu
             if g.maplist.map_in_filtered_set() {
-                self.mGameSettingsMenu.miMapField.load_current_map(g);
-                self.szCurrentMapName = Ptr::from_mut(&mut self.mGameSettingsMenu.miMapField.szMapName);
+                g.ctl(self.mGameSettingsMenu.miMapField).load_current_map(g);
+                self.szCurrentMapName = Ptr::from_mut(&mut g.ctl(self.mGameSettingsMenu.miMapField).szMapName);
 
                 self.mGameSettingsMenu.close_map_filters(g);
 
@@ -1284,25 +1381,25 @@ impl MenuState {
         } else if MENU_CODE_TO_MAP_FILTERS == code {
             self.mGameSettingsMenu.open_map_filters(g);
         } else if MENU_CODE_TO_MAP_FILTER_EDIT == code {
-            self.mMapFilterEditMenu.miMapBrowser.reset(g, 0);
+            g.ctl(self.mMapFilterEditMenu.miMapBrowser).reset(g, 0);
 
-            self.mCurrentMenu = menu(self.mMapFilterEditMenu);
-            self.mCurrentMenu.reset_menu(g);
+            self.mCurrentMenu = MenuId::MapFilterEdit;
+            self.current().reset_menu(g);
         } else if MENU_CODE_MAP_BROWSER_EXIT == code {
-            self.mGameSettingsMenu.miMapField.load_current_map(g);
-            self.szCurrentMapName = Ptr::from_mut(&mut self.mGameSettingsMenu.miMapField.szMapName);
+            g.ctl(self.mGameSettingsMenu.miMapField).load_current_map(g);
+            self.szCurrentMapName = Ptr::from_mut(&mut g.ctl(self.mGameSettingsMenu.miMapField).szMapName);
 
-            self.mCurrentMenu = menu(self.mGameSettingsMenu);
+            self.mCurrentMenu = MenuId::GameSettings;
             //mCurrentMenu->ResetMenu();
         } else if MENU_CODE_TO_MAP_BROWSER_THUMBNAILS == code {
-            self.mMapFilterEditMenu.miMapBrowser.reset(g, 1);
+            g.ctl(self.mMapFilterEditMenu.miMapBrowser).reset(g, 1);
 
-            self.mCurrentMenu = menu(self.mMapFilterEditMenu);
-            self.mCurrentMenu.reset_menu(g);
+            self.mCurrentMenu = MenuId::MapFilterEdit;
+            self.current().reset_menu(g);
         } else if MENU_CODE_SAVE_ALL_MAP_THUMBNAILS == code {
             // C++ casts mCurrentMenu to UI_OptionsMenu*; only the options menu emits this code.
             self.mOptionsMenu.show_thumbnails_popup(g);
-            self.mCurrentMenu.reset_menu(g);
+            self.current().reset_menu(g);
         } else if MENU_CODE_GENERATE_THUMBS_RESET_YES == code || MENU_CODE_GENERATE_THUMBS_RESET_NO == code {
             self.mOptionsMenu.hide_thumbnails_popup(g);
 
@@ -1310,9 +1407,9 @@ impl MenuState {
                 *fGenerateMapThumbs = true;
             }
         } else if MENU_CODE_HEALTH_MODE_START_LIFE_CHANGED == code {
-            self.mModeOptionsMenu.health_mode_start_life_changed();
+            self.mModeOptionsMenu.health_mode_start_life_changed(g);
         } else if MENU_CODE_HEALTH_MODE_MAX_LIFE_CHANGED == code {
-            self.mModeOptionsMenu.health_mode_max_life_changed();
+            self.mModeOptionsMenu.health_mode_max_life_changed(g);
         }
 
         if g.netplay.active {
@@ -1337,8 +1434,8 @@ impl MenuState {
             if MENU_CODE_TO_NET_SERVERLIST == code {
                 self.mNetServersMenu.open_server_list(g);
             } else if MENU_CODE_TO_NET_ADDREMOVE_SERVER_MENU == code {
-                self.mCurrentMenu = menu(self.mNetEditServersMenu);
-                self.mCurrentMenu.reset_menu(g);
+                self.mCurrentMenu = MenuId::NetEditServers;
+                self.current().reset_menu(g);
                 self.mNetEditServersMenu.restore(g);
             } else if MENU_CODE_NET_ADDREMOVE_SERVER_ON_ADD_BTN == code {
                 self.mNetEditServersMenu.on_press_add(g);
@@ -1379,14 +1476,14 @@ impl MenuState {
                 self.mNetLobbyMenu.restore(g);
                 self.mNetNewRoomMenu.restore(g);
 
-                self.mCurrentMenu = menu(self.mNetLobbyMenu);
-                self.mCurrentMenu.reset_menu(g);
+                self.mCurrentMenu = MenuId::NetLobby;
+                self.current().reset_menu(g);
             } else if MENU_CODE_TO_NET_NEW_ROOM_LEVEL_SELECT_MENU == code {
-                self.mCurrentMenu = menu(self.mNetNewRoomSettingsMenu);
-                self.mCurrentMenu.reset_menu(g);
+                self.mCurrentMenu = MenuId::NetNewRoomSettings;
+                self.current().reset_menu(g);
             } else if MENU_CODE_TO_NET_NEW_ROOM_SETTINGS_MENU == code {
-                self.mCurrentMenu = menu(self.mNetNewRoomMenu);
-                self.mCurrentMenu.reset_menu(g);
+                self.mCurrentMenu = MenuId::NetNewRoom;
+                self.current().reset_menu(g);
             } else if MENU_CODE_NET_CHAT_SEND == code {
                 if !g.netplay.mychatmessage.is_empty() {
                     let message = g.netplay.mychatmessage.clone();
@@ -1395,8 +1492,8 @@ impl MenuState {
                     code = MENU_CODE_TO_NET_ROOM_MENU;
                 }
             } else if MENU_CODE_TO_NET_ROOM_MENU == code {
-                self.mCurrentMenu = menu(self.mNetRoomMenu);
-                self.mCurrentMenu.reset_menu(g);
+                self.mCurrentMenu = MenuId::NetRoom;
+                self.current().reset_menu(g);
                 g.netplay.currentMenuChanged = true;
                 g.netplay.operationInProgress = false;
 
@@ -1487,17 +1584,17 @@ impl GameState for MenuState {
         assign(&mut self.mNetNewRoomSettingsMenu, UI_NetNewRoomSettingsMenu::new(g, &self.mGameSettingsMenu));
         assign(&mut self.mNetRoomMenu, UI_NetRoomMenu::new(g));
 
-        self.mCurrentMenu = menu(self.mMainMenu);
+        self.mCurrentMenu = MenuId::Main;
 
         if let Some(forcedMap) = harness::forced_map(g) {
             if !g.maplist.findexact(forcedMap, false) && !g.maplist.find(forcedMap) {
                 eprintln!("[harness] SMW_MAP '{}' not found", forcedMap);
                 std::process::exit(2);
             }
-            self.mGameSettingsMenu.miMapField.load_current_map(g);
+            g.ctl(self.mGameSettingsMenu.miMapField).load_current_map(g);
         }
 
-        self.szCurrentMapName = Ptr::from_mut(&mut self.mGameSettingsMenu.miMapField.szMapName);
+        self.szCurrentMapName = Ptr::from_mut(&mut g.ctl(self.mGameSettingsMenu.miMapField).szMapName);
 
         true
     }
@@ -1526,17 +1623,17 @@ impl GameState for MenuState {
                 && g.game_values.bonuswheel == 2)
                 || (matchtype == MatchType::Tour && g.game_values.tourstops[g.game_values.tourstopcurrent - 1].iBonusType != 0))
         {
-            self.mBonusWheelMenu.miBonusWheel.reset(g, false);
-            self.mCurrentMenu = menu(self.mBonusWheelMenu);
+            g.ctl(self.mBonusWheelMenu.miBonusWheel).reset(g, false);
+            self.mCurrentMenu = MenuId::BonusWheel;
         } else if matchtype != MatchType::SingleGame && matchtype != MatchType::QuickGame && matchtype != MatchType::MiniGame && matchtype != MatchType::NetGame {
-            self.mCurrentMenu = menu(self.mTournamentScoreboardMenu);
+            self.mCurrentMenu = MenuId::TournamentScoreboard;
         } else if matchtype == MatchType::QuickGame {
             //Reset back to main menu after quick game
-            self.mCurrentMenu = menu(self.mMainMenu);
-            self.mCurrentMenu.reset_menu(g);
+            self.mCurrentMenu = MenuId::Main;
+            self.current().reset_menu(g);
         } else if matchtype == MatchType::NetGame {
-            self.mCurrentMenu = menu(self.mNetLobbyMenu);
-            self.mCurrentMenu.reset_menu(g);
+            self.mCurrentMenu = MenuId::NetLobby;
+            self.current().reset_menu(g);
             g.netplay.joinSuccessful = false;
             g.netplay.gameRunning = false;
         }
@@ -1545,8 +1642,8 @@ impl GameState for MenuState {
             if g.game_values.gamemode.winningteam > -1 && g.game_values.tournamentwinner == -1 {
                 //Stage is completed
                 let winningteam = g.game_values.gamemode.winningteam;
-                self.mWorldMenu.miWorld.set_controlling_team(g, winningteam);
-                self.mWorldMenu.miWorld.set_current_stage_to_completed(g, winningteam);
+                g.ctl(self.mWorldMenu.miWorld).set_controlling_team(g, winningteam);
+                g.ctl(self.mWorldMenu.miWorld).set_current_stage_to_completed(g, winningteam);
 
                 self.mWorldMenu.close_stage_start(g);
 
@@ -1570,25 +1667,25 @@ impl GameState for MenuState {
 
             //If we're suposed to skip the scoreboard, then reset back to the world map
             if g.game_values.worldskipscoreboard {
-                self.mCurrentMenu = menu(self.mWorldMenu);
-                self.mCurrentMenu.reset_menu(g);
+                self.mCurrentMenu = MenuId::World;
+                self.current().reset_menu(g);
 
                 g.game_values.worldskipscoreboard = false;
             } else {
                 let winningteam = g.game_values.gamemode.winningteam;
-                self.mTournamentScoreboardMenu.miTournamentScoreboard.refresh_world_scores(g, winningteam);
+                g.ctl(self.mTournamentScoreboardMenu.miTournamentScoreboard).refresh_world_scores(g, winningteam);
             }
         } else if g.game_values.matchtype == MatchType::Tour {
-            self.mTournamentScoreboardMenu.miTournamentScoreboard.refresh_tour_scores(g);
+            g.ctl(self.mTournamentScoreboardMenu.miTournamentScoreboard).refresh_tour_scores(g);
 
             if g.game_values.tourstopcurrent < g.game_values.tourstops.len() {
-                self.mTourStopMenu.miTourStop.refresh(g, g.game_values.tourstopcurrent as i16);
+                g.ctl(self.mTourStopMenu.miTourStop).refresh(g, g.game_values.tourstopcurrent as i16);
             }
         } else if g.game_values.matchtype == MatchType::Tournament {
-            self.mTournamentScoreboardMenu.miTournamentScoreboard.stop_swirl();
+            g.ctl(self.mTournamentScoreboardMenu.miTournamentScoreboard).stop_swirl();
             if g.game_values.gamemode.winningteam > -1 {
                 let winningteam = g.game_values.gamemode.winningteam;
-                self.mTournamentScoreboardMenu.miTournamentScoreboard.refresh_tournament_scores(g, winningteam);
+                g.ctl(self.mTournamentScoreboardMenu.miTournamentScoreboard).refresh_tournament_scores(g, winningteam);
 
                 self.choose_next_tournament_control_team(g);
             }
@@ -1615,8 +1712,8 @@ impl GameState for MenuState {
         }
 
         if matchtype != MatchType::World && matchtype != MatchType::QuickGame && matchtype != MatchType::NetGame {
-            if self.mCurrentMenu == menu(self.mGameSettingsMenu) || self.mCurrentMenu == menu(self.mTournamentScoreboardMenu) {
-                self.mGameSettingsMenu.miMapField.load_current_map(g);
+            if self.mCurrentMenu == MenuId::GameSettings || self.mCurrentMenu == MenuId::TournamentScoreboard {
+                g.ctl(self.mGameSettingsMenu.miMapField).load_current_map(g);
             }
         }
 
@@ -1684,7 +1781,7 @@ impl GameState for MenuState {
 
                 if let Some((x, y)) = input.event.tap() {
                     if AppState::Menu == g.game_values.appstate {
-                        let code = self.mCurrentMenu.mouse_click(g, x, y);
+                        let code = self.current().mouse_click(g, x, y);
                         if self.handle_menu_code(g, code, &mut fGenerateMapThumbs) {
                             return;
                         }
@@ -1693,20 +1790,20 @@ impl GameState for MenuState {
             }
 
             //If AI is controlling the tournament menu, select the options
-            if g.game_values.matchtype == MatchType::Tournament && self.iTournamentAITimer > 0 && self.mCurrentMenu == menu(self.mGameSettingsMenu) && self.mGameSettingsMenu.is_on_start_btn() {
+            if g.game_values.matchtype == MatchType::Tournament && self.iTournamentAITimer > 0 && self.mCurrentMenu == MenuId::GameSettings && self.mGameSettingsMenu.is_on_start_btn() {
                 self.iTournamentAITimer -= 1;
                 if self.iTournamentAITimer == 0 {
                     self.iTournamentAIStep += 1;
 
                     if self.iTournamentAIStep == 1 {
-                        self.mGameSettingsMenu.miMapField.choose_random_map(g);
+                        g.ctl(self.mGameSettingsMenu.miMapField).choose_random_map(g);
 
                         self.iTournamentAITimer = 60;
                     } else if self.iTournamentAIStep == 2 {
                         g.currentgamemode = RANDOM_INT(gp.get(), GAMEMODE_LAST) as i16;
                         g.game_values.gamemode = g.gamemodes[g.currentgamemode as usize];
-                        self.mGameSettingsMenu.game_mode_changed(g.currentgamemode);
-                        g.game_values.gamemode = g.gamemodes[self.mGameSettingsMenu.get_current_game_mode_id() as usize];
+                        self.mGameSettingsMenu.game_mode_changed(g, g.currentgamemode);
+                        g.game_values.gamemode = g.gamemodes[self.mGameSettingsMenu.get_current_game_mode_id(g) as usize];
 
                         self.iTournamentAITimer = 60;
                     } else if self.iTournamentAIStep == 3 {
@@ -1716,7 +1813,7 @@ impl GameState for MenuState {
                         g.game_values.gamemode.goal = goal;
 
                         let modeGoal = g.gamemodes[g.currentgamemode as usize].goal;
-                        self.mGameSettingsMenu.miGoalField[g.currentgamemode as usize].set_current_value(modeGoal);
+                        g.ctl(self.mGameSettingsMenu.miGoalField[g.currentgamemode as usize]).set_current_value(modeGoal);
 
                         self.mModeOptionsMenu.set_random_game_mode_settings(g, g.game_values.gamemode.gamemode as i16);
 
@@ -1736,7 +1833,7 @@ impl GameState for MenuState {
             */
 
             if AppState::Menu == g.game_values.appstate {
-                let code = self.mCurrentMenu.send_input(g, Ptr::from_mut(&mut gp.game_values.playerInput));
+                let code = self.current().send_input(g, Ptr::from_mut(&mut gp.game_values.playerInput));
 
                 if self.handle_menu_code(g, code, &mut fGenerateMapThumbs) {
                     return;
@@ -1746,14 +1843,14 @@ impl GameState for MenuState {
             //--------------- draw everything ----------------------
 
             //Don't draw backdrop for world
-            if self.mCurrentMenu != menu(self.mWorldMenu) {
+            if self.mCurrentMenu != MenuId::World {
                 gp.rm.sprite(gp.rm.menu_backdrop).draw(g, 0, 0);
             } else {
                 crate::common::gfx::blit::fill_rect(g.screen, std::ptr::null(), (*g.screen).map_rgb(0, 0, 0));
             }
 
-            self.mCurrentMenu.update(g);
-            self.mCurrentMenu.draw(g);
+            self.current().update(g);
+            self.current().draw(g);
 
             if self.iDisplayError > DISPLAY_ERROR_NONE {
                 gp.rm.sprite(gp.rm.spr_selectfield).draw_src(g, 70, 400, &rect(0, 0, 484, 32));
@@ -1799,8 +1896,8 @@ impl GameState for MenuState {
                     //Fade to world match type
                     g.game_values.screenfadespeed = -8;
 
-                    self.mCurrentMenu = menu(self.mWorldMenu);
-                    self.mCurrentMenu.reset_menu(g);
+                    self.mCurrentMenu = MenuId::World;
+                    self.current().reset_menu(g);
 
                     gp.rm.backgroundmusic[2].stop(g);
                     let worldMusic = g.worldmusiclist.current_music(g.g_worldmap.get_music_category(), g.g_worldmap.get_world_name()).clone();
@@ -1808,7 +1905,7 @@ impl GameState for MenuState {
                     gp.rm.backgroundmusic[5].play(g, false, false);
                     self.fNeedMenuMusicReset = true;
 
-                    self.mWorldMenu.miWorld.display_team_control_announcement(g);
+                    g.ctl(self.mWorldMenu.miWorld).display_team_control_announcement(g);
 
                     g.game_values.appstate = AppState::Menu;
                 }

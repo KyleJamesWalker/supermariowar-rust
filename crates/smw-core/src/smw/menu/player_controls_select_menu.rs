@@ -1,11 +1,12 @@
 //! Port of src/smw/menu/PlayerControlsSelectMenu.cpp
 
+use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_button::MI_Button;
 use crate::common::ui::mi_image::MI_Image;
 use crate::common::ui::mi_text::{MI_HeaderText, MI_Text};
-use crate::common::uicontrol::{ctl_ptr, TextAlign};
+use crate::common::uicontrol::{TextAlign};
 use crate::common::uimenu::UI_Menu;
 use crate::globals::*;
 
@@ -16,16 +17,16 @@ use crate::globals::*;
 pub struct UI_PlayerControlsSelectMenu {
     pub ui_menu: UI_Menu,
 
-    pub miPlayer1ControlsButton: Ptr<MI_Button>,
-    pub miPlayer2ControlsButton: Ptr<MI_Button>,
-    pub miPlayer3ControlsButton: Ptr<MI_Button>,
-    pub miPlayer4ControlsButton: Ptr<MI_Button>,
+    pub miPlayer1ControlsButton: Ctl<MI_Button>,
+    pub miPlayer2ControlsButton: Ctl<MI_Button>,
+    pub miPlayer3ControlsButton: Ctl<MI_Button>,
+    pub miPlayer4ControlsButton: Ctl<MI_Button>,
 
-    pub miPlayerControlsBackButton: Ptr<MI_Button>,
+    pub miPlayerControlsBackButton: Ctl<MI_Button>,
 
-    pub miPlayerControlsLeftHeaderBar: Ptr<MI_Image>,
-    pub miPlayerControlsMenuRightHeaderBar: Ptr<MI_Image>,
-    pub miPlayerControlsMenuHeaderText: Ptr<MI_Text>,
+    pub miPlayerControlsLeftHeaderBar: Ctl<MI_Image>,
+    pub miPlayerControlsMenuRightHeaderBar: Ctl<MI_Image>,
+    pub miPlayerControlsMenuHeaderText: Ctl<MI_Text>,
 }
 crate::impl_base!(UI_PlayerControlsSelectMenu => ui_menu: UI_Menu);
 
@@ -35,38 +36,38 @@ impl UI_PlayerControlsSelectMenu {
         let spr_selectfield = g.rm.spr_selectfield;
         let menu_plain_field = g.rm.menu_plain_field;
 
-        this.miPlayer1ControlsButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 120, 140, "Player 1", 400, TextAlign::CENTER));
-        this.miPlayer1ControlsButton.set_code(MENU_CODE_TO_PLAYER_1_CONTROLS);
+        this.miPlayer1ControlsButton = Ctl::new(MI_Button::new(g, spr_selectfield, 120, 140, "Player 1", 400, TextAlign::CENTER), g);
+        g.ctl(this.miPlayer1ControlsButton).set_code(MENU_CODE_TO_PLAYER_1_CONTROLS);
 
-        this.miPlayer2ControlsButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 120, 180, "Player 2", 400, TextAlign::CENTER));
-        this.miPlayer2ControlsButton.set_code(MENU_CODE_TO_PLAYER_2_CONTROLS);
+        this.miPlayer2ControlsButton = Ctl::new(MI_Button::new(g, spr_selectfield, 120, 180, "Player 2", 400, TextAlign::CENTER), g);
+        g.ctl(this.miPlayer2ControlsButton).set_code(MENU_CODE_TO_PLAYER_2_CONTROLS);
 
-        this.miPlayer3ControlsButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 120, 220, "Player 3", 400, TextAlign::CENTER));
-        this.miPlayer3ControlsButton.set_code(MENU_CODE_TO_PLAYER_3_CONTROLS);
+        this.miPlayer3ControlsButton = Ctl::new(MI_Button::new(g, spr_selectfield, 120, 220, "Player 3", 400, TextAlign::CENTER), g);
+        g.ctl(this.miPlayer3ControlsButton).set_code(MENU_CODE_TO_PLAYER_3_CONTROLS);
 
-        this.miPlayer4ControlsButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 120, 260, "Player 4", 400, TextAlign::CENTER));
-        this.miPlayer4ControlsButton.set_code(MENU_CODE_TO_PLAYER_4_CONTROLS);
+        this.miPlayer4ControlsButton = Ctl::new(MI_Button::new(g, spr_selectfield, 120, 260, "Player 4", 400, TextAlign::CENTER), g);
+        g.ctl(this.miPlayer4ControlsButton).set_code(MENU_CODE_TO_PLAYER_4_CONTROLS);
 
-        this.miPlayerControlsBackButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
-        this.miPlayerControlsBackButton.set_code(MENU_CODE_TO_MAIN_MENU);
+        this.miPlayerControlsBackButton = Ctl::new(MI_Button::new(g, spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER), g);
+        g.ctl(this.miPlayerControlsBackButton).set_code(MENU_CODE_TO_MAIN_MENU);
 
-        this.miPlayerControlsLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-        this.miPlayerControlsMenuRightHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-        this.miPlayerControlsMenuHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Player Controls Menu", 320, 5));
+        this.miPlayerControlsLeftHeaderBar = Ctl::new(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0), g);
+        this.miPlayerControlsMenuRightHeaderBar = Ctl::new(MI_Image::new(menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0), g);
+        this.miPlayerControlsMenuHeaderText = Ctl::new(MI_HeaderText::new(g, "Player Controls Menu", 320, 5), g);
 
-        let p1 = ctl_ptr(this.miPlayer1ControlsButton);
-        let p2 = ctl_ptr(this.miPlayer2ControlsButton);
-        let p3 = ctl_ptr(this.miPlayer3ControlsButton);
-        let p4 = ctl_ptr(this.miPlayer4ControlsButton);
-        let back = ctl_ptr(this.miPlayerControlsBackButton);
+        let p1 = this.miPlayer1ControlsButton.id();
+        let p2 = this.miPlayer2ControlsButton.id();
+        let p3 = this.miPlayer3ControlsButton.id();
+        let p4 = this.miPlayer4ControlsButton.id();
+        let back = this.miPlayerControlsBackButton.id();
 
-        this.add_control(p1, back, p2, Ptr::null(), back);
-        this.add_control(p2, p1, p3, Ptr::null(), back);
-        this.add_control(p3, p2, p4, Ptr::null(), back);
-        this.add_control(p4, p3, back, Ptr::null(), back);
-        this.add_control(back, p4, p1, p1, Ptr::null());
+        this.add_control(g, p1, back, p2, Default::default(), back);
+        this.add_control(g, p2, p1, p3, Default::default(), back);
+        this.add_control(g, p3, p2, p4, Default::default(), back);
+        this.add_control(g, p4, p3, back, Default::default(), back);
+        this.add_control(g, back, p4, p1, p1, Default::default());
 
-        let (l, r, h) = (ctl_ptr(this.miPlayerControlsLeftHeaderBar), ctl_ptr(this.miPlayerControlsMenuRightHeaderBar), ctl_ptr(this.miPlayerControlsMenuHeaderText));
+        let (l, r, h) = (this.miPlayerControlsLeftHeaderBar.id(), this.miPlayerControlsMenuRightHeaderBar.id(), this.miPlayerControlsMenuHeaderText.id());
         this.add_non_control(l);
         this.add_non_control(r);
         this.add_non_control(h);

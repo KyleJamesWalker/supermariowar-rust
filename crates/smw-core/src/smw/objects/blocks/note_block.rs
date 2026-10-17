@@ -194,7 +194,7 @@ impl IO_BlockTrait for B_NoteBlock {
                 io_block_kill_players_and_objects_inside_block(g, self, g.player(player).globalID);
             }
 
-            g.g_map.update_tile_gap(self.col, self.row);
+            g.update_tile_gap(self.col, self.row);
         }
 
         false

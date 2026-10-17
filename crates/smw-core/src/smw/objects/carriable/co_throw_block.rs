@@ -4,7 +4,8 @@ use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
-use crate::common::eyecandy::{EC_FallingObject, EC_SingleAnimation, Spotlight};
+use crate::common::map::PlatformId;
+use crate::common::eyecandy::{EC_FallingObject, EC_SingleAnimation, SpotlightId};
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::{gfxSprite, ClipEdge};
@@ -42,7 +43,7 @@ pub struct CO_ThrowBlock {
     pub frozenvelocity: f32,
     pub frozenanimationspeed: i16,
 
-    pub sSpotlight: Ptr<Spotlight>,
+    pub sSpotlight: SpotlightId,
 }
 impl_base!(CO_ThrowBlock => mo_carried_object: MO_CarriedObject);
 
@@ -60,7 +61,7 @@ impl CO_ThrowBlock {
             frozentimer: 0,
             frozenvelocity: 0.0,
             frozenanimationspeed: 0,
-            sSpotlight: Ptr::null(),
+            sSpotlight: SpotlightId::NONE,
         };
 
         o.state = 2;
@@ -87,7 +88,7 @@ impl CO_ThrowBlock {
         o.frozenvelocity = 0.0;
         o.frozenanimationspeed = 2;
 
-        o.sSpotlight = Ptr::null();
+        o.sSpotlight = SpotlightId::NONE;
         o
     }
 
@@ -102,7 +103,7 @@ impl CO_ThrowBlock {
             // Holding
             if player != self.owner {
                 if !self.owner.is_none() {
-                    g.player(self.owner).carriedItem = Ptr::null();
+                    g.player(self.owner).carriedItem = crate::smw::object_container::ObjectId::NONE;
                 }
 
                 self.kick(g);
@@ -111,7 +112,7 @@ impl CO_ThrowBlock {
                 g.player(player).bouncejump();
                 let p = g.player(player);
                 g.player(player).collisions.checktop(g, p);
-                g.player(player).platform = Ptr::null();
+                g.player(player).platform = PlatformId::NONE;
             }
         }
 
@@ -189,7 +190,7 @@ impl CO_ThrowBlock {
         if_sound_on_play(g, &mut gp.rm.sfx_breakblock);
 
         if !self.owner.is_none() {
-            g.player(self.owner).carriedItem = Ptr::null();
+            g.player(self.owner).carriedItem = crate::smw::object_container::ObjectId::NONE;
             self.owner = PlayerId::NONE;
         }
     }
@@ -278,7 +279,7 @@ impl CObjectTrait for CO_ThrowBlock {
             self.dead = true;
 
             if !self.owner.is_none() {
-                g.player(self.owner).carriedItem = Ptr::null();
+                g.player(self.owner).carriedItem = crate::smw::object_container::ObjectId::NONE;
                 self.owner = PlayerId::NONE;
             }
 
@@ -304,12 +305,12 @@ impl CObjectTrait for CO_ThrowBlock {
         if g.game_values.spotlights && self.state == 1 {
             let x = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
             let y = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
-            if self.sSpotlight.is_null() {
+            if self.sSpotlight.is_none() {
                 self.sSpotlight = gp.spotlightManager.add_spotlight(g, x, y, 3);
             }
 
-            if !self.sSpotlight.is_null() {
-                self.sSpotlight.update_position(x, y);
+            if !self.sSpotlight.is_none() {
+                g.spotlightManager.update_position(self.sSpotlight, x, y);
             }
         }
     }

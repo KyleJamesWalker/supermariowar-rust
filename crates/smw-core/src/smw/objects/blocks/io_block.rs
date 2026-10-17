@@ -71,7 +71,7 @@ pub fn io_block_update<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T) {
             this.reset();
 
             let b = this.block();
-            g.g_map.update_tile_gap(b.col, b.row);
+            g.update_tile_gap(b.col, b.row);
         }
     }
 }

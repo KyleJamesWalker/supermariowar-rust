@@ -30,8 +30,6 @@ pub struct MO_CarriedObject {
     pub iOwnerLeftOffset: i16,
     pub iOwnerRightOffset: i16,
     pub iOwnerUpOffset: i16,
-    /// For `drop`, which clears the owner's `carriedItem`.
-    game: Ptr<Game>,
 }
 impl_base!(MO_CarriedObject => io_moving_object: IO_MovingObject);
 
@@ -89,7 +87,6 @@ impl MO_CarriedObject {
             iOwnerLeftOffset: 0,
             iOwnerRightOffset: 0,
             iOwnerUpOffset: 0,
-            game: g.ptr(),
         };
         o.init();
         o
@@ -114,14 +111,6 @@ impl MO_CarriedObject {
     }
     pub fn is_carried_by_kuribo_shoe(&self) -> bool {
         self.fCarriedByKuriboShoe
-    }
-}
-
-impl Drop for MO_CarriedObject {
-    fn drop(&mut self) {
-        if let Some(owner) = self.game.players.get(self.owner) {
-            owner.carriedItem = Ptr::null();
-        }
     }
 }
 
@@ -151,7 +140,7 @@ pub fn mo_carried_object_drop<T: MO_CarriedObjectTrait + ?Sized>(g: &mut Game, t
     {
         let o = this.carried_mut();
         if !o.owner.is_none() {
-            g.player(o.owner).carriedItem = Ptr::null();
+            g.player(o.owner).carriedItem = crate::smw::object_container::ObjectId::NONE;
         }
 
         o.owner = PlayerId::NONE;

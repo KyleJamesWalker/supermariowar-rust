@@ -1,5 +1,6 @@
 //! Port of src/smw/menu/ModeOptionsMenu.cpp
 
+use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
 use crate::common::game_mode::*;
 use crate::common::gameplay_styles::{DeathStyle, JailStyle, ScoringStyle, StarStyle};
@@ -11,7 +12,7 @@ use crate::common::ui::mi_image::MI_Image;
 use crate::common::ui::mi_select_field::MI_SelectField;
 use crate::common::ui::mi_slider_field::MI_SliderField;
 use crate::common::ui::mi_text::{MI_HeaderText, MI_Text};
-use crate::common::uicontrol::{ctl_ptr, TextAlign};
+use crate::common::uicontrol::{TextAlign};
 use crate::common::uimenu::UI_Menu;
 use crate::globals::*;
 use crate::smw::ui::mi_frenzy_mode_options::MI_FrenzyModeOptions;
@@ -25,181 +26,181 @@ pub struct UI_ModeOptionsMenu {
     pub mModeSettingsMenu: [UI_Menu; 22],
     pub mBossSettingsMenu: UI_Menu,
     // Classic
-    pub miClassicModeStyleField: Ptr<MI_SelectField<DeathStyle>>,
-    pub miClassicModeScoringField: Ptr<MI_SelectField<ScoringStyle>>,
-    pub miClassicModeBackButton: Ptr<MI_Button>,
-    pub miClassicModeLeftHeaderBar: Ptr<MI_Image>,
-    pub miClassicModeRightHeaderBar: Ptr<MI_Image>,
-    pub miClassicModeHeaderText: Ptr<MI_Text>,
+    pub miClassicModeStyleField: Ctl<MI_SelectField<DeathStyle>>,
+    pub miClassicModeScoringField: Ctl<MI_SelectField<ScoringStyle>>,
+    pub miClassicModeBackButton: Ctl<MI_Button>,
+    pub miClassicModeLeftHeaderBar: Ctl<MI_Image>,
+    pub miClassicModeRightHeaderBar: Ctl<MI_Image>,
+    pub miClassicModeHeaderText: Ctl<MI_Text>,
     // Frag
-    pub miFragModeStyleField: Ptr<MI_SelectField<DeathStyle>>,
-    pub miFragModeScoringField: Ptr<MI_SelectField<ScoringStyle>>,
-    pub miFragModeBackButton: Ptr<MI_Button>,
-    pub miFragModeLeftHeaderBar: Ptr<MI_Image>,
-    pub miFragModeRightHeaderBar: Ptr<MI_Image>,
-    pub miFragModeHeaderText: Ptr<MI_Text>,
+    pub miFragModeStyleField: Ctl<MI_SelectField<DeathStyle>>,
+    pub miFragModeScoringField: Ctl<MI_SelectField<ScoringStyle>>,
+    pub miFragModeBackButton: Ctl<MI_Button>,
+    pub miFragModeLeftHeaderBar: Ctl<MI_Image>,
+    pub miFragModeRightHeaderBar: Ctl<MI_Image>,
+    pub miFragModeHeaderText: Ctl<MI_Text>,
     // Time Limit
-    pub miTimeLimitModeStyleField: Ptr<MI_SelectField<DeathStyle>>,
-    pub miTimeLimitModeScoringField: Ptr<MI_SelectField<ScoringStyle>>,
-    pub miTimeLimitModePercentExtraTime: Ptr<MI_SliderField>,
-    pub miTimeLimitModeBackButton: Ptr<MI_Button>,
-    pub miTimeLimitModeLeftHeaderBar: Ptr<MI_Image>,
-    pub miTimeLimitModeRightHeaderBar: Ptr<MI_Image>,
-    pub miTimeLimitModeHeaderText: Ptr<MI_Text>,
+    pub miTimeLimitModeStyleField: Ctl<MI_SelectField<DeathStyle>>,
+    pub miTimeLimitModeScoringField: Ctl<MI_SelectField<ScoringStyle>>,
+    pub miTimeLimitModePercentExtraTime: Ctl<MI_SliderField>,
+    pub miTimeLimitModeBackButton: Ctl<MI_Button>,
+    pub miTimeLimitModeLeftHeaderBar: Ctl<MI_Image>,
+    pub miTimeLimitModeRightHeaderBar: Ctl<MI_Image>,
+    pub miTimeLimitModeHeaderText: Ctl<MI_Text>,
     // Jail
-    pub miJailModeStyleField: Ptr<MI_SelectField<JailStyle>>,
-    pub miJailModeTagFreeField: Ptr<MI_SelectField<bool>>,
-    pub miJailModeTimeFreeField: Ptr<MI_SelectField<i16>>,
-    pub miJailModeJailKeyField: Ptr<MI_SliderField>,
-    pub miJailModeBackButton: Ptr<MI_Button>,
-    pub miJailModeLeftHeaderBar: Ptr<MI_Image>,
-    pub miJailModeRightHeaderBar: Ptr<MI_Image>,
-    pub miJailModeHeaderText: Ptr<MI_Text>,
+    pub miJailModeStyleField: Ctl<MI_SelectField<JailStyle>>,
+    pub miJailModeTagFreeField: Ctl<MI_SelectField<bool>>,
+    pub miJailModeTimeFreeField: Ctl<MI_SelectField<i16>>,
+    pub miJailModeJailKeyField: Ctl<MI_SliderField>,
+    pub miJailModeBackButton: Ctl<MI_Button>,
+    pub miJailModeLeftHeaderBar: Ctl<MI_Image>,
+    pub miJailModeRightHeaderBar: Ctl<MI_Image>,
+    pub miJailModeHeaderText: Ctl<MI_Text>,
     // Coins
-    pub miCoinModePenaltyField: Ptr<MI_SelectField<bool>>,
-    pub miCoinModeQuantityField: Ptr<MI_SelectField<i16>>,
-    pub miCoinModePercentExtraCoin: Ptr<MI_SliderField>,
-    pub miCoinModeBackButton: Ptr<MI_Button>,
-    pub miCoinModeLeftHeaderBar: Ptr<MI_Image>,
-    pub miCoinModeRightHeaderBar: Ptr<MI_Image>,
-    pub miCoinModeHeaderText: Ptr<MI_Text>,
+    pub miCoinModePenaltyField: Ctl<MI_SelectField<bool>>,
+    pub miCoinModeQuantityField: Ctl<MI_SelectField<i16>>,
+    pub miCoinModePercentExtraCoin: Ctl<MI_SliderField>,
+    pub miCoinModeBackButton: Ctl<MI_Button>,
+    pub miCoinModeLeftHeaderBar: Ctl<MI_Image>,
+    pub miCoinModeRightHeaderBar: Ctl<MI_Image>,
+    pub miCoinModeHeaderText: Ctl<MI_Text>,
     // Yoshi's Eggs
-    pub miEggModeEggQuantityField: [Ptr<MI_PowerupSlider>; 4],
-    pub miEggModeYoshiQuantityField: [Ptr<MI_PowerupSlider>; 4],
-    pub miEggModeExplosionTimeField: Ptr<MI_SelectField<i16>>,
-    pub miEggModeBackButton: Ptr<MI_Button>,
-    pub miEggModeLeftHeaderBar: Ptr<MI_Image>,
-    pub miEggModeRightHeaderBar: Ptr<MI_Image>,
-    pub miEggModeHeaderText: Ptr<MI_Text>,
+    pub miEggModeEggQuantityField: [Ctl<MI_PowerupSlider>; 4],
+    pub miEggModeYoshiQuantityField: [Ctl<MI_PowerupSlider>; 4],
+    pub miEggModeExplosionTimeField: Ctl<MI_SelectField<i16>>,
+    pub miEggModeBackButton: Ctl<MI_Button>,
+    pub miEggModeLeftHeaderBar: Ctl<MI_Image>,
+    pub miEggModeRightHeaderBar: Ctl<MI_Image>,
+    pub miEggModeHeaderText: Ctl<MI_Text>,
     // Capture The Flag
-    pub miFlagModeSpeedField: Ptr<MI_SliderField>,
-    pub miFlagModeTouchReturnField: Ptr<MI_SelectField<bool>>,
-    pub miFlagModePointMoveField: Ptr<MI_SelectField<bool>>,
-    pub miFlagModeAutoReturnField: Ptr<MI_SelectField<i16>>,
-    pub miFlagModeHomeScoreField: Ptr<MI_SelectField<bool>>,
-    pub miFlagModeCenterFlagField: Ptr<MI_SelectField<bool>>,
-    pub miFlagModeBackButton: Ptr<MI_Button>,
-    pub miFlagModeLeftHeaderBar: Ptr<MI_Image>,
-    pub miFlagModeRightHeaderBar: Ptr<MI_Image>,
-    pub miFlagModeHeaderText: Ptr<MI_Text>,
+    pub miFlagModeSpeedField: Ctl<MI_SliderField>,
+    pub miFlagModeTouchReturnField: Ctl<MI_SelectField<bool>>,
+    pub miFlagModePointMoveField: Ctl<MI_SelectField<bool>>,
+    pub miFlagModeAutoReturnField: Ctl<MI_SelectField<i16>>,
+    pub miFlagModeHomeScoreField: Ctl<MI_SelectField<bool>>,
+    pub miFlagModeCenterFlagField: Ctl<MI_SelectField<bool>>,
+    pub miFlagModeBackButton: Ctl<MI_Button>,
+    pub miFlagModeLeftHeaderBar: Ctl<MI_Image>,
+    pub miFlagModeRightHeaderBar: Ctl<MI_Image>,
+    pub miFlagModeHeaderText: Ctl<MI_Text>,
     // Chicken
-    pub miChickenModeShowTargetField: Ptr<MI_SelectField<bool>>,
-    pub miChickenModeGlideField: Ptr<MI_SelectField<bool>>,
-    pub miChickenModeBackButton: Ptr<MI_Button>,
-    pub miChickenModeLeftHeaderBar: Ptr<MI_Image>,
-    pub miChickenModeRightHeaderBar: Ptr<MI_Image>,
-    pub miChickenModeHeaderText: Ptr<MI_Text>,
+    pub miChickenModeShowTargetField: Ctl<MI_SelectField<bool>>,
+    pub miChickenModeGlideField: Ctl<MI_SelectField<bool>>,
+    pub miChickenModeBackButton: Ctl<MI_Button>,
+    pub miChickenModeLeftHeaderBar: Ctl<MI_Image>,
+    pub miChickenModeRightHeaderBar: Ctl<MI_Image>,
+    pub miChickenModeHeaderText: Ctl<MI_Text>,
     // Tag
-    pub miTagModeTagOnTouchField: Ptr<MI_SelectField<bool>>,
-    pub miTagModeBackButton: Ptr<MI_Button>,
-    pub miTagModeLeftHeaderBar: Ptr<MI_Image>,
-    pub miTagModeRightHeaderBar: Ptr<MI_Image>,
-    pub miTagModeHeaderText: Ptr<MI_Text>,
+    pub miTagModeTagOnTouchField: Ctl<MI_SelectField<bool>>,
+    pub miTagModeBackButton: Ctl<MI_Button>,
+    pub miTagModeLeftHeaderBar: Ctl<MI_Image>,
+    pub miTagModeRightHeaderBar: Ctl<MI_Image>,
+    pub miTagModeHeaderText: Ctl<MI_Text>,
     // Star
-    pub miStarModeTimeField: Ptr<MI_SelectField<i16>>,
-    pub miStarModeShineField: Ptr<MI_SelectField<StarStyle>>,
-    pub miStarModePercentExtraTime: Ptr<MI_SliderField>,
-    pub miStarModeBackButton: Ptr<MI_Button>,
-    pub miStarModeLeftHeaderBar: Ptr<MI_Image>,
-    pub miStarModeRightHeaderBar: Ptr<MI_Image>,
-    pub miStarModeHeaderText: Ptr<MI_Text>,
+    pub miStarModeTimeField: Ctl<MI_SelectField<i16>>,
+    pub miStarModeShineField: Ctl<MI_SelectField<StarStyle>>,
+    pub miStarModePercentExtraTime: Ctl<MI_SliderField>,
+    pub miStarModeBackButton: Ctl<MI_Button>,
+    pub miStarModeLeftHeaderBar: Ctl<MI_Image>,
+    pub miStarModeRightHeaderBar: Ctl<MI_Image>,
+    pub miStarModeHeaderText: Ctl<MI_Text>,
     // Domination
-    pub miDominationModeQuantityField: Ptr<MI_SelectField<i16>>,
-    pub miDominationModeLoseOnDeathField: Ptr<MI_SelectField<bool>>,
-    pub miDominationModeRelocateOnDeathField: Ptr<MI_SelectField<bool>>,
-    pub miDominationModeStealOnDeathField: Ptr<MI_SelectField<bool>>,
-    pub miDominationModeRelocateFrequencyField: Ptr<MI_SelectField<i16>>,
-    pub miDominationModeDeathText: Ptr<MI_Text>,
-    pub miDominationModeBackButton: Ptr<MI_Button>,
-    pub miDominationModeLeftHeaderBar: Ptr<MI_Image>,
-    pub miDominationModeRightHeaderBar: Ptr<MI_Image>,
-    pub miDominationModeHeaderText: Ptr<MI_Text>,
+    pub miDominationModeQuantityField: Ctl<MI_SelectField<i16>>,
+    pub miDominationModeLoseOnDeathField: Ctl<MI_SelectField<bool>>,
+    pub miDominationModeRelocateOnDeathField: Ctl<MI_SelectField<bool>>,
+    pub miDominationModeStealOnDeathField: Ctl<MI_SelectField<bool>>,
+    pub miDominationModeRelocateFrequencyField: Ctl<MI_SelectField<i16>>,
+    pub miDominationModeDeathText: Ctl<MI_Text>,
+    pub miDominationModeBackButton: Ctl<MI_Button>,
+    pub miDominationModeLeftHeaderBar: Ctl<MI_Image>,
+    pub miDominationModeRightHeaderBar: Ctl<MI_Image>,
+    pub miDominationModeHeaderText: Ctl<MI_Text>,
     // King of the Hill
-    pub miKingOfTheHillModeSizeField: Ptr<MI_SelectField<i16>>,
-    pub miKingOfTheHillModeRelocateFrequencyField: Ptr<MI_SelectField<i16>>,
-    pub miKingOfTheHillModeMultiplierField: Ptr<MI_SelectField<i16>>,
-    pub miKingOfTheHillModeBackButton: Ptr<MI_Button>,
-    pub miKingOfTheHillModeLeftHeaderBar: Ptr<MI_Image>,
-    pub miKingOfTheHillModeRightHeaderBar: Ptr<MI_Image>,
-    pub miKingOfTheHillModeHeaderText: Ptr<MI_Text>,
+    pub miKingOfTheHillModeSizeField: Ctl<MI_SelectField<i16>>,
+    pub miKingOfTheHillModeRelocateFrequencyField: Ctl<MI_SelectField<i16>>,
+    pub miKingOfTheHillModeMultiplierField: Ctl<MI_SelectField<i16>>,
+    pub miKingOfTheHillModeBackButton: Ctl<MI_Button>,
+    pub miKingOfTheHillModeLeftHeaderBar: Ctl<MI_Image>,
+    pub miKingOfTheHillModeRightHeaderBar: Ctl<MI_Image>,
+    pub miKingOfTheHillModeHeaderText: Ctl<MI_Text>,
     // Race
-    pub miRaceModeQuantityField: Ptr<MI_SelectField<i16>>,
-    pub miRaceModeSpeedField: Ptr<MI_SelectField<i16>>,
-    pub miRaceModePenaltyField: Ptr<MI_SelectField<i16>>,
-    pub miRaceModeBackButton: Ptr<MI_Button>,
-    pub miRaceModeLeftHeaderBar: Ptr<MI_Image>,
-    pub miRaceModeRightHeaderBar: Ptr<MI_Image>,
-    pub miRaceModeHeaderText: Ptr<MI_Text>,
+    pub miRaceModeQuantityField: Ctl<MI_SelectField<i16>>,
+    pub miRaceModeSpeedField: Ctl<MI_SelectField<i16>>,
+    pub miRaceModePenaltyField: Ctl<MI_SelectField<i16>>,
+    pub miRaceModeBackButton: Ctl<MI_Button>,
+    pub miRaceModeLeftHeaderBar: Ctl<MI_Image>,
+    pub miRaceModeRightHeaderBar: Ctl<MI_Image>,
+    pub miRaceModeHeaderText: Ctl<MI_Text>,
     // Stomp
-    pub miStompModeRateField: Ptr<MI_SelectField<i16>>,
-    pub miStompModeEnemySlider: [Ptr<MI_PowerupSlider>; NUMSTOMPENEMIES as usize],
-    pub miStompModeBackButton: Ptr<MI_Button>,
-    pub miStompModeLeftHeaderBar: Ptr<MI_Image>,
-    pub miStompModeRightHeaderBar: Ptr<MI_Image>,
-    pub miStompModeHeaderText: Ptr<MI_Text>,
+    pub miStompModeRateField: Ctl<MI_SelectField<i16>>,
+    pub miStompModeEnemySlider: [Ctl<MI_PowerupSlider>; NUMSTOMPENEMIES as usize],
+    pub miStompModeBackButton: Ctl<MI_Button>,
+    pub miStompModeLeftHeaderBar: Ctl<MI_Image>,
+    pub miStompModeRightHeaderBar: Ctl<MI_Image>,
+    pub miStompModeHeaderText: Ctl<MI_Text>,
     // Frenzy
-    pub miFrenzyModeOptions: Ptr<MI_FrenzyModeOptions>,
-    pub miFrenzyModeLeftHeaderBar: Ptr<MI_Image>,
-    pub miFrenzyModeRightHeaderBar: Ptr<MI_Image>,
-    pub miFrenzyModeHeaderText: Ptr<MI_Text>,
+    pub miFrenzyModeOptions: Ctl<MI_FrenzyModeOptions>,
+    pub miFrenzyModeLeftHeaderBar: Ctl<MI_Image>,
+    pub miFrenzyModeRightHeaderBar: Ctl<MI_Image>,
+    pub miFrenzyModeHeaderText: Ctl<MI_Text>,
     // Survival
-    pub miSurvivalModeEnemySlider: [Ptr<MI_PowerupSlider>; NUMSURVIVALENEMIES as usize],
-    pub miSurvivalModeDensityField: Ptr<MI_SelectField<i16>>,
-    pub miSurvivalModeSpeedField: Ptr<MI_SelectField<i16>>,
-    pub miSurvivalModeShieldField: Ptr<MI_SelectField<bool>>,
-    pub miSurvivalModeBackButton: Ptr<MI_Button>,
-    pub miSurvivalModeLeftHeaderBar: Ptr<MI_Image>,
-    pub miSurvivalModeRightHeaderBar: Ptr<MI_Image>,
-    pub miSurvivalModeHeaderText: Ptr<MI_Text>,
+    pub miSurvivalModeEnemySlider: [Ctl<MI_PowerupSlider>; NUMSURVIVALENEMIES as usize],
+    pub miSurvivalModeDensityField: Ctl<MI_SelectField<i16>>,
+    pub miSurvivalModeSpeedField: Ctl<MI_SelectField<i16>>,
+    pub miSurvivalModeShieldField: Ctl<MI_SelectField<bool>>,
+    pub miSurvivalModeBackButton: Ctl<MI_Button>,
+    pub miSurvivalModeLeftHeaderBar: Ctl<MI_Image>,
+    pub miSurvivalModeRightHeaderBar: Ctl<MI_Image>,
+    pub miSurvivalModeHeaderText: Ctl<MI_Text>,
     // Greed
-    pub miGreedModeCoinLife: Ptr<MI_SelectField<i16>>,
-    pub miGreedModeOwnCoins: Ptr<MI_SelectField<bool>>,
-    pub miGreedModeMultiplier: Ptr<MI_SelectField<i16>>,
-    pub miGreedModePercentExtraCoin: Ptr<MI_SliderField>,
-    pub miGreedModeBackButton: Ptr<MI_Button>,
-    pub miGreedModeLeftHeaderBar: Ptr<MI_Image>,
-    pub miGreedModeRightHeaderBar: Ptr<MI_Image>,
-    pub miGreedModeHeaderText: Ptr<MI_Text>,
+    pub miGreedModeCoinLife: Ctl<MI_SelectField<i16>>,
+    pub miGreedModeOwnCoins: Ctl<MI_SelectField<bool>>,
+    pub miGreedModeMultiplier: Ctl<MI_SelectField<i16>>,
+    pub miGreedModePercentExtraCoin: Ctl<MI_SliderField>,
+    pub miGreedModeBackButton: Ctl<MI_Button>,
+    pub miGreedModeLeftHeaderBar: Ctl<MI_Image>,
+    pub miGreedModeRightHeaderBar: Ctl<MI_Image>,
+    pub miGreedModeHeaderText: Ctl<MI_Text>,
     // Health
-    pub miHealthModeStartLife: Ptr<MI_SelectField<i16>>,
-    pub miHealthModeMaxLife: Ptr<MI_SelectField<i16>>,
-    pub miHealthModePercentExtraLife: Ptr<MI_SliderField>,
-    pub miHealthModeBackButton: Ptr<MI_Button>,
-    pub miHealthModeLeftHeaderBar: Ptr<MI_Image>,
-    pub miHealthModeRightHeaderBar: Ptr<MI_Image>,
-    pub miHealthModeHeaderText: Ptr<MI_Text>,
+    pub miHealthModeStartLife: Ctl<MI_SelectField<i16>>,
+    pub miHealthModeMaxLife: Ctl<MI_SelectField<i16>>,
+    pub miHealthModePercentExtraLife: Ctl<MI_SliderField>,
+    pub miHealthModeBackButton: Ctl<MI_Button>,
+    pub miHealthModeLeftHeaderBar: Ctl<MI_Image>,
+    pub miHealthModeRightHeaderBar: Ctl<MI_Image>,
+    pub miHealthModeHeaderText: Ctl<MI_Text>,
     // Card Collection
-    pub miCollectionModeQuantityField: Ptr<MI_SelectField<i16>>,
-    pub miCollectionModeRateField: Ptr<MI_SelectField<i16>>,
-    pub miCollectionModeBankTimeField: Ptr<MI_SelectField<i16>>,
-    pub miCollectionModeCardLifeField: Ptr<MI_SelectField<i16>>,
-    pub miCollectionModeBackButton: Ptr<MI_Button>,
-    pub miCollectionModeLeftHeaderBar: Ptr<MI_Image>,
-    pub miCollectionModeRightHeaderBar: Ptr<MI_Image>,
-    pub miCollectionModeHeaderText: Ptr<MI_Text>,
+    pub miCollectionModeQuantityField: Ctl<MI_SelectField<i16>>,
+    pub miCollectionModeRateField: Ctl<MI_SelectField<i16>>,
+    pub miCollectionModeBankTimeField: Ctl<MI_SelectField<i16>>,
+    pub miCollectionModeCardLifeField: Ctl<MI_SelectField<i16>>,
+    pub miCollectionModeBackButton: Ctl<MI_Button>,
+    pub miCollectionModeLeftHeaderBar: Ctl<MI_Image>,
+    pub miCollectionModeRightHeaderBar: Ctl<MI_Image>,
+    pub miCollectionModeHeaderText: Ctl<MI_Text>,
     // Phanto Chase
-    pub miChaseModeSpeedField: Ptr<MI_SelectField<i16>>,
-    pub miChaseModeQuantitySlider: [Ptr<MI_PowerupSlider>; 3],
-    pub miChaseModeBackButton: Ptr<MI_Button>,
-    pub miChaseModeLeftHeaderBar: Ptr<MI_Image>,
-    pub miChaseModeRightHeaderBar: Ptr<MI_Image>,
-    pub miChaseModeHeaderText: Ptr<MI_Text>,
+    pub miChaseModeSpeedField: Ctl<MI_SelectField<i16>>,
+    pub miChaseModeQuantitySlider: [Ctl<MI_PowerupSlider>; 3],
+    pub miChaseModeBackButton: Ctl<MI_Button>,
+    pub miChaseModeLeftHeaderBar: Ctl<MI_Image>,
+    pub miChaseModeRightHeaderBar: Ctl<MI_Image>,
+    pub miChaseModeHeaderText: Ctl<MI_Text>,
     // Shyguy Tag
-    pub miShyGuyTagModeTagOnSuicideField: Ptr<MI_SelectField<bool>>,
-    pub miShyGuyTagModeTagOnStompField: Ptr<MI_SelectField<i16>>,
-    pub miShyGuyTagModeFreeTimeField: Ptr<MI_SelectField<i16>>,
-    pub miShyGuyTagModeBackButton: Ptr<MI_Button>,
-    pub miShyGuyTagModeLeftHeaderBar: Ptr<MI_Image>,
-    pub miShyGuyTagModeRightHeaderBar: Ptr<MI_Image>,
-    pub miShyGuyTagModeHeaderText: Ptr<MI_Text>,
+    pub miShyGuyTagModeTagOnSuicideField: Ctl<MI_SelectField<bool>>,
+    pub miShyGuyTagModeTagOnStompField: Ctl<MI_SelectField<i16>>,
+    pub miShyGuyTagModeFreeTimeField: Ctl<MI_SelectField<i16>>,
+    pub miShyGuyTagModeBackButton: Ctl<MI_Button>,
+    pub miShyGuyTagModeLeftHeaderBar: Ctl<MI_Image>,
+    pub miShyGuyTagModeRightHeaderBar: Ctl<MI_Image>,
+    pub miShyGuyTagModeHeaderText: Ctl<MI_Text>,
     // Boss
-    pub miBossModeTypeField: Ptr<MI_SelectField<Boss>>,
-    pub miBossModeDifficultyField: Ptr<MI_SelectField<i16>>,
-    pub miBossModeHitPointsField: Ptr<MI_SelectField<i16>>,
-    pub miBossModeBackButton: Ptr<MI_Button>,
-    pub miBossModeLeftHeaderBar: Ptr<MI_Image>,
-    pub miBossModeRightHeaderBar: Ptr<MI_Image>,
-    pub miBossModeHeaderText: Ptr<MI_Text>,
+    pub miBossModeTypeField: Ctl<MI_SelectField<Boss>>,
+    pub miBossModeDifficultyField: Ctl<MI_SelectField<i16>>,
+    pub miBossModeHitPointsField: Ctl<MI_SelectField<i16>>,
+    pub miBossModeBackButton: Ctl<MI_Button>,
+    pub miBossModeLeftHeaderBar: Ctl<MI_Image>,
+    pub miBossModeRightHeaderBar: Ctl<MI_Image>,
+    pub miBossModeHeaderText: Ctl<MI_Text>,
 }
 
 crate::impl_base!(UI_ModeOptionsMenu => ui_menu: UI_Menu);
@@ -212,34 +213,34 @@ impl UI_ModeOptionsMenu {
         // Classic Mode Settings
         //***********************
 
-        this.miClassicModeStyleField = Ptr::new_box(MI_SelectField::<DeathStyle>::new(g.rm.spr_selectfield, 120, 200, "On Kill", 400, 180));
-        this.miClassicModeStyleField.add("Respawn", DeathStyle::Respawn);
-        this.miClassicModeStyleField.add("Shield", DeathStyle::Shield);
-        this.miClassicModeStyleField.set_output_ptr(&mut g.game_values.gamemodemenusettings.classic.style as *mut _);
-        this.miClassicModeStyleField.set_current_value(g.game_values.gamemodemenusettings.classic.style);
+        this.miClassicModeStyleField = Ctl::new(MI_SelectField::<DeathStyle>::new(g.rm.spr_selectfield, 120, 200, "On Kill", 400, 180), g);
+        g.ctl(this.miClassicModeStyleField).add("Respawn", DeathStyle::Respawn);
+        g.ctl(this.miClassicModeStyleField).add("Shield", DeathStyle::Shield);
+        g.ctl(this.miClassicModeStyleField).set_output_ptr(&mut g.game_values.gamemodemenusettings.classic.style as *mut _);
+        g.ctl(this.miClassicModeStyleField).set_current_value(g.game_values.gamemodemenusettings.classic.style);
 
-        this.miClassicModeScoringField = Ptr::new_box(MI_SelectField::<ScoringStyle>::new(g.rm.spr_selectfield, 120, 240, "Scoring", 400, 180));
-        this.miClassicModeScoringField.add("All Kills", ScoringStyle::AllKills);
-        this.miClassicModeScoringField.add_random("Push Kills Only", ScoringStyle::PushOnly, false);
-        this.miClassicModeScoringField.set_output_ptr(&mut g.game_values.gamemodemenusettings.classic.scoring as *mut _);
-        this.miClassicModeScoringField.set_current_value(g.game_values.gamemodemenusettings.classic.scoring);
+        this.miClassicModeScoringField = Ctl::new(MI_SelectField::<ScoringStyle>::new(g.rm.spr_selectfield, 120, 240, "Scoring", 400, 180), g);
+        g.ctl(this.miClassicModeScoringField).add("All Kills", ScoringStyle::AllKills);
+        g.ctl(this.miClassicModeScoringField).add_random("Push Kills Only", ScoringStyle::PushOnly, false);
+        g.ctl(this.miClassicModeScoringField).set_output_ptr(&mut g.game_values.gamemodemenusettings.classic.scoring as *mut _);
+        g.ctl(this.miClassicModeScoringField).set_current_value(g.game_values.gamemodemenusettings.classic.scoring);
 
-        this.miClassicModeBackButton = Ptr::new_box(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
-        this.miClassicModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
+        this.miClassicModeBackButton = Ctl::new(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER), g);
+        g.ctl(this.miClassicModeBackButton).set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
-        this.miClassicModeLeftHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-        this.miClassicModeRightHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-        this.miClassicModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Classic Mode Menu", 320, 5));
+        this.miClassicModeLeftHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0), g);
+        this.miClassicModeRightHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0), g);
+        this.miClassicModeHeaderText = Ctl::new(MI_HeaderText::new(g, "Classic Mode Menu", 320, 5), g);
 
-        this.mModeSettingsMenu[0].add_control(ctl_ptr(this.miClassicModeStyleField), ctl_ptr(this.miClassicModeBackButton), ctl_ptr(this.miClassicModeScoringField), Ptr::null(), ctl_ptr(this.miClassicModeBackButton));
-        this.mModeSettingsMenu[0].add_control(ctl_ptr(this.miClassicModeScoringField), ctl_ptr(this.miClassicModeStyleField), ctl_ptr(this.miClassicModeBackButton), Ptr::null(), ctl_ptr(this.miClassicModeBackButton));
-        this.mModeSettingsMenu[0].add_control(ctl_ptr(this.miClassicModeBackButton), ctl_ptr(this.miClassicModeScoringField), ctl_ptr(this.miClassicModeStyleField), ctl_ptr(this.miClassicModeScoringField), Ptr::null());
+        this.mModeSettingsMenu[0].add_control(g, this.miClassicModeStyleField.id(), this.miClassicModeBackButton.id(), this.miClassicModeScoringField.id(), Default::default(), this.miClassicModeBackButton.id());
+        this.mModeSettingsMenu[0].add_control(g, this.miClassicModeScoringField.id(), this.miClassicModeStyleField.id(), this.miClassicModeBackButton.id(), Default::default(), this.miClassicModeBackButton.id());
+        this.mModeSettingsMenu[0].add_control(g, this.miClassicModeBackButton.id(), this.miClassicModeScoringField.id(), this.miClassicModeStyleField.id(), this.miClassicModeScoringField.id(), Default::default());
 
-        this.mModeSettingsMenu[0].add_non_control(ctl_ptr(this.miClassicModeLeftHeaderBar));
-        this.mModeSettingsMenu[0].add_non_control(ctl_ptr(this.miClassicModeRightHeaderBar));
-        this.mModeSettingsMenu[0].add_non_control(ctl_ptr(this.miClassicModeHeaderText));
+        this.mModeSettingsMenu[0].add_non_control(this.miClassicModeLeftHeaderBar.id());
+        this.mModeSettingsMenu[0].add_non_control(this.miClassicModeRightHeaderBar.id());
+        this.mModeSettingsMenu[0].add_non_control(this.miClassicModeHeaderText.id());
 
-        this.mModeSettingsMenu[0].set_initial_focus(g, ctl_ptr(this.miClassicModeStyleField));
+        this.mModeSettingsMenu[0].set_initial_focus(g, this.miClassicModeStyleField.id());
         this.mModeSettingsMenu[0].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -247,34 +248,34 @@ impl UI_ModeOptionsMenu {
         // Frag Mode Settings
         //***********************
 
-        this.miFragModeStyleField = Ptr::new_box(MI_SelectField::<DeathStyle>::new(g.rm.spr_selectfield, 120, 200, "On Kill", 400, 180));
-        this.miFragModeStyleField.add("Respawn", DeathStyle::Respawn);
-        this.miFragModeStyleField.add("Shield", DeathStyle::Shield);
-        this.miFragModeStyleField.set_output_ptr(&mut g.game_values.gamemodemenusettings.frag.style as *mut _);
-        this.miFragModeStyleField.set_current_value(g.game_values.gamemodemenusettings.frag.style);
+        this.miFragModeStyleField = Ctl::new(MI_SelectField::<DeathStyle>::new(g.rm.spr_selectfield, 120, 200, "On Kill", 400, 180), g);
+        g.ctl(this.miFragModeStyleField).add("Respawn", DeathStyle::Respawn);
+        g.ctl(this.miFragModeStyleField).add("Shield", DeathStyle::Shield);
+        g.ctl(this.miFragModeStyleField).set_output_ptr(&mut g.game_values.gamemodemenusettings.frag.style as *mut _);
+        g.ctl(this.miFragModeStyleField).set_current_value(g.game_values.gamemodemenusettings.frag.style);
 
-        this.miFragModeScoringField = Ptr::new_box(MI_SelectField::<ScoringStyle>::new(g.rm.spr_selectfield, 120, 240, "Scoring", 400, 180));
-        this.miFragModeScoringField.add("All Kills", ScoringStyle::AllKills);
-        this.miFragModeScoringField.add_random("Push Kills Only", ScoringStyle::PushOnly, false);
-        this.miFragModeScoringField.set_output_ptr(&mut g.game_values.gamemodemenusettings.frag.scoring as *mut _);
-        this.miFragModeScoringField.set_current_value(g.game_values.gamemodemenusettings.frag.scoring);
+        this.miFragModeScoringField = Ctl::new(MI_SelectField::<ScoringStyle>::new(g.rm.spr_selectfield, 120, 240, "Scoring", 400, 180), g);
+        g.ctl(this.miFragModeScoringField).add("All Kills", ScoringStyle::AllKills);
+        g.ctl(this.miFragModeScoringField).add_random("Push Kills Only", ScoringStyle::PushOnly, false);
+        g.ctl(this.miFragModeScoringField).set_output_ptr(&mut g.game_values.gamemodemenusettings.frag.scoring as *mut _);
+        g.ctl(this.miFragModeScoringField).set_current_value(g.game_values.gamemodemenusettings.frag.scoring);
 
-        this.miFragModeBackButton = Ptr::new_box(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
-        this.miFragModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
+        this.miFragModeBackButton = Ctl::new(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER), g);
+        g.ctl(this.miFragModeBackButton).set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
-        this.miFragModeLeftHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-        this.miFragModeRightHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-        this.miFragModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Frag Mode Menu", 320, 5));
+        this.miFragModeLeftHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0), g);
+        this.miFragModeRightHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0), g);
+        this.miFragModeHeaderText = Ctl::new(MI_HeaderText::new(g, "Frag Mode Menu", 320, 5), g);
 
-        this.mModeSettingsMenu[1].add_control(ctl_ptr(this.miFragModeStyleField), ctl_ptr(this.miFragModeBackButton), ctl_ptr(this.miFragModeScoringField), Ptr::null(), ctl_ptr(this.miFragModeBackButton));
-        this.mModeSettingsMenu[1].add_control(ctl_ptr(this.miFragModeScoringField), ctl_ptr(this.miFragModeStyleField), ctl_ptr(this.miFragModeBackButton), Ptr::null(), ctl_ptr(this.miFragModeBackButton));
-        this.mModeSettingsMenu[1].add_control(ctl_ptr(this.miFragModeBackButton), ctl_ptr(this.miFragModeScoringField), ctl_ptr(this.miFragModeStyleField), ctl_ptr(this.miFragModeScoringField), Ptr::null());
+        this.mModeSettingsMenu[1].add_control(g, this.miFragModeStyleField.id(), this.miFragModeBackButton.id(), this.miFragModeScoringField.id(), Default::default(), this.miFragModeBackButton.id());
+        this.mModeSettingsMenu[1].add_control(g, this.miFragModeScoringField.id(), this.miFragModeStyleField.id(), this.miFragModeBackButton.id(), Default::default(), this.miFragModeBackButton.id());
+        this.mModeSettingsMenu[1].add_control(g, this.miFragModeBackButton.id(), this.miFragModeScoringField.id(), this.miFragModeStyleField.id(), this.miFragModeScoringField.id(), Default::default());
 
-        this.mModeSettingsMenu[1].add_non_control(ctl_ptr(this.miFragModeLeftHeaderBar));
-        this.mModeSettingsMenu[1].add_non_control(ctl_ptr(this.miFragModeRightHeaderBar));
-        this.mModeSettingsMenu[1].add_non_control(ctl_ptr(this.miFragModeHeaderText));
+        this.mModeSettingsMenu[1].add_non_control(this.miFragModeLeftHeaderBar.id());
+        this.mModeSettingsMenu[1].add_non_control(this.miFragModeRightHeaderBar.id());
+        this.mModeSettingsMenu[1].add_non_control(this.miFragModeHeaderText.id());
 
-        this.mModeSettingsMenu[1].set_initial_focus(g, ctl_ptr(this.miFragModeStyleField));
+        this.mModeSettingsMenu[1].set_initial_focus(g, this.miFragModeStyleField.id());
         this.mModeSettingsMenu[1].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -282,61 +283,61 @@ impl UI_ModeOptionsMenu {
         // Time Limit Mode Settings
         //***********************
 
-        this.miTimeLimitModeStyleField = Ptr::new_box(MI_SelectField::<DeathStyle>::new(g.rm.spr_selectfield, 120, 180, "On Kill", 400, 150));
-        this.miTimeLimitModeStyleField.add("Respawn", DeathStyle::Respawn);
-        this.miTimeLimitModeStyleField.add("Shield", DeathStyle::Shield);
-        this.miTimeLimitModeStyleField.set_output_ptr(&mut g.game_values.gamemodemenusettings.time.style as *mut _);
-        this.miTimeLimitModeStyleField.set_current_value(g.game_values.gamemodemenusettings.time.style);
+        this.miTimeLimitModeStyleField = Ctl::new(MI_SelectField::<DeathStyle>::new(g.rm.spr_selectfield, 120, 180, "On Kill", 400, 150), g);
+        g.ctl(this.miTimeLimitModeStyleField).add("Respawn", DeathStyle::Respawn);
+        g.ctl(this.miTimeLimitModeStyleField).add("Shield", DeathStyle::Shield);
+        g.ctl(this.miTimeLimitModeStyleField).set_output_ptr(&mut g.game_values.gamemodemenusettings.time.style as *mut _);
+        g.ctl(this.miTimeLimitModeStyleField).set_current_value(g.game_values.gamemodemenusettings.time.style);
 
-        this.miTimeLimitModeScoringField = Ptr::new_box(MI_SelectField::<ScoringStyle>::new(g.rm.spr_selectfield, 120, 220, "Scoring", 400, 150));
-        this.miTimeLimitModeScoringField.add("All Kills", ScoringStyle::AllKills);
-        this.miTimeLimitModeScoringField.add_random("Push Kills Only", ScoringStyle::PushOnly, false);
-        this.miTimeLimitModeScoringField.set_output_ptr(&mut g.game_values.gamemodemenusettings.time.scoring as *mut _);
-        this.miTimeLimitModeScoringField.set_current_value(g.game_values.gamemodemenusettings.time.scoring);
+        this.miTimeLimitModeScoringField = Ctl::new(MI_SelectField::<ScoringStyle>::new(g.rm.spr_selectfield, 120, 220, "Scoring", 400, 150), g);
+        g.ctl(this.miTimeLimitModeScoringField).add("All Kills", ScoringStyle::AllKills);
+        g.ctl(this.miTimeLimitModeScoringField).add_random("Push Kills Only", ScoringStyle::PushOnly, false);
+        g.ctl(this.miTimeLimitModeScoringField).set_output_ptr(&mut g.game_values.gamemodemenusettings.time.scoring as *mut _);
+        g.ctl(this.miTimeLimitModeScoringField).set_current_value(g.game_values.gamemodemenusettings.time.scoring);
 
-        this.miTimeLimitModePercentExtraTime = Ptr::new_box(MI_SliderField::new(g.rm.spr_selectfield, g.rm.menu_slider_bar, 120, 260, "Extra Time", 400, 150, 384));
-        this.miTimeLimitModePercentExtraTime.add_random("0", 0, false);
-        this.miTimeLimitModePercentExtraTime.add_random("5", 5, false);
-        this.miTimeLimitModePercentExtraTime.add("10", 10);
-        this.miTimeLimitModePercentExtraTime.add("15", 15);
-        this.miTimeLimitModePercentExtraTime.add("20", 20);
-        this.miTimeLimitModePercentExtraTime.add("25", 25);
-        this.miTimeLimitModePercentExtraTime.add("30", 30);
-        this.miTimeLimitModePercentExtraTime.add("35", 35);
-        this.miTimeLimitModePercentExtraTime.add("40", 40);
-        this.miTimeLimitModePercentExtraTime.add("45", 45);
-        this.miTimeLimitModePercentExtraTime.add("50", 50);
-        this.miTimeLimitModePercentExtraTime.add_random("55", 55, false);
-        this.miTimeLimitModePercentExtraTime.add_random("60", 60, false);
-        this.miTimeLimitModePercentExtraTime.add_random("65", 65, false);
-        this.miTimeLimitModePercentExtraTime.add_random("70", 70, false);
-        this.miTimeLimitModePercentExtraTime.add_random("75", 75, false);
-        this.miTimeLimitModePercentExtraTime.add_random("80", 80, false);
-        this.miTimeLimitModePercentExtraTime.add_random("85", 85, false);
-        this.miTimeLimitModePercentExtraTime.add_random("90", 90, false);
-        this.miTimeLimitModePercentExtraTime.add_random("95", 95, false);
-        this.miTimeLimitModePercentExtraTime.add_random("100", 100, false);
-        this.miTimeLimitModePercentExtraTime.set_output_ptr(&mut g.game_values.gamemodemenusettings.time.percentextratime as *mut _);
-        this.miTimeLimitModePercentExtraTime.set_current_value(g.game_values.gamemodemenusettings.time.percentextratime);
-        this.miTimeLimitModePercentExtraTime.allow_wrap(false);
+        this.miTimeLimitModePercentExtraTime = Ctl::new(MI_SliderField::new(g.rm.spr_selectfield, g.rm.menu_slider_bar, 120, 260, "Extra Time", 400, 150, 384), g);
+        g.ctl(this.miTimeLimitModePercentExtraTime).add_random("0", 0, false);
+        g.ctl(this.miTimeLimitModePercentExtraTime).add_random("5", 5, false);
+        g.ctl(this.miTimeLimitModePercentExtraTime).add("10", 10);
+        g.ctl(this.miTimeLimitModePercentExtraTime).add("15", 15);
+        g.ctl(this.miTimeLimitModePercentExtraTime).add("20", 20);
+        g.ctl(this.miTimeLimitModePercentExtraTime).add("25", 25);
+        g.ctl(this.miTimeLimitModePercentExtraTime).add("30", 30);
+        g.ctl(this.miTimeLimitModePercentExtraTime).add("35", 35);
+        g.ctl(this.miTimeLimitModePercentExtraTime).add("40", 40);
+        g.ctl(this.miTimeLimitModePercentExtraTime).add("45", 45);
+        g.ctl(this.miTimeLimitModePercentExtraTime).add("50", 50);
+        g.ctl(this.miTimeLimitModePercentExtraTime).add_random("55", 55, false);
+        g.ctl(this.miTimeLimitModePercentExtraTime).add_random("60", 60, false);
+        g.ctl(this.miTimeLimitModePercentExtraTime).add_random("65", 65, false);
+        g.ctl(this.miTimeLimitModePercentExtraTime).add_random("70", 70, false);
+        g.ctl(this.miTimeLimitModePercentExtraTime).add_random("75", 75, false);
+        g.ctl(this.miTimeLimitModePercentExtraTime).add_random("80", 80, false);
+        g.ctl(this.miTimeLimitModePercentExtraTime).add_random("85", 85, false);
+        g.ctl(this.miTimeLimitModePercentExtraTime).add_random("90", 90, false);
+        g.ctl(this.miTimeLimitModePercentExtraTime).add_random("95", 95, false);
+        g.ctl(this.miTimeLimitModePercentExtraTime).add_random("100", 100, false);
+        g.ctl(this.miTimeLimitModePercentExtraTime).set_output_ptr(&mut g.game_values.gamemodemenusettings.time.percentextratime as *mut _);
+        g.ctl(this.miTimeLimitModePercentExtraTime).set_current_value(g.game_values.gamemodemenusettings.time.percentextratime);
+        g.ctl(this.miTimeLimitModePercentExtraTime).allow_wrap(false);
 
-        this.miTimeLimitModeBackButton = Ptr::new_box(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
-        this.miTimeLimitModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
+        this.miTimeLimitModeBackButton = Ctl::new(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER), g);
+        g.ctl(this.miTimeLimitModeBackButton).set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
-        this.miTimeLimitModeLeftHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-        this.miTimeLimitModeRightHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-        this.miTimeLimitModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Time Mode Menu", 320, 5));
+        this.miTimeLimitModeLeftHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0), g);
+        this.miTimeLimitModeRightHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0), g);
+        this.miTimeLimitModeHeaderText = Ctl::new(MI_HeaderText::new(g, "Time Mode Menu", 320, 5), g);
 
-        this.mModeSettingsMenu[2].add_control(ctl_ptr(this.miTimeLimitModeStyleField), ctl_ptr(this.miTimeLimitModeBackButton), ctl_ptr(this.miTimeLimitModeScoringField), Ptr::null(), ctl_ptr(this.miTimeLimitModeBackButton));
-        this.mModeSettingsMenu[2].add_control(ctl_ptr(this.miTimeLimitModeScoringField), ctl_ptr(this.miTimeLimitModeStyleField), ctl_ptr(this.miTimeLimitModePercentExtraTime), Ptr::null(), ctl_ptr(this.miTimeLimitModeBackButton));
-        this.mModeSettingsMenu[2].add_control(ctl_ptr(this.miTimeLimitModePercentExtraTime), ctl_ptr(this.miTimeLimitModeScoringField), ctl_ptr(this.miTimeLimitModeBackButton), Ptr::null(), ctl_ptr(this.miTimeLimitModeBackButton));
-        this.mModeSettingsMenu[2].add_control(ctl_ptr(this.miTimeLimitModeBackButton), ctl_ptr(this.miTimeLimitModePercentExtraTime), ctl_ptr(this.miTimeLimitModeStyleField), ctl_ptr(this.miTimeLimitModePercentExtraTime), Ptr::null());
+        this.mModeSettingsMenu[2].add_control(g, this.miTimeLimitModeStyleField.id(), this.miTimeLimitModeBackButton.id(), this.miTimeLimitModeScoringField.id(), Default::default(), this.miTimeLimitModeBackButton.id());
+        this.mModeSettingsMenu[2].add_control(g, this.miTimeLimitModeScoringField.id(), this.miTimeLimitModeStyleField.id(), this.miTimeLimitModePercentExtraTime.id(), Default::default(), this.miTimeLimitModeBackButton.id());
+        this.mModeSettingsMenu[2].add_control(g, this.miTimeLimitModePercentExtraTime.id(), this.miTimeLimitModeScoringField.id(), this.miTimeLimitModeBackButton.id(), Default::default(), this.miTimeLimitModeBackButton.id());
+        this.mModeSettingsMenu[2].add_control(g, this.miTimeLimitModeBackButton.id(), this.miTimeLimitModePercentExtraTime.id(), this.miTimeLimitModeStyleField.id(), this.miTimeLimitModePercentExtraTime.id(), Default::default());
 
-        this.mModeSettingsMenu[2].add_non_control(ctl_ptr(this.miTimeLimitModeLeftHeaderBar));
-        this.mModeSettingsMenu[2].add_non_control(ctl_ptr(this.miTimeLimitModeRightHeaderBar));
-        this.mModeSettingsMenu[2].add_non_control(ctl_ptr(this.miTimeLimitModeHeaderText));
+        this.mModeSettingsMenu[2].add_non_control(this.miTimeLimitModeLeftHeaderBar.id());
+        this.mModeSettingsMenu[2].add_non_control(this.miTimeLimitModeRightHeaderBar.id());
+        this.mModeSettingsMenu[2].add_non_control(this.miTimeLimitModeHeaderText.id());
 
-        this.mModeSettingsMenu[2].set_initial_focus(g, ctl_ptr(this.miTimeLimitModeStyleField));
+        this.mModeSettingsMenu[2].set_initial_focus(g, this.miTimeLimitModeStyleField.id());
         this.mModeSettingsMenu[2].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -344,81 +345,81 @@ impl UI_ModeOptionsMenu {
         // Jail Mode Settings
         //***********************
 
-        this.miJailModeStyleField = Ptr::new_box(MI_SelectField::<JailStyle>::new(g.rm.spr_selectfield, 120, 160, "Style", 400, 150));
-        this.miJailModeStyleField.add("Classic", JailStyle::Classic);
-        this.miJailModeStyleField.add("Owned", JailStyle::Owned);
-        this.miJailModeStyleField.add("Free For All", JailStyle::FreeForAll);
-        this.miJailModeStyleField.set_output_ptr(&mut g.game_values.gamemodemenusettings.jail.style as *mut _);
-        this.miJailModeStyleField.set_current_value(g.game_values.gamemodemenusettings.jail.style);
+        this.miJailModeStyleField = Ctl::new(MI_SelectField::<JailStyle>::new(g.rm.spr_selectfield, 120, 160, "Style", 400, 150), g);
+        g.ctl(this.miJailModeStyleField).add("Classic", JailStyle::Classic);
+        g.ctl(this.miJailModeStyleField).add("Owned", JailStyle::Owned);
+        g.ctl(this.miJailModeStyleField).add("Free For All", JailStyle::FreeForAll);
+        g.ctl(this.miJailModeStyleField).set_output_ptr(&mut g.game_values.gamemodemenusettings.jail.style as *mut _);
+        g.ctl(this.miJailModeStyleField).set_current_value(g.game_values.gamemodemenusettings.jail.style);
 
-        this.miJailModeTimeFreeField = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 200, "Free Timer", 400, 150));
-        this.miJailModeTimeFreeField.add("None", 1);
-        this.miJailModeTimeFreeField.add_random("5 Seconds", 310, false);
-        this.miJailModeTimeFreeField.add("10 Seconds", 620);
-        this.miJailModeTimeFreeField.add("15 Seconds", 930);
-        this.miJailModeTimeFreeField.add("20 Seconds", 1240);
-        this.miJailModeTimeFreeField.add("25 Seconds", 1550);
-        this.miJailModeTimeFreeField.add("30 Seconds", 1860);
-        this.miJailModeTimeFreeField.add("35 Seconds", 2170);
-        this.miJailModeTimeFreeField.add("40 Seconds", 2480);
-        this.miJailModeTimeFreeField.add_random("45 Seconds", 2790, false);
-        this.miJailModeTimeFreeField.add_random("50 Seconds", 3100, false);
-        this.miJailModeTimeFreeField.add_random("55 Seconds", 3410, false);
-        this.miJailModeTimeFreeField.add_random("60 Seconds", 3720, false);
-        this.miJailModeTimeFreeField.set_output_ptr(&mut g.game_values.gamemodemenusettings.jail.timetofree as *mut _);
-        this.miJailModeTimeFreeField.set_current_value(g.game_values.gamemodemenusettings.jail.timetofree);
+        this.miJailModeTimeFreeField = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 200, "Free Timer", 400, 150), g);
+        g.ctl(this.miJailModeTimeFreeField).add("None", 1);
+        g.ctl(this.miJailModeTimeFreeField).add_random("5 Seconds", 310, false);
+        g.ctl(this.miJailModeTimeFreeField).add("10 Seconds", 620);
+        g.ctl(this.miJailModeTimeFreeField).add("15 Seconds", 930);
+        g.ctl(this.miJailModeTimeFreeField).add("20 Seconds", 1240);
+        g.ctl(this.miJailModeTimeFreeField).add("25 Seconds", 1550);
+        g.ctl(this.miJailModeTimeFreeField).add("30 Seconds", 1860);
+        g.ctl(this.miJailModeTimeFreeField).add("35 Seconds", 2170);
+        g.ctl(this.miJailModeTimeFreeField).add("40 Seconds", 2480);
+        g.ctl(this.miJailModeTimeFreeField).add_random("45 Seconds", 2790, false);
+        g.ctl(this.miJailModeTimeFreeField).add_random("50 Seconds", 3100, false);
+        g.ctl(this.miJailModeTimeFreeField).add_random("55 Seconds", 3410, false);
+        g.ctl(this.miJailModeTimeFreeField).add_random("60 Seconds", 3720, false);
+        g.ctl(this.miJailModeTimeFreeField).set_output_ptr(&mut g.game_values.gamemodemenusettings.jail.timetofree as *mut _);
+        g.ctl(this.miJailModeTimeFreeField).set_current_value(g.game_values.gamemodemenusettings.jail.timetofree);
 
-        this.miJailModeTagFreeField = Ptr::new_box(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 120, 240, "Tag Free", 400, 150));
-        this.miJailModeTagFreeField.add("Off", false);
-        this.miJailModeTagFreeField.add("On", true);
-        this.miJailModeTagFreeField.set_output_ptr(&mut g.game_values.gamemodemenusettings.jail.tagfree as *mut _);
-        this.miJailModeTagFreeField.set_current_value(g.game_values.gamemodemenusettings.jail.tagfree);
-        this.miJailModeTagFreeField.set_auto_advance(true);
+        this.miJailModeTagFreeField = Ctl::new(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 120, 240, "Tag Free", 400, 150), g);
+        g.ctl(this.miJailModeTagFreeField).add("Off", false);
+        g.ctl(this.miJailModeTagFreeField).add("On", true);
+        g.ctl(this.miJailModeTagFreeField).set_output_ptr(&mut g.game_values.gamemodemenusettings.jail.tagfree as *mut _);
+        g.ctl(this.miJailModeTagFreeField).set_current_value(g.game_values.gamemodemenusettings.jail.tagfree);
+        g.ctl(this.miJailModeTagFreeField).set_auto_advance(true);
 
-        this.miJailModeJailKeyField = Ptr::new_box(MI_SliderField::new(g.rm.spr_selectfield, g.rm.menu_slider_bar, 120, 280, "Jail Key", 400, 150, 384));
-        this.miJailModeJailKeyField.add_random("0", 0, false);
-        this.miJailModeJailKeyField.add_random("5", 5, false);
-        this.miJailModeJailKeyField.add("10", 10);
-        this.miJailModeJailKeyField.add("15", 15);
-        this.miJailModeJailKeyField.add("20", 20);
-        this.miJailModeJailKeyField.add("25", 25);
-        this.miJailModeJailKeyField.add("30", 30);
-        this.miJailModeJailKeyField.add("35", 35);
-        this.miJailModeJailKeyField.add("40", 40);
-        this.miJailModeJailKeyField.add("45", 45);
-        this.miJailModeJailKeyField.add("50", 50);
-        this.miJailModeJailKeyField.add_random("55", 55, false);
-        this.miJailModeJailKeyField.add_random("60", 60, false);
-        this.miJailModeJailKeyField.add_random("65", 65, false);
-        this.miJailModeJailKeyField.add_random("70", 70, false);
-        this.miJailModeJailKeyField.add_random("75", 75, false);
-        this.miJailModeJailKeyField.add_random("80", 80, false);
-        this.miJailModeJailKeyField.add_random("85", 85, false);
-        this.miJailModeJailKeyField.add_random("90", 90, false);
-        this.miJailModeJailKeyField.add_random("95", 95, false);
-        this.miJailModeJailKeyField.add_random("100", 100, false);
-        this.miJailModeJailKeyField.set_output_ptr(&mut g.game_values.gamemodemenusettings.jail.percentkey as *mut _);
-        this.miJailModeJailKeyField.set_current_value(g.game_values.gamemodemenusettings.jail.percentkey);
-        this.miJailModeJailKeyField.allow_wrap(false);
+        this.miJailModeJailKeyField = Ctl::new(MI_SliderField::new(g.rm.spr_selectfield, g.rm.menu_slider_bar, 120, 280, "Jail Key", 400, 150, 384), g);
+        g.ctl(this.miJailModeJailKeyField).add_random("0", 0, false);
+        g.ctl(this.miJailModeJailKeyField).add_random("5", 5, false);
+        g.ctl(this.miJailModeJailKeyField).add("10", 10);
+        g.ctl(this.miJailModeJailKeyField).add("15", 15);
+        g.ctl(this.miJailModeJailKeyField).add("20", 20);
+        g.ctl(this.miJailModeJailKeyField).add("25", 25);
+        g.ctl(this.miJailModeJailKeyField).add("30", 30);
+        g.ctl(this.miJailModeJailKeyField).add("35", 35);
+        g.ctl(this.miJailModeJailKeyField).add("40", 40);
+        g.ctl(this.miJailModeJailKeyField).add("45", 45);
+        g.ctl(this.miJailModeJailKeyField).add("50", 50);
+        g.ctl(this.miJailModeJailKeyField).add_random("55", 55, false);
+        g.ctl(this.miJailModeJailKeyField).add_random("60", 60, false);
+        g.ctl(this.miJailModeJailKeyField).add_random("65", 65, false);
+        g.ctl(this.miJailModeJailKeyField).add_random("70", 70, false);
+        g.ctl(this.miJailModeJailKeyField).add_random("75", 75, false);
+        g.ctl(this.miJailModeJailKeyField).add_random("80", 80, false);
+        g.ctl(this.miJailModeJailKeyField).add_random("85", 85, false);
+        g.ctl(this.miJailModeJailKeyField).add_random("90", 90, false);
+        g.ctl(this.miJailModeJailKeyField).add_random("95", 95, false);
+        g.ctl(this.miJailModeJailKeyField).add_random("100", 100, false);
+        g.ctl(this.miJailModeJailKeyField).set_output_ptr(&mut g.game_values.gamemodemenusettings.jail.percentkey as *mut _);
+        g.ctl(this.miJailModeJailKeyField).set_current_value(g.game_values.gamemodemenusettings.jail.percentkey);
+        g.ctl(this.miJailModeJailKeyField).allow_wrap(false);
 
-        this.miJailModeBackButton = Ptr::new_box(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
-        this.miJailModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
+        this.miJailModeBackButton = Ctl::new(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER), g);
+        g.ctl(this.miJailModeBackButton).set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
-        this.miJailModeLeftHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-        this.miJailModeRightHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-        this.miJailModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Jail Mode Menu", 320, 5));
+        this.miJailModeLeftHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0), g);
+        this.miJailModeRightHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0), g);
+        this.miJailModeHeaderText = Ctl::new(MI_HeaderText::new(g, "Jail Mode Menu", 320, 5), g);
 
-        this.mModeSettingsMenu[3].add_control(ctl_ptr(this.miJailModeStyleField), ctl_ptr(this.miJailModeBackButton), ctl_ptr(this.miJailModeTimeFreeField), Ptr::null(), ctl_ptr(this.miJailModeBackButton));
-        this.mModeSettingsMenu[3].add_control(ctl_ptr(this.miJailModeTimeFreeField), ctl_ptr(this.miJailModeStyleField), ctl_ptr(this.miJailModeTagFreeField), Ptr::null(), ctl_ptr(this.miJailModeBackButton));
-        this.mModeSettingsMenu[3].add_control(ctl_ptr(this.miJailModeTagFreeField), ctl_ptr(this.miJailModeTimeFreeField), ctl_ptr(this.miJailModeJailKeyField), Ptr::null(), ctl_ptr(this.miJailModeBackButton));
-        this.mModeSettingsMenu[3].add_control(ctl_ptr(this.miJailModeJailKeyField), ctl_ptr(this.miJailModeTagFreeField), ctl_ptr(this.miJailModeBackButton), Ptr::null(), ctl_ptr(this.miJailModeBackButton));
-        this.mModeSettingsMenu[3].add_control(ctl_ptr(this.miJailModeBackButton), ctl_ptr(this.miJailModeJailKeyField), ctl_ptr(this.miJailModeStyleField), ctl_ptr(this.miJailModeJailKeyField), Ptr::null());
+        this.mModeSettingsMenu[3].add_control(g, this.miJailModeStyleField.id(), this.miJailModeBackButton.id(), this.miJailModeTimeFreeField.id(), Default::default(), this.miJailModeBackButton.id());
+        this.mModeSettingsMenu[3].add_control(g, this.miJailModeTimeFreeField.id(), this.miJailModeStyleField.id(), this.miJailModeTagFreeField.id(), Default::default(), this.miJailModeBackButton.id());
+        this.mModeSettingsMenu[3].add_control(g, this.miJailModeTagFreeField.id(), this.miJailModeTimeFreeField.id(), this.miJailModeJailKeyField.id(), Default::default(), this.miJailModeBackButton.id());
+        this.mModeSettingsMenu[3].add_control(g, this.miJailModeJailKeyField.id(), this.miJailModeTagFreeField.id(), this.miJailModeBackButton.id(), Default::default(), this.miJailModeBackButton.id());
+        this.mModeSettingsMenu[3].add_control(g, this.miJailModeBackButton.id(), this.miJailModeJailKeyField.id(), this.miJailModeStyleField.id(), this.miJailModeJailKeyField.id(), Default::default());
 
-        this.mModeSettingsMenu[3].add_non_control(ctl_ptr(this.miJailModeLeftHeaderBar));
-        this.mModeSettingsMenu[3].add_non_control(ctl_ptr(this.miJailModeRightHeaderBar));
-        this.mModeSettingsMenu[3].add_non_control(ctl_ptr(this.miJailModeHeaderText));
+        this.mModeSettingsMenu[3].add_non_control(this.miJailModeLeftHeaderBar.id());
+        this.mModeSettingsMenu[3].add_non_control(this.miJailModeRightHeaderBar.id());
+        this.mModeSettingsMenu[3].add_non_control(this.miJailModeHeaderText.id());
 
-        this.mModeSettingsMenu[3].set_initial_focus(g, ctl_ptr(this.miJailModeStyleField));
+        this.mModeSettingsMenu[3].set_initial_focus(g, this.miJailModeStyleField.id());
         this.mModeSettingsMenu[3].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -426,70 +427,70 @@ impl UI_ModeOptionsMenu {
         // Coins Mode Settings
         //***********************
 
-        this.miCoinModePenaltyField = Ptr::new_box(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 120, 180, "Penalty", 400, 150));
-        this.miCoinModePenaltyField.add("Off", false);
-        this.miCoinModePenaltyField.add("On", true);
-        this.miCoinModePenaltyField.set_output_ptr(&mut g.game_values.gamemodemenusettings.coins.penalty as *mut _);
-        this.miCoinModePenaltyField.set_current_value(g.game_values.gamemodemenusettings.coins.penalty);
-        this.miCoinModePenaltyField.set_auto_advance(true);
+        this.miCoinModePenaltyField = Ctl::new(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 120, 180, "Penalty", 400, 150), g);
+        g.ctl(this.miCoinModePenaltyField).add("Off", false);
+        g.ctl(this.miCoinModePenaltyField).add("On", true);
+        g.ctl(this.miCoinModePenaltyField).set_output_ptr(&mut g.game_values.gamemodemenusettings.coins.penalty as *mut _);
+        g.ctl(this.miCoinModePenaltyField).set_current_value(g.game_values.gamemodemenusettings.coins.penalty);
+        g.ctl(this.miCoinModePenaltyField).set_auto_advance(true);
 
-        this.miCoinModeQuantityField = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 220, "Quantity", 400, 150));
-        this.miCoinModeQuantityField.add("1", 1);
-        this.miCoinModeQuantityField.add("2", 2);
-        this.miCoinModeQuantityField.add("3", 3);
-        this.miCoinModeQuantityField.add("4", 4);
-        this.miCoinModeQuantityField.add("5", 5);
-        this.miCoinModeQuantityField.add("6", 6);
-        this.miCoinModeQuantityField.add("7", 7);
-        this.miCoinModeQuantityField.add("8", 8);
-        this.miCoinModeQuantityField.add("9", 9);
-        this.miCoinModeQuantityField.add("10", 10);
-        this.miCoinModeQuantityField.set_output_ptr(&mut g.game_values.gamemodemenusettings.coins.quantity as *mut _);
-        this.miCoinModeQuantityField.set_current_value(g.game_values.gamemodemenusettings.coins.quantity);
+        this.miCoinModeQuantityField = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 220, "Quantity", 400, 150), g);
+        g.ctl(this.miCoinModeQuantityField).add("1", 1);
+        g.ctl(this.miCoinModeQuantityField).add("2", 2);
+        g.ctl(this.miCoinModeQuantityField).add("3", 3);
+        g.ctl(this.miCoinModeQuantityField).add("4", 4);
+        g.ctl(this.miCoinModeQuantityField).add("5", 5);
+        g.ctl(this.miCoinModeQuantityField).add("6", 6);
+        g.ctl(this.miCoinModeQuantityField).add("7", 7);
+        g.ctl(this.miCoinModeQuantityField).add("8", 8);
+        g.ctl(this.miCoinModeQuantityField).add("9", 9);
+        g.ctl(this.miCoinModeQuantityField).add("10", 10);
+        g.ctl(this.miCoinModeQuantityField).set_output_ptr(&mut g.game_values.gamemodemenusettings.coins.quantity as *mut _);
+        g.ctl(this.miCoinModeQuantityField).set_current_value(g.game_values.gamemodemenusettings.coins.quantity);
 
-        this.miCoinModePercentExtraCoin = Ptr::new_box(MI_SliderField::new(g.rm.spr_selectfield, g.rm.menu_slider_bar, 120, 260, "Extra Coins", 400, 150, 384));
-        this.miCoinModePercentExtraCoin.add_random("0", 0, false);
-        this.miCoinModePercentExtraCoin.add_random("5", 5, false);
-        this.miCoinModePercentExtraCoin.add("10", 10);
-        this.miCoinModePercentExtraCoin.add("15", 15);
-        this.miCoinModePercentExtraCoin.add("20", 20);
-        this.miCoinModePercentExtraCoin.add("25", 25);
-        this.miCoinModePercentExtraCoin.add("30", 30);
-        this.miCoinModePercentExtraCoin.add("35", 35);
-        this.miCoinModePercentExtraCoin.add("40", 40);
-        this.miCoinModePercentExtraCoin.add("45", 45);
-        this.miCoinModePercentExtraCoin.add("50", 50);
-        this.miCoinModePercentExtraCoin.add_random("55", 55, false);
-        this.miCoinModePercentExtraCoin.add_random("60", 60, false);
-        this.miCoinModePercentExtraCoin.add_random("65", 65, false);
-        this.miCoinModePercentExtraCoin.add_random("70", 70, false);
-        this.miCoinModePercentExtraCoin.add_random("75", 75, false);
-        this.miCoinModePercentExtraCoin.add_random("80", 80, false);
-        this.miCoinModePercentExtraCoin.add_random("85", 85, false);
-        this.miCoinModePercentExtraCoin.add_random("90", 90, false);
-        this.miCoinModePercentExtraCoin.add_random("95", 95, false);
-        this.miCoinModePercentExtraCoin.add_random("100", 100, false);
-        this.miCoinModePercentExtraCoin.set_output_ptr(&mut g.game_values.gamemodemenusettings.coins.percentextracoin as *mut _);
-        this.miCoinModePercentExtraCoin.set_current_value(g.game_values.gamemodemenusettings.coins.percentextracoin);
-        this.miCoinModePercentExtraCoin.allow_wrap(false);
+        this.miCoinModePercentExtraCoin = Ctl::new(MI_SliderField::new(g.rm.spr_selectfield, g.rm.menu_slider_bar, 120, 260, "Extra Coins", 400, 150, 384), g);
+        g.ctl(this.miCoinModePercentExtraCoin).add_random("0", 0, false);
+        g.ctl(this.miCoinModePercentExtraCoin).add_random("5", 5, false);
+        g.ctl(this.miCoinModePercentExtraCoin).add("10", 10);
+        g.ctl(this.miCoinModePercentExtraCoin).add("15", 15);
+        g.ctl(this.miCoinModePercentExtraCoin).add("20", 20);
+        g.ctl(this.miCoinModePercentExtraCoin).add("25", 25);
+        g.ctl(this.miCoinModePercentExtraCoin).add("30", 30);
+        g.ctl(this.miCoinModePercentExtraCoin).add("35", 35);
+        g.ctl(this.miCoinModePercentExtraCoin).add("40", 40);
+        g.ctl(this.miCoinModePercentExtraCoin).add("45", 45);
+        g.ctl(this.miCoinModePercentExtraCoin).add("50", 50);
+        g.ctl(this.miCoinModePercentExtraCoin).add_random("55", 55, false);
+        g.ctl(this.miCoinModePercentExtraCoin).add_random("60", 60, false);
+        g.ctl(this.miCoinModePercentExtraCoin).add_random("65", 65, false);
+        g.ctl(this.miCoinModePercentExtraCoin).add_random("70", 70, false);
+        g.ctl(this.miCoinModePercentExtraCoin).add_random("75", 75, false);
+        g.ctl(this.miCoinModePercentExtraCoin).add_random("80", 80, false);
+        g.ctl(this.miCoinModePercentExtraCoin).add_random("85", 85, false);
+        g.ctl(this.miCoinModePercentExtraCoin).add_random("90", 90, false);
+        g.ctl(this.miCoinModePercentExtraCoin).add_random("95", 95, false);
+        g.ctl(this.miCoinModePercentExtraCoin).add_random("100", 100, false);
+        g.ctl(this.miCoinModePercentExtraCoin).set_output_ptr(&mut g.game_values.gamemodemenusettings.coins.percentextracoin as *mut _);
+        g.ctl(this.miCoinModePercentExtraCoin).set_current_value(g.game_values.gamemodemenusettings.coins.percentextracoin);
+        g.ctl(this.miCoinModePercentExtraCoin).allow_wrap(false);
 
-        this.miCoinModeBackButton = Ptr::new_box(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
-        this.miCoinModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
+        this.miCoinModeBackButton = Ctl::new(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER), g);
+        g.ctl(this.miCoinModeBackButton).set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
-        this.miCoinModeLeftHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-        this.miCoinModeRightHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-        this.miCoinModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Coin Collection Mode Menu", 320, 5));
+        this.miCoinModeLeftHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0), g);
+        this.miCoinModeRightHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0), g);
+        this.miCoinModeHeaderText = Ctl::new(MI_HeaderText::new(g, "Coin Collection Mode Menu", 320, 5), g);
 
-        this.mModeSettingsMenu[4].add_control(ctl_ptr(this.miCoinModePenaltyField), ctl_ptr(this.miCoinModeBackButton), ctl_ptr(this.miCoinModeQuantityField), Ptr::null(), ctl_ptr(this.miCoinModeBackButton));
-        this.mModeSettingsMenu[4].add_control(ctl_ptr(this.miCoinModeQuantityField), ctl_ptr(this.miCoinModePenaltyField), ctl_ptr(this.miCoinModePercentExtraCoin), Ptr::null(), ctl_ptr(this.miCoinModeBackButton));
-        this.mModeSettingsMenu[4].add_control(ctl_ptr(this.miCoinModePercentExtraCoin), ctl_ptr(this.miCoinModeQuantityField), ctl_ptr(this.miCoinModeBackButton), Ptr::null(), ctl_ptr(this.miCoinModeBackButton));
-        this.mModeSettingsMenu[4].add_control(ctl_ptr(this.miCoinModeBackButton), ctl_ptr(this.miCoinModePercentExtraCoin), ctl_ptr(this.miCoinModePenaltyField), ctl_ptr(this.miCoinModePercentExtraCoin), Ptr::null());
+        this.mModeSettingsMenu[4].add_control(g, this.miCoinModePenaltyField.id(), this.miCoinModeBackButton.id(), this.miCoinModeQuantityField.id(), Default::default(), this.miCoinModeBackButton.id());
+        this.mModeSettingsMenu[4].add_control(g, this.miCoinModeQuantityField.id(), this.miCoinModePenaltyField.id(), this.miCoinModePercentExtraCoin.id(), Default::default(), this.miCoinModeBackButton.id());
+        this.mModeSettingsMenu[4].add_control(g, this.miCoinModePercentExtraCoin.id(), this.miCoinModeQuantityField.id(), this.miCoinModeBackButton.id(), Default::default(), this.miCoinModeBackButton.id());
+        this.mModeSettingsMenu[4].add_control(g, this.miCoinModeBackButton.id(), this.miCoinModePercentExtraCoin.id(), this.miCoinModePenaltyField.id(), this.miCoinModePercentExtraCoin.id(), Default::default());
 
-        this.mModeSettingsMenu[4].add_non_control(ctl_ptr(this.miCoinModeLeftHeaderBar));
-        this.mModeSettingsMenu[4].add_non_control(ctl_ptr(this.miCoinModeRightHeaderBar));
-        this.mModeSettingsMenu[4].add_non_control(ctl_ptr(this.miCoinModeHeaderText));
+        this.mModeSettingsMenu[4].add_non_control(this.miCoinModeLeftHeaderBar.id());
+        this.mModeSettingsMenu[4].add_non_control(this.miCoinModeRightHeaderBar.id());
+        this.mModeSettingsMenu[4].add_non_control(this.miCoinModeHeaderText.id());
 
-        this.mModeSettingsMenu[4].set_initial_focus(g, ctl_ptr(this.miCoinModePenaltyField));
+        this.mModeSettingsMenu[4].set_initial_focus(g, this.miCoinModePenaltyField.id());
         this.mModeSettingsMenu[4].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -497,62 +498,62 @@ impl UI_ModeOptionsMenu {
         // Stomp Mode Settings
         //***********************
 
-        this.miStompModeRateField = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 40, "Rate", 400, 180));
-        this.miStompModeRateField.add_random("Very Slow", 150, false);
-        this.miStompModeRateField.add("Slow", 120);
-        this.miStompModeRateField.add("Moderate", 90);
-        this.miStompModeRateField.add("Fast", 60);
-        this.miStompModeRateField.add_random("Very Fast", 30, false);
-        this.miStompModeRateField.add_random("Extremely Fast", 15, false);
-        this.miStompModeRateField.add_random("Insanely Fast", 5, false);
-        this.miStompModeRateField.set_output_ptr(&mut g.game_values.gamemodemenusettings.stomp.rate as *mut _);
-        this.miStompModeRateField.set_current_value(g.game_values.gamemodemenusettings.stomp.rate);
+        this.miStompModeRateField = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 40, "Rate", 400, 180), g);
+        g.ctl(this.miStompModeRateField).add_random("Very Slow", 150, false);
+        g.ctl(this.miStompModeRateField).add("Slow", 120);
+        g.ctl(this.miStompModeRateField).add("Moderate", 90);
+        g.ctl(this.miStompModeRateField).add("Fast", 60);
+        g.ctl(this.miStompModeRateField).add_random("Very Fast", 30, false);
+        g.ctl(this.miStompModeRateField).add_random("Extremely Fast", 15, false);
+        g.ctl(this.miStompModeRateField).add_random("Insanely Fast", 5, false);
+        g.ctl(this.miStompModeRateField).set_output_ptr(&mut g.game_values.gamemodemenusettings.stomp.rate as *mut _);
+        g.ctl(this.miStompModeRateField).set_current_value(g.game_values.gamemodemenusettings.stomp.rate);
 
         for iEnemy in 0..NUMSTOMPENEMIES as i16 {
-            this.miStompModeEnemySlider[iEnemy as usize] = Ptr::new_box(MI_PowerupSlider::new(g.rm.spr_selectfield, g.rm.menu_slider_bar, g.rm.menu_stomp, 120, 80 + 40 * iEnemy, 400, iEnemy));
-            this.miStompModeEnemySlider[iEnemy as usize].add("", 0);
-            this.miStompModeEnemySlider[iEnemy as usize].add("", 1);
-            this.miStompModeEnemySlider[iEnemy as usize].add("", 2);
-            this.miStompModeEnemySlider[iEnemy as usize].add("", 3);
-            this.miStompModeEnemySlider[iEnemy as usize].add("", 4);
-            this.miStompModeEnemySlider[iEnemy as usize].add("", 5);
-            this.miStompModeEnemySlider[iEnemy as usize].add("", 6);
-            this.miStompModeEnemySlider[iEnemy as usize].add("", 7);
-            this.miStompModeEnemySlider[iEnemy as usize].add("", 8);
-            this.miStompModeEnemySlider[iEnemy as usize].add("", 9);
-            this.miStompModeEnemySlider[iEnemy as usize].add("", 10);
-            this.miStompModeEnemySlider[iEnemy as usize].allow_wrap(false);
-            this.miStompModeEnemySlider[iEnemy as usize].set_output_ptr(&mut g.game_values.gamemodemenusettings.stomp.enemyweight[iEnemy as usize] as *mut _);
-            this.miStompModeEnemySlider[iEnemy as usize].set_current_value(g.game_values.gamemodemenusettings.stomp.enemyweight[iEnemy as usize]);
+            this.miStompModeEnemySlider[iEnemy as usize] = Ctl::new(MI_PowerupSlider::new(g.rm.spr_selectfield, g.rm.menu_slider_bar, g.rm.menu_stomp, 120, 80 + 40 * iEnemy, 400, iEnemy), g);
+            g.ctl(this.miStompModeEnemySlider[iEnemy as usize]).add("", 0);
+            g.ctl(this.miStompModeEnemySlider[iEnemy as usize]).add("", 1);
+            g.ctl(this.miStompModeEnemySlider[iEnemy as usize]).add("", 2);
+            g.ctl(this.miStompModeEnemySlider[iEnemy as usize]).add("", 3);
+            g.ctl(this.miStompModeEnemySlider[iEnemy as usize]).add("", 4);
+            g.ctl(this.miStompModeEnemySlider[iEnemy as usize]).add("", 5);
+            g.ctl(this.miStompModeEnemySlider[iEnemy as usize]).add("", 6);
+            g.ctl(this.miStompModeEnemySlider[iEnemy as usize]).add("", 7);
+            g.ctl(this.miStompModeEnemySlider[iEnemy as usize]).add("", 8);
+            g.ctl(this.miStompModeEnemySlider[iEnemy as usize]).add("", 9);
+            g.ctl(this.miStompModeEnemySlider[iEnemy as usize]).add("", 10);
+            g.ctl(this.miStompModeEnemySlider[iEnemy as usize]).allow_wrap(false);
+            g.ctl(this.miStompModeEnemySlider[iEnemy as usize]).set_output_ptr(&mut g.game_values.gamemodemenusettings.stomp.enemyweight[iEnemy as usize] as *mut _);
+            g.ctl(this.miStompModeEnemySlider[iEnemy as usize]).set_current_value(g.game_values.gamemodemenusettings.stomp.enemyweight[iEnemy as usize]);
         }
 
-        this.miStompModeBackButton = Ptr::new_box(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
-        this.miStompModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
+        this.miStompModeBackButton = Ctl::new(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER), g);
+        g.ctl(this.miStompModeBackButton).set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
-        this.miStompModeLeftHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-        this.miStompModeRightHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-        this.miStompModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Stomp Mode Menu", 320, 5));
+        this.miStompModeLeftHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0), g);
+        this.miStompModeRightHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0), g);
+        this.miStompModeHeaderText = Ctl::new(MI_HeaderText::new(g, "Stomp Mode Menu", 320, 5), g);
 
 
-        this.mModeSettingsMenu[5].add_control(ctl_ptr(this.miStompModeRateField), ctl_ptr(this.miStompModeBackButton), ctl_ptr(this.miStompModeEnemySlider[0]), Ptr::null(), ctl_ptr(this.miStompModeBackButton));
+        this.mModeSettingsMenu[5].add_control(g, this.miStompModeRateField.id(), this.miStompModeBackButton.id(), this.miStompModeEnemySlider[0].id(), Default::default(), this.miStompModeBackButton.id());
 
-        this.mModeSettingsMenu[5].add_control(ctl_ptr(this.miStompModeEnemySlider[0]), ctl_ptr(this.miStompModeRateField), ctl_ptr(this.miStompModeEnemySlider[1]), Ptr::null(), ctl_ptr(this.miStompModeBackButton));
-        this.mModeSettingsMenu[5].add_control(ctl_ptr(this.miStompModeEnemySlider[1]), ctl_ptr(this.miStompModeEnemySlider[0]), ctl_ptr(this.miStompModeEnemySlider[2]), Ptr::null(), ctl_ptr(this.miStompModeBackButton));
-        this.mModeSettingsMenu[5].add_control(ctl_ptr(this.miStompModeEnemySlider[2]), ctl_ptr(this.miStompModeEnemySlider[1]), ctl_ptr(this.miStompModeEnemySlider[3]), Ptr::null(), ctl_ptr(this.miStompModeBackButton));
-        this.mModeSettingsMenu[5].add_control(ctl_ptr(this.miStompModeEnemySlider[3]), ctl_ptr(this.miStompModeEnemySlider[2]), ctl_ptr(this.miStompModeEnemySlider[4]), Ptr::null(), ctl_ptr(this.miStompModeBackButton));
-        this.mModeSettingsMenu[5].add_control(ctl_ptr(this.miStompModeEnemySlider[4]), ctl_ptr(this.miStompModeEnemySlider[3]), ctl_ptr(this.miStompModeEnemySlider[5]), Ptr::null(), ctl_ptr(this.miStompModeBackButton));
-        this.mModeSettingsMenu[5].add_control(ctl_ptr(this.miStompModeEnemySlider[5]), ctl_ptr(this.miStompModeEnemySlider[4]), ctl_ptr(this.miStompModeEnemySlider[6]), Ptr::null(), ctl_ptr(this.miStompModeBackButton));
-        this.mModeSettingsMenu[5].add_control(ctl_ptr(this.miStompModeEnemySlider[6]), ctl_ptr(this.miStompModeEnemySlider[5]), ctl_ptr(this.miStompModeEnemySlider[7]), Ptr::null(), ctl_ptr(this.miStompModeBackButton));
-        this.mModeSettingsMenu[5].add_control(ctl_ptr(this.miStompModeEnemySlider[7]), ctl_ptr(this.miStompModeEnemySlider[6]), ctl_ptr(this.miStompModeEnemySlider[8]), Ptr::null(), ctl_ptr(this.miStompModeBackButton));
-        this.mModeSettingsMenu[5].add_control(ctl_ptr(this.miStompModeEnemySlider[8]), ctl_ptr(this.miStompModeEnemySlider[7]), ctl_ptr(this.miStompModeBackButton), Ptr::null(), ctl_ptr(this.miStompModeBackButton));
+        this.mModeSettingsMenu[5].add_control(g, this.miStompModeEnemySlider[0].id(), this.miStompModeRateField.id(), this.miStompModeEnemySlider[1].id(), Default::default(), this.miStompModeBackButton.id());
+        this.mModeSettingsMenu[5].add_control(g, this.miStompModeEnemySlider[1].id(), this.miStompModeEnemySlider[0].id(), this.miStompModeEnemySlider[2].id(), Default::default(), this.miStompModeBackButton.id());
+        this.mModeSettingsMenu[5].add_control(g, this.miStompModeEnemySlider[2].id(), this.miStompModeEnemySlider[1].id(), this.miStompModeEnemySlider[3].id(), Default::default(), this.miStompModeBackButton.id());
+        this.mModeSettingsMenu[5].add_control(g, this.miStompModeEnemySlider[3].id(), this.miStompModeEnemySlider[2].id(), this.miStompModeEnemySlider[4].id(), Default::default(), this.miStompModeBackButton.id());
+        this.mModeSettingsMenu[5].add_control(g, this.miStompModeEnemySlider[4].id(), this.miStompModeEnemySlider[3].id(), this.miStompModeEnemySlider[5].id(), Default::default(), this.miStompModeBackButton.id());
+        this.mModeSettingsMenu[5].add_control(g, this.miStompModeEnemySlider[5].id(), this.miStompModeEnemySlider[4].id(), this.miStompModeEnemySlider[6].id(), Default::default(), this.miStompModeBackButton.id());
+        this.mModeSettingsMenu[5].add_control(g, this.miStompModeEnemySlider[6].id(), this.miStompModeEnemySlider[5].id(), this.miStompModeEnemySlider[7].id(), Default::default(), this.miStompModeBackButton.id());
+        this.mModeSettingsMenu[5].add_control(g, this.miStompModeEnemySlider[7].id(), this.miStompModeEnemySlider[6].id(), this.miStompModeEnemySlider[8].id(), Default::default(), this.miStompModeBackButton.id());
+        this.mModeSettingsMenu[5].add_control(g, this.miStompModeEnemySlider[8].id(), this.miStompModeEnemySlider[7].id(), this.miStompModeBackButton.id(), Default::default(), this.miStompModeBackButton.id());
 
-        this.mModeSettingsMenu[5].add_control(ctl_ptr(this.miStompModeBackButton), ctl_ptr(this.miStompModeEnemySlider[8]), ctl_ptr(this.miStompModeRateField), ctl_ptr(this.miStompModeEnemySlider[8]), Ptr::null());
+        this.mModeSettingsMenu[5].add_control(g, this.miStompModeBackButton.id(), this.miStompModeEnemySlider[8].id(), this.miStompModeRateField.id(), this.miStompModeEnemySlider[8].id(), Default::default());
 
-        this.mModeSettingsMenu[5].add_non_control(ctl_ptr(this.miStompModeLeftHeaderBar));
-        this.mModeSettingsMenu[5].add_non_control(ctl_ptr(this.miStompModeRightHeaderBar));
-        this.mModeSettingsMenu[5].add_non_control(ctl_ptr(this.miStompModeHeaderText));
+        this.mModeSettingsMenu[5].add_non_control(this.miStompModeLeftHeaderBar.id());
+        this.mModeSettingsMenu[5].add_non_control(this.miStompModeRightHeaderBar.id());
+        this.mModeSettingsMenu[5].add_non_control(this.miStompModeHeaderText.id());
 
-        this.mModeSettingsMenu[5].set_initial_focus(g, ctl_ptr(this.miStompModeRateField));
+        this.mModeSettingsMenu[5].set_initial_focus(g, this.miStompModeRateField.id());
         this.mModeSettingsMenu[5].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -561,153 +562,153 @@ impl UI_ModeOptionsMenu {
         //***********************
 
         for iEggField in 0..4 {
-            this.miEggModeEggQuantityField[iEggField as usize] = Ptr::new_box(MI_PowerupSlider::new(g.rm.spr_selectfield, g.rm.menu_slider_bar, g.rm.menu_egg, 170, 60 + 40 * iEggField, 300, iEggField));
-            this.miEggModeEggQuantityField[iEggField as usize].add_random("0", 0, !(iEggField == 0));
-            this.miEggModeEggQuantityField[iEggField as usize].add_random("1", 1, !(iEggField >= 2));
-            this.miEggModeEggQuantityField[iEggField as usize].add_random("2", 2, !(iEggField >= 2));
-            this.miEggModeEggQuantityField[iEggField as usize].add_random("3", 3, !(iEggField >= 1));
-            this.miEggModeEggQuantityField[iEggField as usize].add("4", 4);
-            this.miEggModeEggQuantityField[iEggField as usize].set_output_ptr(&mut g.game_values.gamemodemenusettings.egg.eggs[iEggField as usize] as *mut _);
-            this.miEggModeEggQuantityField[iEggField as usize].set_current_value(g.game_values.gamemodemenusettings.egg.eggs[iEggField as usize]);
-            this.miEggModeEggQuantityField[iEggField as usize].allow_wrap(false);
+            this.miEggModeEggQuantityField[iEggField as usize] = Ctl::new(MI_PowerupSlider::new(g.rm.spr_selectfield, g.rm.menu_slider_bar, g.rm.menu_egg, 170, 60 + 40 * iEggField, 300, iEggField), g);
+            g.ctl(this.miEggModeEggQuantityField[iEggField as usize]).add_random("0", 0, !(iEggField == 0));
+            g.ctl(this.miEggModeEggQuantityField[iEggField as usize]).add_random("1", 1, !(iEggField >= 2));
+            g.ctl(this.miEggModeEggQuantityField[iEggField as usize]).add_random("2", 2, !(iEggField >= 2));
+            g.ctl(this.miEggModeEggQuantityField[iEggField as usize]).add_random("3", 3, !(iEggField >= 1));
+            g.ctl(this.miEggModeEggQuantityField[iEggField as usize]).add("4", 4);
+            g.ctl(this.miEggModeEggQuantityField[iEggField as usize]).set_output_ptr(&mut g.game_values.gamemodemenusettings.egg.eggs[iEggField as usize] as *mut _);
+            g.ctl(this.miEggModeEggQuantityField[iEggField as usize]).set_current_value(g.game_values.gamemodemenusettings.egg.eggs[iEggField as usize]);
+            g.ctl(this.miEggModeEggQuantityField[iEggField as usize]).allow_wrap(false);
         }
 
         for iYoshiField in 0..4 {
-            this.miEggModeYoshiQuantityField[iYoshiField as usize] = Ptr::new_box(MI_PowerupSlider::new(g.rm.spr_selectfield, g.rm.menu_slider_bar, g.rm.menu_egg, 170, 220 + 40 * iYoshiField, 300, iYoshiField + 4));
-            this.miEggModeYoshiQuantityField[iYoshiField as usize].add_random("0", 0, !(iYoshiField == 0));
-            this.miEggModeYoshiQuantityField[iYoshiField as usize].add_random("1", 1, !(iYoshiField >= 2));
-            this.miEggModeYoshiQuantityField[iYoshiField as usize].add_random("2", 2, !(iYoshiField >= 1));
-            this.miEggModeYoshiQuantityField[iYoshiField as usize].add("3", 3);
-            this.miEggModeYoshiQuantityField[iYoshiField as usize].add("4", 4);
-            this.miEggModeYoshiQuantityField[iYoshiField as usize].set_output_ptr(&mut g.game_values.gamemodemenusettings.egg.yoshis[iYoshiField as usize] as *mut _);
-            this.miEggModeYoshiQuantityField[iYoshiField as usize].set_current_value(g.game_values.gamemodemenusettings.egg.yoshis[iYoshiField as usize]);
-            this.miEggModeYoshiQuantityField[iYoshiField as usize].allow_wrap(false);
+            this.miEggModeYoshiQuantityField[iYoshiField as usize] = Ctl::new(MI_PowerupSlider::new(g.rm.spr_selectfield, g.rm.menu_slider_bar, g.rm.menu_egg, 170, 220 + 40 * iYoshiField, 300, iYoshiField + 4), g);
+            g.ctl(this.miEggModeYoshiQuantityField[iYoshiField as usize]).add_random("0", 0, !(iYoshiField == 0));
+            g.ctl(this.miEggModeYoshiQuantityField[iYoshiField as usize]).add_random("1", 1, !(iYoshiField >= 2));
+            g.ctl(this.miEggModeYoshiQuantityField[iYoshiField as usize]).add_random("2", 2, !(iYoshiField >= 1));
+            g.ctl(this.miEggModeYoshiQuantityField[iYoshiField as usize]).add("3", 3);
+            g.ctl(this.miEggModeYoshiQuantityField[iYoshiField as usize]).add("4", 4);
+            g.ctl(this.miEggModeYoshiQuantityField[iYoshiField as usize]).set_output_ptr(&mut g.game_values.gamemodemenusettings.egg.yoshis[iYoshiField as usize] as *mut _);
+            g.ctl(this.miEggModeYoshiQuantityField[iYoshiField as usize]).set_current_value(g.game_values.gamemodemenusettings.egg.yoshis[iYoshiField as usize]);
+            g.ctl(this.miEggModeYoshiQuantityField[iYoshiField as usize]).allow_wrap(false);
         }
 
-        this.miEggModeExplosionTimeField = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 380, "Explosion Timer", 400, 220));
-        this.miEggModeExplosionTimeField.add("Off", 0);
-        this.miEggModeExplosionTimeField.add_random("3 Seconds", 3, false);
-        this.miEggModeExplosionTimeField.add("5 Seconds", 5);
-        this.miEggModeExplosionTimeField.add("8 Seconds", 8);
-        this.miEggModeExplosionTimeField.add("10 Seconds", 10);
-        this.miEggModeExplosionTimeField.add("15 Seconds", 15);
-        this.miEggModeExplosionTimeField.add("20 Seconds", 20);
-        this.miEggModeExplosionTimeField.set_output_ptr(&mut g.game_values.gamemodemenusettings.egg.explode as *mut _);
-        this.miEggModeExplosionTimeField.set_current_value(g.game_values.gamemodemenusettings.egg.explode);
+        this.miEggModeExplosionTimeField = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 380, "Explosion Timer", 400, 220), g);
+        g.ctl(this.miEggModeExplosionTimeField).add("Off", 0);
+        g.ctl(this.miEggModeExplosionTimeField).add_random("3 Seconds", 3, false);
+        g.ctl(this.miEggModeExplosionTimeField).add("5 Seconds", 5);
+        g.ctl(this.miEggModeExplosionTimeField).add("8 Seconds", 8);
+        g.ctl(this.miEggModeExplosionTimeField).add("10 Seconds", 10);
+        g.ctl(this.miEggModeExplosionTimeField).add("15 Seconds", 15);
+        g.ctl(this.miEggModeExplosionTimeField).add("20 Seconds", 20);
+        g.ctl(this.miEggModeExplosionTimeField).set_output_ptr(&mut g.game_values.gamemodemenusettings.egg.explode as *mut _);
+        g.ctl(this.miEggModeExplosionTimeField).set_current_value(g.game_values.gamemodemenusettings.egg.explode);
 
-        this.miEggModeBackButton = Ptr::new_box(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
-        this.miEggModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
+        this.miEggModeBackButton = Ctl::new(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER), g);
+        g.ctl(this.miEggModeBackButton).set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
-        this.miEggModeLeftHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-        this.miEggModeRightHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-        this.miEggModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Yoshi's Eggs Mode Menu", 320, 5));
+        this.miEggModeLeftHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0), g);
+        this.miEggModeRightHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0), g);
+        this.miEggModeHeaderText = Ctl::new(MI_HeaderText::new(g, "Yoshi's Eggs Mode Menu", 320, 5), g);
 
-        this.mModeSettingsMenu[6].add_control(ctl_ptr(this.miEggModeEggQuantityField[0]), ctl_ptr(this.miEggModeBackButton), ctl_ptr(this.miEggModeEggQuantityField[1]), Ptr::null(), ctl_ptr(this.miEggModeBackButton));
-        this.mModeSettingsMenu[6].add_control(ctl_ptr(this.miEggModeEggQuantityField[1]), ctl_ptr(this.miEggModeEggQuantityField[0]), ctl_ptr(this.miEggModeEggQuantityField[2]), Ptr::null(), ctl_ptr(this.miEggModeBackButton));
-        this.mModeSettingsMenu[6].add_control(ctl_ptr(this.miEggModeEggQuantityField[2]), ctl_ptr(this.miEggModeEggQuantityField[1]), ctl_ptr(this.miEggModeEggQuantityField[3]), Ptr::null(), ctl_ptr(this.miEggModeBackButton));
-        this.mModeSettingsMenu[6].add_control(ctl_ptr(this.miEggModeEggQuantityField[3]), ctl_ptr(this.miEggModeEggQuantityField[2]), ctl_ptr(this.miEggModeYoshiQuantityField[0]), Ptr::null(), ctl_ptr(this.miEggModeBackButton));
+        this.mModeSettingsMenu[6].add_control(g, this.miEggModeEggQuantityField[0].id(), this.miEggModeBackButton.id(), this.miEggModeEggQuantityField[1].id(), Default::default(), this.miEggModeBackButton.id());
+        this.mModeSettingsMenu[6].add_control(g, this.miEggModeEggQuantityField[1].id(), this.miEggModeEggQuantityField[0].id(), this.miEggModeEggQuantityField[2].id(), Default::default(), this.miEggModeBackButton.id());
+        this.mModeSettingsMenu[6].add_control(g, this.miEggModeEggQuantityField[2].id(), this.miEggModeEggQuantityField[1].id(), this.miEggModeEggQuantityField[3].id(), Default::default(), this.miEggModeBackButton.id());
+        this.mModeSettingsMenu[6].add_control(g, this.miEggModeEggQuantityField[3].id(), this.miEggModeEggQuantityField[2].id(), this.miEggModeYoshiQuantityField[0].id(), Default::default(), this.miEggModeBackButton.id());
 
-        this.mModeSettingsMenu[6].add_control(ctl_ptr(this.miEggModeYoshiQuantityField[0]), ctl_ptr(this.miEggModeEggQuantityField[3]), ctl_ptr(this.miEggModeYoshiQuantityField[1]), Ptr::null(), ctl_ptr(this.miEggModeBackButton));
-        this.mModeSettingsMenu[6].add_control(ctl_ptr(this.miEggModeYoshiQuantityField[1]), ctl_ptr(this.miEggModeYoshiQuantityField[0]), ctl_ptr(this.miEggModeYoshiQuantityField[2]), Ptr::null(), ctl_ptr(this.miEggModeBackButton));
-        this.mModeSettingsMenu[6].add_control(ctl_ptr(this.miEggModeYoshiQuantityField[2]), ctl_ptr(this.miEggModeYoshiQuantityField[1]), ctl_ptr(this.miEggModeYoshiQuantityField[3]), Ptr::null(), ctl_ptr(this.miEggModeBackButton));
-        this.mModeSettingsMenu[6].add_control(ctl_ptr(this.miEggModeYoshiQuantityField[3]), ctl_ptr(this.miEggModeYoshiQuantityField[2]), ctl_ptr(this.miEggModeExplosionTimeField), Ptr::null(), ctl_ptr(this.miEggModeBackButton));
+        this.mModeSettingsMenu[6].add_control(g, this.miEggModeYoshiQuantityField[0].id(), this.miEggModeEggQuantityField[3].id(), this.miEggModeYoshiQuantityField[1].id(), Default::default(), this.miEggModeBackButton.id());
+        this.mModeSettingsMenu[6].add_control(g, this.miEggModeYoshiQuantityField[1].id(), this.miEggModeYoshiQuantityField[0].id(), this.miEggModeYoshiQuantityField[2].id(), Default::default(), this.miEggModeBackButton.id());
+        this.mModeSettingsMenu[6].add_control(g, this.miEggModeYoshiQuantityField[2].id(), this.miEggModeYoshiQuantityField[1].id(), this.miEggModeYoshiQuantityField[3].id(), Default::default(), this.miEggModeBackButton.id());
+        this.mModeSettingsMenu[6].add_control(g, this.miEggModeYoshiQuantityField[3].id(), this.miEggModeYoshiQuantityField[2].id(), this.miEggModeExplosionTimeField.id(), Default::default(), this.miEggModeBackButton.id());
 
-        this.mModeSettingsMenu[6].add_control(ctl_ptr(this.miEggModeExplosionTimeField), ctl_ptr(this.miEggModeYoshiQuantityField[3]), ctl_ptr(this.miEggModeBackButton), Ptr::null(), ctl_ptr(this.miEggModeBackButton));
+        this.mModeSettingsMenu[6].add_control(g, this.miEggModeExplosionTimeField.id(), this.miEggModeYoshiQuantityField[3].id(), this.miEggModeBackButton.id(), Default::default(), this.miEggModeBackButton.id());
 
-        this.mModeSettingsMenu[6].add_control(ctl_ptr(this.miEggModeBackButton), ctl_ptr(this.miEggModeExplosionTimeField), ctl_ptr(this.miEggModeEggQuantityField[0]), ctl_ptr(this.miEggModeExplosionTimeField), Ptr::null());
+        this.mModeSettingsMenu[6].add_control(g, this.miEggModeBackButton.id(), this.miEggModeExplosionTimeField.id(), this.miEggModeEggQuantityField[0].id(), this.miEggModeExplosionTimeField.id(), Default::default());
 
-        this.mModeSettingsMenu[6].add_non_control(ctl_ptr(this.miEggModeLeftHeaderBar));
-        this.mModeSettingsMenu[6].add_non_control(ctl_ptr(this.miEggModeRightHeaderBar));
-        this.mModeSettingsMenu[6].add_non_control(ctl_ptr(this.miEggModeHeaderText));
+        this.mModeSettingsMenu[6].add_non_control(this.miEggModeLeftHeaderBar.id());
+        this.mModeSettingsMenu[6].add_non_control(this.miEggModeRightHeaderBar.id());
+        this.mModeSettingsMenu[6].add_non_control(this.miEggModeHeaderText.id());
 
-        this.mModeSettingsMenu[6].set_initial_focus(g, ctl_ptr(this.miEggModeEggQuantityField[0]));
+        this.mModeSettingsMenu[6].set_initial_focus(g, this.miEggModeEggQuantityField[0].id());
         this.mModeSettingsMenu[6].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
         //***********************
         // Flag Mode Settings
         //***********************
 
-        this.miFlagModeSpeedField = Ptr::new_box(MI_SliderField::new(g.rm.spr_selectfield, g.rm.menu_slider_bar, 120, 120, "Speed", 400, 180, 380));
-        this.miFlagModeSpeedField.add("-", -1);
-        this.miFlagModeSpeedField.add("0", 0);
-        this.miFlagModeSpeedField.add("1", 1);
-        this.miFlagModeSpeedField.add("2", 2);
-        this.miFlagModeSpeedField.add("3", 3);
-        this.miFlagModeSpeedField.add("4", 4);
-        this.miFlagModeSpeedField.add("5", 5);
-        this.miFlagModeSpeedField.add_random("6", 6, false);
-        this.miFlagModeSpeedField.add_random("7", 7, false);
-        this.miFlagModeSpeedField.add_random("8", 8, false);
-        this.miFlagModeSpeedField.set_output_ptr(&mut g.game_values.gamemodemenusettings.flag.speed as *mut _);
-        this.miFlagModeSpeedField.set_current_value(g.game_values.gamemodemenusettings.flag.speed);
-        this.miFlagModeSpeedField.allow_wrap(false);
+        this.miFlagModeSpeedField = Ctl::new(MI_SliderField::new(g.rm.spr_selectfield, g.rm.menu_slider_bar, 120, 120, "Speed", 400, 180, 380), g);
+        g.ctl(this.miFlagModeSpeedField).add("-", -1);
+        g.ctl(this.miFlagModeSpeedField).add("0", 0);
+        g.ctl(this.miFlagModeSpeedField).add("1", 1);
+        g.ctl(this.miFlagModeSpeedField).add("2", 2);
+        g.ctl(this.miFlagModeSpeedField).add("3", 3);
+        g.ctl(this.miFlagModeSpeedField).add("4", 4);
+        g.ctl(this.miFlagModeSpeedField).add("5", 5);
+        g.ctl(this.miFlagModeSpeedField).add_random("6", 6, false);
+        g.ctl(this.miFlagModeSpeedField).add_random("7", 7, false);
+        g.ctl(this.miFlagModeSpeedField).add_random("8", 8, false);
+        g.ctl(this.miFlagModeSpeedField).set_output_ptr(&mut g.game_values.gamemodemenusettings.flag.speed as *mut _);
+        g.ctl(this.miFlagModeSpeedField).set_current_value(g.game_values.gamemodemenusettings.flag.speed);
+        g.ctl(this.miFlagModeSpeedField).allow_wrap(false);
 
-        this.miFlagModeTouchReturnField = Ptr::new_box(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 120, 160, "Touch Return", 400, 180));
-        this.miFlagModeTouchReturnField.add("Off", false);
-        this.miFlagModeTouchReturnField.add("On", true);
-        this.miFlagModeTouchReturnField.set_output_ptr(&mut g.game_values.gamemodemenusettings.flag.touchreturn as *mut _);
-        this.miFlagModeTouchReturnField.set_current_value(g.game_values.gamemodemenusettings.flag.touchreturn);
-        this.miFlagModeTouchReturnField.set_auto_advance(true);
+        this.miFlagModeTouchReturnField = Ctl::new(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 120, 160, "Touch Return", 400, 180), g);
+        g.ctl(this.miFlagModeTouchReturnField).add("Off", false);
+        g.ctl(this.miFlagModeTouchReturnField).add("On", true);
+        g.ctl(this.miFlagModeTouchReturnField).set_output_ptr(&mut g.game_values.gamemodemenusettings.flag.touchreturn as *mut _);
+        g.ctl(this.miFlagModeTouchReturnField).set_current_value(g.game_values.gamemodemenusettings.flag.touchreturn);
+        g.ctl(this.miFlagModeTouchReturnField).set_auto_advance(true);
 
-        this.miFlagModePointMoveField = Ptr::new_box(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 120, 200, "Point Move", 400, 180));
-        this.miFlagModePointMoveField.add("Off", false);
-        this.miFlagModePointMoveField.add("On", true);
-        this.miFlagModePointMoveField.set_output_ptr(&mut g.game_values.gamemodemenusettings.flag.pointmove as *mut _);
-        this.miFlagModePointMoveField.set_current_value(g.game_values.gamemodemenusettings.flag.pointmove);
-        this.miFlagModePointMoveField.set_auto_advance(true);
+        this.miFlagModePointMoveField = Ctl::new(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 120, 200, "Point Move", 400, 180), g);
+        g.ctl(this.miFlagModePointMoveField).add("Off", false);
+        g.ctl(this.miFlagModePointMoveField).add("On", true);
+        g.ctl(this.miFlagModePointMoveField).set_output_ptr(&mut g.game_values.gamemodemenusettings.flag.pointmove as *mut _);
+        g.ctl(this.miFlagModePointMoveField).set_current_value(g.game_values.gamemodemenusettings.flag.pointmove);
+        g.ctl(this.miFlagModePointMoveField).set_auto_advance(true);
 
-        this.miFlagModeAutoReturnField = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 240, "Auto Return", 400, 180));
-        this.miFlagModeAutoReturnField.add("None", 0);
-        this.miFlagModeAutoReturnField.add_random("5 Seconds", 310, false);
-        this.miFlagModeAutoReturnField.add("10 Seconds", 620);
-        this.miFlagModeAutoReturnField.add_random("15 Seconds", 930, false);
-        this.miFlagModeAutoReturnField.add("20 Seconds", 1240);
-        this.miFlagModeAutoReturnField.add_random("25 Seconds", 1550, false);
-        this.miFlagModeAutoReturnField.add_random("30 Seconds", 1860, false);
-        this.miFlagModeAutoReturnField.add_random("35 Seconds", 2170, false);
-        this.miFlagModeAutoReturnField.add_random("40 Seconds", 2480, false);
-        this.miFlagModeAutoReturnField.add_random("45 Seconds", 2790, false);
-        this.miFlagModeAutoReturnField.add_random("50 Seconds", 3100, false);
-        this.miFlagModeAutoReturnField.add_random("55 Seconds", 3410, false);
-        this.miFlagModeAutoReturnField.add_random("60 Seconds", 3720, false);
-        this.miFlagModeAutoReturnField.set_output_ptr(&mut g.game_values.gamemodemenusettings.flag.autoreturn as *mut _);
-        this.miFlagModeAutoReturnField.set_current_value(g.game_values.gamemodemenusettings.flag.autoreturn);
+        this.miFlagModeAutoReturnField = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 240, "Auto Return", 400, 180), g);
+        g.ctl(this.miFlagModeAutoReturnField).add("None", 0);
+        g.ctl(this.miFlagModeAutoReturnField).add_random("5 Seconds", 310, false);
+        g.ctl(this.miFlagModeAutoReturnField).add("10 Seconds", 620);
+        g.ctl(this.miFlagModeAutoReturnField).add_random("15 Seconds", 930, false);
+        g.ctl(this.miFlagModeAutoReturnField).add("20 Seconds", 1240);
+        g.ctl(this.miFlagModeAutoReturnField).add_random("25 Seconds", 1550, false);
+        g.ctl(this.miFlagModeAutoReturnField).add_random("30 Seconds", 1860, false);
+        g.ctl(this.miFlagModeAutoReturnField).add_random("35 Seconds", 2170, false);
+        g.ctl(this.miFlagModeAutoReturnField).add_random("40 Seconds", 2480, false);
+        g.ctl(this.miFlagModeAutoReturnField).add_random("45 Seconds", 2790, false);
+        g.ctl(this.miFlagModeAutoReturnField).add_random("50 Seconds", 3100, false);
+        g.ctl(this.miFlagModeAutoReturnField).add_random("55 Seconds", 3410, false);
+        g.ctl(this.miFlagModeAutoReturnField).add_random("60 Seconds", 3720, false);
+        g.ctl(this.miFlagModeAutoReturnField).set_output_ptr(&mut g.game_values.gamemodemenusettings.flag.autoreturn as *mut _);
+        g.ctl(this.miFlagModeAutoReturnField).set_current_value(g.game_values.gamemodemenusettings.flag.autoreturn);
 
-        this.miFlagModeHomeScoreField = Ptr::new_box(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 120, 280, "Need Home", 400, 180));
-        this.miFlagModeHomeScoreField.add("Off", false);
-        this.miFlagModeHomeScoreField.add("On", true);
-        this.miFlagModeHomeScoreField.set_output_ptr(&mut g.game_values.gamemodemenusettings.flag.homescore as *mut _);
-        this.miFlagModeHomeScoreField.set_current_value(g.game_values.gamemodemenusettings.flag.homescore);
-        this.miFlagModeHomeScoreField.set_auto_advance(true);
+        this.miFlagModeHomeScoreField = Ctl::new(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 120, 280, "Need Home", 400, 180), g);
+        g.ctl(this.miFlagModeHomeScoreField).add("Off", false);
+        g.ctl(this.miFlagModeHomeScoreField).add("On", true);
+        g.ctl(this.miFlagModeHomeScoreField).set_output_ptr(&mut g.game_values.gamemodemenusettings.flag.homescore as *mut _);
+        g.ctl(this.miFlagModeHomeScoreField).set_current_value(g.game_values.gamemodemenusettings.flag.homescore);
+        g.ctl(this.miFlagModeHomeScoreField).set_auto_advance(true);
 
-        this.miFlagModeCenterFlagField = Ptr::new_box(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 120, 320, "Center Flag", 400, 180));
-        this.miFlagModeCenterFlagField.add("Off", false);
-        this.miFlagModeCenterFlagField.add("On", true);
-        this.miFlagModeCenterFlagField.set_output_ptr(&mut g.game_values.gamemodemenusettings.flag.centerflag as *mut _);
-        this.miFlagModeCenterFlagField.set_current_value(g.game_values.gamemodemenusettings.flag.centerflag);
-        this.miFlagModeCenterFlagField.set_auto_advance(true);
+        this.miFlagModeCenterFlagField = Ctl::new(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 120, 320, "Center Flag", 400, 180), g);
+        g.ctl(this.miFlagModeCenterFlagField).add("Off", false);
+        g.ctl(this.miFlagModeCenterFlagField).add("On", true);
+        g.ctl(this.miFlagModeCenterFlagField).set_output_ptr(&mut g.game_values.gamemodemenusettings.flag.centerflag as *mut _);
+        g.ctl(this.miFlagModeCenterFlagField).set_current_value(g.game_values.gamemodemenusettings.flag.centerflag);
+        g.ctl(this.miFlagModeCenterFlagField).set_auto_advance(true);
 
-        this.miFlagModeBackButton = Ptr::new_box(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
-        this.miFlagModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
+        this.miFlagModeBackButton = Ctl::new(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER), g);
+        g.ctl(this.miFlagModeBackButton).set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
-        this.miFlagModeLeftHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-        this.miFlagModeRightHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-        this.miFlagModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Capture The Flag Mode Menu", 320, 5));
+        this.miFlagModeLeftHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0), g);
+        this.miFlagModeRightHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0), g);
+        this.miFlagModeHeaderText = Ctl::new(MI_HeaderText::new(g, "Capture The Flag Mode Menu", 320, 5), g);
 
-        this.mModeSettingsMenu[7].add_control(ctl_ptr(this.miFlagModeSpeedField), ctl_ptr(this.miFlagModeBackButton), ctl_ptr(this.miFlagModeTouchReturnField), Ptr::null(), ctl_ptr(this.miFlagModeBackButton));
-        this.mModeSettingsMenu[7].add_control(ctl_ptr(this.miFlagModeTouchReturnField), ctl_ptr(this.miFlagModeSpeedField), ctl_ptr(this.miFlagModePointMoveField), Ptr::null(), ctl_ptr(this.miFlagModeBackButton));
-        this.mModeSettingsMenu[7].add_control(ctl_ptr(this.miFlagModePointMoveField), ctl_ptr(this.miFlagModeTouchReturnField), ctl_ptr(this.miFlagModeAutoReturnField), Ptr::null(), ctl_ptr(this.miFlagModeBackButton));
-        this.mModeSettingsMenu[7].add_control(ctl_ptr(this.miFlagModeAutoReturnField), ctl_ptr(this.miFlagModePointMoveField), ctl_ptr(this.miFlagModeHomeScoreField), Ptr::null(), ctl_ptr(this.miFlagModeBackButton));
-        this.mModeSettingsMenu[7].add_control(ctl_ptr(this.miFlagModeHomeScoreField), ctl_ptr(this.miFlagModeAutoReturnField), ctl_ptr(this.miFlagModeCenterFlagField), Ptr::null(), ctl_ptr(this.miFlagModeBackButton));
-        this.mModeSettingsMenu[7].add_control(ctl_ptr(this.miFlagModeCenterFlagField), ctl_ptr(this.miFlagModeHomeScoreField), ctl_ptr(this.miFlagModeBackButton), Ptr::null(), ctl_ptr(this.miFlagModeBackButton));
+        this.mModeSettingsMenu[7].add_control(g, this.miFlagModeSpeedField.id(), this.miFlagModeBackButton.id(), this.miFlagModeTouchReturnField.id(), Default::default(), this.miFlagModeBackButton.id());
+        this.mModeSettingsMenu[7].add_control(g, this.miFlagModeTouchReturnField.id(), this.miFlagModeSpeedField.id(), this.miFlagModePointMoveField.id(), Default::default(), this.miFlagModeBackButton.id());
+        this.mModeSettingsMenu[7].add_control(g, this.miFlagModePointMoveField.id(), this.miFlagModeTouchReturnField.id(), this.miFlagModeAutoReturnField.id(), Default::default(), this.miFlagModeBackButton.id());
+        this.mModeSettingsMenu[7].add_control(g, this.miFlagModeAutoReturnField.id(), this.miFlagModePointMoveField.id(), this.miFlagModeHomeScoreField.id(), Default::default(), this.miFlagModeBackButton.id());
+        this.mModeSettingsMenu[7].add_control(g, this.miFlagModeHomeScoreField.id(), this.miFlagModeAutoReturnField.id(), this.miFlagModeCenterFlagField.id(), Default::default(), this.miFlagModeBackButton.id());
+        this.mModeSettingsMenu[7].add_control(g, this.miFlagModeCenterFlagField.id(), this.miFlagModeHomeScoreField.id(), this.miFlagModeBackButton.id(), Default::default(), this.miFlagModeBackButton.id());
 
-        this.mModeSettingsMenu[7].add_control(ctl_ptr(this.miFlagModeBackButton), ctl_ptr(this.miFlagModeCenterFlagField), ctl_ptr(this.miFlagModeSpeedField), ctl_ptr(this.miFlagModeCenterFlagField), Ptr::null());
+        this.mModeSettingsMenu[7].add_control(g, this.miFlagModeBackButton.id(), this.miFlagModeCenterFlagField.id(), this.miFlagModeSpeedField.id(), this.miFlagModeCenterFlagField.id(), Default::default());
 
-        this.mModeSettingsMenu[7].add_non_control(ctl_ptr(this.miFlagModeLeftHeaderBar));
-        this.mModeSettingsMenu[7].add_non_control(ctl_ptr(this.miFlagModeRightHeaderBar));
-        this.mModeSettingsMenu[7].add_non_control(ctl_ptr(this.miFlagModeHeaderText));
+        this.mModeSettingsMenu[7].add_non_control(this.miFlagModeLeftHeaderBar.id());
+        this.mModeSettingsMenu[7].add_non_control(this.miFlagModeRightHeaderBar.id());
+        this.mModeSettingsMenu[7].add_non_control(this.miFlagModeHeaderText.id());
 
-        this.mModeSettingsMenu[7].set_initial_focus(g, ctl_ptr(this.miFlagModeSpeedField));
+        this.mModeSettingsMenu[7].set_initial_focus(g, this.miFlagModeSpeedField.id());
         this.mModeSettingsMenu[7].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -715,37 +716,37 @@ impl UI_ModeOptionsMenu {
         // Chicken Mode Settings
         //***********************
 
-        this.miChickenModeShowTargetField = Ptr::new_box(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 120, 200, "Show Target", 400, 180));
-        this.miChickenModeShowTargetField.add("Off", false);
-        this.miChickenModeShowTargetField.add("On", true);
-        this.miChickenModeShowTargetField.set_output_ptr(&mut g.game_values.gamemodemenusettings.chicken.usetarget as *mut _);
-        this.miChickenModeShowTargetField.set_current_value(g.game_values.gamemodemenusettings.chicken.usetarget);
-        this.miChickenModeShowTargetField.set_auto_advance(true);
+        this.miChickenModeShowTargetField = Ctl::new(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 120, 200, "Show Target", 400, 180), g);
+        g.ctl(this.miChickenModeShowTargetField).add("Off", false);
+        g.ctl(this.miChickenModeShowTargetField).add("On", true);
+        g.ctl(this.miChickenModeShowTargetField).set_output_ptr(&mut g.game_values.gamemodemenusettings.chicken.usetarget as *mut _);
+        g.ctl(this.miChickenModeShowTargetField).set_current_value(g.game_values.gamemodemenusettings.chicken.usetarget);
+        g.ctl(this.miChickenModeShowTargetField).set_auto_advance(true);
 
-        this.miChickenModeGlideField = Ptr::new_box(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 120, 240, "Chicken Glide", 400, 180));
-        this.miChickenModeGlideField.add("Off", false);
-        this.miChickenModeGlideField.add("On", true);
-        this.miChickenModeGlideField.set_output_ptr(&mut g.game_values.gamemodemenusettings.chicken.glide as *mut _);
-        this.miChickenModeGlideField.set_current_value(g.game_values.gamemodemenusettings.chicken.glide);
-        this.miChickenModeGlideField.set_auto_advance(true);
+        this.miChickenModeGlideField = Ctl::new(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 120, 240, "Chicken Glide", 400, 180), g);
+        g.ctl(this.miChickenModeGlideField).add("Off", false);
+        g.ctl(this.miChickenModeGlideField).add("On", true);
+        g.ctl(this.miChickenModeGlideField).set_output_ptr(&mut g.game_values.gamemodemenusettings.chicken.glide as *mut _);
+        g.ctl(this.miChickenModeGlideField).set_current_value(g.game_values.gamemodemenusettings.chicken.glide);
+        g.ctl(this.miChickenModeGlideField).set_auto_advance(true);
 
-        this.miChickenModeBackButton = Ptr::new_box(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
-        this.miChickenModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
+        this.miChickenModeBackButton = Ctl::new(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER), g);
+        g.ctl(this.miChickenModeBackButton).set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
-        this.miChickenModeLeftHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-        this.miChickenModeRightHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-        this.miChickenModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Chicken Mode Menu", 320, 5));
+        this.miChickenModeLeftHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0), g);
+        this.miChickenModeRightHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0), g);
+        this.miChickenModeHeaderText = Ctl::new(MI_HeaderText::new(g, "Chicken Mode Menu", 320, 5), g);
 
 
-        this.mModeSettingsMenu[8].add_control(ctl_ptr(this.miChickenModeShowTargetField), ctl_ptr(this.miChickenModeBackButton), ctl_ptr(this.miChickenModeGlideField), Ptr::null(), ctl_ptr(this.miChickenModeBackButton));
-        this.mModeSettingsMenu[8].add_control(ctl_ptr(this.miChickenModeGlideField), ctl_ptr(this.miChickenModeShowTargetField), ctl_ptr(this.miChickenModeBackButton), Ptr::null(), ctl_ptr(this.miChickenModeBackButton));
-        this.mModeSettingsMenu[8].add_control(ctl_ptr(this.miChickenModeBackButton), ctl_ptr(this.miChickenModeGlideField), ctl_ptr(this.miChickenModeShowTargetField), ctl_ptr(this.miChickenModeGlideField), Ptr::null());
+        this.mModeSettingsMenu[8].add_control(g, this.miChickenModeShowTargetField.id(), this.miChickenModeBackButton.id(), this.miChickenModeGlideField.id(), Default::default(), this.miChickenModeBackButton.id());
+        this.mModeSettingsMenu[8].add_control(g, this.miChickenModeGlideField.id(), this.miChickenModeShowTargetField.id(), this.miChickenModeBackButton.id(), Default::default(), this.miChickenModeBackButton.id());
+        this.mModeSettingsMenu[8].add_control(g, this.miChickenModeBackButton.id(), this.miChickenModeGlideField.id(), this.miChickenModeShowTargetField.id(), this.miChickenModeGlideField.id(), Default::default());
 
-        this.mModeSettingsMenu[8].add_non_control(ctl_ptr(this.miChickenModeLeftHeaderBar));
-        this.mModeSettingsMenu[8].add_non_control(ctl_ptr(this.miChickenModeRightHeaderBar));
-        this.mModeSettingsMenu[8].add_non_control(ctl_ptr(this.miChickenModeHeaderText));
+        this.mModeSettingsMenu[8].add_non_control(this.miChickenModeLeftHeaderBar.id());
+        this.mModeSettingsMenu[8].add_non_control(this.miChickenModeRightHeaderBar.id());
+        this.mModeSettingsMenu[8].add_non_control(this.miChickenModeHeaderText.id());
 
-        this.mModeSettingsMenu[8].set_initial_focus(g, ctl_ptr(this.miChickenModeShowTargetField));
+        this.mModeSettingsMenu[8].set_initial_focus(g, this.miChickenModeShowTargetField.id());
         this.mModeSettingsMenu[8].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -753,29 +754,29 @@ impl UI_ModeOptionsMenu {
         // Tag Mode Settings
         //***********************
 
-        this.miTagModeTagOnTouchField = Ptr::new_box(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 120, 220, "Touch Tag", 400, 180));
-        this.miTagModeTagOnTouchField.add("Off", false);
-        this.miTagModeTagOnTouchField.add("On", true);
-        this.miTagModeTagOnTouchField.set_output_ptr(&mut g.game_values.gamemodemenusettings.tag.tagontouch as *mut _);
-        this.miTagModeTagOnTouchField.set_current_value(g.game_values.gamemodemenusettings.tag.tagontouch);
-        this.miTagModeTagOnTouchField.set_auto_advance(true);
+        this.miTagModeTagOnTouchField = Ctl::new(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 120, 220, "Touch Tag", 400, 180), g);
+        g.ctl(this.miTagModeTagOnTouchField).add("Off", false);
+        g.ctl(this.miTagModeTagOnTouchField).add("On", true);
+        g.ctl(this.miTagModeTagOnTouchField).set_output_ptr(&mut g.game_values.gamemodemenusettings.tag.tagontouch as *mut _);
+        g.ctl(this.miTagModeTagOnTouchField).set_current_value(g.game_values.gamemodemenusettings.tag.tagontouch);
+        g.ctl(this.miTagModeTagOnTouchField).set_auto_advance(true);
 
-        this.miTagModeBackButton = Ptr::new_box(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
-        this.miTagModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
+        this.miTagModeBackButton = Ctl::new(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER), g);
+        g.ctl(this.miTagModeBackButton).set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
-        this.miTagModeLeftHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-        this.miTagModeRightHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-        this.miTagModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Tag Mode Menu", 320, 5));
+        this.miTagModeLeftHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0), g);
+        this.miTagModeRightHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0), g);
+        this.miTagModeHeaderText = Ctl::new(MI_HeaderText::new(g, "Tag Mode Menu", 320, 5), g);
 
 
-        this.mModeSettingsMenu[9].add_control(ctl_ptr(this.miTagModeTagOnTouchField), ctl_ptr(this.miTagModeBackButton), ctl_ptr(this.miTagModeBackButton), Ptr::null(), ctl_ptr(this.miTagModeBackButton));
-        this.mModeSettingsMenu[9].add_control(ctl_ptr(this.miTagModeBackButton), ctl_ptr(this.miTagModeTagOnTouchField), ctl_ptr(this.miTagModeTagOnTouchField), ctl_ptr(this.miTagModeTagOnTouchField), Ptr::null());
+        this.mModeSettingsMenu[9].add_control(g, this.miTagModeTagOnTouchField.id(), this.miTagModeBackButton.id(), this.miTagModeBackButton.id(), Default::default(), this.miTagModeBackButton.id());
+        this.mModeSettingsMenu[9].add_control(g, this.miTagModeBackButton.id(), this.miTagModeTagOnTouchField.id(), this.miTagModeTagOnTouchField.id(), this.miTagModeTagOnTouchField.id(), Default::default());
 
-        this.mModeSettingsMenu[9].add_non_control(ctl_ptr(this.miTagModeLeftHeaderBar));
-        this.mModeSettingsMenu[9].add_non_control(ctl_ptr(this.miTagModeRightHeaderBar));
-        this.mModeSettingsMenu[9].add_non_control(ctl_ptr(this.miTagModeHeaderText));
+        this.mModeSettingsMenu[9].add_non_control(this.miTagModeLeftHeaderBar.id());
+        this.mModeSettingsMenu[9].add_non_control(this.miTagModeRightHeaderBar.id());
+        this.mModeSettingsMenu[9].add_non_control(this.miTagModeHeaderText.id());
 
-        this.mModeSettingsMenu[9].set_initial_focus(g, ctl_ptr(this.miTagModeTagOnTouchField));
+        this.mModeSettingsMenu[9].set_initial_focus(g, this.miTagModeTagOnTouchField.id());
         this.mModeSettingsMenu[9].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -783,73 +784,73 @@ impl UI_ModeOptionsMenu {
         // Star Mode Settings
         //***********************
 
-        this.miStarModeTimeField = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 180, "Time", 400, 150));
-        this.miStarModeTimeField.add_random("5 Seconds", 5, false);
-        this.miStarModeTimeField.add_random("10 Seconds", 10, false);
-        this.miStarModeTimeField.add("15 Seconds", 15);
-        this.miStarModeTimeField.add("20 Seconds", 20);
-        this.miStarModeTimeField.add("25 Seconds", 25);
-        this.miStarModeTimeField.add("30 Seconds", 30);
-        this.miStarModeTimeField.add("35 Seconds", 35);
-        this.miStarModeTimeField.add("40 Seconds", 40);
-        this.miStarModeTimeField.add_random("45 Seconds", 45, false);
-        this.miStarModeTimeField.add_random("50 Seconds", 50, false);
-        this.miStarModeTimeField.add_random("55 Seconds", 55, false);
-        this.miStarModeTimeField.add_random("60 Seconds", 60, false);
-        this.miStarModeTimeField.set_output_ptr(&mut g.game_values.gamemodemenusettings.star.time as *mut _);
-        this.miStarModeTimeField.set_current_value(g.game_values.gamemodemenusettings.star.time);
+        this.miStarModeTimeField = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 180, "Time", 400, 150), g);
+        g.ctl(this.miStarModeTimeField).add_random("5 Seconds", 5, false);
+        g.ctl(this.miStarModeTimeField).add_random("10 Seconds", 10, false);
+        g.ctl(this.miStarModeTimeField).add("15 Seconds", 15);
+        g.ctl(this.miStarModeTimeField).add("20 Seconds", 20);
+        g.ctl(this.miStarModeTimeField).add("25 Seconds", 25);
+        g.ctl(this.miStarModeTimeField).add("30 Seconds", 30);
+        g.ctl(this.miStarModeTimeField).add("35 Seconds", 35);
+        g.ctl(this.miStarModeTimeField).add("40 Seconds", 40);
+        g.ctl(this.miStarModeTimeField).add_random("45 Seconds", 45, false);
+        g.ctl(this.miStarModeTimeField).add_random("50 Seconds", 50, false);
+        g.ctl(this.miStarModeTimeField).add_random("55 Seconds", 55, false);
+        g.ctl(this.miStarModeTimeField).add_random("60 Seconds", 60, false);
+        g.ctl(this.miStarModeTimeField).set_output_ptr(&mut g.game_values.gamemodemenusettings.star.time as *mut _);
+        g.ctl(this.miStarModeTimeField).set_current_value(g.game_values.gamemodemenusettings.star.time);
 
-        this.miStarModeShineField = Ptr::new_box(MI_SelectField::<StarStyle>::new(g.rm.spr_selectfield, 120, 220, "Star Type", 400, 150));
-        this.miStarModeShineField.add("Ztar", StarStyle::Ztar);
-        this.miStarModeShineField.add("Shine", StarStyle::Shine);
-        this.miStarModeShineField.add("Multi Star", StarStyle::Multi);
-        this.miStarModeShineField.add("Random", StarStyle::Random);
-        this.miStarModeShineField.set_output_ptr(&mut g.game_values.gamemodemenusettings.star.shine as *mut _);
-        this.miStarModeShineField.set_current_value(g.game_values.gamemodemenusettings.star.shine);
+        this.miStarModeShineField = Ctl::new(MI_SelectField::<StarStyle>::new(g.rm.spr_selectfield, 120, 220, "Star Type", 400, 150), g);
+        g.ctl(this.miStarModeShineField).add("Ztar", StarStyle::Ztar);
+        g.ctl(this.miStarModeShineField).add("Shine", StarStyle::Shine);
+        g.ctl(this.miStarModeShineField).add("Multi Star", StarStyle::Multi);
+        g.ctl(this.miStarModeShineField).add("Random", StarStyle::Random);
+        g.ctl(this.miStarModeShineField).set_output_ptr(&mut g.game_values.gamemodemenusettings.star.shine as *mut _);
+        g.ctl(this.miStarModeShineField).set_current_value(g.game_values.gamemodemenusettings.star.shine);
 
-        this.miStarModePercentExtraTime = Ptr::new_box(MI_SliderField::new(g.rm.spr_selectfield, g.rm.menu_slider_bar, 120, 260, "Extra Time", 400, 150, 384));
-        this.miStarModePercentExtraTime.add_random("0", 0, false);
-        this.miStarModePercentExtraTime.add_random("5", 5, false);
-        this.miStarModePercentExtraTime.add("10", 10);
-        this.miStarModePercentExtraTime.add("15", 15);
-        this.miStarModePercentExtraTime.add("20", 20);
-        this.miStarModePercentExtraTime.add("25", 25);
-        this.miStarModePercentExtraTime.add("30", 30);
-        this.miStarModePercentExtraTime.add("35", 35);
-        this.miStarModePercentExtraTime.add("40", 40);
-        this.miStarModePercentExtraTime.add("45", 45);
-        this.miStarModePercentExtraTime.add("50", 50);
-        this.miStarModePercentExtraTime.add_random("55", 55, false);
-        this.miStarModePercentExtraTime.add_random("60", 60, false);
-        this.miStarModePercentExtraTime.add_random("65", 65, false);
-        this.miStarModePercentExtraTime.add_random("70", 70, false);
-        this.miStarModePercentExtraTime.add_random("75", 75, false);
-        this.miStarModePercentExtraTime.add_random("80", 80, false);
-        this.miStarModePercentExtraTime.add_random("85", 85, false);
-        this.miStarModePercentExtraTime.add_random("90", 90, false);
-        this.miStarModePercentExtraTime.add_random("95", 95, false);
-        this.miStarModePercentExtraTime.add_random("100", 100, false);
-        this.miStarModePercentExtraTime.set_output_ptr(&mut g.game_values.gamemodemenusettings.star.percentextratime as *mut _);
-        this.miStarModePercentExtraTime.set_current_value(g.game_values.gamemodemenusettings.star.percentextratime);
-        this.miStarModePercentExtraTime.allow_wrap(false);
+        this.miStarModePercentExtraTime = Ctl::new(MI_SliderField::new(g.rm.spr_selectfield, g.rm.menu_slider_bar, 120, 260, "Extra Time", 400, 150, 384), g);
+        g.ctl(this.miStarModePercentExtraTime).add_random("0", 0, false);
+        g.ctl(this.miStarModePercentExtraTime).add_random("5", 5, false);
+        g.ctl(this.miStarModePercentExtraTime).add("10", 10);
+        g.ctl(this.miStarModePercentExtraTime).add("15", 15);
+        g.ctl(this.miStarModePercentExtraTime).add("20", 20);
+        g.ctl(this.miStarModePercentExtraTime).add("25", 25);
+        g.ctl(this.miStarModePercentExtraTime).add("30", 30);
+        g.ctl(this.miStarModePercentExtraTime).add("35", 35);
+        g.ctl(this.miStarModePercentExtraTime).add("40", 40);
+        g.ctl(this.miStarModePercentExtraTime).add("45", 45);
+        g.ctl(this.miStarModePercentExtraTime).add("50", 50);
+        g.ctl(this.miStarModePercentExtraTime).add_random("55", 55, false);
+        g.ctl(this.miStarModePercentExtraTime).add_random("60", 60, false);
+        g.ctl(this.miStarModePercentExtraTime).add_random("65", 65, false);
+        g.ctl(this.miStarModePercentExtraTime).add_random("70", 70, false);
+        g.ctl(this.miStarModePercentExtraTime).add_random("75", 75, false);
+        g.ctl(this.miStarModePercentExtraTime).add_random("80", 80, false);
+        g.ctl(this.miStarModePercentExtraTime).add_random("85", 85, false);
+        g.ctl(this.miStarModePercentExtraTime).add_random("90", 90, false);
+        g.ctl(this.miStarModePercentExtraTime).add_random("95", 95, false);
+        g.ctl(this.miStarModePercentExtraTime).add_random("100", 100, false);
+        g.ctl(this.miStarModePercentExtraTime).set_output_ptr(&mut g.game_values.gamemodemenusettings.star.percentextratime as *mut _);
+        g.ctl(this.miStarModePercentExtraTime).set_current_value(g.game_values.gamemodemenusettings.star.percentextratime);
+        g.ctl(this.miStarModePercentExtraTime).allow_wrap(false);
 
-        this.miStarModeBackButton = Ptr::new_box(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
-        this.miStarModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
+        this.miStarModeBackButton = Ctl::new(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER), g);
+        g.ctl(this.miStarModeBackButton).set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
-        this.miStarModeLeftHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-        this.miStarModeRightHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-        this.miStarModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Star Mode Menu", 320, 5));
+        this.miStarModeLeftHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0), g);
+        this.miStarModeRightHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0), g);
+        this.miStarModeHeaderText = Ctl::new(MI_HeaderText::new(g, "Star Mode Menu", 320, 5), g);
 
-        this.mModeSettingsMenu[10].add_control(ctl_ptr(this.miStarModeTimeField), ctl_ptr(this.miStarModeBackButton), ctl_ptr(this.miStarModeShineField), Ptr::null(), ctl_ptr(this.miStarModeBackButton));
-        this.mModeSettingsMenu[10].add_control(ctl_ptr(this.miStarModeShineField), ctl_ptr(this.miStarModeTimeField), ctl_ptr(this.miStarModePercentExtraTime), Ptr::null(), ctl_ptr(this.miStarModeBackButton));
-        this.mModeSettingsMenu[10].add_control(ctl_ptr(this.miStarModePercentExtraTime), ctl_ptr(this.miStarModeShineField), ctl_ptr(this.miStarModeBackButton), Ptr::null(), ctl_ptr(this.miStarModeBackButton));
-        this.mModeSettingsMenu[10].add_control(ctl_ptr(this.miStarModeBackButton), ctl_ptr(this.miStarModePercentExtraTime), ctl_ptr(this.miStarModeTimeField), ctl_ptr(this.miStarModePercentExtraTime), Ptr::null());
+        this.mModeSettingsMenu[10].add_control(g, this.miStarModeTimeField.id(), this.miStarModeBackButton.id(), this.miStarModeShineField.id(), Default::default(), this.miStarModeBackButton.id());
+        this.mModeSettingsMenu[10].add_control(g, this.miStarModeShineField.id(), this.miStarModeTimeField.id(), this.miStarModePercentExtraTime.id(), Default::default(), this.miStarModeBackButton.id());
+        this.mModeSettingsMenu[10].add_control(g, this.miStarModePercentExtraTime.id(), this.miStarModeShineField.id(), this.miStarModeBackButton.id(), Default::default(), this.miStarModeBackButton.id());
+        this.mModeSettingsMenu[10].add_control(g, this.miStarModeBackButton.id(), this.miStarModePercentExtraTime.id(), this.miStarModeTimeField.id(), this.miStarModePercentExtraTime.id(), Default::default());
 
-        this.mModeSettingsMenu[10].add_non_control(ctl_ptr(this.miStarModeLeftHeaderBar));
-        this.mModeSettingsMenu[10].add_non_control(ctl_ptr(this.miStarModeRightHeaderBar));
-        this.mModeSettingsMenu[10].add_non_control(ctl_ptr(this.miStarModeHeaderText));
+        this.mModeSettingsMenu[10].add_non_control(this.miStarModeLeftHeaderBar.id());
+        this.mModeSettingsMenu[10].add_non_control(this.miStarModeRightHeaderBar.id());
+        this.mModeSettingsMenu[10].add_non_control(this.miStarModeHeaderText.id());
 
-        this.mModeSettingsMenu[10].set_initial_focus(g, ctl_ptr(this.miStarModeTimeField));
+        this.mModeSettingsMenu[10].set_initial_focus(g, this.miStarModeTimeField.id());
         this.mModeSettingsMenu[10].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -857,95 +858,95 @@ impl UI_ModeOptionsMenu {
         // Domination Mode Settings
         //***********************
 
-        this.miDominationModeQuantityField = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 120, "Quantity", 400, 180));
-        this.miDominationModeQuantityField.add_random("1 Base", 1, false);
-        this.miDominationModeQuantityField.add_random("2 Bases", 2, false);
-        this.miDominationModeQuantityField.add("3 Bases", 3);
-        this.miDominationModeQuantityField.add("4 Bases", 4);
-        this.miDominationModeQuantityField.add("5 Bases", 5);
-        this.miDominationModeQuantityField.add_random("6 Bases", 6, false);
-        this.miDominationModeQuantityField.add_random("7 Bases", 7, false);
-        this.miDominationModeQuantityField.add_random("8 Bases", 8, false);
-        this.miDominationModeQuantityField.add_random("9 Bases", 9, false);
-        this.miDominationModeQuantityField.add_random("10 Bases", 10, false);
-        this.miDominationModeQuantityField.add_random("# Players - 1", 11, false);
-        this.miDominationModeQuantityField.add_random("# Players", 12, false);
-        this.miDominationModeQuantityField.add("# Players + 1", 13);
-        this.miDominationModeQuantityField.add("# Players + 2", 14);
-        this.miDominationModeQuantityField.add("# Players + 3", 15);
-        this.miDominationModeQuantityField.add("# Players + 4", 16);
-        this.miDominationModeQuantityField.add("# Players + 5", 17);
-        this.miDominationModeQuantityField.add_random("# Players + 6", 18, false);
-        this.miDominationModeQuantityField.add_random("2x Players - 3", 19, false);
-        this.miDominationModeQuantityField.add_random("2x Players - 2", 20, false);
-        this.miDominationModeQuantityField.add("2x Players - 1", 21);
-        this.miDominationModeQuantityField.add("2x Players", 22);
-        this.miDominationModeQuantityField.add_random("2x Players + 1", 23, false);
-        this.miDominationModeQuantityField.add_random("2x Players + 2", 24, false);
-        this.miDominationModeQuantityField.set_output_ptr(&mut g.game_values.gamemodemenusettings.domination.quantity as *mut _);
-        this.miDominationModeQuantityField.set_current_value(g.game_values.gamemodemenusettings.domination.quantity);
+        this.miDominationModeQuantityField = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 120, "Quantity", 400, 180), g);
+        g.ctl(this.miDominationModeQuantityField).add_random("1 Base", 1, false);
+        g.ctl(this.miDominationModeQuantityField).add_random("2 Bases", 2, false);
+        g.ctl(this.miDominationModeQuantityField).add("3 Bases", 3);
+        g.ctl(this.miDominationModeQuantityField).add("4 Bases", 4);
+        g.ctl(this.miDominationModeQuantityField).add("5 Bases", 5);
+        g.ctl(this.miDominationModeQuantityField).add_random("6 Bases", 6, false);
+        g.ctl(this.miDominationModeQuantityField).add_random("7 Bases", 7, false);
+        g.ctl(this.miDominationModeQuantityField).add_random("8 Bases", 8, false);
+        g.ctl(this.miDominationModeQuantityField).add_random("9 Bases", 9, false);
+        g.ctl(this.miDominationModeQuantityField).add_random("10 Bases", 10, false);
+        g.ctl(this.miDominationModeQuantityField).add_random("# Players - 1", 11, false);
+        g.ctl(this.miDominationModeQuantityField).add_random("# Players", 12, false);
+        g.ctl(this.miDominationModeQuantityField).add("# Players + 1", 13);
+        g.ctl(this.miDominationModeQuantityField).add("# Players + 2", 14);
+        g.ctl(this.miDominationModeQuantityField).add("# Players + 3", 15);
+        g.ctl(this.miDominationModeQuantityField).add("# Players + 4", 16);
+        g.ctl(this.miDominationModeQuantityField).add("# Players + 5", 17);
+        g.ctl(this.miDominationModeQuantityField).add_random("# Players + 6", 18, false);
+        g.ctl(this.miDominationModeQuantityField).add_random("2x Players - 3", 19, false);
+        g.ctl(this.miDominationModeQuantityField).add_random("2x Players - 2", 20, false);
+        g.ctl(this.miDominationModeQuantityField).add("2x Players - 1", 21);
+        g.ctl(this.miDominationModeQuantityField).add("2x Players", 22);
+        g.ctl(this.miDominationModeQuantityField).add_random("2x Players + 1", 23, false);
+        g.ctl(this.miDominationModeQuantityField).add_random("2x Players + 2", 24, false);
+        g.ctl(this.miDominationModeQuantityField).set_output_ptr(&mut g.game_values.gamemodemenusettings.domination.quantity as *mut _);
+        g.ctl(this.miDominationModeQuantityField).set_current_value(g.game_values.gamemodemenusettings.domination.quantity);
 
-        this.miDominationModeRelocateFrequencyField = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 160, "Relocate", 400, 180));
-        this.miDominationModeRelocateFrequencyField.add("Never", 0);
-        this.miDominationModeRelocateFrequencyField.add_random("5 Seconds", 310, false);
-        this.miDominationModeRelocateFrequencyField.add("10 Seconds", 620);
-        this.miDominationModeRelocateFrequencyField.add("15 Seconds", 930);
-        this.miDominationModeRelocateFrequencyField.add("20 Seconds", 1240);
-        this.miDominationModeRelocateFrequencyField.add("30 Seconds", 1860);
-        this.miDominationModeRelocateFrequencyField.add("45 Seconds", 2790);
-        this.miDominationModeRelocateFrequencyField.add("1 Minute", 3720);
-        this.miDominationModeRelocateFrequencyField.add("1.5 Minutes", 5580);
-        this.miDominationModeRelocateFrequencyField.add("2 Minutes", 7440);
-        this.miDominationModeRelocateFrequencyField.add("2.5 Minutes", 9300);
-        this.miDominationModeRelocateFrequencyField.add("3 Minutes", 11160);
-        this.miDominationModeRelocateFrequencyField.set_output_ptr(&mut g.game_values.gamemodemenusettings.domination.relocationfrequency as *mut _);
-        this.miDominationModeRelocateFrequencyField.set_current_value(g.game_values.gamemodemenusettings.domination.relocationfrequency);
+        this.miDominationModeRelocateFrequencyField = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 160, "Relocate", 400, 180), g);
+        g.ctl(this.miDominationModeRelocateFrequencyField).add("Never", 0);
+        g.ctl(this.miDominationModeRelocateFrequencyField).add_random("5 Seconds", 310, false);
+        g.ctl(this.miDominationModeRelocateFrequencyField).add("10 Seconds", 620);
+        g.ctl(this.miDominationModeRelocateFrequencyField).add("15 Seconds", 930);
+        g.ctl(this.miDominationModeRelocateFrequencyField).add("20 Seconds", 1240);
+        g.ctl(this.miDominationModeRelocateFrequencyField).add("30 Seconds", 1860);
+        g.ctl(this.miDominationModeRelocateFrequencyField).add("45 Seconds", 2790);
+        g.ctl(this.miDominationModeRelocateFrequencyField).add("1 Minute", 3720);
+        g.ctl(this.miDominationModeRelocateFrequencyField).add("1.5 Minutes", 5580);
+        g.ctl(this.miDominationModeRelocateFrequencyField).add("2 Minutes", 7440);
+        g.ctl(this.miDominationModeRelocateFrequencyField).add("2.5 Minutes", 9300);
+        g.ctl(this.miDominationModeRelocateFrequencyField).add("3 Minutes", 11160);
+        g.ctl(this.miDominationModeRelocateFrequencyField).set_output_ptr(&mut g.game_values.gamemodemenusettings.domination.relocationfrequency as *mut _);
+        g.ctl(this.miDominationModeRelocateFrequencyField).set_current_value(g.game_values.gamemodemenusettings.domination.relocationfrequency);
 
-        this.miDominationModeDeathText = Ptr::new_box(MI_Text::new(g, "On Death", 120, 210, 0, true, TextAlign::LEFT));
+        this.miDominationModeDeathText = Ctl::new(MI_Text::new(g, "On Death", 120, 210, 0, true, TextAlign::LEFT), g);
 
-        this.miDominationModeLoseOnDeathField = Ptr::new_box(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 120, 240, "Lose Bases", 400, 180));
-        this.miDominationModeLoseOnDeathField.add("Off", false);
-        this.miDominationModeLoseOnDeathField.add("On", true);
-        this.miDominationModeLoseOnDeathField.set_output_ptr(&mut g.game_values.gamemodemenusettings.domination.loseondeath as *mut _);
-        this.miDominationModeLoseOnDeathField.set_current_value(g.game_values.gamemodemenusettings.domination.loseondeath);
-        this.miDominationModeLoseOnDeathField.set_auto_advance(true);
+        this.miDominationModeLoseOnDeathField = Ctl::new(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 120, 240, "Lose Bases", 400, 180), g);
+        g.ctl(this.miDominationModeLoseOnDeathField).add("Off", false);
+        g.ctl(this.miDominationModeLoseOnDeathField).add("On", true);
+        g.ctl(this.miDominationModeLoseOnDeathField).set_output_ptr(&mut g.game_values.gamemodemenusettings.domination.loseondeath as *mut _);
+        g.ctl(this.miDominationModeLoseOnDeathField).set_current_value(g.game_values.gamemodemenusettings.domination.loseondeath);
+        g.ctl(this.miDominationModeLoseOnDeathField).set_auto_advance(true);
 
-        this.miDominationModeRelocateOnDeathField = Ptr::new_box(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 120, 280, "Move Bases", 400, 180));
-        this.miDominationModeRelocateOnDeathField.add("Off", false);
-        this.miDominationModeRelocateOnDeathField.add("On", true);
-        this.miDominationModeRelocateOnDeathField.set_output_ptr(&mut g.game_values.gamemodemenusettings.domination.relocateondeath as *mut _);
-        this.miDominationModeRelocateOnDeathField.set_current_value(g.game_values.gamemodemenusettings.domination.relocateondeath);
-        this.miDominationModeRelocateOnDeathField.set_auto_advance(true);
+        this.miDominationModeRelocateOnDeathField = Ctl::new(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 120, 280, "Move Bases", 400, 180), g);
+        g.ctl(this.miDominationModeRelocateOnDeathField).add("Off", false);
+        g.ctl(this.miDominationModeRelocateOnDeathField).add("On", true);
+        g.ctl(this.miDominationModeRelocateOnDeathField).set_output_ptr(&mut g.game_values.gamemodemenusettings.domination.relocateondeath as *mut _);
+        g.ctl(this.miDominationModeRelocateOnDeathField).set_current_value(g.game_values.gamemodemenusettings.domination.relocateondeath);
+        g.ctl(this.miDominationModeRelocateOnDeathField).set_auto_advance(true);
 
-        this.miDominationModeStealOnDeathField = Ptr::new_box(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 120, 320, "Steal Bases", 400, 180));
-        this.miDominationModeStealOnDeathField.add("Off", false);
-        this.miDominationModeStealOnDeathField.add("On", true);
-        this.miDominationModeStealOnDeathField.set_output_ptr(&mut g.game_values.gamemodemenusettings.domination.stealondeath as *mut _);
-        this.miDominationModeStealOnDeathField.set_current_value(g.game_values.gamemodemenusettings.domination.stealondeath);
-        this.miDominationModeStealOnDeathField.set_auto_advance(true);
+        this.miDominationModeStealOnDeathField = Ctl::new(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 120, 320, "Steal Bases", 400, 180), g);
+        g.ctl(this.miDominationModeStealOnDeathField).add("Off", false);
+        g.ctl(this.miDominationModeStealOnDeathField).add("On", true);
+        g.ctl(this.miDominationModeStealOnDeathField).set_output_ptr(&mut g.game_values.gamemodemenusettings.domination.stealondeath as *mut _);
+        g.ctl(this.miDominationModeStealOnDeathField).set_current_value(g.game_values.gamemodemenusettings.domination.stealondeath);
+        g.ctl(this.miDominationModeStealOnDeathField).set_auto_advance(true);
 
 
-        this.miDominationModeBackButton = Ptr::new_box(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
-        this.miDominationModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
+        this.miDominationModeBackButton = Ctl::new(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER), g);
+        g.ctl(this.miDominationModeBackButton).set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
-        this.miDominationModeLeftHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-        this.miDominationModeRightHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-        this.miDominationModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Domination Mode Menu", 320, 5));
+        this.miDominationModeLeftHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0), g);
+        this.miDominationModeRightHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0), g);
+        this.miDominationModeHeaderText = Ctl::new(MI_HeaderText::new(g, "Domination Mode Menu", 320, 5), g);
 
-        this.mModeSettingsMenu[11].add_control(ctl_ptr(this.miDominationModeQuantityField), ctl_ptr(this.miDominationModeBackButton), ctl_ptr(this.miDominationModeRelocateFrequencyField), Ptr::null(), ctl_ptr(this.miDominationModeBackButton));
-        this.mModeSettingsMenu[11].add_control(ctl_ptr(this.miDominationModeRelocateFrequencyField), ctl_ptr(this.miDominationModeQuantityField), ctl_ptr(this.miDominationModeLoseOnDeathField), Ptr::null(), ctl_ptr(this.miDominationModeBackButton));
-        this.mModeSettingsMenu[11].add_control(ctl_ptr(this.miDominationModeLoseOnDeathField), ctl_ptr(this.miDominationModeRelocateFrequencyField), ctl_ptr(this.miDominationModeRelocateOnDeathField), Ptr::null(), ctl_ptr(this.miDominationModeBackButton));
-        this.mModeSettingsMenu[11].add_control(ctl_ptr(this.miDominationModeRelocateOnDeathField), ctl_ptr(this.miDominationModeLoseOnDeathField), ctl_ptr(this.miDominationModeStealOnDeathField), Ptr::null(), ctl_ptr(this.miDominationModeBackButton));
-        this.mModeSettingsMenu[11].add_control(ctl_ptr(this.miDominationModeStealOnDeathField), ctl_ptr(this.miDominationModeRelocateOnDeathField), ctl_ptr(this.miDominationModeBackButton), Ptr::null(), ctl_ptr(this.miDominationModeBackButton));
+        this.mModeSettingsMenu[11].add_control(g, this.miDominationModeQuantityField.id(), this.miDominationModeBackButton.id(), this.miDominationModeRelocateFrequencyField.id(), Default::default(), this.miDominationModeBackButton.id());
+        this.mModeSettingsMenu[11].add_control(g, this.miDominationModeRelocateFrequencyField.id(), this.miDominationModeQuantityField.id(), this.miDominationModeLoseOnDeathField.id(), Default::default(), this.miDominationModeBackButton.id());
+        this.mModeSettingsMenu[11].add_control(g, this.miDominationModeLoseOnDeathField.id(), this.miDominationModeRelocateFrequencyField.id(), this.miDominationModeRelocateOnDeathField.id(), Default::default(), this.miDominationModeBackButton.id());
+        this.mModeSettingsMenu[11].add_control(g, this.miDominationModeRelocateOnDeathField.id(), this.miDominationModeLoseOnDeathField.id(), this.miDominationModeStealOnDeathField.id(), Default::default(), this.miDominationModeBackButton.id());
+        this.mModeSettingsMenu[11].add_control(g, this.miDominationModeStealOnDeathField.id(), this.miDominationModeRelocateOnDeathField.id(), this.miDominationModeBackButton.id(), Default::default(), this.miDominationModeBackButton.id());
 
-        this.mModeSettingsMenu[11].add_control(ctl_ptr(this.miDominationModeBackButton), ctl_ptr(this.miDominationModeStealOnDeathField), ctl_ptr(this.miDominationModeQuantityField), ctl_ptr(this.miDominationModeStealOnDeathField), Ptr::null());
+        this.mModeSettingsMenu[11].add_control(g, this.miDominationModeBackButton.id(), this.miDominationModeStealOnDeathField.id(), this.miDominationModeQuantityField.id(), this.miDominationModeStealOnDeathField.id(), Default::default());
 
-        this.mModeSettingsMenu[11].add_non_control(ctl_ptr(this.miDominationModeLeftHeaderBar));
-        this.mModeSettingsMenu[11].add_non_control(ctl_ptr(this.miDominationModeRightHeaderBar));
-        this.mModeSettingsMenu[11].add_non_control(ctl_ptr(this.miDominationModeHeaderText));
-        this.mModeSettingsMenu[11].add_non_control(ctl_ptr(this.miDominationModeDeathText));
+        this.mModeSettingsMenu[11].add_non_control(this.miDominationModeLeftHeaderBar.id());
+        this.mModeSettingsMenu[11].add_non_control(this.miDominationModeRightHeaderBar.id());
+        this.mModeSettingsMenu[11].add_non_control(this.miDominationModeHeaderText.id());
+        this.mModeSettingsMenu[11].add_non_control(this.miDominationModeDeathText.id());
 
-        this.mModeSettingsMenu[11].set_initial_focus(g, ctl_ptr(this.miDominationModeQuantityField));
+        this.mModeSettingsMenu[11].set_initial_focus(g, this.miDominationModeQuantityField.id());
         this.mModeSettingsMenu[11].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -953,59 +954,59 @@ impl UI_ModeOptionsMenu {
         // King of the Hill Mode Settings
         //***********************
 
-        this.miKingOfTheHillModeSizeField = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 180, "Size", 400, 180));
-        this.miKingOfTheHillModeSizeField.add("2 x 2", 2);
-        this.miKingOfTheHillModeSizeField.add("3 x 3", 3);
-        this.miKingOfTheHillModeSizeField.add("4 x 4", 4);
-        this.miKingOfTheHillModeSizeField.add("5 x 5", 5);
-        this.miKingOfTheHillModeSizeField.add("6 x 6", 6);
-        this.miKingOfTheHillModeSizeField.add("7 x 7", 7);
-        this.miKingOfTheHillModeSizeField.set_output_ptr(&mut g.game_values.gamemodemenusettings.kingofthehill.areasize as *mut _);
-        this.miKingOfTheHillModeSizeField.set_current_value(g.game_values.gamemodemenusettings.kingofthehill.areasize);
+        this.miKingOfTheHillModeSizeField = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 180, "Size", 400, 180), g);
+        g.ctl(this.miKingOfTheHillModeSizeField).add("2 x 2", 2);
+        g.ctl(this.miKingOfTheHillModeSizeField).add("3 x 3", 3);
+        g.ctl(this.miKingOfTheHillModeSizeField).add("4 x 4", 4);
+        g.ctl(this.miKingOfTheHillModeSizeField).add("5 x 5", 5);
+        g.ctl(this.miKingOfTheHillModeSizeField).add("6 x 6", 6);
+        g.ctl(this.miKingOfTheHillModeSizeField).add("7 x 7", 7);
+        g.ctl(this.miKingOfTheHillModeSizeField).set_output_ptr(&mut g.game_values.gamemodemenusettings.kingofthehill.areasize as *mut _);
+        g.ctl(this.miKingOfTheHillModeSizeField).set_current_value(g.game_values.gamemodemenusettings.kingofthehill.areasize);
 
-        this.miKingOfTheHillModeRelocateFrequencyField = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 220, "Relocate", 400, 180));
-        this.miKingOfTheHillModeRelocateFrequencyField.add("Never", 0);
-        this.miKingOfTheHillModeRelocateFrequencyField.add_random("5 Seconds", 310, false);
-        this.miKingOfTheHillModeRelocateFrequencyField.add("10 Seconds", 620);
-        this.miKingOfTheHillModeRelocateFrequencyField.add("15 Seconds", 930);
-        this.miKingOfTheHillModeRelocateFrequencyField.add("20 Seconds", 1240);
-        this.miKingOfTheHillModeRelocateFrequencyField.add("30 Seconds", 1860);
-        this.miKingOfTheHillModeRelocateFrequencyField.add("45 Seconds", 2790);
-        this.miKingOfTheHillModeRelocateFrequencyField.add("1 Minute", 3720);
-        this.miKingOfTheHillModeRelocateFrequencyField.add("1.5 Minutes", 5580);
-        this.miKingOfTheHillModeRelocateFrequencyField.add("2 Minutes", 7440);
-        this.miKingOfTheHillModeRelocateFrequencyField.add("2.5 Minutes", 9300);
-        this.miKingOfTheHillModeRelocateFrequencyField.add("3 Minutes", 11160);
-        this.miKingOfTheHillModeRelocateFrequencyField.set_output_ptr(&mut g.game_values.gamemodemenusettings.kingofthehill.relocationfrequency as *mut _);
-        this.miKingOfTheHillModeRelocateFrequencyField.set_current_value(g.game_values.gamemodemenusettings.kingofthehill.relocationfrequency);
+        this.miKingOfTheHillModeRelocateFrequencyField = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 220, "Relocate", 400, 180), g);
+        g.ctl(this.miKingOfTheHillModeRelocateFrequencyField).add("Never", 0);
+        g.ctl(this.miKingOfTheHillModeRelocateFrequencyField).add_random("5 Seconds", 310, false);
+        g.ctl(this.miKingOfTheHillModeRelocateFrequencyField).add("10 Seconds", 620);
+        g.ctl(this.miKingOfTheHillModeRelocateFrequencyField).add("15 Seconds", 930);
+        g.ctl(this.miKingOfTheHillModeRelocateFrequencyField).add("20 Seconds", 1240);
+        g.ctl(this.miKingOfTheHillModeRelocateFrequencyField).add("30 Seconds", 1860);
+        g.ctl(this.miKingOfTheHillModeRelocateFrequencyField).add("45 Seconds", 2790);
+        g.ctl(this.miKingOfTheHillModeRelocateFrequencyField).add("1 Minute", 3720);
+        g.ctl(this.miKingOfTheHillModeRelocateFrequencyField).add("1.5 Minutes", 5580);
+        g.ctl(this.miKingOfTheHillModeRelocateFrequencyField).add("2 Minutes", 7440);
+        g.ctl(this.miKingOfTheHillModeRelocateFrequencyField).add("2.5 Minutes", 9300);
+        g.ctl(this.miKingOfTheHillModeRelocateFrequencyField).add("3 Minutes", 11160);
+        g.ctl(this.miKingOfTheHillModeRelocateFrequencyField).set_output_ptr(&mut g.game_values.gamemodemenusettings.kingofthehill.relocationfrequency as *mut _);
+        g.ctl(this.miKingOfTheHillModeRelocateFrequencyField).set_current_value(g.game_values.gamemodemenusettings.kingofthehill.relocationfrequency);
 
-        this.miKingOfTheHillModeMultiplierField = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 260, "Max Multiplier", 400, 180));
-        this.miKingOfTheHillModeMultiplierField.add("None", 1);
-        this.miKingOfTheHillModeMultiplierField.add("2", 2);
-        this.miKingOfTheHillModeMultiplierField.add("3", 3);
-        this.miKingOfTheHillModeMultiplierField.add("4", 4);
-        this.miKingOfTheHillModeMultiplierField.add("5", 5);
-        this.miKingOfTheHillModeMultiplierField.set_output_ptr(&mut g.game_values.gamemodemenusettings.kingofthehill.maxmultiplier as *mut _);
-        this.miKingOfTheHillModeMultiplierField.set_current_value(g.game_values.gamemodemenusettings.kingofthehill.maxmultiplier);
+        this.miKingOfTheHillModeMultiplierField = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 260, "Max Multiplier", 400, 180), g);
+        g.ctl(this.miKingOfTheHillModeMultiplierField).add("None", 1);
+        g.ctl(this.miKingOfTheHillModeMultiplierField).add("2", 2);
+        g.ctl(this.miKingOfTheHillModeMultiplierField).add("3", 3);
+        g.ctl(this.miKingOfTheHillModeMultiplierField).add("4", 4);
+        g.ctl(this.miKingOfTheHillModeMultiplierField).add("5", 5);
+        g.ctl(this.miKingOfTheHillModeMultiplierField).set_output_ptr(&mut g.game_values.gamemodemenusettings.kingofthehill.maxmultiplier as *mut _);
+        g.ctl(this.miKingOfTheHillModeMultiplierField).set_current_value(g.game_values.gamemodemenusettings.kingofthehill.maxmultiplier);
 
-        this.miKingOfTheHillModeBackButton = Ptr::new_box(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
-        this.miKingOfTheHillModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
+        this.miKingOfTheHillModeBackButton = Ctl::new(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER), g);
+        g.ctl(this.miKingOfTheHillModeBackButton).set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
-        this.miKingOfTheHillModeLeftHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-        this.miKingOfTheHillModeRightHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-        this.miKingOfTheHillModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "King of the Hill Mode Menu", 320, 5));
+        this.miKingOfTheHillModeLeftHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0), g);
+        this.miKingOfTheHillModeRightHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0), g);
+        this.miKingOfTheHillModeHeaderText = Ctl::new(MI_HeaderText::new(g, "King of the Hill Mode Menu", 320, 5), g);
 
-        this.mModeSettingsMenu[12].add_control(ctl_ptr(this.miKingOfTheHillModeSizeField), ctl_ptr(this.miKingOfTheHillModeBackButton), ctl_ptr(this.miKingOfTheHillModeRelocateFrequencyField), Ptr::null(), ctl_ptr(this.miKingOfTheHillModeBackButton));
-        this.mModeSettingsMenu[12].add_control(ctl_ptr(this.miKingOfTheHillModeRelocateFrequencyField), ctl_ptr(this.miKingOfTheHillModeSizeField), ctl_ptr(this.miKingOfTheHillModeMultiplierField), Ptr::null(), ctl_ptr(this.miKingOfTheHillModeBackButton));
-        this.mModeSettingsMenu[12].add_control(ctl_ptr(this.miKingOfTheHillModeMultiplierField), ctl_ptr(this.miKingOfTheHillModeRelocateFrequencyField), ctl_ptr(this.miKingOfTheHillModeBackButton), Ptr::null(), ctl_ptr(this.miKingOfTheHillModeBackButton));
+        this.mModeSettingsMenu[12].add_control(g, this.miKingOfTheHillModeSizeField.id(), this.miKingOfTheHillModeBackButton.id(), this.miKingOfTheHillModeRelocateFrequencyField.id(), Default::default(), this.miKingOfTheHillModeBackButton.id());
+        this.mModeSettingsMenu[12].add_control(g, this.miKingOfTheHillModeRelocateFrequencyField.id(), this.miKingOfTheHillModeSizeField.id(), this.miKingOfTheHillModeMultiplierField.id(), Default::default(), this.miKingOfTheHillModeBackButton.id());
+        this.mModeSettingsMenu[12].add_control(g, this.miKingOfTheHillModeMultiplierField.id(), this.miKingOfTheHillModeRelocateFrequencyField.id(), this.miKingOfTheHillModeBackButton.id(), Default::default(), this.miKingOfTheHillModeBackButton.id());
 
-        this.mModeSettingsMenu[12].add_control(ctl_ptr(this.miKingOfTheHillModeBackButton), ctl_ptr(this.miKingOfTheHillModeMultiplierField), ctl_ptr(this.miKingOfTheHillModeSizeField), ctl_ptr(this.miKingOfTheHillModeMultiplierField), Ptr::null());
+        this.mModeSettingsMenu[12].add_control(g, this.miKingOfTheHillModeBackButton.id(), this.miKingOfTheHillModeMultiplierField.id(), this.miKingOfTheHillModeSizeField.id(), this.miKingOfTheHillModeMultiplierField.id(), Default::default());
 
-        this.mModeSettingsMenu[12].add_non_control(ctl_ptr(this.miKingOfTheHillModeLeftHeaderBar));
-        this.mModeSettingsMenu[12].add_non_control(ctl_ptr(this.miKingOfTheHillModeRightHeaderBar));
-        this.mModeSettingsMenu[12].add_non_control(ctl_ptr(this.miKingOfTheHillModeHeaderText));
+        this.mModeSettingsMenu[12].add_non_control(this.miKingOfTheHillModeLeftHeaderBar.id());
+        this.mModeSettingsMenu[12].add_non_control(this.miKingOfTheHillModeRightHeaderBar.id());
+        this.mModeSettingsMenu[12].add_non_control(this.miKingOfTheHillModeHeaderText.id());
 
-        this.mModeSettingsMenu[12].set_initial_focus(g, ctl_ptr(this.miKingOfTheHillModeSizeField));
+        this.mModeSettingsMenu[12].set_initial_focus(g, this.miKingOfTheHillModeSizeField.id());
         this.mModeSettingsMenu[12].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -1013,54 +1014,54 @@ impl UI_ModeOptionsMenu {
         // Race Mode Settings
         //***********************
 
-        this.miRaceModeQuantityField = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 180, "Quantity", 400, 180));
-        this.miRaceModeQuantityField.add_random("2", 2, false);
-        this.miRaceModeQuantityField.add("3", 3);
-        this.miRaceModeQuantityField.add("4", 4);
-        this.miRaceModeQuantityField.add("5", 5);
-        this.miRaceModeQuantityField.add("6", 6);
-        this.miRaceModeQuantityField.add("7", 7);
-        this.miRaceModeQuantityField.add("8", MAXRACEGOALS as i16);
-        this.miRaceModeQuantityField.set_output_ptr(&mut g.game_values.gamemodemenusettings.race.quantity as *mut _);
-        this.miRaceModeQuantityField.set_current_value(g.game_values.gamemodemenusettings.race.quantity);
+        this.miRaceModeQuantityField = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 180, "Quantity", 400, 180), g);
+        g.ctl(this.miRaceModeQuantityField).add_random("2", 2, false);
+        g.ctl(this.miRaceModeQuantityField).add("3", 3);
+        g.ctl(this.miRaceModeQuantityField).add("4", 4);
+        g.ctl(this.miRaceModeQuantityField).add("5", 5);
+        g.ctl(this.miRaceModeQuantityField).add("6", 6);
+        g.ctl(this.miRaceModeQuantityField).add("7", 7);
+        g.ctl(this.miRaceModeQuantityField).add("8", MAXRACEGOALS as i16);
+        g.ctl(this.miRaceModeQuantityField).set_output_ptr(&mut g.game_values.gamemodemenusettings.race.quantity as *mut _);
+        g.ctl(this.miRaceModeQuantityField).set_current_value(g.game_values.gamemodemenusettings.race.quantity);
 
-        this.miRaceModeSpeedField = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 220, "Speed", 400, 180));
-        this.miRaceModeSpeedField.add("Stationary", 0);
-        this.miRaceModeSpeedField.add("Very Slow", 2);
-        this.miRaceModeSpeedField.add("Slow", 3);
-        this.miRaceModeSpeedField.add("Moderate", 4);
-        this.miRaceModeSpeedField.add("Fast", 6);
-        this.miRaceModeSpeedField.add_random("Very Fast", 8, false);
-        this.miRaceModeSpeedField.add_random("Extremely Fast", 15, false);
-        this.miRaceModeSpeedField.add_random("Insanely Fast", 30, false);
-        this.miRaceModeSpeedField.set_output_ptr(&mut g.game_values.gamemodemenusettings.race.speed as *mut _);
-        this.miRaceModeSpeedField.set_current_value(g.game_values.gamemodemenusettings.race.speed);
+        this.miRaceModeSpeedField = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 220, "Speed", 400, 180), g);
+        g.ctl(this.miRaceModeSpeedField).add("Stationary", 0);
+        g.ctl(this.miRaceModeSpeedField).add("Very Slow", 2);
+        g.ctl(this.miRaceModeSpeedField).add("Slow", 3);
+        g.ctl(this.miRaceModeSpeedField).add("Moderate", 4);
+        g.ctl(this.miRaceModeSpeedField).add("Fast", 6);
+        g.ctl(this.miRaceModeSpeedField).add_random("Very Fast", 8, false);
+        g.ctl(this.miRaceModeSpeedField).add_random("Extremely Fast", 15, false);
+        g.ctl(this.miRaceModeSpeedField).add_random("Insanely Fast", 30, false);
+        g.ctl(this.miRaceModeSpeedField).set_output_ptr(&mut g.game_values.gamemodemenusettings.race.speed as *mut _);
+        g.ctl(this.miRaceModeSpeedField).set_current_value(g.game_values.gamemodemenusettings.race.speed);
 
-        this.miRaceModePenaltyField = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 260, "Penalty", 400, 180));
-        this.miRaceModePenaltyField.add("None", 0);
-        this.miRaceModePenaltyField.add("One Goal", 1);
-        this.miRaceModePenaltyField.add("All Goals", 2);
-        this.miRaceModePenaltyField.set_output_ptr(&mut g.game_values.gamemodemenusettings.race.penalty as *mut _);
-        this.miRaceModePenaltyField.set_current_value(g.game_values.gamemodemenusettings.race.penalty);
+        this.miRaceModePenaltyField = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 260, "Penalty", 400, 180), g);
+        g.ctl(this.miRaceModePenaltyField).add("None", 0);
+        g.ctl(this.miRaceModePenaltyField).add("One Goal", 1);
+        g.ctl(this.miRaceModePenaltyField).add("All Goals", 2);
+        g.ctl(this.miRaceModePenaltyField).set_output_ptr(&mut g.game_values.gamemodemenusettings.race.penalty as *mut _);
+        g.ctl(this.miRaceModePenaltyField).set_current_value(g.game_values.gamemodemenusettings.race.penalty);
 
-        this.miRaceModeBackButton = Ptr::new_box(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
-        this.miRaceModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
+        this.miRaceModeBackButton = Ctl::new(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER), g);
+        g.ctl(this.miRaceModeBackButton).set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
-        this.miRaceModeLeftHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-        this.miRaceModeRightHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-        this.miRaceModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Race Mode Menu", 320, 5));
+        this.miRaceModeLeftHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0), g);
+        this.miRaceModeRightHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0), g);
+        this.miRaceModeHeaderText = Ctl::new(MI_HeaderText::new(g, "Race Mode Menu", 320, 5), g);
 
-        this.mModeSettingsMenu[13].add_control(ctl_ptr(this.miRaceModeQuantityField), ctl_ptr(this.miRaceModeBackButton), ctl_ptr(this.miRaceModeSpeedField), Ptr::null(), ctl_ptr(this.miRaceModeBackButton));
-        this.mModeSettingsMenu[13].add_control(ctl_ptr(this.miRaceModeSpeedField), ctl_ptr(this.miRaceModeQuantityField), ctl_ptr(this.miRaceModePenaltyField), Ptr::null(), ctl_ptr(this.miRaceModeBackButton));
-        this.mModeSettingsMenu[13].add_control(ctl_ptr(this.miRaceModePenaltyField), ctl_ptr(this.miRaceModeSpeedField), ctl_ptr(this.miRaceModeBackButton), Ptr::null(), ctl_ptr(this.miRaceModeBackButton));
+        this.mModeSettingsMenu[13].add_control(g, this.miRaceModeQuantityField.id(), this.miRaceModeBackButton.id(), this.miRaceModeSpeedField.id(), Default::default(), this.miRaceModeBackButton.id());
+        this.mModeSettingsMenu[13].add_control(g, this.miRaceModeSpeedField.id(), this.miRaceModeQuantityField.id(), this.miRaceModePenaltyField.id(), Default::default(), this.miRaceModeBackButton.id());
+        this.mModeSettingsMenu[13].add_control(g, this.miRaceModePenaltyField.id(), this.miRaceModeSpeedField.id(), this.miRaceModeBackButton.id(), Default::default(), this.miRaceModeBackButton.id());
 
-        this.mModeSettingsMenu[13].add_control(ctl_ptr(this.miRaceModeBackButton), ctl_ptr(this.miRaceModePenaltyField), ctl_ptr(this.miRaceModeQuantityField), ctl_ptr(this.miRaceModePenaltyField), Ptr::null());
+        this.mModeSettingsMenu[13].add_control(g, this.miRaceModeBackButton.id(), this.miRaceModePenaltyField.id(), this.miRaceModeQuantityField.id(), this.miRaceModePenaltyField.id(), Default::default());
 
-        this.mModeSettingsMenu[13].add_non_control(ctl_ptr(this.miRaceModeLeftHeaderBar));
-        this.mModeSettingsMenu[13].add_non_control(ctl_ptr(this.miRaceModeRightHeaderBar));
-        this.mModeSettingsMenu[13].add_non_control(ctl_ptr(this.miRaceModeHeaderText));
+        this.mModeSettingsMenu[13].add_non_control(this.miRaceModeLeftHeaderBar.id());
+        this.mModeSettingsMenu[13].add_non_control(this.miRaceModeRightHeaderBar.id());
+        this.mModeSettingsMenu[13].add_non_control(this.miRaceModeHeaderText.id());
 
-        this.mModeSettingsMenu[13].set_initial_focus(g, ctl_ptr(this.miRaceModeQuantityField));
+        this.mModeSettingsMenu[13].set_initial_focus(g, this.miRaceModeQuantityField.id());
         this.mModeSettingsMenu[13].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -1068,20 +1069,20 @@ impl UI_ModeOptionsMenu {
         // Frenzy Mode Settings
         //***********************
 
-        this.miFrenzyModeOptions = Ptr::new_box(MI_FrenzyModeOptions::new(g, 50, 44, 640, 7));
-        this.miFrenzyModeOptions.set_auto_modify(true);
+        this.miFrenzyModeOptions = Ctl::new(MI_FrenzyModeOptions::new(g, 50, 44, 640, 7), g);
+        g.ctl(this.miFrenzyModeOptions).set_auto_modify(true);
 
-        this.miFrenzyModeLeftHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-        this.miFrenzyModeRightHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-        this.miFrenzyModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Frenzy Mode Menu", 320, 5));
+        this.miFrenzyModeLeftHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0), g);
+        this.miFrenzyModeRightHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0), g);
+        this.miFrenzyModeHeaderText = Ctl::new(MI_HeaderText::new(g, "Frenzy Mode Menu", 320, 5), g);
 
-        this.mModeSettingsMenu[15].add_control(ctl_ptr(this.miFrenzyModeOptions), Ptr::null(), Ptr::null(), Ptr::null(), Ptr::null());
+        this.mModeSettingsMenu[15].add_control(g, this.miFrenzyModeOptions.id(), ControlId::NONE, ControlId::NONE, ControlId::NONE, ControlId::NONE);
 
-        this.mModeSettingsMenu[15].add_non_control(ctl_ptr(this.miFrenzyModeLeftHeaderBar));
-        this.mModeSettingsMenu[15].add_non_control(ctl_ptr(this.miFrenzyModeRightHeaderBar));
-        this.mModeSettingsMenu[15].add_non_control(ctl_ptr(this.miFrenzyModeHeaderText));
+        this.mModeSettingsMenu[15].add_non_control(this.miFrenzyModeLeftHeaderBar.id());
+        this.mModeSettingsMenu[15].add_non_control(this.miFrenzyModeRightHeaderBar.id());
+        this.mModeSettingsMenu[15].add_non_control(this.miFrenzyModeHeaderText.id());
 
-        this.mModeSettingsMenu[15].set_initial_focus(g, ctl_ptr(this.miFrenzyModeOptions));
+        this.mModeSettingsMenu[15].set_initial_focus(g, this.miFrenzyModeOptions.id());
         this.mModeSettingsMenu[15].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -1090,239 +1091,239 @@ impl UI_ModeOptionsMenu {
         //***********************
 
         for iEnemy in 0..NUMSURVIVALENEMIES as i16 {
-            this.miSurvivalModeEnemySlider[iEnemy as usize] = Ptr::new_box(MI_PowerupSlider::new(g.rm.spr_selectfield, g.rm.menu_slider_bar, g.rm.menu_survival, 120, 120 + 40 * iEnemy, 400, iEnemy));
-            this.miSurvivalModeEnemySlider[iEnemy as usize].add("", 0);
-            this.miSurvivalModeEnemySlider[iEnemy as usize].add("", 1);
-            this.miSurvivalModeEnemySlider[iEnemy as usize].add("", 2);
-            this.miSurvivalModeEnemySlider[iEnemy as usize].add("", 3);
-            this.miSurvivalModeEnemySlider[iEnemy as usize].add("", 4);
-            this.miSurvivalModeEnemySlider[iEnemy as usize].add("", 5);
-            this.miSurvivalModeEnemySlider[iEnemy as usize].add("", 6);
-            this.miSurvivalModeEnemySlider[iEnemy as usize].add("", 7);
-            this.miSurvivalModeEnemySlider[iEnemy as usize].add("", 8);
-            this.miSurvivalModeEnemySlider[iEnemy as usize].add("", 9);
-            this.miSurvivalModeEnemySlider[iEnemy as usize].add("", 10);
-            this.miSurvivalModeEnemySlider[iEnemy as usize].allow_wrap(false);
-            this.miSurvivalModeEnemySlider[iEnemy as usize].set_output_ptr(&mut g.game_values.gamemodemenusettings.survival.enemyweight[iEnemy as usize] as *mut _);
-            this.miSurvivalModeEnemySlider[iEnemy as usize].set_current_value(g.game_values.gamemodemenusettings.survival.enemyweight[iEnemy as usize]);
+            this.miSurvivalModeEnemySlider[iEnemy as usize] = Ctl::new(MI_PowerupSlider::new(g.rm.spr_selectfield, g.rm.menu_slider_bar, g.rm.menu_survival, 120, 120 + 40 * iEnemy, 400, iEnemy), g);
+            g.ctl(this.miSurvivalModeEnemySlider[iEnemy as usize]).add("", 0);
+            g.ctl(this.miSurvivalModeEnemySlider[iEnemy as usize]).add("", 1);
+            g.ctl(this.miSurvivalModeEnemySlider[iEnemy as usize]).add("", 2);
+            g.ctl(this.miSurvivalModeEnemySlider[iEnemy as usize]).add("", 3);
+            g.ctl(this.miSurvivalModeEnemySlider[iEnemy as usize]).add("", 4);
+            g.ctl(this.miSurvivalModeEnemySlider[iEnemy as usize]).add("", 5);
+            g.ctl(this.miSurvivalModeEnemySlider[iEnemy as usize]).add("", 6);
+            g.ctl(this.miSurvivalModeEnemySlider[iEnemy as usize]).add("", 7);
+            g.ctl(this.miSurvivalModeEnemySlider[iEnemy as usize]).add("", 8);
+            g.ctl(this.miSurvivalModeEnemySlider[iEnemy as usize]).add("", 9);
+            g.ctl(this.miSurvivalModeEnemySlider[iEnemy as usize]).add("", 10);
+            g.ctl(this.miSurvivalModeEnemySlider[iEnemy as usize]).allow_wrap(false);
+            g.ctl(this.miSurvivalModeEnemySlider[iEnemy as usize]).set_output_ptr(&mut g.game_values.gamemodemenusettings.survival.enemyweight[iEnemy as usize] as *mut _);
+            g.ctl(this.miSurvivalModeEnemySlider[iEnemy as usize]).set_current_value(g.game_values.gamemodemenusettings.survival.enemyweight[iEnemy as usize]);
         }
 
-        this.miSurvivalModeDensityField = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 240, "Density", 400, 180));
-        this.miSurvivalModeDensityField.add_random("Very Low", 40, false);
-        this.miSurvivalModeDensityField.add("Low", 30);
-        this.miSurvivalModeDensityField.add("Medium", 20);
-        this.miSurvivalModeDensityField.add("High", 15);
-        this.miSurvivalModeDensityField.add_random("Very High", 10, false);
-        this.miSurvivalModeDensityField.add("Extremely High", 6);
-        this.miSurvivalModeDensityField.add_random("Insanely High", 2, false);
-        this.miSurvivalModeDensityField.set_output_ptr(&mut g.game_values.gamemodemenusettings.survival.density as *mut _);
-        this.miSurvivalModeDensityField.set_current_value(g.game_values.gamemodemenusettings.survival.density);
+        this.miSurvivalModeDensityField = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 240, "Density", 400, 180), g);
+        g.ctl(this.miSurvivalModeDensityField).add_random("Very Low", 40, false);
+        g.ctl(this.miSurvivalModeDensityField).add("Low", 30);
+        g.ctl(this.miSurvivalModeDensityField).add("Medium", 20);
+        g.ctl(this.miSurvivalModeDensityField).add("High", 15);
+        g.ctl(this.miSurvivalModeDensityField).add_random("Very High", 10, false);
+        g.ctl(this.miSurvivalModeDensityField).add("Extremely High", 6);
+        g.ctl(this.miSurvivalModeDensityField).add_random("Insanely High", 2, false);
+        g.ctl(this.miSurvivalModeDensityField).set_output_ptr(&mut g.game_values.gamemodemenusettings.survival.density as *mut _);
+        g.ctl(this.miSurvivalModeDensityField).set_current_value(g.game_values.gamemodemenusettings.survival.density);
 
-        this.miSurvivalModeSpeedField = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 280, "Speed", 400, 180));
-        this.miSurvivalModeSpeedField.add_random("Very Slow", 2, false);
-        this.miSurvivalModeSpeedField.add("Slow", 3);
-        this.miSurvivalModeSpeedField.add("Moderate", 4);
-        this.miSurvivalModeSpeedField.add("Fast", 6);
-        this.miSurvivalModeSpeedField.add_random("Very Fast", 8, false);
-        this.miSurvivalModeSpeedField.add_random("Extremely Fast", 15, false);
-        this.miSurvivalModeSpeedField.add_random("Insanely Fast", 30, false);
-        this.miSurvivalModeSpeedField.set_output_ptr(&mut g.game_values.gamemodemenusettings.survival.speed as *mut _);
-        this.miSurvivalModeSpeedField.set_current_value(g.game_values.gamemodemenusettings.survival.speed);
+        this.miSurvivalModeSpeedField = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 280, "Speed", 400, 180), g);
+        g.ctl(this.miSurvivalModeSpeedField).add_random("Very Slow", 2, false);
+        g.ctl(this.miSurvivalModeSpeedField).add("Slow", 3);
+        g.ctl(this.miSurvivalModeSpeedField).add("Moderate", 4);
+        g.ctl(this.miSurvivalModeSpeedField).add("Fast", 6);
+        g.ctl(this.miSurvivalModeSpeedField).add_random("Very Fast", 8, false);
+        g.ctl(this.miSurvivalModeSpeedField).add_random("Extremely Fast", 15, false);
+        g.ctl(this.miSurvivalModeSpeedField).add_random("Insanely Fast", 30, false);
+        g.ctl(this.miSurvivalModeSpeedField).set_output_ptr(&mut g.game_values.gamemodemenusettings.survival.speed as *mut _);
+        g.ctl(this.miSurvivalModeSpeedField).set_current_value(g.game_values.gamemodemenusettings.survival.speed);
 
-        this.miSurvivalModeShieldField = Ptr::new_box(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 120, 320, "Shield", 400, 180));
-        this.miSurvivalModeShieldField.add("Off", false);
-        this.miSurvivalModeShieldField.add("On", true);
-        this.miSurvivalModeShieldField.set_output_ptr(&mut g.game_values.gamemodemenusettings.survival.shield as *mut _);
-        this.miSurvivalModeShieldField.set_current_value(g.game_values.gamemodemenusettings.survival.shield);
-        this.miSurvivalModeShieldField.set_auto_advance(true);
+        this.miSurvivalModeShieldField = Ctl::new(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 120, 320, "Shield", 400, 180), g);
+        g.ctl(this.miSurvivalModeShieldField).add("Off", false);
+        g.ctl(this.miSurvivalModeShieldField).add("On", true);
+        g.ctl(this.miSurvivalModeShieldField).set_output_ptr(&mut g.game_values.gamemodemenusettings.survival.shield as *mut _);
+        g.ctl(this.miSurvivalModeShieldField).set_current_value(g.game_values.gamemodemenusettings.survival.shield);
+        g.ctl(this.miSurvivalModeShieldField).set_auto_advance(true);
 
-        this.miSurvivalModeBackButton = Ptr::new_box(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
-        this.miSurvivalModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
+        this.miSurvivalModeBackButton = Ctl::new(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER), g);
+        g.ctl(this.miSurvivalModeBackButton).set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
-        this.miSurvivalModeLeftHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-        this.miSurvivalModeRightHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-        this.miSurvivalModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Survival Mode Menu", 320, 5));
+        this.miSurvivalModeLeftHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0), g);
+        this.miSurvivalModeRightHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0), g);
+        this.miSurvivalModeHeaderText = Ctl::new(MI_HeaderText::new(g, "Survival Mode Menu", 320, 5), g);
 
-        this.mModeSettingsMenu[16].add_control(ctl_ptr(this.miSurvivalModeEnemySlider[0]), ctl_ptr(this.miSurvivalModeBackButton), ctl_ptr(this.miSurvivalModeEnemySlider[1]), Ptr::null(), ctl_ptr(this.miSurvivalModeBackButton));
-        this.mModeSettingsMenu[16].add_control(ctl_ptr(this.miSurvivalModeEnemySlider[1]), ctl_ptr(this.miSurvivalModeEnemySlider[0]), ctl_ptr(this.miSurvivalModeEnemySlider[2]), Ptr::null(), ctl_ptr(this.miSurvivalModeBackButton));
-        this.mModeSettingsMenu[16].add_control(ctl_ptr(this.miSurvivalModeEnemySlider[2]), ctl_ptr(this.miSurvivalModeEnemySlider[1]), ctl_ptr(this.miSurvivalModeDensityField), Ptr::null(), ctl_ptr(this.miSurvivalModeBackButton));
-        this.mModeSettingsMenu[16].add_control(ctl_ptr(this.miSurvivalModeDensityField), ctl_ptr(this.miSurvivalModeEnemySlider[2]), ctl_ptr(this.miSurvivalModeSpeedField), Ptr::null(), ctl_ptr(this.miSurvivalModeBackButton));
-        this.mModeSettingsMenu[16].add_control(ctl_ptr(this.miSurvivalModeSpeedField), ctl_ptr(this.miSurvivalModeDensityField), ctl_ptr(this.miSurvivalModeShieldField), Ptr::null(), ctl_ptr(this.miSurvivalModeBackButton));
-        this.mModeSettingsMenu[16].add_control(ctl_ptr(this.miSurvivalModeShieldField), ctl_ptr(this.miSurvivalModeSpeedField), ctl_ptr(this.miSurvivalModeBackButton), Ptr::null(), ctl_ptr(this.miSurvivalModeBackButton));
-        this.mModeSettingsMenu[16].add_control(ctl_ptr(this.miSurvivalModeBackButton), ctl_ptr(this.miSurvivalModeShieldField), ctl_ptr(this.miSurvivalModeEnemySlider[0]), ctl_ptr(this.miSurvivalModeShieldField), Ptr::null());
+        this.mModeSettingsMenu[16].add_control(g, this.miSurvivalModeEnemySlider[0].id(), this.miSurvivalModeBackButton.id(), this.miSurvivalModeEnemySlider[1].id(), Default::default(), this.miSurvivalModeBackButton.id());
+        this.mModeSettingsMenu[16].add_control(g, this.miSurvivalModeEnemySlider[1].id(), this.miSurvivalModeEnemySlider[0].id(), this.miSurvivalModeEnemySlider[2].id(), Default::default(), this.miSurvivalModeBackButton.id());
+        this.mModeSettingsMenu[16].add_control(g, this.miSurvivalModeEnemySlider[2].id(), this.miSurvivalModeEnemySlider[1].id(), this.miSurvivalModeDensityField.id(), Default::default(), this.miSurvivalModeBackButton.id());
+        this.mModeSettingsMenu[16].add_control(g, this.miSurvivalModeDensityField.id(), this.miSurvivalModeEnemySlider[2].id(), this.miSurvivalModeSpeedField.id(), Default::default(), this.miSurvivalModeBackButton.id());
+        this.mModeSettingsMenu[16].add_control(g, this.miSurvivalModeSpeedField.id(), this.miSurvivalModeDensityField.id(), this.miSurvivalModeShieldField.id(), Default::default(), this.miSurvivalModeBackButton.id());
+        this.mModeSettingsMenu[16].add_control(g, this.miSurvivalModeShieldField.id(), this.miSurvivalModeSpeedField.id(), this.miSurvivalModeBackButton.id(), Default::default(), this.miSurvivalModeBackButton.id());
+        this.mModeSettingsMenu[16].add_control(g, this.miSurvivalModeBackButton.id(), this.miSurvivalModeShieldField.id(), this.miSurvivalModeEnemySlider[0].id(), this.miSurvivalModeShieldField.id(), Default::default());
 
-        this.mModeSettingsMenu[16].add_non_control(ctl_ptr(this.miSurvivalModeLeftHeaderBar));
-        this.mModeSettingsMenu[16].add_non_control(ctl_ptr(this.miSurvivalModeRightHeaderBar));
-        this.mModeSettingsMenu[16].add_non_control(ctl_ptr(this.miSurvivalModeHeaderText));
+        this.mModeSettingsMenu[16].add_non_control(this.miSurvivalModeLeftHeaderBar.id());
+        this.mModeSettingsMenu[16].add_non_control(this.miSurvivalModeRightHeaderBar.id());
+        this.mModeSettingsMenu[16].add_non_control(this.miSurvivalModeHeaderText.id());
 
-        this.mModeSettingsMenu[16].set_initial_focus(g, ctl_ptr(this.miSurvivalModeEnemySlider[0]));
+        this.mModeSettingsMenu[16].set_initial_focus(g, this.miSurvivalModeEnemySlider[0].id());
         this.mModeSettingsMenu[16].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
         //***********************
         // Greed Mode Settings
         //***********************
-        this.miGreedModeCoinLife = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 160, "Coin Life", 400, 150));
-        this.miGreedModeCoinLife.add_random("1 Second", 62, false);
-        this.miGreedModeCoinLife.add_random("2 Seconds", 124, false);
-        this.miGreedModeCoinLife.add("3 Seconds", 186);
-        this.miGreedModeCoinLife.add("4 Seconds", 248);
-        this.miGreedModeCoinLife.add("5 Seconds", 310);
-        this.miGreedModeCoinLife.add("6 Seconds", 372);
-        this.miGreedModeCoinLife.add("7 Seconds", 434);
-        this.miGreedModeCoinLife.add("8 Seconds", 496);
-        this.miGreedModeCoinLife.add("9 Seconds", 558);
-        this.miGreedModeCoinLife.add("10 Seconds", 620);
-        this.miGreedModeCoinLife.add("12 Seconds", 744);
-        this.miGreedModeCoinLife.add("15 Seconds", 930);
-        this.miGreedModeCoinLife.add("18 Seconds", 1116);
-        this.miGreedModeCoinLife.add("20 Seconds", 1240);
-        this.miGreedModeCoinLife.add("25 Seconds", 1550);
-        this.miGreedModeCoinLife.add("30 Seconds", 1860);
-        this.miGreedModeCoinLife.set_output_ptr(&mut g.game_values.gamemodemenusettings.greed.coinlife as *mut _);
-        this.miGreedModeCoinLife.set_current_value(g.game_values.gamemodemenusettings.greed.coinlife);
+        this.miGreedModeCoinLife = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 160, "Coin Life", 400, 150), g);
+        g.ctl(this.miGreedModeCoinLife).add_random("1 Second", 62, false);
+        g.ctl(this.miGreedModeCoinLife).add_random("2 Seconds", 124, false);
+        g.ctl(this.miGreedModeCoinLife).add("3 Seconds", 186);
+        g.ctl(this.miGreedModeCoinLife).add("4 Seconds", 248);
+        g.ctl(this.miGreedModeCoinLife).add("5 Seconds", 310);
+        g.ctl(this.miGreedModeCoinLife).add("6 Seconds", 372);
+        g.ctl(this.miGreedModeCoinLife).add("7 Seconds", 434);
+        g.ctl(this.miGreedModeCoinLife).add("8 Seconds", 496);
+        g.ctl(this.miGreedModeCoinLife).add("9 Seconds", 558);
+        g.ctl(this.miGreedModeCoinLife).add("10 Seconds", 620);
+        g.ctl(this.miGreedModeCoinLife).add("12 Seconds", 744);
+        g.ctl(this.miGreedModeCoinLife).add("15 Seconds", 930);
+        g.ctl(this.miGreedModeCoinLife).add("18 Seconds", 1116);
+        g.ctl(this.miGreedModeCoinLife).add("20 Seconds", 1240);
+        g.ctl(this.miGreedModeCoinLife).add("25 Seconds", 1550);
+        g.ctl(this.miGreedModeCoinLife).add("30 Seconds", 1860);
+        g.ctl(this.miGreedModeCoinLife).set_output_ptr(&mut g.game_values.gamemodemenusettings.greed.coinlife as *mut _);
+        g.ctl(this.miGreedModeCoinLife).set_current_value(g.game_values.gamemodemenusettings.greed.coinlife);
 
-        this.miGreedModeOwnCoins = Ptr::new_box(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 120, 200, "Own Coins", 400, 150));
-        this.miGreedModeOwnCoins.add("Yes", true);
-        this.miGreedModeOwnCoins.add("No", false);
-        this.miGreedModeOwnCoins.set_output_ptr(&mut g.game_values.gamemodemenusettings.greed.owncoins as *mut _);
-        this.miGreedModeOwnCoins.set_current_value(g.game_values.gamemodemenusettings.greed.owncoins);
-        this.miGreedModeOwnCoins.set_auto_advance(true);
+        this.miGreedModeOwnCoins = Ctl::new(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 120, 200, "Own Coins", 400, 150), g);
+        g.ctl(this.miGreedModeOwnCoins).add("Yes", true);
+        g.ctl(this.miGreedModeOwnCoins).add("No", false);
+        g.ctl(this.miGreedModeOwnCoins).set_output_ptr(&mut g.game_values.gamemodemenusettings.greed.owncoins as *mut _);
+        g.ctl(this.miGreedModeOwnCoins).set_current_value(g.game_values.gamemodemenusettings.greed.owncoins);
+        g.ctl(this.miGreedModeOwnCoins).set_auto_advance(true);
 
-        this.miGreedModeMultiplier = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 240, "Multipler", 400, 150));
-        this.miGreedModeMultiplier.add_random("0.5", 1, false);
-        this.miGreedModeMultiplier.add("1", 2);
-        this.miGreedModeMultiplier.add("1.5", 3);
-        this.miGreedModeMultiplier.add("2", 4);
-        this.miGreedModeMultiplier.add_random("2.5", 5, false);
-        this.miGreedModeMultiplier.add_random("3", 6, false);
-        this.miGreedModeMultiplier.set_output_ptr(&mut g.game_values.gamemodemenusettings.greed.multiplier as *mut _);
-        this.miGreedModeMultiplier.set_current_value(g.game_values.gamemodemenusettings.greed.multiplier);
+        this.miGreedModeMultiplier = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 240, "Multipler", 400, 150), g);
+        g.ctl(this.miGreedModeMultiplier).add_random("0.5", 1, false);
+        g.ctl(this.miGreedModeMultiplier).add("1", 2);
+        g.ctl(this.miGreedModeMultiplier).add("1.5", 3);
+        g.ctl(this.miGreedModeMultiplier).add("2", 4);
+        g.ctl(this.miGreedModeMultiplier).add_random("2.5", 5, false);
+        g.ctl(this.miGreedModeMultiplier).add_random("3", 6, false);
+        g.ctl(this.miGreedModeMultiplier).set_output_ptr(&mut g.game_values.gamemodemenusettings.greed.multiplier as *mut _);
+        g.ctl(this.miGreedModeMultiplier).set_current_value(g.game_values.gamemodemenusettings.greed.multiplier);
 
-        this.miGreedModePercentExtraCoin = Ptr::new_box(MI_SliderField::new(g.rm.spr_selectfield, g.rm.menu_slider_bar, 120, 280, "Extra Coins", 400, 150, 384));
-        this.miGreedModePercentExtraCoin.add_random("0", 0, false);
-        this.miGreedModePercentExtraCoin.add_random("5", 5, false);
-        this.miGreedModePercentExtraCoin.add("10", 10);
-        this.miGreedModePercentExtraCoin.add("15", 15);
-        this.miGreedModePercentExtraCoin.add("20", 20);
-        this.miGreedModePercentExtraCoin.add("25", 25);
-        this.miGreedModePercentExtraCoin.add("30", 30);
-        this.miGreedModePercentExtraCoin.add("35", 35);
-        this.miGreedModePercentExtraCoin.add("40", 40);
-        this.miGreedModePercentExtraCoin.add("45", 45);
-        this.miGreedModePercentExtraCoin.add("50", 50);
-        this.miGreedModePercentExtraCoin.add_random("55", 55, false);
-        this.miGreedModePercentExtraCoin.add_random("60", 60, false);
-        this.miGreedModePercentExtraCoin.add_random("65", 65, false);
-        this.miGreedModePercentExtraCoin.add_random("70", 70, false);
-        this.miGreedModePercentExtraCoin.add_random("75", 75, false);
-        this.miGreedModePercentExtraCoin.add_random("80", 80, false);
-        this.miGreedModePercentExtraCoin.add_random("85", 85, false);
-        this.miGreedModePercentExtraCoin.add_random("90", 90, false);
-        this.miGreedModePercentExtraCoin.add_random("95", 95, false);
-        this.miGreedModePercentExtraCoin.add_random("100", 100, false);
-        this.miGreedModePercentExtraCoin.set_output_ptr(&mut g.game_values.gamemodemenusettings.greed.percentextracoin as *mut _);
-        this.miGreedModePercentExtraCoin.set_current_value(g.game_values.gamemodemenusettings.greed.percentextracoin);
-        this.miGreedModePercentExtraCoin.allow_wrap(false);
+        this.miGreedModePercentExtraCoin = Ctl::new(MI_SliderField::new(g.rm.spr_selectfield, g.rm.menu_slider_bar, 120, 280, "Extra Coins", 400, 150, 384), g);
+        g.ctl(this.miGreedModePercentExtraCoin).add_random("0", 0, false);
+        g.ctl(this.miGreedModePercentExtraCoin).add_random("5", 5, false);
+        g.ctl(this.miGreedModePercentExtraCoin).add("10", 10);
+        g.ctl(this.miGreedModePercentExtraCoin).add("15", 15);
+        g.ctl(this.miGreedModePercentExtraCoin).add("20", 20);
+        g.ctl(this.miGreedModePercentExtraCoin).add("25", 25);
+        g.ctl(this.miGreedModePercentExtraCoin).add("30", 30);
+        g.ctl(this.miGreedModePercentExtraCoin).add("35", 35);
+        g.ctl(this.miGreedModePercentExtraCoin).add("40", 40);
+        g.ctl(this.miGreedModePercentExtraCoin).add("45", 45);
+        g.ctl(this.miGreedModePercentExtraCoin).add("50", 50);
+        g.ctl(this.miGreedModePercentExtraCoin).add_random("55", 55, false);
+        g.ctl(this.miGreedModePercentExtraCoin).add_random("60", 60, false);
+        g.ctl(this.miGreedModePercentExtraCoin).add_random("65", 65, false);
+        g.ctl(this.miGreedModePercentExtraCoin).add_random("70", 70, false);
+        g.ctl(this.miGreedModePercentExtraCoin).add_random("75", 75, false);
+        g.ctl(this.miGreedModePercentExtraCoin).add_random("80", 80, false);
+        g.ctl(this.miGreedModePercentExtraCoin).add_random("85", 85, false);
+        g.ctl(this.miGreedModePercentExtraCoin).add_random("90", 90, false);
+        g.ctl(this.miGreedModePercentExtraCoin).add_random("95", 95, false);
+        g.ctl(this.miGreedModePercentExtraCoin).add_random("100", 100, false);
+        g.ctl(this.miGreedModePercentExtraCoin).set_output_ptr(&mut g.game_values.gamemodemenusettings.greed.percentextracoin as *mut _);
+        g.ctl(this.miGreedModePercentExtraCoin).set_current_value(g.game_values.gamemodemenusettings.greed.percentextracoin);
+        g.ctl(this.miGreedModePercentExtraCoin).allow_wrap(false);
 
-        this.miGreedModeBackButton = Ptr::new_box(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
-        this.miGreedModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
+        this.miGreedModeBackButton = Ctl::new(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER), g);
+        g.ctl(this.miGreedModeBackButton).set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
-        this.miGreedModeLeftHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-        this.miGreedModeRightHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-        this.miGreedModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Greed Mode Menu", 320, 5));
+        this.miGreedModeLeftHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0), g);
+        this.miGreedModeRightHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0), g);
+        this.miGreedModeHeaderText = Ctl::new(MI_HeaderText::new(g, "Greed Mode Menu", 320, 5), g);
 
-        this.mModeSettingsMenu[17].add_control(ctl_ptr(this.miGreedModeCoinLife), ctl_ptr(this.miGreedModeBackButton), ctl_ptr(this.miGreedModeOwnCoins), Ptr::null(), ctl_ptr(this.miGreedModeBackButton));
-        this.mModeSettingsMenu[17].add_control(ctl_ptr(this.miGreedModeOwnCoins), ctl_ptr(this.miGreedModeCoinLife), ctl_ptr(this.miGreedModeMultiplier), Ptr::null(), ctl_ptr(this.miGreedModeBackButton));
-        this.mModeSettingsMenu[17].add_control(ctl_ptr(this.miGreedModeMultiplier), ctl_ptr(this.miGreedModeOwnCoins), ctl_ptr(this.miGreedModePercentExtraCoin), Ptr::null(), ctl_ptr(this.miGreedModeBackButton));
-        this.mModeSettingsMenu[17].add_control(ctl_ptr(this.miGreedModePercentExtraCoin), ctl_ptr(this.miGreedModeMultiplier), ctl_ptr(this.miGreedModeBackButton), Ptr::null(), ctl_ptr(this.miGreedModeBackButton));
+        this.mModeSettingsMenu[17].add_control(g, this.miGreedModeCoinLife.id(), this.miGreedModeBackButton.id(), this.miGreedModeOwnCoins.id(), Default::default(), this.miGreedModeBackButton.id());
+        this.mModeSettingsMenu[17].add_control(g, this.miGreedModeOwnCoins.id(), this.miGreedModeCoinLife.id(), this.miGreedModeMultiplier.id(), Default::default(), this.miGreedModeBackButton.id());
+        this.mModeSettingsMenu[17].add_control(g, this.miGreedModeMultiplier.id(), this.miGreedModeOwnCoins.id(), this.miGreedModePercentExtraCoin.id(), Default::default(), this.miGreedModeBackButton.id());
+        this.mModeSettingsMenu[17].add_control(g, this.miGreedModePercentExtraCoin.id(), this.miGreedModeMultiplier.id(), this.miGreedModeBackButton.id(), Default::default(), this.miGreedModeBackButton.id());
 
-        this.mModeSettingsMenu[17].add_control(ctl_ptr(this.miGreedModeBackButton), ctl_ptr(this.miGreedModePercentExtraCoin), ctl_ptr(this.miGreedModeCoinLife), ctl_ptr(this.miGreedModePercentExtraCoin), Ptr::null());
+        this.mModeSettingsMenu[17].add_control(g, this.miGreedModeBackButton.id(), this.miGreedModePercentExtraCoin.id(), this.miGreedModeCoinLife.id(), this.miGreedModePercentExtraCoin.id(), Default::default());
 
-        this.mModeSettingsMenu[17].add_non_control(ctl_ptr(this.miGreedModeLeftHeaderBar));
-        this.mModeSettingsMenu[17].add_non_control(ctl_ptr(this.miGreedModeRightHeaderBar));
-        this.mModeSettingsMenu[17].add_non_control(ctl_ptr(this.miGreedModeHeaderText));
+        this.mModeSettingsMenu[17].add_non_control(this.miGreedModeLeftHeaderBar.id());
+        this.mModeSettingsMenu[17].add_non_control(this.miGreedModeRightHeaderBar.id());
+        this.mModeSettingsMenu[17].add_non_control(this.miGreedModeHeaderText.id());
 
-        this.mModeSettingsMenu[17].set_initial_focus(g, ctl_ptr(this.miGreedModeCoinLife));
+        this.mModeSettingsMenu[17].set_initial_focus(g, this.miGreedModeCoinLife.id());
         this.mModeSettingsMenu[17].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
         //***********************
         // Health Mode Settings
         //***********************
-        this.miHealthModeStartLife = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 180, "Start Life", 400, 150));
-        this.miHealthModeStartLife.add_random("2", 2, false);
-        this.miHealthModeStartLife.add_random("3", 3, false);
-        this.miHealthModeStartLife.add("4", 4);
-        this.miHealthModeStartLife.add("5", 5);
-        this.miHealthModeStartLife.add("6", 6);
-        this.miHealthModeStartLife.add_random("7", 7, false);
-        this.miHealthModeStartLife.add_random("8", 8, false);
-        this.miHealthModeStartLife.add_random("9", 9, false);
-        this.miHealthModeStartLife.add_random("10", 10, false);
-        this.miHealthModeStartLife.set_output_ptr(&mut g.game_values.gamemodemenusettings.health.startlife as *mut _);
-        this.miHealthModeStartLife.set_current_value(g.game_values.gamemodemenusettings.health.startlife);
-        this.miHealthModeStartLife.allow_wrap(false);
-        this.miHealthModeStartLife.set_item_changed_code(MENU_CODE_HEALTH_MODE_START_LIFE_CHANGED);
+        this.miHealthModeStartLife = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 180, "Start Life", 400, 150), g);
+        g.ctl(this.miHealthModeStartLife).add_random("2", 2, false);
+        g.ctl(this.miHealthModeStartLife).add_random("3", 3, false);
+        g.ctl(this.miHealthModeStartLife).add("4", 4);
+        g.ctl(this.miHealthModeStartLife).add("5", 5);
+        g.ctl(this.miHealthModeStartLife).add("6", 6);
+        g.ctl(this.miHealthModeStartLife).add_random("7", 7, false);
+        g.ctl(this.miHealthModeStartLife).add_random("8", 8, false);
+        g.ctl(this.miHealthModeStartLife).add_random("9", 9, false);
+        g.ctl(this.miHealthModeStartLife).add_random("10", 10, false);
+        g.ctl(this.miHealthModeStartLife).set_output_ptr(&mut g.game_values.gamemodemenusettings.health.startlife as *mut _);
+        g.ctl(this.miHealthModeStartLife).set_current_value(g.game_values.gamemodemenusettings.health.startlife);
+        g.ctl(this.miHealthModeStartLife).allow_wrap(false);
+        g.ctl(this.miHealthModeStartLife).set_item_changed_code(MENU_CODE_HEALTH_MODE_START_LIFE_CHANGED);
 
-        this.miHealthModeMaxLife = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 220, "Max Life", 400, 150));
-        this.miHealthModeMaxLife.add_random("2", 2, false);
-        this.miHealthModeMaxLife.add_random("3", 3, false);
-        this.miHealthModeMaxLife.add_random("4", 4, false);
-        this.miHealthModeMaxLife.add_random("5", 5, false);
-        this.miHealthModeMaxLife.add("6", 6);
-        this.miHealthModeMaxLife.add("7", 7);
-        this.miHealthModeMaxLife.add("8", 8);
-        this.miHealthModeMaxLife.add("9", 9);
-        this.miHealthModeMaxLife.add("10", 10);
-        this.miHealthModeMaxLife.set_output_ptr(&mut g.game_values.gamemodemenusettings.health.maxlife as *mut _);
-        this.miHealthModeMaxLife.set_current_value(g.game_values.gamemodemenusettings.health.maxlife);
-        this.miHealthModeMaxLife.allow_wrap(false);
-        this.miHealthModeMaxLife.set_item_changed_code(MENU_CODE_HEALTH_MODE_MAX_LIFE_CHANGED);
+        this.miHealthModeMaxLife = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 220, "Max Life", 400, 150), g);
+        g.ctl(this.miHealthModeMaxLife).add_random("2", 2, false);
+        g.ctl(this.miHealthModeMaxLife).add_random("3", 3, false);
+        g.ctl(this.miHealthModeMaxLife).add_random("4", 4, false);
+        g.ctl(this.miHealthModeMaxLife).add_random("5", 5, false);
+        g.ctl(this.miHealthModeMaxLife).add("6", 6);
+        g.ctl(this.miHealthModeMaxLife).add("7", 7);
+        g.ctl(this.miHealthModeMaxLife).add("8", 8);
+        g.ctl(this.miHealthModeMaxLife).add("9", 9);
+        g.ctl(this.miHealthModeMaxLife).add("10", 10);
+        g.ctl(this.miHealthModeMaxLife).set_output_ptr(&mut g.game_values.gamemodemenusettings.health.maxlife as *mut _);
+        g.ctl(this.miHealthModeMaxLife).set_current_value(g.game_values.gamemodemenusettings.health.maxlife);
+        g.ctl(this.miHealthModeMaxLife).allow_wrap(false);
+        g.ctl(this.miHealthModeMaxLife).set_item_changed_code(MENU_CODE_HEALTH_MODE_MAX_LIFE_CHANGED);
 
-        this.miHealthModePercentExtraLife = Ptr::new_box(MI_SliderField::new(g.rm.spr_selectfield, g.rm.menu_slider_bar, 120, 260, "Extra Life", 400, 150, 384));
-        this.miHealthModePercentExtraLife.add_random("0", 0, false);
-        this.miHealthModePercentExtraLife.add_random("5", 5, false);
-        this.miHealthModePercentExtraLife.add("10", 10);
-        this.miHealthModePercentExtraLife.add("15", 15);
-        this.miHealthModePercentExtraLife.add("20", 20);
-        this.miHealthModePercentExtraLife.add("25", 25);
-        this.miHealthModePercentExtraLife.add("30", 30);
-        this.miHealthModePercentExtraLife.add("35", 35);
-        this.miHealthModePercentExtraLife.add("40", 40);
-        this.miHealthModePercentExtraLife.add("45", 45);
-        this.miHealthModePercentExtraLife.add("50", 50);
-        this.miHealthModePercentExtraLife.add_random("55", 55, false);
-        this.miHealthModePercentExtraLife.add_random("60", 60, false);
-        this.miHealthModePercentExtraLife.add_random("65", 65, false);
-        this.miHealthModePercentExtraLife.add_random("70", 70, false);
-        this.miHealthModePercentExtraLife.add_random("75", 75, false);
-        this.miHealthModePercentExtraLife.add_random("80", 80, false);
-        this.miHealthModePercentExtraLife.add_random("85", 85, false);
-        this.miHealthModePercentExtraLife.add_random("90", 90, false);
-        this.miHealthModePercentExtraLife.add_random("95", 95, false);
-        this.miHealthModePercentExtraLife.add_random("100", 100, false);
-        this.miHealthModePercentExtraLife.set_output_ptr(&mut g.game_values.gamemodemenusettings.health.percentextralife as *mut _);
-        this.miHealthModePercentExtraLife.set_current_value(g.game_values.gamemodemenusettings.health.percentextralife);
-        this.miHealthModePercentExtraLife.allow_wrap(false);
+        this.miHealthModePercentExtraLife = Ctl::new(MI_SliderField::new(g.rm.spr_selectfield, g.rm.menu_slider_bar, 120, 260, "Extra Life", 400, 150, 384), g);
+        g.ctl(this.miHealthModePercentExtraLife).add_random("0", 0, false);
+        g.ctl(this.miHealthModePercentExtraLife).add_random("5", 5, false);
+        g.ctl(this.miHealthModePercentExtraLife).add("10", 10);
+        g.ctl(this.miHealthModePercentExtraLife).add("15", 15);
+        g.ctl(this.miHealthModePercentExtraLife).add("20", 20);
+        g.ctl(this.miHealthModePercentExtraLife).add("25", 25);
+        g.ctl(this.miHealthModePercentExtraLife).add("30", 30);
+        g.ctl(this.miHealthModePercentExtraLife).add("35", 35);
+        g.ctl(this.miHealthModePercentExtraLife).add("40", 40);
+        g.ctl(this.miHealthModePercentExtraLife).add("45", 45);
+        g.ctl(this.miHealthModePercentExtraLife).add("50", 50);
+        g.ctl(this.miHealthModePercentExtraLife).add_random("55", 55, false);
+        g.ctl(this.miHealthModePercentExtraLife).add_random("60", 60, false);
+        g.ctl(this.miHealthModePercentExtraLife).add_random("65", 65, false);
+        g.ctl(this.miHealthModePercentExtraLife).add_random("70", 70, false);
+        g.ctl(this.miHealthModePercentExtraLife).add_random("75", 75, false);
+        g.ctl(this.miHealthModePercentExtraLife).add_random("80", 80, false);
+        g.ctl(this.miHealthModePercentExtraLife).add_random("85", 85, false);
+        g.ctl(this.miHealthModePercentExtraLife).add_random("90", 90, false);
+        g.ctl(this.miHealthModePercentExtraLife).add_random("95", 95, false);
+        g.ctl(this.miHealthModePercentExtraLife).add_random("100", 100, false);
+        g.ctl(this.miHealthModePercentExtraLife).set_output_ptr(&mut g.game_values.gamemodemenusettings.health.percentextralife as *mut _);
+        g.ctl(this.miHealthModePercentExtraLife).set_current_value(g.game_values.gamemodemenusettings.health.percentextralife);
+        g.ctl(this.miHealthModePercentExtraLife).allow_wrap(false);
 
-        this.miHealthModeBackButton = Ptr::new_box(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
-        this.miHealthModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
+        this.miHealthModeBackButton = Ctl::new(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER), g);
+        g.ctl(this.miHealthModeBackButton).set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
-        this.miHealthModeLeftHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-        this.miHealthModeRightHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-        this.miHealthModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Health Mode Menu", 320, 5));
+        this.miHealthModeLeftHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0), g);
+        this.miHealthModeRightHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0), g);
+        this.miHealthModeHeaderText = Ctl::new(MI_HeaderText::new(g, "Health Mode Menu", 320, 5), g);
 
-        this.mModeSettingsMenu[18].add_control(ctl_ptr(this.miHealthModeStartLife), ctl_ptr(this.miHealthModeBackButton), ctl_ptr(this.miHealthModeMaxLife), Ptr::null(), ctl_ptr(this.miHealthModeBackButton));
-        this.mModeSettingsMenu[18].add_control(ctl_ptr(this.miHealthModeMaxLife), ctl_ptr(this.miHealthModeStartLife), ctl_ptr(this.miHealthModePercentExtraLife), Ptr::null(), ctl_ptr(this.miHealthModeBackButton));
-        this.mModeSettingsMenu[18].add_control(ctl_ptr(this.miHealthModePercentExtraLife), ctl_ptr(this.miHealthModeMaxLife), ctl_ptr(this.miHealthModeBackButton), Ptr::null(), ctl_ptr(this.miHealthModeBackButton));
-        this.mModeSettingsMenu[18].add_control(ctl_ptr(this.miHealthModeBackButton), ctl_ptr(this.miHealthModePercentExtraLife), ctl_ptr(this.miHealthModeStartLife), ctl_ptr(this.miHealthModePercentExtraLife), Ptr::null());
+        this.mModeSettingsMenu[18].add_control(g, this.miHealthModeStartLife.id(), this.miHealthModeBackButton.id(), this.miHealthModeMaxLife.id(), Default::default(), this.miHealthModeBackButton.id());
+        this.mModeSettingsMenu[18].add_control(g, this.miHealthModeMaxLife.id(), this.miHealthModeStartLife.id(), this.miHealthModePercentExtraLife.id(), Default::default(), this.miHealthModeBackButton.id());
+        this.mModeSettingsMenu[18].add_control(g, this.miHealthModePercentExtraLife.id(), this.miHealthModeMaxLife.id(), this.miHealthModeBackButton.id(), Default::default(), this.miHealthModeBackButton.id());
+        this.mModeSettingsMenu[18].add_control(g, this.miHealthModeBackButton.id(), this.miHealthModePercentExtraLife.id(), this.miHealthModeStartLife.id(), this.miHealthModePercentExtraLife.id(), Default::default());
 
-        this.mModeSettingsMenu[18].add_non_control(ctl_ptr(this.miHealthModeLeftHeaderBar));
-        this.mModeSettingsMenu[18].add_non_control(ctl_ptr(this.miHealthModeRightHeaderBar));
-        this.mModeSettingsMenu[18].add_non_control(ctl_ptr(this.miHealthModeHeaderText));
+        this.mModeSettingsMenu[18].add_non_control(this.miHealthModeLeftHeaderBar.id());
+        this.mModeSettingsMenu[18].add_non_control(this.miHealthModeRightHeaderBar.id());
+        this.mModeSettingsMenu[18].add_non_control(this.miHealthModeHeaderText.id());
 
-        this.mModeSettingsMenu[18].set_initial_focus(g, ctl_ptr(this.miHealthModeStartLife));
+        this.mModeSettingsMenu[18].set_initial_focus(g, this.miHealthModeStartLife.id());
         this.mModeSettingsMenu[18].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -1330,137 +1331,137 @@ impl UI_ModeOptionsMenu {
         // Card Collection Mode Settings
         //***********************
 
-        this.miCollectionModeQuantityField = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 160, "Limit", 400, 180));
-        this.miCollectionModeQuantityField.add("1 Card", 1);
-        this.miCollectionModeQuantityField.add("2 Cards", 2);
-        this.miCollectionModeQuantityField.add("3 Cards", 3);
-        this.miCollectionModeQuantityField.add_random("4 Cards", 4, false);
-        this.miCollectionModeQuantityField.add_random("5 Cards", 5, false);
-        this.miCollectionModeQuantityField.add("# Players - 1", 6);
-        this.miCollectionModeQuantityField.add("# Players", 7);
-        this.miCollectionModeQuantityField.add_random("# Players + 1", 8, false);
-        this.miCollectionModeQuantityField.add_random("# Players + 2", 9, false);
-        this.miCollectionModeQuantityField.add_random("# Players + 3", 10, false);
-        this.miCollectionModeQuantityField.set_output_ptr(&mut g.game_values.gamemodemenusettings.collection.quantity as *mut _);
-        this.miCollectionModeQuantityField.set_current_value(g.game_values.gamemodemenusettings.collection.quantity);
+        this.miCollectionModeQuantityField = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 160, "Limit", 400, 180), g);
+        g.ctl(this.miCollectionModeQuantityField).add("1 Card", 1);
+        g.ctl(this.miCollectionModeQuantityField).add("2 Cards", 2);
+        g.ctl(this.miCollectionModeQuantityField).add("3 Cards", 3);
+        g.ctl(this.miCollectionModeQuantityField).add_random("4 Cards", 4, false);
+        g.ctl(this.miCollectionModeQuantityField).add_random("5 Cards", 5, false);
+        g.ctl(this.miCollectionModeQuantityField).add("# Players - 1", 6);
+        g.ctl(this.miCollectionModeQuantityField).add("# Players", 7);
+        g.ctl(this.miCollectionModeQuantityField).add_random("# Players + 1", 8, false);
+        g.ctl(this.miCollectionModeQuantityField).add_random("# Players + 2", 9, false);
+        g.ctl(this.miCollectionModeQuantityField).add_random("# Players + 3", 10, false);
+        g.ctl(this.miCollectionModeQuantityField).set_output_ptr(&mut g.game_values.gamemodemenusettings.collection.quantity as *mut _);
+        g.ctl(this.miCollectionModeQuantityField).set_current_value(g.game_values.gamemodemenusettings.collection.quantity);
 
-        this.miCollectionModeRateField = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 200, "Rate", 400, 180));
-        this.miCollectionModeRateField.add("Instant", 0);
-        this.miCollectionModeRateField.add("1 Second", 62);
-        this.miCollectionModeRateField.add("2 Seconds", 124);
-        this.miCollectionModeRateField.add("3 Seconds", 186);
-        this.miCollectionModeRateField.add("5 Seconds", 310);
-        this.miCollectionModeRateField.add_random("10 Seconds", 620, false);
-        this.miCollectionModeRateField.add_random("15 Seconds", 930, false);
-        this.miCollectionModeRateField.add_random("20 Seconds", 1240, false);
-        this.miCollectionModeRateField.add_random("25 Seconds", 1550, false);
-        this.miCollectionModeRateField.add_random("30 Seconds", 1860, false);
-        this.miCollectionModeRateField.set_output_ptr(&mut g.game_values.gamemodemenusettings.collection.rate as *mut _);
-        this.miCollectionModeRateField.set_current_value(g.game_values.gamemodemenusettings.collection.rate);
+        this.miCollectionModeRateField = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 200, "Rate", 400, 180), g);
+        g.ctl(this.miCollectionModeRateField).add("Instant", 0);
+        g.ctl(this.miCollectionModeRateField).add("1 Second", 62);
+        g.ctl(this.miCollectionModeRateField).add("2 Seconds", 124);
+        g.ctl(this.miCollectionModeRateField).add("3 Seconds", 186);
+        g.ctl(this.miCollectionModeRateField).add("5 Seconds", 310);
+        g.ctl(this.miCollectionModeRateField).add_random("10 Seconds", 620, false);
+        g.ctl(this.miCollectionModeRateField).add_random("15 Seconds", 930, false);
+        g.ctl(this.miCollectionModeRateField).add_random("20 Seconds", 1240, false);
+        g.ctl(this.miCollectionModeRateField).add_random("25 Seconds", 1550, false);
+        g.ctl(this.miCollectionModeRateField).add_random("30 Seconds", 1860, false);
+        g.ctl(this.miCollectionModeRateField).set_output_ptr(&mut g.game_values.gamemodemenusettings.collection.rate as *mut _);
+        g.ctl(this.miCollectionModeRateField).set_current_value(g.game_values.gamemodemenusettings.collection.rate);
 
-        this.miCollectionModeBankTimeField = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 240, "Bank Time", 400, 180));
-        this.miCollectionModeBankTimeField.add_random("Instant", 0, false);
-        this.miCollectionModeBankTimeField.add_random("1 Second", 62, false);
-        this.miCollectionModeBankTimeField.add("2 Seconds", 124);
-        this.miCollectionModeBankTimeField.add("3 Seconds", 186);
-        this.miCollectionModeBankTimeField.add("4 Seconds", 248);
-        this.miCollectionModeBankTimeField.add("5 Seconds", 310);
-        this.miCollectionModeBankTimeField.add_random("6 Seconds", 372, false);
-        this.miCollectionModeBankTimeField.add_random("7 Seconds", 434, false);
-        this.miCollectionModeBankTimeField.add_random("8 Seconds", 496, false);
-        this.miCollectionModeBankTimeField.add_random("9 Seconds", 558, false);
-        this.miCollectionModeBankTimeField.add_random("10 Seconds", 620, false);
-        this.miCollectionModeBankTimeField.set_output_ptr(&mut g.game_values.gamemodemenusettings.collection.banktime as *mut _);
-        this.miCollectionModeBankTimeField.set_current_value(g.game_values.gamemodemenusettings.collection.banktime);
+        this.miCollectionModeBankTimeField = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 240, "Bank Time", 400, 180), g);
+        g.ctl(this.miCollectionModeBankTimeField).add_random("Instant", 0, false);
+        g.ctl(this.miCollectionModeBankTimeField).add_random("1 Second", 62, false);
+        g.ctl(this.miCollectionModeBankTimeField).add("2 Seconds", 124);
+        g.ctl(this.miCollectionModeBankTimeField).add("3 Seconds", 186);
+        g.ctl(this.miCollectionModeBankTimeField).add("4 Seconds", 248);
+        g.ctl(this.miCollectionModeBankTimeField).add("5 Seconds", 310);
+        g.ctl(this.miCollectionModeBankTimeField).add_random("6 Seconds", 372, false);
+        g.ctl(this.miCollectionModeBankTimeField).add_random("7 Seconds", 434, false);
+        g.ctl(this.miCollectionModeBankTimeField).add_random("8 Seconds", 496, false);
+        g.ctl(this.miCollectionModeBankTimeField).add_random("9 Seconds", 558, false);
+        g.ctl(this.miCollectionModeBankTimeField).add_random("10 Seconds", 620, false);
+        g.ctl(this.miCollectionModeBankTimeField).set_output_ptr(&mut g.game_values.gamemodemenusettings.collection.banktime as *mut _);
+        g.ctl(this.miCollectionModeBankTimeField).set_current_value(g.game_values.gamemodemenusettings.collection.banktime);
 
-        this.miCollectionModeCardLifeField = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 280, "Card Life", 400, 180));
-        this.miCollectionModeCardLifeField.add_random("1 Second", 62, false);
-        this.miCollectionModeCardLifeField.add_random("2 Seconds", 124, false);
-        this.miCollectionModeCardLifeField.add("3 Seconds", 186);
-        this.miCollectionModeCardLifeField.add("4 Seconds", 248);
-        this.miCollectionModeCardLifeField.add("5 Seconds", 310);
-        this.miCollectionModeCardLifeField.add("6 Seconds", 372);
-        this.miCollectionModeCardLifeField.add("7 Seconds", 434);
-        this.miCollectionModeCardLifeField.add("8 Seconds", 496);
-        this.miCollectionModeCardLifeField.add("9 Seconds", 558);
-        this.miCollectionModeCardLifeField.add("10 Seconds", 620);
-        this.miCollectionModeCardLifeField.add("12 Seconds", 744);
-        this.miCollectionModeCardLifeField.add("15 Seconds", 930);
-        this.miCollectionModeCardLifeField.add("18 Seconds", 1116);
-        this.miCollectionModeCardLifeField.add("20 Seconds", 1240);
-        this.miCollectionModeCardLifeField.add("25 Seconds", 1550);
-        this.miCollectionModeCardLifeField.add("30 Seconds", 1860);
-        this.miCollectionModeCardLifeField.set_output_ptr(&mut g.game_values.gamemodemenusettings.collection.cardlife as *mut _);
-        this.miCollectionModeCardLifeField.set_current_value(g.game_values.gamemodemenusettings.collection.cardlife);
+        this.miCollectionModeCardLifeField = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 280, "Card Life", 400, 180), g);
+        g.ctl(this.miCollectionModeCardLifeField).add_random("1 Second", 62, false);
+        g.ctl(this.miCollectionModeCardLifeField).add_random("2 Seconds", 124, false);
+        g.ctl(this.miCollectionModeCardLifeField).add("3 Seconds", 186);
+        g.ctl(this.miCollectionModeCardLifeField).add("4 Seconds", 248);
+        g.ctl(this.miCollectionModeCardLifeField).add("5 Seconds", 310);
+        g.ctl(this.miCollectionModeCardLifeField).add("6 Seconds", 372);
+        g.ctl(this.miCollectionModeCardLifeField).add("7 Seconds", 434);
+        g.ctl(this.miCollectionModeCardLifeField).add("8 Seconds", 496);
+        g.ctl(this.miCollectionModeCardLifeField).add("9 Seconds", 558);
+        g.ctl(this.miCollectionModeCardLifeField).add("10 Seconds", 620);
+        g.ctl(this.miCollectionModeCardLifeField).add("12 Seconds", 744);
+        g.ctl(this.miCollectionModeCardLifeField).add("15 Seconds", 930);
+        g.ctl(this.miCollectionModeCardLifeField).add("18 Seconds", 1116);
+        g.ctl(this.miCollectionModeCardLifeField).add("20 Seconds", 1240);
+        g.ctl(this.miCollectionModeCardLifeField).add("25 Seconds", 1550);
+        g.ctl(this.miCollectionModeCardLifeField).add("30 Seconds", 1860);
+        g.ctl(this.miCollectionModeCardLifeField).set_output_ptr(&mut g.game_values.gamemodemenusettings.collection.cardlife as *mut _);
+        g.ctl(this.miCollectionModeCardLifeField).set_current_value(g.game_values.gamemodemenusettings.collection.cardlife);
 
-        this.miCollectionModeBackButton = Ptr::new_box(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
-        this.miCollectionModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
+        this.miCollectionModeBackButton = Ctl::new(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER), g);
+        g.ctl(this.miCollectionModeBackButton).set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
-        this.miCollectionModeLeftHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-        this.miCollectionModeRightHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-        this.miCollectionModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Card Collection Mode Menu", 320, 5));
+        this.miCollectionModeLeftHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0), g);
+        this.miCollectionModeRightHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0), g);
+        this.miCollectionModeHeaderText = Ctl::new(MI_HeaderText::new(g, "Card Collection Mode Menu", 320, 5), g);
 
-        this.mModeSettingsMenu[19].add_control(ctl_ptr(this.miCollectionModeQuantityField), ctl_ptr(this.miCollectionModeBackButton), ctl_ptr(this.miCollectionModeRateField), Ptr::null(), ctl_ptr(this.miCollectionModeBackButton));
-        this.mModeSettingsMenu[19].add_control(ctl_ptr(this.miCollectionModeRateField), ctl_ptr(this.miCollectionModeQuantityField), ctl_ptr(this.miCollectionModeBankTimeField), Ptr::null(), ctl_ptr(this.miCollectionModeBackButton));
-        this.mModeSettingsMenu[19].add_control(ctl_ptr(this.miCollectionModeBankTimeField), ctl_ptr(this.miCollectionModeRateField), ctl_ptr(this.miCollectionModeCardLifeField), Ptr::null(), ctl_ptr(this.miCollectionModeBackButton));
-        this.mModeSettingsMenu[19].add_control(ctl_ptr(this.miCollectionModeCardLifeField), ctl_ptr(this.miCollectionModeBankTimeField), ctl_ptr(this.miCollectionModeBackButton), Ptr::null(), ctl_ptr(this.miCollectionModeBackButton));
-        this.mModeSettingsMenu[19].add_control(ctl_ptr(this.miCollectionModeBackButton), ctl_ptr(this.miCollectionModeCardLifeField), ctl_ptr(this.miCollectionModeQuantityField), ctl_ptr(this.miCollectionModeCardLifeField), Ptr::null());
+        this.mModeSettingsMenu[19].add_control(g, this.miCollectionModeQuantityField.id(), this.miCollectionModeBackButton.id(), this.miCollectionModeRateField.id(), Default::default(), this.miCollectionModeBackButton.id());
+        this.mModeSettingsMenu[19].add_control(g, this.miCollectionModeRateField.id(), this.miCollectionModeQuantityField.id(), this.miCollectionModeBankTimeField.id(), Default::default(), this.miCollectionModeBackButton.id());
+        this.mModeSettingsMenu[19].add_control(g, this.miCollectionModeBankTimeField.id(), this.miCollectionModeRateField.id(), this.miCollectionModeCardLifeField.id(), Default::default(), this.miCollectionModeBackButton.id());
+        this.mModeSettingsMenu[19].add_control(g, this.miCollectionModeCardLifeField.id(), this.miCollectionModeBankTimeField.id(), this.miCollectionModeBackButton.id(), Default::default(), this.miCollectionModeBackButton.id());
+        this.mModeSettingsMenu[19].add_control(g, this.miCollectionModeBackButton.id(), this.miCollectionModeCardLifeField.id(), this.miCollectionModeQuantityField.id(), this.miCollectionModeCardLifeField.id(), Default::default());
 
-        this.mModeSettingsMenu[19].add_non_control(ctl_ptr(this.miCollectionModeLeftHeaderBar));
-        this.mModeSettingsMenu[19].add_non_control(ctl_ptr(this.miCollectionModeRightHeaderBar));
-        this.mModeSettingsMenu[19].add_non_control(ctl_ptr(this.miCollectionModeHeaderText));
+        this.mModeSettingsMenu[19].add_non_control(this.miCollectionModeLeftHeaderBar.id());
+        this.mModeSettingsMenu[19].add_non_control(this.miCollectionModeRightHeaderBar.id());
+        this.mModeSettingsMenu[19].add_non_control(this.miCollectionModeHeaderText.id());
 
-        this.mModeSettingsMenu[19].set_initial_focus(g, ctl_ptr(this.miCollectionModeQuantityField));
+        this.mModeSettingsMenu[19].set_initial_focus(g, this.miCollectionModeQuantityField.id());
         this.mModeSettingsMenu[19].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
         //***********************
         // Chase Mode Settings
         //***********************
 
-        this.miChaseModeSpeedField = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 160, "Speed", 400, 180));
-        this.miChaseModeSpeedField.add_random("Very Slow", 3, false);
-        this.miChaseModeSpeedField.add("Slow", 4);
-        this.miChaseModeSpeedField.add("Moderate", 5);
-        this.miChaseModeSpeedField.add("Fast", 6);
-        this.miChaseModeSpeedField.add("Very Fast", 7);
-        this.miChaseModeSpeedField.add_random("Extremely Fast", 8, false);
-        this.miChaseModeSpeedField.add_random("Insanely Fast", 10, false);
-        this.miChaseModeSpeedField.set_output_ptr(&mut g.game_values.gamemodemenusettings.chase.phantospeed as *mut _);
-        this.miChaseModeSpeedField.set_current_value(g.game_values.gamemodemenusettings.chase.phantospeed);
+        this.miChaseModeSpeedField = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 160, "Speed", 400, 180), g);
+        g.ctl(this.miChaseModeSpeedField).add_random("Very Slow", 3, false);
+        g.ctl(this.miChaseModeSpeedField).add("Slow", 4);
+        g.ctl(this.miChaseModeSpeedField).add("Moderate", 5);
+        g.ctl(this.miChaseModeSpeedField).add("Fast", 6);
+        g.ctl(this.miChaseModeSpeedField).add("Very Fast", 7);
+        g.ctl(this.miChaseModeSpeedField).add_random("Extremely Fast", 8, false);
+        g.ctl(this.miChaseModeSpeedField).add_random("Insanely Fast", 10, false);
+        g.ctl(this.miChaseModeSpeedField).set_output_ptr(&mut g.game_values.gamemodemenusettings.chase.phantospeed as *mut _);
+        g.ctl(this.miChaseModeSpeedField).set_current_value(g.game_values.gamemodemenusettings.chase.phantospeed);
 
         for iPhanto in 0..3 {
-            this.miChaseModeQuantitySlider[iPhanto as usize] = Ptr::new_box(MI_PowerupSlider::new(g.rm.spr_selectfield, g.rm.menu_slider_bar, g.rm.spr_phanto, 120, 200 + 40 * iPhanto, 400, iPhanto));
-            this.miChaseModeQuantitySlider[iPhanto as usize].add_random("", 0, !(iPhanto == 0));
-            this.miChaseModeQuantitySlider[iPhanto as usize].add("", 1);
-            this.miChaseModeQuantitySlider[iPhanto as usize].add("", 2);
-            this.miChaseModeQuantitySlider[iPhanto as usize].add_random("", 3, false);
-            this.miChaseModeQuantitySlider[iPhanto as usize].add_random("", 4, false);
-            this.miChaseModeQuantitySlider[iPhanto as usize].add_random("", 5, false);
-            this.miChaseModeQuantitySlider[iPhanto as usize].allow_wrap(false);
-            this.miChaseModeQuantitySlider[iPhanto as usize].set_output_ptr(&mut g.game_values.gamemodemenusettings.chase.phantoquantity[iPhanto as usize] as *mut _);
-            this.miChaseModeQuantitySlider[iPhanto as usize].set_current_value(g.game_values.gamemodemenusettings.chase.phantoquantity[iPhanto as usize]);
+            this.miChaseModeQuantitySlider[iPhanto as usize] = Ctl::new(MI_PowerupSlider::new(g.rm.spr_selectfield, g.rm.menu_slider_bar, g.rm.spr_phanto, 120, 200 + 40 * iPhanto, 400, iPhanto), g);
+            g.ctl(this.miChaseModeQuantitySlider[iPhanto as usize]).add_random("", 0, !(iPhanto == 0));
+            g.ctl(this.miChaseModeQuantitySlider[iPhanto as usize]).add("", 1);
+            g.ctl(this.miChaseModeQuantitySlider[iPhanto as usize]).add("", 2);
+            g.ctl(this.miChaseModeQuantitySlider[iPhanto as usize]).add_random("", 3, false);
+            g.ctl(this.miChaseModeQuantitySlider[iPhanto as usize]).add_random("", 4, false);
+            g.ctl(this.miChaseModeQuantitySlider[iPhanto as usize]).add_random("", 5, false);
+            g.ctl(this.miChaseModeQuantitySlider[iPhanto as usize]).allow_wrap(false);
+            g.ctl(this.miChaseModeQuantitySlider[iPhanto as usize]).set_output_ptr(&mut g.game_values.gamemodemenusettings.chase.phantoquantity[iPhanto as usize] as *mut _);
+            g.ctl(this.miChaseModeQuantitySlider[iPhanto as usize]).set_current_value(g.game_values.gamemodemenusettings.chase.phantoquantity[iPhanto as usize]);
         }
 
-        this.miChaseModeBackButton = Ptr::new_box(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
-        this.miChaseModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
+        this.miChaseModeBackButton = Ctl::new(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER), g);
+        g.ctl(this.miChaseModeBackButton).set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
-        this.miChaseModeLeftHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-        this.miChaseModeRightHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-        this.miChaseModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Phanto Mode Menu", 320, 5));
+        this.miChaseModeLeftHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0), g);
+        this.miChaseModeRightHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0), g);
+        this.miChaseModeHeaderText = Ctl::new(MI_HeaderText::new(g, "Phanto Mode Menu", 320, 5), g);
 
-        this.mModeSettingsMenu[20].add_control(ctl_ptr(this.miChaseModeSpeedField), ctl_ptr(this.miChaseModeBackButton), ctl_ptr(this.miChaseModeQuantitySlider[0]), Ptr::null(), ctl_ptr(this.miChaseModeBackButton));
+        this.mModeSettingsMenu[20].add_control(g, this.miChaseModeSpeedField.id(), this.miChaseModeBackButton.id(), this.miChaseModeQuantitySlider[0].id(), Default::default(), this.miChaseModeBackButton.id());
 
-        this.mModeSettingsMenu[20].add_control(ctl_ptr(this.miChaseModeQuantitySlider[0]), ctl_ptr(this.miChaseModeSpeedField), ctl_ptr(this.miChaseModeQuantitySlider[1]), Ptr::null(), ctl_ptr(this.miChaseModeBackButton));
-        this.mModeSettingsMenu[20].add_control(ctl_ptr(this.miChaseModeQuantitySlider[1]), ctl_ptr(this.miChaseModeQuantitySlider[0]), ctl_ptr(this.miChaseModeQuantitySlider[2]), Ptr::null(), ctl_ptr(this.miChaseModeBackButton));
-        this.mModeSettingsMenu[20].add_control(ctl_ptr(this.miChaseModeQuantitySlider[2]), ctl_ptr(this.miChaseModeQuantitySlider[1]), ctl_ptr(this.miChaseModeBackButton), Ptr::null(), ctl_ptr(this.miChaseModeBackButton));
+        this.mModeSettingsMenu[20].add_control(g, this.miChaseModeQuantitySlider[0].id(), this.miChaseModeSpeedField.id(), this.miChaseModeQuantitySlider[1].id(), Default::default(), this.miChaseModeBackButton.id());
+        this.mModeSettingsMenu[20].add_control(g, this.miChaseModeQuantitySlider[1].id(), this.miChaseModeQuantitySlider[0].id(), this.miChaseModeQuantitySlider[2].id(), Default::default(), this.miChaseModeBackButton.id());
+        this.mModeSettingsMenu[20].add_control(g, this.miChaseModeQuantitySlider[2].id(), this.miChaseModeQuantitySlider[1].id(), this.miChaseModeBackButton.id(), Default::default(), this.miChaseModeBackButton.id());
 
-        this.mModeSettingsMenu[20].add_control(ctl_ptr(this.miChaseModeBackButton), ctl_ptr(this.miChaseModeQuantitySlider[2]), ctl_ptr(this.miChaseModeSpeedField), ctl_ptr(this.miChaseModeQuantitySlider[2]), Ptr::null());
+        this.mModeSettingsMenu[20].add_control(g, this.miChaseModeBackButton.id(), this.miChaseModeQuantitySlider[2].id(), this.miChaseModeSpeedField.id(), this.miChaseModeQuantitySlider[2].id(), Default::default());
 
-        this.mModeSettingsMenu[20].add_non_control(ctl_ptr(this.miChaseModeLeftHeaderBar));
-        this.mModeSettingsMenu[20].add_non_control(ctl_ptr(this.miChaseModeRightHeaderBar));
-        this.mModeSettingsMenu[20].add_non_control(ctl_ptr(this.miChaseModeHeaderText));
+        this.mModeSettingsMenu[20].add_non_control(this.miChaseModeLeftHeaderBar.id());
+        this.mModeSettingsMenu[20].add_non_control(this.miChaseModeRightHeaderBar.id());
+        this.mModeSettingsMenu[20].add_non_control(this.miChaseModeHeaderText.id());
 
-        this.mModeSettingsMenu[20].set_initial_focus(g, ctl_ptr(this.miChaseModeSpeedField));
+        this.mModeSettingsMenu[20].set_initial_focus(g, this.miChaseModeSpeedField.id());
         this.mModeSettingsMenu[20].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -1468,52 +1469,52 @@ impl UI_ModeOptionsMenu {
         // Shyguy Tag Mode Settings
         //***********************
 
-        this.miShyGuyTagModeTagOnSuicideField = Ptr::new_box(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 120, 180, "Suicide Tag", 400, 180));
-        this.miShyGuyTagModeTagOnSuicideField.add("Off", false);
-        this.miShyGuyTagModeTagOnSuicideField.add("On", true);
-        this.miShyGuyTagModeTagOnSuicideField.set_output_ptr(&mut g.game_values.gamemodemenusettings.shyguytag.tagonsuicide as *mut _);
-        this.miShyGuyTagModeTagOnSuicideField.set_current_value(g.game_values.gamemodemenusettings.shyguytag.tagonsuicide);
-        this.miShyGuyTagModeTagOnSuicideField.set_auto_advance(true);
+        this.miShyGuyTagModeTagOnSuicideField = Ctl::new(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 120, 180, "Suicide Tag", 400, 180), g);
+        g.ctl(this.miShyGuyTagModeTagOnSuicideField).add("Off", false);
+        g.ctl(this.miShyGuyTagModeTagOnSuicideField).add("On", true);
+        g.ctl(this.miShyGuyTagModeTagOnSuicideField).set_output_ptr(&mut g.game_values.gamemodemenusettings.shyguytag.tagonsuicide as *mut _);
+        g.ctl(this.miShyGuyTagModeTagOnSuicideField).set_current_value(g.game_values.gamemodemenusettings.shyguytag.tagonsuicide);
+        g.ctl(this.miShyGuyTagModeTagOnSuicideField).set_auto_advance(true);
 
-        this.miShyGuyTagModeTagOnStompField = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 220, "Tag Transfer", 400, 180));
-        this.miShyGuyTagModeTagOnStompField.add("Touch Only", 0);
-        this.miShyGuyTagModeTagOnStompField.add("Kills Only", 1);
-        this.miShyGuyTagModeTagOnStompField.add("Touch and Kills", 2);
-        this.miShyGuyTagModeTagOnStompField.set_output_ptr(&mut g.game_values.gamemodemenusettings.shyguytag.tagtransfer as *mut _);
-        this.miShyGuyTagModeTagOnStompField.set_current_value(g.game_values.gamemodemenusettings.shyguytag.tagtransfer);
+        this.miShyGuyTagModeTagOnStompField = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 220, "Tag Transfer", 400, 180), g);
+        g.ctl(this.miShyGuyTagModeTagOnStompField).add("Touch Only", 0);
+        g.ctl(this.miShyGuyTagModeTagOnStompField).add("Kills Only", 1);
+        g.ctl(this.miShyGuyTagModeTagOnStompField).add("Touch and Kills", 2);
+        g.ctl(this.miShyGuyTagModeTagOnStompField).set_output_ptr(&mut g.game_values.gamemodemenusettings.shyguytag.tagtransfer as *mut _);
+        g.ctl(this.miShyGuyTagModeTagOnStompField).set_current_value(g.game_values.gamemodemenusettings.shyguytag.tagtransfer);
 
-        this.miShyGuyTagModeFreeTimeField = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 260, "Free Time", 400, 180));
-        this.miShyGuyTagModeFreeTimeField.add("Instant", 0);
-        this.miShyGuyTagModeFreeTimeField.add("1 Second", 1);
-        this.miShyGuyTagModeFreeTimeField.add("2 Seconds", 2);
-        this.miShyGuyTagModeFreeTimeField.add("3 Seconds", 3);
-        this.miShyGuyTagModeFreeTimeField.add("4 Seconds", 4);
-        this.miShyGuyTagModeFreeTimeField.add("5 Seconds", 5);
-        this.miShyGuyTagModeFreeTimeField.add("6 Seconds", 6);
-        this.miShyGuyTagModeFreeTimeField.add("7 Seconds", 7);
-        this.miShyGuyTagModeFreeTimeField.add("8 Seconds", 8);
-        this.miShyGuyTagModeFreeTimeField.add("9 Seconds", 9);
-        this.miShyGuyTagModeFreeTimeField.add("10 Seconds", 10);
-        this.miShyGuyTagModeFreeTimeField.set_output_ptr(&mut g.game_values.gamemodemenusettings.shyguytag.freetime as *mut _);
-        this.miShyGuyTagModeFreeTimeField.set_current_value(g.game_values.gamemodemenusettings.shyguytag.freetime);
+        this.miShyGuyTagModeFreeTimeField = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 260, "Free Time", 400, 180), g);
+        g.ctl(this.miShyGuyTagModeFreeTimeField).add("Instant", 0);
+        g.ctl(this.miShyGuyTagModeFreeTimeField).add("1 Second", 1);
+        g.ctl(this.miShyGuyTagModeFreeTimeField).add("2 Seconds", 2);
+        g.ctl(this.miShyGuyTagModeFreeTimeField).add("3 Seconds", 3);
+        g.ctl(this.miShyGuyTagModeFreeTimeField).add("4 Seconds", 4);
+        g.ctl(this.miShyGuyTagModeFreeTimeField).add("5 Seconds", 5);
+        g.ctl(this.miShyGuyTagModeFreeTimeField).add("6 Seconds", 6);
+        g.ctl(this.miShyGuyTagModeFreeTimeField).add("7 Seconds", 7);
+        g.ctl(this.miShyGuyTagModeFreeTimeField).add("8 Seconds", 8);
+        g.ctl(this.miShyGuyTagModeFreeTimeField).add("9 Seconds", 9);
+        g.ctl(this.miShyGuyTagModeFreeTimeField).add("10 Seconds", 10);
+        g.ctl(this.miShyGuyTagModeFreeTimeField).set_output_ptr(&mut g.game_values.gamemodemenusettings.shyguytag.freetime as *mut _);
+        g.ctl(this.miShyGuyTagModeFreeTimeField).set_current_value(g.game_values.gamemodemenusettings.shyguytag.freetime);
 
-        this.miShyGuyTagModeBackButton = Ptr::new_box(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
-        this.miShyGuyTagModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
+        this.miShyGuyTagModeBackButton = Ctl::new(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER), g);
+        g.ctl(this.miShyGuyTagModeBackButton).set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
-        this.miShyGuyTagModeLeftHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-        this.miShyGuyTagModeRightHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-        this.miShyGuyTagModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Shyguy Tag Mode Menu", 320, 5));
+        this.miShyGuyTagModeLeftHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0), g);
+        this.miShyGuyTagModeRightHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0), g);
+        this.miShyGuyTagModeHeaderText = Ctl::new(MI_HeaderText::new(g, "Shyguy Tag Mode Menu", 320, 5), g);
 
-        this.mModeSettingsMenu[21].add_control(ctl_ptr(this.miShyGuyTagModeTagOnSuicideField), ctl_ptr(this.miShyGuyTagModeBackButton), ctl_ptr(this.miShyGuyTagModeTagOnStompField), Ptr::null(), ctl_ptr(this.miShyGuyTagModeBackButton));
-        this.mModeSettingsMenu[21].add_control(ctl_ptr(this.miShyGuyTagModeTagOnStompField), ctl_ptr(this.miShyGuyTagModeTagOnSuicideField), ctl_ptr(this.miShyGuyTagModeFreeTimeField), Ptr::null(), ctl_ptr(this.miShyGuyTagModeBackButton));
-        this.mModeSettingsMenu[21].add_control(ctl_ptr(this.miShyGuyTagModeFreeTimeField), ctl_ptr(this.miShyGuyTagModeTagOnStompField), ctl_ptr(this.miShyGuyTagModeBackButton), Ptr::null(), ctl_ptr(this.miShyGuyTagModeBackButton));
-        this.mModeSettingsMenu[21].add_control(ctl_ptr(this.miShyGuyTagModeBackButton), ctl_ptr(this.miShyGuyTagModeFreeTimeField), ctl_ptr(this.miShyGuyTagModeTagOnSuicideField), ctl_ptr(this.miShyGuyTagModeFreeTimeField), Ptr::null());
+        this.mModeSettingsMenu[21].add_control(g, this.miShyGuyTagModeTagOnSuicideField.id(), this.miShyGuyTagModeBackButton.id(), this.miShyGuyTagModeTagOnStompField.id(), Default::default(), this.miShyGuyTagModeBackButton.id());
+        this.mModeSettingsMenu[21].add_control(g, this.miShyGuyTagModeTagOnStompField.id(), this.miShyGuyTagModeTagOnSuicideField.id(), this.miShyGuyTagModeFreeTimeField.id(), Default::default(), this.miShyGuyTagModeBackButton.id());
+        this.mModeSettingsMenu[21].add_control(g, this.miShyGuyTagModeFreeTimeField.id(), this.miShyGuyTagModeTagOnStompField.id(), this.miShyGuyTagModeBackButton.id(), Default::default(), this.miShyGuyTagModeBackButton.id());
+        this.mModeSettingsMenu[21].add_control(g, this.miShyGuyTagModeBackButton.id(), this.miShyGuyTagModeFreeTimeField.id(), this.miShyGuyTagModeTagOnSuicideField.id(), this.miShyGuyTagModeFreeTimeField.id(), Default::default());
 
-        this.mModeSettingsMenu[21].add_non_control(ctl_ptr(this.miShyGuyTagModeLeftHeaderBar));
-        this.mModeSettingsMenu[21].add_non_control(ctl_ptr(this.miShyGuyTagModeRightHeaderBar));
-        this.mModeSettingsMenu[21].add_non_control(ctl_ptr(this.miShyGuyTagModeHeaderText));
+        this.mModeSettingsMenu[21].add_non_control(this.miShyGuyTagModeLeftHeaderBar.id());
+        this.mModeSettingsMenu[21].add_non_control(this.miShyGuyTagModeRightHeaderBar.id());
+        this.mModeSettingsMenu[21].add_non_control(this.miShyGuyTagModeHeaderText.id());
 
-        this.mModeSettingsMenu[21].set_initial_focus(g, ctl_ptr(this.miShyGuyTagModeTagOnSuicideField));
+        this.mModeSettingsMenu[21].set_initial_focus(g, this.miShyGuyTagModeTagOnSuicideField.id());
         this.mModeSettingsMenu[21].set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
 
@@ -1521,63 +1522,63 @@ impl UI_ModeOptionsMenu {
         // Boss Mode Settings
         //***********************
 
-        this.miBossModeTypeField = Ptr::new_box(MI_SelectField::<Boss>::new(g.rm.spr_selectfield, 120, 180, "Type", 400, 180));
-        this.miBossModeTypeField.add("Hammer", Boss::Hammer);
-        this.miBossModeTypeField.add("Bomb", Boss::Bomb);
-        this.miBossModeTypeField.add("Fire", Boss::Fire);
-        this.miBossModeTypeField.set_output_ptr(&mut g.game_values.gamemodemenusettings.boss.bosstype as *mut _);
-        this.miBossModeTypeField.set_current_value(g.game_values.gamemodemenusettings.boss.bosstype);
+        this.miBossModeTypeField = Ctl::new(MI_SelectField::<Boss>::new(g.rm.spr_selectfield, 120, 180, "Type", 400, 180), g);
+        g.ctl(this.miBossModeTypeField).add("Hammer", Boss::Hammer);
+        g.ctl(this.miBossModeTypeField).add("Bomb", Boss::Bomb);
+        g.ctl(this.miBossModeTypeField).add("Fire", Boss::Fire);
+        g.ctl(this.miBossModeTypeField).set_output_ptr(&mut g.game_values.gamemodemenusettings.boss.bosstype as *mut _);
+        g.ctl(this.miBossModeTypeField).set_current_value(g.game_values.gamemodemenusettings.boss.bosstype);
 
-        this.miBossModeDifficultyField = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 220, "Difficulty", 400, 180));
-        this.miBossModeDifficultyField.add_random("Very Easy", 0, false);
-        this.miBossModeDifficultyField.add("Easy", 1);
-        this.miBossModeDifficultyField.add("Moderate", 2);
-        this.miBossModeDifficultyField.add("Hard", 3);
-        this.miBossModeDifficultyField.add_random("Very Hard", 4, false);
-        this.miBossModeDifficultyField.set_output_ptr(&mut g.game_values.gamemodemenusettings.boss.difficulty as *mut _);
-        this.miBossModeDifficultyField.set_current_value(g.game_values.gamemodemenusettings.boss.difficulty);
+        this.miBossModeDifficultyField = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 220, "Difficulty", 400, 180), g);
+        g.ctl(this.miBossModeDifficultyField).add_random("Very Easy", 0, false);
+        g.ctl(this.miBossModeDifficultyField).add("Easy", 1);
+        g.ctl(this.miBossModeDifficultyField).add("Moderate", 2);
+        g.ctl(this.miBossModeDifficultyField).add("Hard", 3);
+        g.ctl(this.miBossModeDifficultyField).add_random("Very Hard", 4, false);
+        g.ctl(this.miBossModeDifficultyField).set_output_ptr(&mut g.game_values.gamemodemenusettings.boss.difficulty as *mut _);
+        g.ctl(this.miBossModeDifficultyField).set_current_value(g.game_values.gamemodemenusettings.boss.difficulty);
 
-        this.miBossModeHitPointsField = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 260, "Health", 400, 180));
-        this.miBossModeHitPointsField.add_random("1", 1, false);
-        this.miBossModeHitPointsField.add_random("2", 2, false);
-        this.miBossModeHitPointsField.add("3", 3);
-        this.miBossModeHitPointsField.add("4", 4);
-        this.miBossModeHitPointsField.add("5", 5);
-        this.miBossModeHitPointsField.add("6", 6);
-        this.miBossModeHitPointsField.add("7", 7);
-        this.miBossModeHitPointsField.add("8", 8);
-        this.miBossModeHitPointsField.add_random("9", 9, false);
-        this.miBossModeHitPointsField.add_random("10", 10, false);
-        this.miBossModeHitPointsField.add_random("11", 11, false);
-        this.miBossModeHitPointsField.add_random("12", 12, false);
-        this.miBossModeHitPointsField.add_random("13", 13, false);
-        this.miBossModeHitPointsField.add_random("14", 14, false);
-        this.miBossModeHitPointsField.add_random("15", 15, false);
-        this.miBossModeHitPointsField.add_random("16", 16, false);
-        this.miBossModeHitPointsField.add_random("17", 17, false);
-        this.miBossModeHitPointsField.add_random("18", 18, false);
-        this.miBossModeHitPointsField.add_random("19", 19, false);
-        this.miBossModeHitPointsField.add_random("20", 20, false);
-        this.miBossModeHitPointsField.set_output_ptr(&mut g.game_values.gamemodemenusettings.boss.hitpoints as *mut _);
-        this.miBossModeHitPointsField.set_current_value(g.game_values.gamemodemenusettings.boss.hitpoints);
+        this.miBossModeHitPointsField = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 120, 260, "Health", 400, 180), g);
+        g.ctl(this.miBossModeHitPointsField).add_random("1", 1, false);
+        g.ctl(this.miBossModeHitPointsField).add_random("2", 2, false);
+        g.ctl(this.miBossModeHitPointsField).add("3", 3);
+        g.ctl(this.miBossModeHitPointsField).add("4", 4);
+        g.ctl(this.miBossModeHitPointsField).add("5", 5);
+        g.ctl(this.miBossModeHitPointsField).add("6", 6);
+        g.ctl(this.miBossModeHitPointsField).add("7", 7);
+        g.ctl(this.miBossModeHitPointsField).add("8", 8);
+        g.ctl(this.miBossModeHitPointsField).add_random("9", 9, false);
+        g.ctl(this.miBossModeHitPointsField).add_random("10", 10, false);
+        g.ctl(this.miBossModeHitPointsField).add_random("11", 11, false);
+        g.ctl(this.miBossModeHitPointsField).add_random("12", 12, false);
+        g.ctl(this.miBossModeHitPointsField).add_random("13", 13, false);
+        g.ctl(this.miBossModeHitPointsField).add_random("14", 14, false);
+        g.ctl(this.miBossModeHitPointsField).add_random("15", 15, false);
+        g.ctl(this.miBossModeHitPointsField).add_random("16", 16, false);
+        g.ctl(this.miBossModeHitPointsField).add_random("17", 17, false);
+        g.ctl(this.miBossModeHitPointsField).add_random("18", 18, false);
+        g.ctl(this.miBossModeHitPointsField).add_random("19", 19, false);
+        g.ctl(this.miBossModeHitPointsField).add_random("20", 20, false);
+        g.ctl(this.miBossModeHitPointsField).set_output_ptr(&mut g.game_values.gamemodemenusettings.boss.hitpoints as *mut _);
+        g.ctl(this.miBossModeHitPointsField).set_current_value(g.game_values.gamemodemenusettings.boss.hitpoints);
 
-        this.miBossModeBackButton = Ptr::new_box(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
-        this.miBossModeBackButton.set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
+        this.miBossModeBackButton = Ctl::new(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER), g);
+        g.ctl(this.miBossModeBackButton).set_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
-        this.miBossModeLeftHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-        this.miBossModeRightHeaderBar = Ptr::new_box(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-        this.miBossModeHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Boss Minigame Menu", 320, 5));
+        this.miBossModeLeftHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0), g);
+        this.miBossModeRightHeaderBar = Ctl::new(MI_Image::new(g.rm.menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0), g);
+        this.miBossModeHeaderText = Ctl::new(MI_HeaderText::new(g, "Boss Minigame Menu", 320, 5), g);
 
-        this.mBossSettingsMenu.add_control(ctl_ptr(this.miBossModeTypeField), ctl_ptr(this.miBossModeBackButton), ctl_ptr(this.miBossModeDifficultyField), Ptr::null(), ctl_ptr(this.miBossModeBackButton));
-        this.mBossSettingsMenu.add_control(ctl_ptr(this.miBossModeDifficultyField), ctl_ptr(this.miBossModeTypeField), ctl_ptr(this.miBossModeHitPointsField), Ptr::null(), ctl_ptr(this.miBossModeBackButton));
-        this.mBossSettingsMenu.add_control(ctl_ptr(this.miBossModeHitPointsField), ctl_ptr(this.miBossModeDifficultyField), ctl_ptr(this.miBossModeBackButton), Ptr::null(), ctl_ptr(this.miBossModeBackButton));
-        this.mBossSettingsMenu.add_control(ctl_ptr(this.miBossModeBackButton), ctl_ptr(this.miBossModeHitPointsField), ctl_ptr(this.miBossModeTypeField), ctl_ptr(this.miBossModeHitPointsField), Ptr::null());
+        this.mBossSettingsMenu.add_control(g, this.miBossModeTypeField.id(), this.miBossModeBackButton.id(), this.miBossModeDifficultyField.id(), Default::default(), this.miBossModeBackButton.id());
+        this.mBossSettingsMenu.add_control(g, this.miBossModeDifficultyField.id(), this.miBossModeTypeField.id(), this.miBossModeHitPointsField.id(), Default::default(), this.miBossModeBackButton.id());
+        this.mBossSettingsMenu.add_control(g, this.miBossModeHitPointsField.id(), this.miBossModeDifficultyField.id(), this.miBossModeBackButton.id(), Default::default(), this.miBossModeBackButton.id());
+        this.mBossSettingsMenu.add_control(g, this.miBossModeBackButton.id(), this.miBossModeHitPointsField.id(), this.miBossModeTypeField.id(), this.miBossModeHitPointsField.id(), Default::default());
 
-        this.mBossSettingsMenu.add_non_control(ctl_ptr(this.miBossModeLeftHeaderBar));
-        this.mBossSettingsMenu.add_non_control(ctl_ptr(this.miBossModeRightHeaderBar));
-        this.mBossSettingsMenu.add_non_control(ctl_ptr(this.miBossModeHeaderText));
+        this.mBossSettingsMenu.add_non_control(this.miBossModeLeftHeaderBar.id());
+        this.mBossSettingsMenu.add_non_control(this.miBossModeRightHeaderBar.id());
+        this.mBossSettingsMenu.add_non_control(this.miBossModeHeaderText.id());
 
-        this.mBossSettingsMenu.set_initial_focus(g, ctl_ptr(this.miBossModeTypeField));
+        this.mBossSettingsMenu.set_initial_focus(g, this.miBossModeTypeField.id());
         this.mBossSettingsMenu.set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
         this
     }
@@ -1590,17 +1591,17 @@ impl UI_ModeOptionsMenu {
 
     /// Not in the C++: a net match's mode options as the menu names them, for the preview before it starts.
     pub fn describe_game_mode_settings(&self, g: &mut Game, iMode: i16) -> Vec<String> {
-        let g = &g.game_values.gamemodesettings;
+        let gm = &g.game_values.gamemodesettings;
         let lines = match iMode as GameModeType {
-            game_mode_classic => vec![self.miClassicModeStyleField.describe(g.classic.style), self.miClassicModeScoringField.describe(g.classic.scoring)],
-            game_mode_frag => vec![self.miFragModeStyleField.describe(g.frag.style), self.miFragModeScoringField.describe(g.frag.scoring)],
-            game_mode_timelimit => vec![self.miTimeLimitModeStyleField.describe(g.time.style), self.miTimeLimitModeScoringField.describe(g.time.scoring)],
-            game_mode_jail => vec![self.miJailModeStyleField.describe(g.jail.style), self.miJailModeTimeFreeField.describe(g.jail.timetofree), self.miJailModeTagFreeField.describe(g.jail.tagfree)],
-            game_mode_coins => vec![self.miCoinModePenaltyField.describe(g.coins.penalty), self.miCoinModeQuantityField.describe(g.coins.quantity)],
-            game_mode_stomp => vec![self.miStompModeRateField.describe(g.stomp.rate)],
-            game_mode_domination => vec![self.miDominationModeQuantityField.describe(g.domination.quantity)],
-            game_mode_race => vec![self.miRaceModeQuantityField.describe(g.race.quantity), self.miRaceModePenaltyField.describe(g.race.penalty)],
-            game_mode_collection => vec![self.miCollectionModeQuantityField.describe(g.collection.quantity)],
+            game_mode_classic => vec![g.ctl(self.miClassicModeStyleField).describe(gm.classic.style), g.ctl(self.miClassicModeScoringField).describe(gm.classic.scoring)],
+            game_mode_frag => vec![g.ctl(self.miFragModeStyleField).describe(gm.frag.style), g.ctl(self.miFragModeScoringField).describe(gm.frag.scoring)],
+            game_mode_timelimit => vec![g.ctl(self.miTimeLimitModeStyleField).describe(gm.time.style), g.ctl(self.miTimeLimitModeScoringField).describe(gm.time.scoring)],
+            game_mode_jail => vec![g.ctl(self.miJailModeStyleField).describe(gm.jail.style), g.ctl(self.miJailModeTimeFreeField).describe(gm.jail.timetofree), g.ctl(self.miJailModeTagFreeField).describe(gm.jail.tagfree)],
+            game_mode_coins => vec![g.ctl(self.miCoinModePenaltyField).describe(gm.coins.penalty), g.ctl(self.miCoinModeQuantityField).describe(gm.coins.quantity)],
+            game_mode_stomp => vec![g.ctl(self.miStompModeRateField).describe(gm.stomp.rate)],
+            game_mode_domination => vec![g.ctl(self.miDominationModeQuantityField).describe(gm.domination.quantity)],
+            game_mode_race => vec![g.ctl(self.miRaceModeQuantityField).describe(gm.race.quantity), g.ctl(self.miRaceModePenaltyField).describe(gm.race.penalty)],
+            game_mode_collection => vec![g.ctl(self.miCollectionModeQuantityField).describe(gm.collection.quantity)],
             _ => vec![],
         };
         lines.into_iter().flatten().collect()
@@ -1610,130 +1611,130 @@ impl UI_ModeOptionsMenu {
         let iMode = iMode as GameModeType;
         if iMode == game_mode_classic {
             // classic
-            g.game_values.gamemodesettings.classic.style = self.miClassicModeStyleField.random_value(g);
-            g.game_values.gamemodesettings.classic.scoring = self.miClassicModeScoringField.random_value(g);
+            g.game_values.gamemodesettings.classic.style = g.ctl(self.miClassicModeStyleField).random_value(g);
+            g.game_values.gamemodesettings.classic.scoring = g.ctl(self.miClassicModeScoringField).random_value(g);
         } else if iMode == game_mode_frag {
             // frag
-            g.game_values.gamemodesettings.frag.style = self.miFragModeStyleField.random_value(g);
-            g.game_values.gamemodesettings.frag.scoring = self.miFragModeScoringField.random_value(g);
+            g.game_values.gamemodesettings.frag.style = g.ctl(self.miFragModeStyleField).random_value(g);
+            g.game_values.gamemodesettings.frag.scoring = g.ctl(self.miFragModeScoringField).random_value(g);
         } else if iMode == game_mode_timelimit {
             // time
-            g.game_values.gamemodesettings.time.style = self.miTimeLimitModeStyleField.random_value(g);
-            g.game_values.gamemodesettings.time.scoring = self.miTimeLimitModeScoringField.random_value(g);
-            g.game_values.gamemodesettings.time.percentextratime = self.miTimeLimitModePercentExtraTime.current_value();
+            g.game_values.gamemodesettings.time.style = g.ctl(self.miTimeLimitModeStyleField).random_value(g);
+            g.game_values.gamemodesettings.time.scoring = g.ctl(self.miTimeLimitModeScoringField).random_value(g);
+            g.game_values.gamemodesettings.time.percentextratime = g.ctl(self.miTimeLimitModePercentExtraTime).current_value();
         } else if iMode == game_mode_jail {
             // jail
-            g.game_values.gamemodesettings.jail.style = self.miJailModeStyleField.random_value(g);
-            g.game_values.gamemodesettings.jail.timetofree = self.miJailModeTimeFreeField.random_value(g);
-            g.game_values.gamemodesettings.jail.tagfree = self.miJailModeTagFreeField.random_value(g);
-            g.game_values.gamemodesettings.jail.percentkey = self.miJailModeJailKeyField.current_value();
+            g.game_values.gamemodesettings.jail.style = g.ctl(self.miJailModeStyleField).random_value(g);
+            g.game_values.gamemodesettings.jail.timetofree = g.ctl(self.miJailModeTimeFreeField).random_value(g);
+            g.game_values.gamemodesettings.jail.tagfree = g.ctl(self.miJailModeTagFreeField).random_value(g);
+            g.game_values.gamemodesettings.jail.percentkey = g.ctl(self.miJailModeJailKeyField).current_value();
         } else if iMode == game_mode_coins {
             // coins
-            g.game_values.gamemodesettings.coins.penalty = self.miCoinModePenaltyField.random_value(g);
-            g.game_values.gamemodesettings.coins.quantity = self.miCoinModeQuantityField.random_value(g);
-            g.game_values.gamemodesettings.coins.percentextracoin = self.miCoinModePercentExtraCoin.current_value();
+            g.game_values.gamemodesettings.coins.penalty = g.ctl(self.miCoinModePenaltyField).random_value(g);
+            g.game_values.gamemodesettings.coins.quantity = g.ctl(self.miCoinModeQuantityField).random_value(g);
+            g.game_values.gamemodesettings.coins.percentextracoin = g.ctl(self.miCoinModePercentExtraCoin).current_value();
         } else if iMode == game_mode_stomp {
             // stomp
-            g.game_values.gamemodesettings.stomp.rate = self.miStompModeRateField.random_value(g);
+            g.game_values.gamemodesettings.stomp.rate = g.ctl(self.miStompModeRateField).random_value(g);
 
             for iEnemy in 0..NUMSTOMPENEMIES as usize {
-                g.game_values.gamemodesettings.stomp.enemyweight[iEnemy] = self.miStompModeEnemySlider[iEnemy].current_value();
+                g.game_values.gamemodesettings.stomp.enemyweight[iEnemy] = g.ctl(self.miStompModeEnemySlider[iEnemy]).current_value();
             }
         } else if iMode == game_mode_eggs {
             // egg
             for iEgg in 0..4 {
-                g.game_values.gamemodesettings.egg.eggs[iEgg] = self.miEggModeEggQuantityField[iEgg].current_value();
+                g.game_values.gamemodesettings.egg.eggs[iEgg] = g.ctl(self.miEggModeEggQuantityField[iEgg]).current_value();
             }
 
             for iYoshi in 0..4 {
-                g.game_values.gamemodesettings.egg.yoshis[iYoshi] = self.miEggModeYoshiQuantityField[iYoshi].current_value();
+                g.game_values.gamemodesettings.egg.yoshis[iYoshi] = g.ctl(self.miEggModeYoshiQuantityField[iYoshi]).current_value();
             }
 
-            g.game_values.gamemodesettings.egg.explode = self.miEggModeExplosionTimeField.random_value(g);
+            g.game_values.gamemodesettings.egg.explode = g.ctl(self.miEggModeExplosionTimeField).random_value(g);
         } else if iMode == game_mode_ctf {
             // capture the flag
-            g.game_values.gamemodesettings.flag.speed = self.miFlagModeSpeedField.current_value();
-            g.game_values.gamemodesettings.flag.touchreturn = self.miFlagModeTouchReturnField.random_value(g);
-            g.game_values.gamemodesettings.flag.pointmove = self.miFlagModePointMoveField.random_value(g);
-            g.game_values.gamemodesettings.flag.autoreturn = self.miFlagModeAutoReturnField.random_value(g);
-            g.game_values.gamemodesettings.flag.homescore = self.miFlagModeHomeScoreField.random_value(g);
-            g.game_values.gamemodesettings.flag.centerflag = self.miFlagModeCenterFlagField.random_value(g);
+            g.game_values.gamemodesettings.flag.speed = g.ctl(self.miFlagModeSpeedField).current_value();
+            g.game_values.gamemodesettings.flag.touchreturn = g.ctl(self.miFlagModeTouchReturnField).random_value(g);
+            g.game_values.gamemodesettings.flag.pointmove = g.ctl(self.miFlagModePointMoveField).random_value(g);
+            g.game_values.gamemodesettings.flag.autoreturn = g.ctl(self.miFlagModeAutoReturnField).random_value(g);
+            g.game_values.gamemodesettings.flag.homescore = g.ctl(self.miFlagModeHomeScoreField).random_value(g);
+            g.game_values.gamemodesettings.flag.centerflag = g.ctl(self.miFlagModeCenterFlagField).random_value(g);
         } else if iMode == game_mode_chicken {
             // chicken
-            g.game_values.gamemodesettings.chicken.usetarget = self.miChickenModeShowTargetField.random_value(g);
-            g.game_values.gamemodesettings.chicken.glide = self.miChickenModeGlideField.random_value(g);
+            g.game_values.gamemodesettings.chicken.usetarget = g.ctl(self.miChickenModeShowTargetField).random_value(g);
+            g.game_values.gamemodesettings.chicken.glide = g.ctl(self.miChickenModeGlideField).random_value(g);
         } else if iMode == game_mode_tag {
             // tag
-            g.game_values.gamemodesettings.tag.tagontouch = self.miTagModeTagOnTouchField.random_value(g);
+            g.game_values.gamemodesettings.tag.tagontouch = g.ctl(self.miTagModeTagOnTouchField).random_value(g);
         } else if iMode == game_mode_star {
             // star
-            g.game_values.gamemodesettings.star.time = self.miStarModeTimeField.random_value(g);
-            g.game_values.gamemodesettings.star.shine = self.miStarModeShineField.random_value(g);
-            g.game_values.gamemodesettings.star.percentextratime = self.miStarModePercentExtraTime.current_value();
+            g.game_values.gamemodesettings.star.time = g.ctl(self.miStarModeTimeField).random_value(g);
+            g.game_values.gamemodesettings.star.shine = g.ctl(self.miStarModeShineField).random_value(g);
+            g.game_values.gamemodesettings.star.percentextratime = g.ctl(self.miStarModePercentExtraTime).current_value();
         } else if iMode == game_mode_domination {
             // domination
-            g.game_values.gamemodesettings.domination.quantity = self.miDominationModeQuantityField.random_value(g);
-            g.game_values.gamemodesettings.domination.loseondeath = self.miDominationModeLoseOnDeathField.random_value(g);
-            g.game_values.gamemodesettings.domination.relocateondeath = self.miDominationModeRelocateOnDeathField.random_value(g);
-            g.game_values.gamemodesettings.domination.stealondeath = self.miDominationModeStealOnDeathField.random_value(g);
-            g.game_values.gamemodesettings.domination.relocationfrequency = self.miDominationModeRelocateFrequencyField.random_value(g);
+            g.game_values.gamemodesettings.domination.quantity = g.ctl(self.miDominationModeQuantityField).random_value(g);
+            g.game_values.gamemodesettings.domination.loseondeath = g.ctl(self.miDominationModeLoseOnDeathField).random_value(g);
+            g.game_values.gamemodesettings.domination.relocateondeath = g.ctl(self.miDominationModeRelocateOnDeathField).random_value(g);
+            g.game_values.gamemodesettings.domination.stealondeath = g.ctl(self.miDominationModeStealOnDeathField).random_value(g);
+            g.game_values.gamemodesettings.domination.relocationfrequency = g.ctl(self.miDominationModeRelocateFrequencyField).random_value(g);
         } else if iMode == game_mode_koth {
             // king of the hill
-            g.game_values.gamemodesettings.kingofthehill.areasize = self.miKingOfTheHillModeSizeField.random_value(g);
-            g.game_values.gamemodesettings.kingofthehill.relocationfrequency = self.miKingOfTheHillModeRelocateFrequencyField.random_value(g);
-            g.game_values.gamemodesettings.kingofthehill.maxmultiplier = self.miKingOfTheHillModeMultiplierField.random_value(g);
+            g.game_values.gamemodesettings.kingofthehill.areasize = g.ctl(self.miKingOfTheHillModeSizeField).random_value(g);
+            g.game_values.gamemodesettings.kingofthehill.relocationfrequency = g.ctl(self.miKingOfTheHillModeRelocateFrequencyField).random_value(g);
+            g.game_values.gamemodesettings.kingofthehill.maxmultiplier = g.ctl(self.miKingOfTheHillModeMultiplierField).random_value(g);
         } else if iMode == game_mode_race {
             // race
-            g.game_values.gamemodesettings.race.quantity = self.miRaceModeQuantityField.random_value(g);
-            g.game_values.gamemodesettings.race.speed = self.miRaceModeSpeedField.random_value(g);
-            g.game_values.gamemodesettings.race.penalty = self.miRaceModePenaltyField.random_value(g);
+            g.game_values.gamemodesettings.race.quantity = g.ctl(self.miRaceModeQuantityField).random_value(g);
+            g.game_values.gamemodesettings.race.speed = g.ctl(self.miRaceModeSpeedField).random_value(g);
+            g.game_values.gamemodesettings.race.penalty = g.ctl(self.miRaceModePenaltyField).random_value(g);
         } else if iMode == game_mode_frenzy {
             // frenzy
-            self.miFrenzyModeOptions.set_random_game_mode_settings(g);
+            g.ctl(self.miFrenzyModeOptions).set_random_game_mode_settings(g);
         } else if iMode == game_mode_survival {
             // survival
-            g.game_values.gamemodesettings.survival.density = self.miSurvivalModeDensityField.random_value(g);
-            g.game_values.gamemodesettings.survival.speed = self.miSurvivalModeSpeedField.random_value(g);
-            g.game_values.gamemodesettings.survival.shield = self.miSurvivalModeShieldField.random_value(g);
+            g.game_values.gamemodesettings.survival.density = g.ctl(self.miSurvivalModeDensityField).random_value(g);
+            g.game_values.gamemodesettings.survival.speed = g.ctl(self.miSurvivalModeSpeedField).random_value(g);
+            g.game_values.gamemodesettings.survival.shield = g.ctl(self.miSurvivalModeShieldField).random_value(g);
 
             for iEnemy in 0..NUMSURVIVALENEMIES as usize {
-                g.game_values.gamemodesettings.survival.enemyweight[iEnemy] = self.miSurvivalModeEnemySlider[iEnemy].current_value();
+                g.game_values.gamemodesettings.survival.enemyweight[iEnemy] = g.ctl(self.miSurvivalModeEnemySlider[iEnemy]).current_value();
             }
         } else if iMode == game_mode_greed {
             // greed
-            g.game_values.gamemodesettings.greed.coinlife = self.miGreedModeCoinLife.random_value(g);
-            g.game_values.gamemodesettings.greed.owncoins = self.miGreedModeOwnCoins.random_value(g);
-            g.game_values.gamemodesettings.greed.multiplier = self.miGreedModeMultiplier.random_value(g);
-            g.game_values.gamemodesettings.greed.percentextracoin = self.miGreedModePercentExtraCoin.current_value();
+            g.game_values.gamemodesettings.greed.coinlife = g.ctl(self.miGreedModeCoinLife).random_value(g);
+            g.game_values.gamemodesettings.greed.owncoins = g.ctl(self.miGreedModeOwnCoins).random_value(g);
+            g.game_values.gamemodesettings.greed.multiplier = g.ctl(self.miGreedModeMultiplier).random_value(g);
+            g.game_values.gamemodesettings.greed.percentextracoin = g.ctl(self.miGreedModePercentExtraCoin).current_value();
         } else if iMode == game_mode_health {
             // health
-            g.game_values.gamemodesettings.health.startlife = self.miHealthModeStartLife.random_value(g);
-            g.game_values.gamemodesettings.health.maxlife = self.miHealthModeMaxLife.random_value(g);
-            g.game_values.gamemodesettings.health.percentextralife = self.miHealthModePercentExtraLife.current_value();
+            g.game_values.gamemodesettings.health.startlife = g.ctl(self.miHealthModeStartLife).random_value(g);
+            g.game_values.gamemodesettings.health.maxlife = g.ctl(self.miHealthModeMaxLife).random_value(g);
+            g.game_values.gamemodesettings.health.percentextralife = g.ctl(self.miHealthModePercentExtraLife).current_value();
         } else if iMode == game_mode_collection {
             // card collection
-            g.game_values.gamemodesettings.collection.quantity = self.miCollectionModeQuantityField.random_value(g);
-            g.game_values.gamemodesettings.collection.rate = self.miCollectionModeRateField.random_value(g);
-            g.game_values.gamemodesettings.collection.banktime = self.miCollectionModeBankTimeField.random_value(g);
-            g.game_values.gamemodesettings.collection.cardlife = self.miCollectionModeCardLifeField.random_value(g);
+            g.game_values.gamemodesettings.collection.quantity = g.ctl(self.miCollectionModeQuantityField).random_value(g);
+            g.game_values.gamemodesettings.collection.rate = g.ctl(self.miCollectionModeRateField).random_value(g);
+            g.game_values.gamemodesettings.collection.banktime = g.ctl(self.miCollectionModeBankTimeField).random_value(g);
+            g.game_values.gamemodesettings.collection.cardlife = g.ctl(self.miCollectionModeCardLifeField).random_value(g);
         } else if iMode == game_mode_chase {
             // chase (phanto)
-            g.game_values.gamemodesettings.chase.phantospeed = self.miChaseModeSpeedField.random_value(g);
+            g.game_values.gamemodesettings.chase.phantospeed = g.ctl(self.miChaseModeSpeedField).random_value(g);
 
             for iPhanto in 0..3 {
-                g.game_values.gamemodesettings.chase.phantoquantity[iPhanto] = self.miChaseModeQuantitySlider[iPhanto].current_value();
+                g.game_values.gamemodesettings.chase.phantoquantity[iPhanto] = g.ctl(self.miChaseModeQuantitySlider[iPhanto]).current_value();
             }
         } else if iMode == game_mode_shyguytag {
             // shyguy tag
-            g.game_values.gamemodesettings.shyguytag.tagonsuicide = self.miShyGuyTagModeTagOnSuicideField.random_value(g);
-            g.game_values.gamemodesettings.shyguytag.tagtransfer = self.miShyGuyTagModeTagOnStompField.random_value(g);
+            g.game_values.gamemodesettings.shyguytag.tagonsuicide = g.ctl(self.miShyGuyTagModeTagOnSuicideField).random_value(g);
+            g.game_values.gamemodesettings.shyguytag.tagtransfer = g.ctl(self.miShyGuyTagModeTagOnStompField).random_value(g);
             // freetime reads the tag transfer field, as in C++.
-            g.game_values.gamemodesettings.shyguytag.freetime = self.miShyGuyTagModeTagOnStompField.random_value(g);
+            g.game_values.gamemodesettings.shyguytag.freetime = g.ctl(self.miShyGuyTagModeTagOnStompField).random_value(g);
         } else if iMode == game_mode_boss_minigame {
             // boss
-            g.game_values.gamemodesettings.boss.bosstype = self.miBossModeTypeField.random_value(g);
-            g.game_values.gamemodesettings.boss.difficulty = self.miBossModeDifficultyField.random_value(g);
-            g.game_values.gamemodesettings.boss.hitpoints = self.miBossModeHitPointsField.random_value(g);
+            g.game_values.gamemodesettings.boss.bosstype = g.ctl(self.miBossModeTypeField).random_value(g);
+            g.game_values.gamemodesettings.boss.difficulty = g.ctl(self.miBossModeDifficultyField).random_value(g);
+            g.game_values.gamemodesettings.boss.hitpoints = g.ctl(self.miBossModeHitPointsField).random_value(g);
         }
     }
 
@@ -1744,17 +1745,17 @@ impl UI_ModeOptionsMenu {
         Ptr::from_mut(&mut self.mBossSettingsMenu)
     }
 
-    pub fn health_mode_start_life_changed(&mut self) {
-        let iMaxLife: i16 = self.miHealthModeMaxLife.current_value();
-        if self.miHealthModeStartLife.current_value() > iMaxLife {
-            self.miHealthModeStartLife.set_current_value(iMaxLife);
+    pub fn health_mode_start_life_changed(&mut self, g: &mut Game) {
+        let iMaxLife: i16 = g.ctl(self.miHealthModeMaxLife).current_value();
+        if g.ctl(self.miHealthModeStartLife).current_value() > iMaxLife {
+            g.ctl(self.miHealthModeStartLife).set_current_value(iMaxLife);
         }
     }
 
-    pub fn health_mode_max_life_changed(&mut self) {
-        let iStartLife: i16 = self.miHealthModeStartLife.current_value();
-        if self.miHealthModeMaxLife.current_value() < iStartLife {
-            self.miHealthModeMaxLife.set_current_value(iStartLife);
+    pub fn health_mode_max_life_changed(&mut self, g: &mut Game) {
+        let iStartLife: i16 = g.ctl(self.miHealthModeStartLife).current_value();
+        if g.ctl(self.miHealthModeMaxLife).current_value() < iStartLife {
+            g.ctl(self.miHealthModeMaxLife).set_current_value(iStartLife);
         }
     }
 

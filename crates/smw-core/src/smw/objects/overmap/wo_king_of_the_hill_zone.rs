@@ -113,7 +113,7 @@ impl OMO_KingOfTheHillZone {
                 for iCol in 0..size {
                     let r#type: i32 = g.g_map.map(x as i32 + iCol as i32, iFindY as i32);
                     if (((r#type & tile_flag_solid_on_top) != 0 || (r#type & tile_flag_solid) != 0) && (r#type & tile_flag_death_on_top) == 0)
-                        || !g.g_map.block((x as i32 + iCol as i32) as i16, iFindY).is_null()
+                        || !g.map_block((x as i32 + iCol as i32) as i16, iFindY).is_null()
                     {
                         fDone = true;
                         break;
@@ -149,7 +149,7 @@ impl OMO_KingOfTheHillZone {
                     let tx = (x as i32 + iCol as i32) as i16;
                     let ty = (y as i32 + iRow as i32) as i16;
                     // If there is a solid tile inside the zone
-                    if (g.g_map.map(tx as i32, ty as i32) & tile_flag_solid) != 0 || !g.g_map.spawn(1, tx, ty) || !g.g_map.block(tx, ty).is_null() {
+                    if (g.g_map.map(tx as i32, ty as i32) & tile_flag_solid) != 0 || !g.g_map.spawn(1, tx, ty) || !g.map_block(tx, ty).is_null() {
                         iCountSolidTiles += 1;
 
                         // Be more picky in the first few loops, but allow solid tiles to be in
