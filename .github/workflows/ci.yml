@@ -592,7 +592,7 @@ jobs:
           retention-days: 7
 
   determinism:
-    name: determinism (report-only)
+    name: determinism
     needs: [parity, web]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
@@ -604,12 +604,14 @@ jobs:
           path: ${{ runner.temp }}/determinism
           merge-multiple: true
       - name: Compare the manifests
-        continue-on-error: true
         run: |
           shopt -s nullglob
-          python3 tools/determinism.py compare "$RUNNER_TEMP/determinism-summary.md" "$RUNNER_TEMP"/determinism/determinism-*.txt
+          status=0
+          python3 tools/determinism.py compare "$RUNNER_TEMP/determinism-summary.md" "$RUNNER_TEMP"/determinism/determinism-*.txt || status=$?
           cat "$RUNNER_TEMP/determinism-summary.md" >> "$GITHUB_STEP_SUMMARY"
+          exit $status
       - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
         with:
           name: determinism-summary
           path: |
