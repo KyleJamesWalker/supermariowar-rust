@@ -322,6 +322,16 @@ impl MenuState {
         "unknown"
     }
 
+    /// Whether the current menu is `name`: a dump name, or `mode_settings` and `boss_settings`, which the dump calls
+    /// `unknown`.
+    pub fn harness_is(&self, name: &str) -> bool {
+        match self.mCurrentMenu {
+            MenuId::ModeSettings(_) => name == "mode_settings" || name == "unknown",
+            MenuId::BossSettings => name == "boss_settings" || name == "unknown",
+            _ => self.harness_menu_name() == name,
+        }
+    }
+
     pub fn harness_focus_index(&mut self) -> i32 {
         if self.mCurrentMenu != MenuId::None {
             self.current().current_focus_index()

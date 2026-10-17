@@ -35,8 +35,11 @@ enum EventKind {
     JoyButton,
     JoyHat,
     Tap,
+    /// `<frame> await <name>`: later events wait until that menu or state is current.
+    Await,
 }
 
+#[derive(Clone)]
 struct ReplayEvent {
     frame: u32,
     kind: EventKind,
@@ -76,6 +79,8 @@ pub struct Harness {
     frame: u32,
     audible: bool,
     speed: f32,
+    /// Frames the script's `await` lines have waited so far; later events and SMW_FRAMES move by it.
+    shift: u32,
     rec: Option<Recorder>,
     segment: Option<Segment>,
     spawn_events: Vec<String>,
@@ -120,6 +125,7 @@ impl Harness {
             frame: 0,
             audible: false,
             speed: 1.0,
+            shift: 0,
             rec: None,
             segment: None,
             spawn_events: Vec::new(),
@@ -230,7 +236,13 @@ fn load_events(g: &mut Game, path: &str) -> Vec<ReplayEvent> {
             h(gp.get()).devices.push((frame, device, dir == "jadd"));
             continue;
         }
-        if dir == "tap" {
+        if dir == "await" {
+            ev.kind = EventKind::Await;
+            ev.keyName = rest.trim().to_string();
+            if ev.keyName.is_empty() {
+                fail(format!("{}:{}: expected '<frame> await <menu|state>'", path, lineno));
+            }
+        } else if dir == "tap" {
             let nums: Vec<Option<i32>> = rest.split_whitespace().map(|t| t.parse::<i32>().ok()).collect();
             match nums.as_slice() {
                 [Some(x), Some(y)] if (0..SCREEN_W as i32).contains(x) && (0..SCREEN_H as i32).contains(y) => {
@@ -324,6 +336,7 @@ fn input_for(g: &mut Game, ev: &ReplayEvent) -> InputEvent {
         EventKind::JoyButton => InputEvent::PadButton { pad, button: ev.index as u8, down: ev.value != 0 },
         EventKind::JoyHat => InputEvent::PadHat { pad, hat: ev.index as u8, value: ev.value as u8 },
         EventKind::Tap => InputEvent::Tap { x: ev.index as i16, y: ev.value as i16 },
+        EventKind::Await => InputEvent::Other(0),
     }
 }
 
@@ -568,15 +581,54 @@ pub fn frame_start(g: &mut Game) {
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::pad::phase(4);
 
-    while h(gp.get()).nextEvent < h(gp.get()).events.len() && h(gp.get()).events[h(gp.get()).nextEvent].frame <= h(gp.get()).frame {
-        if h(gp.get()).events[h(gp.get()).nextEvent].frame == h(gp.get()).frame {
-            let input = input_of(g, &h(gp.get()).events[h(gp.get()).nextEvent]);
-            note_replay_key(g, &input);
-            crate::smw::input::push_ready(g, input);
-            copy_replay_event(g, &h(gp.get()).events[h(gp.get()).nextEvent]);
+    let frame = h(gp.get()).frame;
+    while let Some(ev) = h(gp.get()).events.get(h(gp.get()).nextEvent).cloned() {
+        match due(g, &ev, frame) {
+            Due::Later => break,
+            Due::Now => {
+                let input = input_of(g, &ev);
+                note_replay_key(g, &input);
+                crate::smw::input::push_ready(g, input);
+                copy_replay_event(g, &ReplayEvent { frame, ..ev });
+            }
+            Due::Past => {}
         }
         h(gp.get()).nextEvent += 1;
     }
+}
+
+enum Due {
+    Now,
+    /// Passed, or an `await` that is satisfied.
+    Past,
+    Later,
+}
+
+/// When a script event plays at `frame`, after the shift its `await` lines have built up. An unsatisfied `await`
+/// moves itself and every later event to the next frame.
+fn due(g: &mut Game, ev: &ReplayEvent, frame: u32) -> Due {
+    let at = ev.frame + h(g).shift;
+    if at > frame {
+        return Due::Later;
+    }
+    if ev.kind == EventKind::Await {
+        if awaited(g, &ev.keyName) {
+            return Due::Past;
+        }
+        h(g).shift = frame + 1 - ev.frame;
+        return Due::Later;
+    }
+    if at == frame {
+        Due::Now
+    } else {
+        Due::Past
+    }
+}
+
+/// Whether `name` is the current state (`state_name`) or, in the menu, the current menu (`MenuState::harness_is`).
+fn awaited(g: &mut Game, name: &str) -> bool {
+    let state = state_name(g);
+    state == name || (state == "menu" && MenuState::instance(g).harness_is(name))
 }
 
 /// Blocking waits take the next replay event immediately instead of waiting for input.
@@ -588,12 +640,15 @@ pub fn wait_event(g: &mut Game) -> Input {
     if !h(gp.get()).replay {
         return crate::services::services(g).events.wait();
     }
-    if h(gp.get()).nextEvent >= h(gp.get()).events.len() {
-        fail(format!("blocking wait at frame {} but the replay has no events left", h(gp.get()).frame));
+    while h(gp.get()).events.get(h(gp.get()).nextEvent).is_some_and(|ev| ev.kind == EventKind::Await) {
+        h(gp.get()).nextEvent += 1;
     }
-    let input = input_of(g, &h(gp.get()).events[h(gp.get()).nextEvent]);
+    let Some(ev) = h(gp.get()).events.get(h(gp.get()).nextEvent).cloned() else {
+        fail(format!("blocking wait at frame {} but the replay has no events left", h(gp.get()).frame));
+    };
+    let input = input_of(g, &ev);
     note_replay_key(g, &input);
-    copy_replay_event(g, &h(gp.get()).events[h(gp.get()).nextEvent]);
+    copy_replay_event(g, &ReplayEvent { frame: ev.frame + h(gp.get()).shift, ..ev });
     h(gp.get()).nextEvent += 1;
     input
 }
@@ -626,7 +681,7 @@ pub fn frame_end(g: &mut Game) {
     }
 
     h(gp.get()).frame += 1;
-    if h(gp.get()).maxFrames >= 0 && h(gp.get()).frame as i64 >= h(gp.get()).maxFrames {
+    if h(gp.get()).maxFrames >= 0 && h(gp.get()).frame as i64 >= h(gp.get()).maxFrames + h(gp.get()).shift as i64 {
         g.game_values.appstate = AppState::Quit;
         h(gp.get()).dump = None;
     }
@@ -866,26 +921,31 @@ fn line_for(ev: &ReplayEvent) -> String {
         EventKind::JoyButton => format!("{} jbutton {} {} {}", ev.frame, ev.device, ev.index, ev.value),
         EventKind::JoyHat => format!("{} jhat {} {} {}", ev.frame, ev.device, ev.index, ev.value),
         EventKind::Tap => format!("{} tap {} {}", ev.frame, ev.index, ev.value),
+        EventKind::Await => format!("{} await {}", ev.frame, ev.keyName),
     }
 }
 
 /// SMW_LIVE_SCRIPT events due this frame enter SDL's queue like OS input, with the modifier and
 /// repeat flags a real keyboard sets, so they take the same capture path as real input.
 fn push_live_script(g: &mut Game, r: &mut Recorder, frame: u32) {
-    while r.nextScript < r.script.len() && r.script[r.nextScript].frame <= frame {
-        if r.script[r.nextScript].frame == frame {
-            let mut input = input_of(g, &r.script[r.nextScript]);
-            match &mut input.event {
-                InputEvent::Key { mods, repeat, down: true, .. } => {
-                    *mods = KMOD_NUM;
-                    *repeat = r.nextScript % 3 == 2;
+    while let Some(ev) = r.script.get(r.nextScript).cloned() {
+        match due(g, &ev, frame) {
+            Due::Later => break,
+            Due::Past => {}
+            Due::Now => {
+                let mut input = input_of(g, &ev);
+                match &mut input.event {
+                    InputEvent::Key { mods, repeat, down: true, .. } => {
+                        *mods = KMOD_NUM;
+                        *repeat = r.nextScript % 3 == 2;
+                    }
+                    InputEvent::PadAxis { pad, .. } | InputEvent::PadButton { pad, .. } | InputEvent::PadHat { pad, .. } => {
+                        *pad = PadSlot(sdl_instance(g, pad.0));
+                    }
+                    _ => {}
                 }
-                InputEvent::PadAxis { pad, .. } | InputEvent::PadButton { pad, .. } | InputEvent::PadHat { pad, .. } => {
-                    *pad = PadSlot(sdl_instance(g, pad.0));
-                }
-                _ => {}
+                crate::services::services(g).events.push(&input);
             }
-            crate::services::services(g).events.push(&input);
         }
         r.nextScript += 1;
     }

@@ -1,17 +1,20 @@
 #@ seed=1
 #@ frames=1400
 10 down Return
+12 await main
 12 up Return
 30 down Down
 32 up Down
 40 down Down
 42 up Down
 50 down Return
+52 await net_servers
 52 up Return
 70 down Down
 72 up Down
 80 down Return
 82 up Return
+300 await net_lobby
 300 down Down
 302 up Down
 310 down Down
@@ -22,6 +25,7 @@
 342 up Left
 350 down Return
 352 up Return
+477 await gameplay
 1100 down Left
 1100 down Up
 1116 up Up
