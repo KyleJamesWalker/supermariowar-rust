@@ -132,17 +132,17 @@ impl MI_TourStop {
             let gamemode: Ptr<dyn CGameModeTrait>;
             let tourstopicon: i16;
             if tourstop.iMode as i32 == game_mode_pipe_minigame {
-                gamemode = Ptr::from_raw(g.pipegamemode.as_ptr() as *mut dyn CGameModeTrait);
+                gamemode = Ptr::from_raw(g.pipegamemode.ptr().as_ptr() as *mut dyn CGameModeTrait);
                 tourstopicon = 25;
             } else if tourstop.iMode as i32 == game_mode_boss_minigame {
                 g.bossgamemode.set_boss_type(tourstop.gmsSettings.boss.bosstype);
-                gamemode = Ptr::from_raw(g.bossgamemode.as_ptr() as *mut dyn CGameModeTrait);
+                gamemode = Ptr::from_raw(g.bossgamemode.ptr().as_ptr() as *mut dyn CGameModeTrait);
                 tourstopicon = 26;
             } else if tourstop.iMode as i32 == game_mode_boxes_minigame {
-                gamemode = Ptr::from_raw(g.boxesgamemode.as_ptr() as *mut dyn CGameModeTrait);
+                gamemode = Ptr::from_raw(g.boxesgamemode.ptr().as_ptr() as *mut dyn CGameModeTrait);
                 tourstopicon = 27;
             } else {
-                gamemode = g.gamemodes[tourstop.iMode as usize];
+                gamemode = g.gamemodes[tourstop.iMode as usize].ptr();
                 tourstopicon = tourstop.iMode;
             }
 

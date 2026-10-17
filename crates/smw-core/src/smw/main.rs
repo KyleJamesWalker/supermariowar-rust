@@ -368,43 +368,39 @@ fn touch_controls_on(g: &mut Game) -> bool {
 /// The players' settings (`playercontrol`, one number each) from before pads were assigned.
 const PAD_PLAYERS_FILE: &str = "pad_players.txt";
 
-fn new_mode<T: CGameModeTrait + 'static>(mode: T) -> Ptr<dyn CGameModeTrait> {
-    Ptr::from_raw(Ptr::new_box(mode).as_ptr() as *mut dyn CGameModeTrait)
-}
-
 pub fn create_gamemodes(g: &mut Game) {
     //set game modes
-    g.gamemodes[0] = new_mode(CGM_Classic::new());
-    g.gamemodes[1] = new_mode(CGM_Frag::new());
-    g.gamemodes[2] = new_mode(CGM_TimeLimit::new());
-    g.gamemodes[3] = new_mode(CGM_Jail::new());
-    g.gamemodes[4] = new_mode(CGM_Coins::new());
-    g.gamemodes[5] = new_mode(CGM_Stomp::new());
-    g.gamemodes[6] = new_mode(CGM_Eggs::new());
-    g.gamemodes[7] = new_mode(CGM_CaptureTheFlag::new());
-    g.gamemodes[8] = new_mode(CGM_Chicken::new());
-    g.gamemodes[9] = new_mode(CGM_Tag::new());
-    g.gamemodes[10] = new_mode(CGM_Star::new());
-    g.gamemodes[11] = new_mode(CGM_Domination::new());
-    g.gamemodes[12] = new_mode(CGM_KingOfTheHill::new());
-    g.gamemodes[13] = new_mode(CGM_Race::new());
-    g.gamemodes[14] = new_mode(CGM_Owned::new());
-    g.gamemodes[15] = new_mode(CGM_Frenzy::new());
-    g.gamemodes[16] = new_mode(CGM_Survival::new());
-    g.gamemodes[17] = new_mode(CGM_Greed::new());
-    g.gamemodes[18] = new_mode(CGM_Health::new());
-    g.gamemodes[19] = new_mode(CGM_Collection::new());
-    g.gamemodes[20] = new_mode(CGM_Chase::new());
-    g.gamemodes[21] = new_mode(CGM_ShyGuyTag::new());
+    g.gamemodes[0].set(Box::new(CGM_Classic::new()));
+    g.gamemodes[1].set(Box::new(CGM_Frag::new()));
+    g.gamemodes[2].set(Box::new(CGM_TimeLimit::new()));
+    g.gamemodes[3].set(Box::new(CGM_Jail::new()));
+    g.gamemodes[4].set(Box::new(CGM_Coins::new()));
+    g.gamemodes[5].set(Box::new(CGM_Stomp::new()));
+    g.gamemodes[6].set(Box::new(CGM_Eggs::new()));
+    g.gamemodes[7].set(Box::new(CGM_CaptureTheFlag::new()));
+    g.gamemodes[8].set(Box::new(CGM_Chicken::new()));
+    g.gamemodes[9].set(Box::new(CGM_Tag::new()));
+    g.gamemodes[10].set(Box::new(CGM_Star::new()));
+    g.gamemodes[11].set(Box::new(CGM_Domination::new()));
+    g.gamemodes[12].set(Box::new(CGM_KingOfTheHill::new()));
+    g.gamemodes[13].set(Box::new(CGM_Race::new()));
+    g.gamemodes[14].set(Box::new(CGM_Owned::new()));
+    g.gamemodes[15].set(Box::new(CGM_Frenzy::new()));
+    g.gamemodes[16].set(Box::new(CGM_Survival::new()));
+    g.gamemodes[17].set(Box::new(CGM_Greed::new()));
+    g.gamemodes[18].set(Box::new(CGM_Health::new()));
+    g.gamemodes[19].set(Box::new(CGM_Collection::new()));
+    g.gamemodes[20].set(Box::new(CGM_Chase::new()));
+    g.gamemodes[21].set(Box::new(CGM_ShyGuyTag::new()));
 
     g.currentgamemode = 0;
     g.game_values.gamemode = Some(crate::common::game_mode::ModeId::Standard((g.currentgamemode as usize) as u8));
 
     //Special modes
-    g.bonushousemode = Ptr::new_box(CGM_Bonus::new());
-    g.pipegamemode = Ptr::new_box(CGM_Pipe_MiniGame::new());
-    g.bossgamemode = Ptr::new_box(CGM_Boss_MiniGame::new());
-    g.boxesgamemode = Ptr::new_box(CGM_Boxes_MiniGame::new());
+    g.bonushousemode.set(Box::new(CGM_Bonus::new()));
+    g.pipegamemode.set(Box::new(CGM_Pipe_MiniGame::new()));
+    g.bossgamemode.set(Box::new(CGM_Boss_MiniGame::new()));
+    g.boxesgamemode.set(Box::new(CGM_Boxes_MiniGame::new()));
 }
 
 pub fn init_spawnlocations(g: &mut Game) {
@@ -549,10 +545,6 @@ pub fn main_game(g: &mut Game) {
 
         println!("\n---------------- shutdown ----------------");
         harness::finish(g);
-
-        for i in 0..GAMEMODE_LAST as usize {
-            g.gamemodes[i].delete();
-        }
 
         sfx_close(g);
         gfx_close();
