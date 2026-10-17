@@ -14,6 +14,7 @@ use std::ops::{Deref, DerefMut};
 //------------------------------------------------------------------------------
 // class OverMapObject - moving objects that don't collide with map or objects, just player
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct IO_OverMapObject {
     pub cobject: CObject,
 

@@ -21,6 +21,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class flag (for Capture the Flag mode)
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct CO_Flag {
     pub mo_carried_object: MO_CarriedObject,
 

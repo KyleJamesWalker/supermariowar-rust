@@ -11,7 +11,7 @@ pub const SOFT: PlayerShieldType = 1;
 pub const SOFT_WITH_STOMP: PlayerShieldType = 2;
 pub const HARD: PlayerShieldType = 3;
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct PlayerShield {
     pub r#type: PlayerShieldType,
     pub timer: i16,

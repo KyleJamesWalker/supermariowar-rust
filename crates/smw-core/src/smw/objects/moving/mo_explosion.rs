@@ -20,6 +20,7 @@ use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
 //------------------------------------------------------------------------------
 // class explosion (for bob-omb mode)
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct MO_Explosion {
     pub io_moving_object: IO_MovingObject,
 

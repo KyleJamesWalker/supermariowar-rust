@@ -18,6 +18,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class OMO Orbit Hazard - component of the fireball string or rotodisc
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct OMO_OrbitHazard {
     pub io_over_map_object: IO_OverMapObject,
 

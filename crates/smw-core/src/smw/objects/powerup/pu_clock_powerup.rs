@@ -16,6 +16,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class clock powerup
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct PU_ClockPowerup {
     pub mo_powerup: MO_Powerup,
 }

@@ -20,6 +20,7 @@ use std::ops::{Deref, DerefMut};
 //------------------------------------------------------------------------------
 // class feather powerup
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct PU_FeatherPowerup {
     pub io_moving_object: IO_MovingObject,
 

@@ -43,6 +43,8 @@ use crate::smw::player::{CPlayer, PlayerState};
 use std::any::Any;
 use std::collections::BTreeMap;
 
+#[derive(Clone)]
+
 pub struct NearestObjects {
     pub player: PlayerId,
     pub teammate: PlayerId,
@@ -122,7 +124,23 @@ pub struct AttentionObject {
 }
 
 /// Virtual interface of `CPlayerAI` (`Init`, `Think`).
-pub trait CPlayerAITrait {
+pub trait ClonePlayerAI {
+    fn clone_box(&self) -> Box<dyn CPlayerAITrait>;
+}
+
+impl<T: CPlayerAITrait + Clone + 'static> ClonePlayerAI for T {
+    fn clone_box(&self) -> Box<dyn CPlayerAITrait> {
+        Box::new(self.clone())
+    }
+}
+
+impl Clone for Box<dyn CPlayerAITrait> {
+    fn clone(&self) -> Self {
+        self.clone_box()
+    }
+}
+
+pub trait CPlayerAITrait: ClonePlayerAI {
     fn ai(&mut self) -> &mut CPlayerAI;
 
     fn set_player(&mut self, player: PlayerId) {
@@ -137,6 +155,8 @@ pub trait CPlayerAITrait {
         cplayer_ai_think(gp.get(), self.ai(), playerKeys)
     }
 }
+
+#[derive(Clone)]
 
 pub struct CPlayerAI {
     pub pPlayer: PlayerId,
@@ -1652,6 +1672,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
 /**************************************************
  * CSimpleAI class
  ***************************************************/
+#[derive(Clone)]
 pub struct CSimpleAI {
     pub cplayer_ai: CPlayerAI,
 }

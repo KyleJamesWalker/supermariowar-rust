@@ -27,6 +27,7 @@ TODO
 
 //Boxes Bonus Mini Game (used in world mode)
 //Try to collect all coins from boxes and players
+#[derive(Clone)]
 pub struct CGM_Boxes_MiniGame {
     pub cgame_mode: CGameMode,
 }

@@ -4,18 +4,22 @@
 #@ map=netplay_feather
 #@ compare=--require kill.args=1,1,0,1,0,.*out=r1.p0.s0 --forbid out=r3 --drops-powerup 0
 10 down Return
+12 await main
 12 up Return
 30 down Down
 32 up Down
 40 down Down
 42 up Down
 50 down Return
+52 await net_servers
 52 up Return
 70 down Down
 72 up Down
 80 down Return
 82 up Return
+150 await net_lobby
 150 down Return
+152 await net_new_room_settings
 152 up Return
 154 down Up
 155 up Up
@@ -30,6 +34,7 @@
 164 down Down
 165 up Down
 170 down Return
+172 await net_new_room
 172 up Return
 190 down Return
 192 up Return
@@ -47,10 +52,12 @@
 242 up Down
 250 down Return
 252 up Return
+420 await net_room
 420 down Up
 422 up Up
 430 down Return
 432 up Return
+466 await gameplay
 900 down Up
 906 up Up
 1175 down Right

@@ -35,6 +35,8 @@ fn calc_velocity(speed: f32, angle: f32) -> Vec2f {
     vel
 }
 
+#[derive(Clone)]
+
 pub struct MovingPlatformPath {
     pub m_startPos: Vec2f,
     pub m_endPos: Vec2f,
@@ -76,7 +78,23 @@ impl MovingPlatformPath {
 }
 
 /// Virtual interface of `MovingPlatformPath`.
-pub trait MovingPlatformPathTrait: Any {
+pub trait ClonePath {
+    fn clone_box(&self) -> Box<dyn MovingPlatformPathTrait>;
+}
+
+impl<T: MovingPlatformPathTrait + Clone> ClonePath for T {
+    fn clone_box(&self) -> Box<dyn MovingPlatformPathTrait> {
+        Box::new(self.clone())
+    }
+}
+
+impl Clone for Box<dyn MovingPlatformPathTrait> {
+    fn clone(&self) -> Self {
+        self.clone_box()
+    }
+}
+
+pub trait MovingPlatformPathTrait: Any + ClonePath {
     fn path(&self) -> &MovingPlatformPath;
     fn path_mut(&mut self) -> &mut MovingPlatformPath;
     fn as_any(&mut self) -> &mut dyn Any;
@@ -138,6 +156,8 @@ pub enum GoalPoint {
 //------------------------------------------------------------------------------
 // Straight Path
 //------------------------------------------------------------------------------
+
+#[derive(Clone)]
 
 pub struct StraightPath {
     pub base: MovingPlatformPath,
@@ -242,6 +262,8 @@ impl MovingPlatformPathTrait for StraightPath {
 //------------------------------------------------------------------------------
 // Straight Path Continuous
 //------------------------------------------------------------------------------
+
+#[derive(Clone)]
 
 pub struct StraightPathContinuous {
     pub base: MovingPlatformPath,
@@ -348,6 +370,8 @@ impl MovingPlatformPathTrait for StraightPathContinuous {
 // Ellipse Path
 //------------------------------------------------------------------------------
 
+#[derive(Clone)]
+
 pub struct EllipsePath {
     pub base: MovingPlatformPath,
     m_radius: Vec2f,
@@ -432,6 +456,8 @@ impl MovingPlatformPathTrait for EllipsePath {
 //------------------------------------------------------------------------------
 // Falling path (for falling donut blocks)
 //------------------------------------------------------------------------------
+
+#[derive(Clone)]
 
 pub struct FallingPath {
     pub base: MovingPlatformPath,

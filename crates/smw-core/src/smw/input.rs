@@ -4,6 +4,8 @@ use crate::game::Game;
 use smw_platform::Input;
 use std::collections::VecDeque;
 
+#[derive(Clone)]
+
 pub struct InputQueue {
     /// Keys and taps from the touch controls: live input that skips the touch filter.
     touch: VecDeque<Input>,

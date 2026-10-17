@@ -8,7 +8,7 @@ use crate::game::Game;
 use smw_platform::{Input, InputEvent, MouseEvent};
 use crate::common::global_constants::MAX_PLAYERS;
 use crate::globals::*;
-use sdl2::sys::{SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP};
+use crate::common::keys::{SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP};
 
 pub const NUM_KEYS: usize = 8;
 
@@ -120,6 +120,8 @@ pub struct CInputPlayerControl {
     pub iDevice: i16,
     pub inputGameControls: [CInputControl; 2], //0 == game controls, 1 == menu controls
 }
+
+#[derive(Clone)]
 
 pub struct CPlayerInput {
     /// Each player's `inputConfiguration[set][kind]` (kind 0 is the keyboard, 1 the joystick); `Game::input_control` reads it.

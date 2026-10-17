@@ -22,6 +22,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class collection card (for card collection mode)
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct MO_CollectionCard {
     pub io_moving_object: IO_MovingObject,
 

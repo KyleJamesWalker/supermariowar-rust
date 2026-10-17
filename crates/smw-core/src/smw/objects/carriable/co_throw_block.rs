@@ -27,6 +27,7 @@ use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
 //------------------------------------------------------------------------------
 // State 1: Moving
 // State 2: Holding
+#[derive(Clone)]
 pub struct CO_ThrowBlock {
     pub mo_carried_object: MO_CarriedObject,
 

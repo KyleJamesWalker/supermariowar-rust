@@ -35,6 +35,7 @@ fn remove_player_race_goals(g: &mut Game, container: &CObjectContainer, id: i16,
 //Touch all the flying blocks in order
 //Each successful curcuit you complete (before getting killed)
 //Counts as one point
+#[derive(Clone)]
 pub struct CGM_Race {
     pub cgame_mode: CGameMode,
 

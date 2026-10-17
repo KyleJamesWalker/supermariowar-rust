@@ -29,6 +29,13 @@ pub struct GameStateManager {
     pub _alias: Aliased,
 }
 
+/// A segment replay's start state is not copied; it hands over to gameplay on its first frame.
+impl Clone for GameStateManager {
+    fn clone(&self) -> Self {
+        GameStateManager { _alias: Aliased::new(), currentState: self.currentState, segment: None }
+    }
+}
+
 impl GameStateManager {
     pub const fn new() -> Self {
         GameStateManager { _alias: Aliased::new(), currentState: StateId::Splash, segment: None }

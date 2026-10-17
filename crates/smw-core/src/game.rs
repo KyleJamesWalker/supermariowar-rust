@@ -10,7 +10,7 @@ use crate::common::file_list::{AnnouncerList, FiltersList, GraphicsList, MusicLi
 use crate::common::map::CMap;
 use crate::common::map_list::MapList;
 use crate::common::random_number_generator::RngState;
-use crate::common::sfx::SfxState;
+use crate::common::sfx::{sfxMusic, SfxState};
 use crate::common::score::CScore;
 use crate::common::resource_manager::CResourceManager;
 use crate::common::tileset_manager::CTilesetManager;
@@ -85,6 +85,7 @@ pub struct Game {
     pub currentgamemode: i16,
     pub rng: RngState,
     pub sfx: SfxState,
+    pub backgroundmusic: [sfxMusic; 6],
     pub networkHandler: Global<NetworkHandler>,
     pub netplay: Global<Networking>,
     pub backup_playercontrol: [i16; 4],
@@ -141,6 +142,13 @@ pub struct Game {
     pub relay: crate::smw::platform::network::websocket::network_layer_websocket::Relay,
     #[cfg(target_os = "emscripten")]
     pub recv_buffer: [u8; smw_netplay::common_netplay::relay_frame::MAX_MESSAGE_LEN],
+    /// What a copy from `clone_match` owns where the original's fields point at shared values.
+    match_copy: Option<MatchCopy>,
+}
+
+struct MatchCopy {
+    _screen: Box<Surface>,
+    _musiclist: Box<MusicList>,
 }
 
 impl Game {
@@ -266,6 +274,7 @@ impl Game {
             currentgamemode: 0,
             rng: RngState::new(),
             sfx: SfxState::new(),
+            backgroundmusic: [const { sfxMusic::new() }; 6],
             networkHandler: Global::uninit(),
             netplay: Global::uninit(),
             backup_playercontrol: [0; 4],
@@ -314,7 +323,112 @@ impl Game {
             relay: crate::smw::platform::network::websocket::network_layer_websocket::Relay::new(),
             #[cfg(target_os = "emscripten")]
             recv_buffer: [0; smw_netplay::common_netplay::relay_frame::MAX_MESSAGE_LEN],
+            match_copy: None,
         }
+    }
+
+    /// A copy of the running match (docs/HANDLES.md, "What a copy of `Game` shares"). It shares the loaded assets,
+    /// runs on `services`, draws to its own screen and has no menus or editors. The harness gives it the replay's
+    /// input but no outputs.
+    pub fn clone_match(&self, services: smw_platform::Services) -> Box<Game> {
+        let mut screen = Box::new(unsafe { (*self.screen).clone() });
+        let screen_ptr: *mut Surface = &mut *screen;
+        let mut musiclist = Box::new((*self.musiclist).clone());
+        let musiclist_ptr = Ptr::from_mut(&mut *musiclist);
+        let mut sfx = self.sfx.clone();
+        sfx.sfx_audible = false;
+        let mut networkHandler: Global<NetworkHandler> = Global::uninit();
+        networkHandler.init(NetworkHandler::default());
+        Box::new(Game {
+            _alias: Aliased::new(),
+            game_values: self.game_values.clone(),
+            filterslist: self.filterslist,
+            maplist: self.maplist,
+            skinlist: self.skinlist,
+            announcerlist: self.announcerlist,
+            musiclist: musiclist_ptr,
+            worldmusiclist: self.worldmusiclist,
+            menugraphicspacklist: self.menugraphicspacklist,
+            worldgraphicspacklist: self.worldgraphicspacklist,
+            gamegraphicspacklist: self.gamegraphicspacklist,
+            soundpacklist: self.soundpacklist,
+            tourlist: self.tourlist,
+            worldlist: self.worldlist,
+            rm: self.rm,
+            g_map: self.g_map.clone(),
+            g_tilesetmanager: self.g_tilesetmanager,
+            noncolcontainer: self.noncolcontainer.clone(),
+            objectcontainer: self.objectcontainer.clone(),
+            controls: crate::common::uicontrol::Controls::new(),
+            eyecandy: self.eyecandy.clone(),
+            players: self.players.clone(),
+            score: self.score.clone(),
+            score_cnt: self.score_cnt,
+            gamemodes: std::array::from_fn(|i| {
+                let mut mode: Owned<dyn CGameModeTrait> = Owned::empty();
+                if self.gamemodes[i].is_set() {
+                    mode.set(self.gamemodes[i].clone_box());
+                }
+                mode
+            }),
+            bonushousemode: self.bonushousemode.clone(),
+            pipegamemode: self.pipegamemode.clone(),
+            bossgamemode: self.bossgamemode.clone(),
+            boxesgamemode: self.boxesgamemode.clone(),
+            currentgamemode: self.currentgamemode,
+            rng: self.rng.clone(),
+            sfx,
+            backgroundmusic: self.backgroundmusic.clone(),
+            networkHandler,
+            netplay: self.netplay.clone(),
+            backup_playercontrol: self.backup_playercontrol,
+            net_outcomes: self.net_outcomes.clone(),
+            net_random: self.net_random.clone(),
+            x_shake: self.x_shake,
+            y_shake: self.y_shake,
+            shakeleft: self.shakeleft,
+            g_iSwirlSpawnLocations: self.g_iSwirlSpawnLocations,
+            spotlightManager: self.spotlightManager.clone(),
+            g_iWinningPlayer: self.g_iWinningPlayer,
+            g_iCurrentDrawIndex: self.g_iCurrentDrawIndex,
+            g_networkIDContext: self.g_networkIDContext,
+            g_networkIDCount: self.g_networkIDCount,
+            match_map: self.match_map.clone(),
+            text_field_opened_by_key: false,
+            g_worldmap: self.g_worldmap.clone(),
+            level_editor: LevelEditorState::new(),
+            world_editor: WorldEditorState::new(),
+            gsm: self.gsm.clone(),
+            gps: self.gps.clone(),
+            ms: None,
+            ss: None,
+            #[cfg(target_os = "emscripten")]
+            frame_events: Vec::new(),
+            net_record: self.net_record.clone(),
+            screen: screen_ptr,
+            blitdest: if self.blitdest == self.screen { screen_ptr } else { self.blitdest },
+            fps_limiter: FPSLimiter::new(),
+            main_loop: self.main_loop.clone(),
+            harness: self.harness.clone_inputs(),
+            editor_harness: EditorHarness::new(),
+            #[cfg(not(target_os = "emscripten"))]
+            pad: PadState::new(),
+            #[cfg(not(target_os = "emscripten"))]
+            touch: TouchState::new(),
+            input: self.input.clone(),
+            services: Some(services),
+            gfx: Global::uninit(),
+            gfx_palette: self.gfx_palette.clone(),
+            RootDataDirectory: self.RootDataDirectory.clone(),
+            SMW_Root_Data_Dir: self.SMW_Root_Data_Dir.clone(),
+            are_paths_initialized: self.are_paths_initialized,
+            devices: self.devices.clone(),
+            #[cfg(target_os = "emscripten")]
+            relay: crate::smw::platform::network::websocket::network_layer_websocket::Relay::new(),
+            #[cfg(target_os = "emscripten")]
+            recv_buffer: [0; smw_netplay::common_netplay::relay_frame::MAX_MESSAGE_LEN],
+            match_copy: Some(MatchCopy { _screen: screen, _musiclist: musiclist }),
+        })
     }
 }
 

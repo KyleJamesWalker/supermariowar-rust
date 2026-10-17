@@ -7,7 +7,6 @@ use crate::game::Game;
 use smw_platform::{Input, InputEvent, Overlay, TouchPhase, OverlayImage, OverlayQuad, SCREEN_H, SCREEN_W};
 use std::sync::Arc;
 use crate::common::path::get_home_directory;
-use sdl2::sys::{SDL_Event, SDL_EventType, SDL_GetKeyboardFocus, SDL_GetScancodeFromKey, SDL_PRESSED, SDL_RELEASED};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Key {

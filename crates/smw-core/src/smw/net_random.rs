@@ -139,6 +139,7 @@ impl Ev {
 }
 
 /// The netplay event sync's part of `Game`.
+#[derive(Clone)]
 pub struct NetRandomState {
     /// The objects added to the containers while an event runs, for its `C` record.
     g_added: Option<Vec<String>>,

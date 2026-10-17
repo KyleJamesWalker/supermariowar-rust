@@ -24,6 +24,7 @@ use std::any::Any;
 
 //Boss Mode
 //Person to score fatal hit to boss wins!
+#[derive(Clone)]
 pub struct CGM_Boss_MiniGame {
     pub cgame_mode: CGameMode,
 
@@ -64,7 +65,7 @@ impl CGM_Boss_MiniGame {
             gp.rm.sfx_timewarning.stop(g);
             gp.rm.sfx_slowdownmusic.stop(g);
 
-            gp.rm.backgroundmusic[1].play(g, true, false);
+            gp.backgroundmusic[1].play(g, true, false);
         }
 
         //game_values.noexit = true;
@@ -129,7 +130,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
                 gp.rm.sfx_slowdownmusic.stop(g);
                 if_sound_on_play(g, &mut gp.rm.sfx_gameover);
 
-                gp.rm.backgroundmusic[1].stop(g);
+                gp.backgroundmusic[1].stop(g);
             }
         }
 

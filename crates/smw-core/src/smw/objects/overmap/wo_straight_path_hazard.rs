@@ -19,6 +19,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class OMO Straight Path Hazard - straight path fireball
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct OMO_StraightPathHazard {
     pub io_over_map_object: IO_OverMapObject,
 

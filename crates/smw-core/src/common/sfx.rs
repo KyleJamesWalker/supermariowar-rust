@@ -7,7 +7,8 @@ use crate::services::services;
 use smw_platform::{SoundId, TrackId};
 use std::io::Write;
 use std::path::Path;
-use std::ptr::null_mut;
+use std::collections::BTreeMap;
+use std::sync::atomic::{AtomicU32, Ordering};
 
 
 fn sdl_get_ticks(g: &mut Game) -> u32 {
@@ -22,6 +23,8 @@ struct VirtualChannel {
     end: u32,
 }
 
+#[derive(Clone)]
+
 struct VirtualMusic {
     music: Option<TrackId>,
     forever: bool,
@@ -31,6 +34,7 @@ struct VirtualMusic {
 }
 
 /// The sound subsystem's part of `Game`.
+#[derive(Clone)]
 pub struct SfxState {
     pub fResumeMusic: bool,
     // Clock for the sfxSound::play() retrigger throttle; the replay harness swaps it (cpp-harness.patch).
@@ -49,7 +53,16 @@ pub struct SfxState {
     v_channels: [VirtualChannel; sfxSound::k_channels],
     v_music: VirtualMusic,
     next_id: u32,
-    s_channels: [*mut sfxSound; sfxSound::k_channels],
+    /// The sound that started each channel, by `sfxSound::key`.
+    s_channels: [Option<u32>; sfxSound::k_channels],
+    /// Each sound's play state, by `sfxSound::key`; the sounds themselves are shared assets.
+    sounds: BTreeMap<u32, SoundPlay>,
+}
+
+#[derive(Clone, Copy, Default)]
+struct SoundPlay {
+    channels: u16,
+    last_start_time: usize,
 }
 
 impl SfxState {
@@ -65,13 +78,18 @@ impl SfxState {
             v_channels: [VirtualChannel { chunk: None, forever: false, end: 0 }; sfxSound::k_channels],
             v_music: VirtualMusic { music: None, forever: false, paused: false, end: 0, remaining: 0 },
             next_id: 0,
-            s_channels: [null_mut(); sfxSound::k_channels],
+            s_channels: [None; sfxSound::k_channels],
+            sounds: BTreeMap::new(),
         }
     }
 }
 
 fn sfx_state(g: &mut Game) -> &mut SfxState {
     &mut g.sfx
+}
+
+fn sound_play(g: &mut Game, key: u32) -> &mut SoundPlay {
+    sfx_state(g).sounds.entry(key).or_default()
 }
 
 fn new_id(g: &mut Game) -> u32 {
@@ -173,10 +191,17 @@ impl Drop for MixChunkPtr {
     }
 }
 
+/// A copy in a cloned match (`Game::clone_match`) names the original's track and frees nothing.
+impl Clone for MixMusicPtr {
+    fn clone(&self) -> Self {
+        MixMusicPtr(self.0, Ptr::null())
+    }
+}
+
 impl Drop for MixMusicPtr {
     fn drop(&mut self) {
         let mut gp = self.1;
-        if let Some(id) = self.0 {
+        if let (Some(id), false) = (self.0, gp.is_null()) {
             let sfx = sfx_state(gp.get());
             if sfx.v_music.music == Some(id) {
                 sfx.v_music.music = None;
@@ -229,15 +254,19 @@ pub struct sfxSound {
     m_sfx: MixChunkPtr,
     m_duration_ms: u32,
     m_name: String,
-    m_channels: u16,
-    m_last_start_time: usize,
+    /// Names this sound's play state in `SfxState`, unique in the process.
+    key: u32,
     pub _alias: Aliased,
 }
 
+fn next_sound_key() -> u32 {
+    static NEXT: AtomicU32 = AtomicU32::new(1);
+    NEXT.fetch_add(1, Ordering::Relaxed)
+}
 
 impl Default for sfxSound {
     fn default() -> Self {
-        sfxSound { _alias: Aliased::new(), m_sfx: MixChunkPtr(None, Ptr::null()), m_duration_ms: 0, m_name: String::new(), m_channels: 0, m_last_start_time: 0 }
+        sfxSound { _alias: Aliased::new(), m_sfx: MixChunkPtr(None, Ptr::null()), m_duration_ms: 0, m_name: String::new(), key: next_sound_key() }
     }
 }
 
@@ -266,15 +295,14 @@ impl sfxSound {
             m_sfx: MixChunkPtr(Some(id), gp),
             m_duration_ms: sfx_durations::sound_ms(&name).unwrap_or(decoded_ms),
             m_name: name,
-            m_channels: 0,
-            m_last_start_time: 0,
+            key: next_sound_key(),
         })
     }
 
     pub fn play(&mut self, g: &mut Game) -> bool {
         let mut gp = g.ptr();
         let current_time: u32 = (sfx_state(g).sfx_ticks)(gp.get());
-        if (current_time as usize).wrapping_sub(self.m_last_start_time) < 40 {
+        if (current_time as usize).wrapping_sub(sound_play(g, self.key).last_start_time) < 40 {
             log_event(g, format!("S skip {}", self.m_name));
             return false;
         }
@@ -283,14 +311,14 @@ impl sfxSound {
         log_event(g, format!("S play {} ch={}", self.m_name, channel));
         if channel < 0 {
             if sfx_state(g).sfx_ignore_channel_failure {
-                self.m_last_start_time = current_time as usize;
+                sound_play(g, self.key).last_start_time = current_time as usize;
             }
             return sfx_state(g).sfx_ignore_channel_failure;
         }
 
-        self.m_last_start_time = current_time as usize;
-        self.m_channels |= 1 << channel;
-        sfx_state(g).s_channels[channel as usize] = self as *mut sfxSound;
+        sound_play(g, self.key).last_start_time = current_time as usize;
+        sound_play(g, self.key).channels |= 1 << channel;
+        sfx_state(g).s_channels[channel as usize] = Some(self.key);
         true
     }
 
@@ -301,33 +329,30 @@ impl sfxSound {
             return;
         }
 
-        self.m_channels |= 1 << channel;
+        sound_play(g, self.key).channels |= 1 << channel;
     }
 
     pub fn stop(&mut self, g: &mut Game) {
         log_event(g, format!("S stop {}", self.m_name));
         for i in 0..Self::k_channels {
-            if self.m_channels & (1 << i) != 0 {
+            if sound_play(g, self.key).channels & (1 << i) != 0 {
                 mix_halt_channel(g, i as i32);
             }
         }
     }
 
-    pub fn is_playing(&self) -> bool {
-        self.m_channels != 0
+    pub fn is_playing(&self, g: &Game) -> bool {
+        g.sfx.sounds.get(&self.key).is_some_and(|p| p.channels != 0)
     }
 
     pub fn on_channel_finished(g: &mut Game, channel: i32) {
-        unsafe {
-            let sfx = sfx_state(g).s_channels[channel as usize];
-            if !sfx.is_null() {
-                (*sfx).m_channels &= !(1 << channel);
-            }
-            sfx_state(g).s_channels[channel as usize] = null_mut();
+        if let Some(key) = sfx_state(g).s_channels[channel as usize].take() {
+            sound_play(g, key).channels &= !(1 << channel);
         }
     }
 }
 
+#[derive(Clone)]
 pub struct sfxMusic {
     m_music: MixMusicPtr,
     /// `Mix_MusicDuration`: seconds, negative when unknown.
@@ -339,13 +364,13 @@ pub struct sfxMusic {
 
 impl Default for sfxMusic {
     fn default() -> Self {
-        sfxMusic { _alias: Aliased::new(), m_music: MixMusicPtr(None, Ptr::null()), m_duration: -1.0, m_name: String::new(), m_paused: false }
+        Self::new()
     }
 }
 
 impl sfxMusic {
-    pub fn new() -> Self {
-        Self::default()
+    pub const fn new() -> Self {
+        sfxMusic { _alias: Aliased::new(), m_music: MixMusicPtr(None, Ptr::null()), m_duration: -1.0, m_name: String::new(), m_paused: false }
     }
 
     /// Returns `Err` where the C++ throws a `std::string`.
@@ -422,6 +447,7 @@ impl sfxMusic {
 /// Chunks and tracks are identified by their owner, so the state survives a reload in another process.
 pub mod checkpoint {
     use super::*;
+    use std::ptr::null_mut;
 
     pub struct Channel {
         pub sound: *mut sfxSound,
@@ -444,7 +470,7 @@ pub mod checkpoint {
             let channels = (0..sfxSound::k_channels)
                 .map(|i| Channel {
                     sound: sounds.iter().copied().find(|&s| sfx_state(g).v_channels[i].chunk.is_some() && (*s).m_sfx.0 == sfx_state(g).v_channels[i].chunk).unwrap_or(null_mut()),
-                    owner: sfx_state(g).s_channels[i],
+                    owner: sounds.iter().copied().find(|&s| sfx_state(g).s_channels[i] == Some((*s).key)).unwrap_or(null_mut()),
                     forever: sfx_state(g).v_channels[i].forever,
                     end: sfx_state(g).v_channels[i].end,
                 })
@@ -464,7 +490,7 @@ pub mod checkpoint {
         unsafe {
             for (i, ch) in channels.iter().enumerate().take(sfxSound::k_channels) {
                 sfx_state(g).v_channels[i] = VirtualChannel { chunk: if ch.sound.is_null() { None } else { (*ch.sound).m_sfx.0 }, forever: ch.forever, end: ch.end };
-                sfx_state(g).s_channels[i] = ch.owner;
+                sfx_state(g).s_channels[i] = if ch.owner.is_null() { None } else { Some((*ch.owner).key) };
             }
             sfx_state(g).v_music = VirtualMusic {
                 music: if music.track.is_null() { None } else { (*music.track).m_music.0 },
@@ -481,12 +507,12 @@ pub mod checkpoint {
         pub fn name(&self) -> &str {
             &self.m_name
         }
-        pub fn state(&self) -> (u16, u64) {
-            (self.m_channels, self.m_last_start_time as u64)
+        pub fn state(&self, g: &mut Game) -> (u16, u64) {
+            let play = *sound_play(g, self.key);
+            (play.channels, play.last_start_time as u64)
         }
-        pub fn set_state(&mut self, channels: u16, last_start: u64) {
-            self.m_channels = channels;
-            self.m_last_start_time = last_start as usize;
+        pub fn set_state(&self, g: &mut Game, channels: u16, last_start: u64) {
+            *sound_play(g, self.key) = SoundPlay { channels, last_start_time: last_start as usize };
         }
     }
 

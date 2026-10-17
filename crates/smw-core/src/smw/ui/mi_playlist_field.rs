@@ -28,11 +28,11 @@ crate::impl_base!(MI_PlaylistField => ui_control: UI_Control);
 /// The music switch shared by every scroll direction.
 fn restart_menu_music(g: &mut Game) {
     let mut gp = g.ptr();
-    gp.rm.backgroundmusic[2].stop(g);
-    g.rm.backgroundmusic[2] = sfxMusic::from_file(g, gp.musiclist.music(1)).unwrap_or_else(|e| std::panic::panic_any(e));
+    gp.backgroundmusic[2].stop(g);
+    g.backgroundmusic[2] = sfxMusic::from_file(g, gp.musiclist.music(1)).unwrap_or_else(|e| std::panic::panic_any(e));
 
     if g.game_values.music {
-        gp.rm.backgroundmusic[2].play(g, false, false);
+        gp.backgroundmusic[2].play(g, false, false);
     }
 }
 

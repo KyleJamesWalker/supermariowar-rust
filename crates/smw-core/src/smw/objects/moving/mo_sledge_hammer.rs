@@ -27,6 +27,7 @@ use crate::smw::player::{get_player_from_global_id, CPlayer};
 //------------------------------------------------------------------------------
 // class sledge hammer
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct MO_SledgeHammer {
     pub io_moving_object: IO_MovingObject,
 

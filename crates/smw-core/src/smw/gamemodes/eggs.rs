@@ -13,6 +13,8 @@ use crate::smw::objects::carriable::co_egg::CO_Egg;
 use crate::smw::objects::moving::mo_yoshi::MO_Yoshi;
 use crate::smw::player::CPlayer;
 
+#[derive(Clone)]
+
 pub struct CGM_Eggs {
     pub cgame_mode: CGameMode,
 }

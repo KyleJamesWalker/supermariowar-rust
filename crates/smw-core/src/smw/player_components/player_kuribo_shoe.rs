@@ -19,7 +19,7 @@ pub const STICKY: KuriboShoeType = 2;
 
 const kuriboShoe_exitCode: [u8; 4] = [4, 8, 4, 8];
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct PlayerKuriboShoe {
     pub r#type: KuriboShoeType,
     pub animationTimer: u8,

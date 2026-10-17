@@ -34,6 +34,21 @@ pub struct Players {
     generations: Vec<u8>,
 }
 
+impl Clone for Players {
+    fn clone(&self) -> Self {
+        let slots = self.slots.iter().map(|&p| if p.is_null() { p } else { Box::into_raw(Box::new(unsafe { (*p).clone() })) }).collect();
+        Players { order: self.order.clone(), slots, generations: self.generations.clone() }
+    }
+}
+
+impl Drop for Players {
+    fn drop(&mut self) {
+        for p in self.slots.drain(..).filter(|p| !p.is_null()) {
+            drop(unsafe { Box::from_raw(p) });
+        }
+    }
+}
+
 impl Players {
     pub const fn new() -> Self {
         Players { order: Vec::new(), slots: Vec::new(), generations: Vec::new() }

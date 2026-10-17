@@ -20,6 +20,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class spring
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct CO_Spring {
     pub mo_carried_object: MO_CarriedObject,
 

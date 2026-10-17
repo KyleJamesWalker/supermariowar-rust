@@ -16,6 +16,7 @@ use crate::smw::gamemodes::game_mode::*;
 use crate::smw::player::CPlayer;
 
 //capture the chicken
+#[derive(Clone)]
 pub struct CGM_Chicken {
     pub cgame_mode: CGameMode,
 

@@ -21,6 +21,7 @@ use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
 //------------------------------------------------------------------------------
 // class fireball
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct MO_Fireball {
     pub io_moving_object: IO_MovingObject,
 

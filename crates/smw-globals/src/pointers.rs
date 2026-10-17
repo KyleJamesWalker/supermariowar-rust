@@ -76,6 +76,16 @@ impl<T> Global<T> {
     }
 }
 
+impl<T: Clone> Clone for Global<T> {
+    fn clone(&self) -> Self {
+        if self.initialized {
+            Global::new((**self).clone())
+        } else {
+            Global::uninit()
+        }
+    }
+}
+
 impl<T> Deref for Global<T> {
     type Target = T;
     #[inline(always)]
@@ -115,6 +125,12 @@ impl<T: ?Sized> Owned<T> {
             Some(v) => Ptr::from_raw(v as *const T as *mut T),
             None => Ptr::null(),
         }
+    }
+}
+
+impl<T: Clone> Clone for Owned<T> {
+    fn clone(&self) -> Self {
+        Owned(self.0.clone())
     }
 }
 

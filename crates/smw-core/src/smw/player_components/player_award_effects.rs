@@ -32,7 +32,7 @@ const awardtexts: [STextAward; PAWARD_LAST as usize] = [
     STextAward { name: "Unstoppable!", large: true },
 ];
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct PlayerAwardEffects {
     pub awardangle: f32,
     pub awards: [i16; MAXAWARDS as usize],

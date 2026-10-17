@@ -35,6 +35,7 @@ use crate::smw::player::CPlayer;
 // power, you're dead.  Plus fireballs have a large enough collision box that you can be hit
 // with them too.
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct B_FlipBlock {
     pub io_block: IO_Block,
 

@@ -22,6 +22,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class coin (for coin mode)
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct MO_Coin {
     pub io_moving_object: IO_MovingObject,
 

@@ -1,32 +1,8 @@
 //! The editors' last input event. They read SDL2 union fields after their poll loops and in arms for other event types,
 //! so each accessor returns what that field of SDL2's `SDL_Event` holds for the event, whatever its type.
 
+use crate::common::keys::*;
 use smw_platform::{DeviceChange, Input, InputEvent, MouseEvent, TouchPhase};
-
-const QUIT: u32 = 0x100;
-const KEYDOWN: u32 = 0x300;
-const KEYUP: u32 = 0x301;
-const TEXTINPUT: u32 = 0x303;
-const MOUSEMOTION: u32 = 0x400;
-const MOUSEBUTTONDOWN: u32 = 0x401;
-const MOUSEBUTTONUP: u32 = 0x402;
-const MOUSEWHEEL: u32 = 0x403;
-const JOYAXISMOTION: u32 = 0x600;
-const JOYHATMOTION: u32 = 0x602;
-const JOYBUTTONDOWN: u32 = 0x603;
-const JOYBUTTONUP: u32 = 0x604;
-const JOYDEVICEADDED: u32 = 0x605;
-const JOYDEVICEREMOVED: u32 = 0x606;
-const CONTROLLERAXISMOTION: u32 = 0x650;
-const CONTROLLERBUTTONDOWN: u32 = 0x651;
-const CONTROLLERBUTTONUP: u32 = 0x652;
-const CONTROLLERDEVICEADDED: u32 = 0x653;
-const CONTROLLERDEVICEREMOVED: u32 = 0x654;
-const CONTROLLERDEVICEREMAPPED: u32 = 0x655;
-const FINGERDOWN: u32 = 0x700;
-const FINGERUP: u32 = 0x701;
-const FINGERMOTION: u32 = 0x702;
-const USEREVENT: u32 = 0x8000;
 
 pub struct EditorEvent(Input);
 
@@ -51,27 +27,27 @@ impl EditorEvent {
             DeviceChange::Remapped => remapped,
         };
         match &self.0.event {
-            InputEvent::Key { down, .. } => if *down { KEYDOWN } else { KEYUP },
-            InputEvent::PadAxis { .. } => JOYAXISMOTION,
-            InputEvent::PadButton { down, .. } => if *down { JOYBUTTONDOWN } else { JOYBUTTONUP },
-            InputEvent::PadHat { .. } => JOYHATMOTION,
-            InputEvent::Pad { change, .. } => device(*change, JOYDEVICEADDED, JOYDEVICEREMOVED, JOYDEVICEREMOVED),
-            InputEvent::GamepadAxis { .. } => CONTROLLERAXISMOTION,
-            InputEvent::GamepadButton { down, .. } => if *down { CONTROLLERBUTTONDOWN } else { CONTROLLERBUTTONUP },
-            InputEvent::Gamepad { change, .. } => device(*change, CONTROLLERDEVICEADDED, CONTROLLERDEVICEREMOVED, CONTROLLERDEVICEREMAPPED),
+            InputEvent::Key { down, .. } => if *down { SDL_KEYDOWN } else { SDL_KEYUP },
+            InputEvent::PadAxis { .. } => SDL_JOYAXISMOTION,
+            InputEvent::PadButton { down, .. } => if *down { SDL_JOYBUTTONDOWN } else { SDL_JOYBUTTONUP },
+            InputEvent::PadHat { .. } => SDL_JOYHATMOTION,
+            InputEvent::Pad { change, .. } => device(*change, SDL_JOYDEVICEADDED, SDL_JOYDEVICEREMOVED, SDL_JOYDEVICEREMOVED),
+            InputEvent::GamepadAxis { .. } => SDL_CONTROLLERAXISMOTION,
+            InputEvent::GamepadButton { down, .. } => if *down { SDL_CONTROLLERBUTTONDOWN } else { SDL_CONTROLLERBUTTONUP },
+            InputEvent::Gamepad { change, .. } => device(*change, SDL_CONTROLLERDEVICEADDED, SDL_CONTROLLERDEVICEREMOVED, SDL_CONTROLLERDEVICEREMAPPED),
             InputEvent::Touch { phase, .. } => match phase {
-                TouchPhase::Down => FINGERDOWN,
-                TouchPhase::Motion => FINGERMOTION,
-                TouchPhase::Up => FINGERUP,
+                TouchPhase::Down => SDL_FINGERDOWN,
+                TouchPhase::Motion => SDL_FINGERMOTION,
+                TouchPhase::Up => SDL_FINGERUP,
             },
-            InputEvent::Text(_) => TEXTINPUT,
+            InputEvent::Text(_) => SDL_TEXTINPUT,
             InputEvent::Mouse { event, .. } => match event {
-                MouseEvent::Motion { .. } => MOUSEMOTION,
-                MouseEvent::Button { down, .. } => if *down { MOUSEBUTTONDOWN } else { MOUSEBUTTONUP },
-                MouseEvent::Wheel { .. } => MOUSEWHEEL,
+                MouseEvent::Motion { .. } => SDL_MOUSEMOTION,
+                MouseEvent::Button { down, .. } => if *down { SDL_MOUSEBUTTONDOWN } else { SDL_MOUSEBUTTONUP },
+                MouseEvent::Wheel { .. } => SDL_MOUSEWHEEL,
             },
-            InputEvent::Quit => QUIT,
-            InputEvent::Tap { .. } => USEREVENT,
+            InputEvent::Quit => SDL_QUIT,
+            InputEvent::Tap { .. } => SDL_USEREVENT,
             InputEvent::Other(t) => *t,
         }
     }

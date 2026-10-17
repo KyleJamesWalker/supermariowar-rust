@@ -312,7 +312,6 @@ pub struct CResourceManager {
     pub sfx_enterstage: sfxSound,
     pub sfx_gameover: sfxSound,
     pub sfx_pickup: sfxSound,
-    pub backgroundmusic: [sfxMusic; 6],
     pub sprites: Vec<Box<std::cell::UnsafeCell<gfxSprite>>>,
     pub _alias: Aliased,
 }

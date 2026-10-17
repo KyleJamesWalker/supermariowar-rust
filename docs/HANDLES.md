@@ -51,16 +51,19 @@ When a category no longer has `Ptr` uses, its types drop `Aliased`. When the las
 - **Order and determinism.** Every container must keep its current iteration order, or the RNG draw order changes. The replays, the sweep and the `R calls=` count catch a change on the first frame it happens.
 - **Checkpoints.** `checkpoint.rs` saves and restores game state for segment replays. Handles are plain integers, so a checkpoint can store them directly. The checkpoint format version changes, and `tools/checkpoint_fixtures` needs regenerating once.
 - **Performance.** A table lookup replaces a pointer dereference. Generation checks are one compare. The frame time on the RG35XX is the number to watch.
-- **Open question:** whether player handles need a generation, or whether clearing the table at match end is enough. The `owner_throw` case says a generation is worth one byte.
-- **Open question: what a copy of `Game` shares.** Step 5 removes the pointers between parts of the game state, but `Game` also holds things a copy cannot sensibly duplicate. Each needs a decision before `Game` can implement `Clone`:
-  - **Platform services** (`services`: video, audio, events, storage, pads). Only one game can own the window and audio device. Options: the copy gets none and runs headless (`smw-headless`), or the copy shares the original's.
-  - **Loaded assets** (`rm` sprites and sounds, the file lists, `g_tilesetmanager`, fonts). Nothing in a match writes them, except that platforms paint their own sprites. Options: share them behind a reference count, or copy them.
-  - **Surfaces** (`screen`, `blitdest`, a platform's `sprites`). The copy needs its own, or must not draw.
-  - **Menus and editors** (`ms`, `controls`, `level_editor`, `world_editor`). A rollback copy only needs the match. Options: copy them too, or clone only the match state into a game that has no menus.
+- **Player handles** carry a generation, which the `owner_throw` case asked for.
 
-  `checkpoint.rs` already saves and restores the match state for segment replays, so a checkpoint loaded into a fresh headless `Game` is a second way to copy a match, with no `Clone` at all.
+## What a copy of `Game` shares
 
-  A copy for rollback netplay or an in-process replay test needs the match state, a headless service set and the shared assets. The proposal for step 6 is to clone exactly that: `Game::clone_match`, which shares assets, gives the copy headless services, and leaves menus and editors out.
+Decided for step 6: `Game::clone_match` copies exactly the running match into a new `Game`.
+
+- **Loaded assets** (`rm` sprites and sounds, the file lists, `g_tilesetmanager`, fonts) are shared: the copy holds the same pointers. Match state that lived inside them moved into `Game` first: each sound's play state is in `SfxState`, and `backgroundmusic` is a `Game` field. The copy owns a copy of the music list, whose current song a match changes.
+- **Platform services** are the ones the caller passes, headless for a test. The copy never plays audio and holds no network connections.
+- **Surfaces:** the copy draws to its own screen. It shares the map's pre-rendered layers, which are `rm` sprites.
+- **Menus and editors** (`ms`, `ss`, `controls`, `level_editor`, `world_editor`) are left out. A copy plays until its match ends.
+- **The harness** keeps the replay's input and counters but has no outputs; `harness::dump_to` gives a copy a dump.
+
+`checkpoint.rs` remains a second way to start a match without a running original.
 
 ## Rollout
 
@@ -68,7 +71,7 @@ When a category no longer has `Ptr` uses, its types drop `Aliased`. When the las
 2. Players.
 3. Game objects and map blocks, one container kind per PR.
 4. Menu controls, one menu per PR or a few small menus together.
-5. Drop `Aliased` from types with no `Ptr` left, then derive `Clone` for `Game`.
-6. Add an in-process test that clones a `Game` mid-replay and checks both copies reach the same dump.
+5. Done: the match state implements `Clone`, and `Game::clone_match` copies it. `Aliased` stays until the last `Ptr` goes.
+6. Done: `crates/smw-headless/tests/replays.rs` clones `cpu_ctf` and `frenzy_cpu` mid-replay, and the original and the copy both reach the golden dump.
 
 Every PR runs the 51 replays, the 290-replay sweep, the editor scripts, the net games and the segment checks. Each step leaves the game working, so the work can pause between any two PRs.

@@ -18,6 +18,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class Ice Blast
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct MO_IceBlast {
     pub io_moving_object: IO_MovingObject,
 

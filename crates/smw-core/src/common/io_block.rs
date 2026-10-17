@@ -11,6 +11,8 @@ use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::player::CPlayer;
 use std::ops::{Deref, DerefMut};
 
+#[derive(Clone)]
+
 pub struct IO_Block {
     pub cobject: CObject,
 

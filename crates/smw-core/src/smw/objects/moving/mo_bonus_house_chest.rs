@@ -19,6 +19,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class treasure chest powerup
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct MO_BonusHouseChest {
     pub io_moving_object: IO_MovingObject,
 

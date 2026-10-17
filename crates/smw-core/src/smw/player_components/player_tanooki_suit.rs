@@ -10,7 +10,7 @@ use crate::globals::*;
 use crate::smw::player::CPlayer;
 use crate::smw::player_components::player_shield::{OFF, SOFT_WITH_STOMP};
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct PlayerTanookiSuit {
     pub tanooki_on: bool,
     pub statue_lock: bool,

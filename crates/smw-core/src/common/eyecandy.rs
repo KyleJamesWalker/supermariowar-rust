@@ -22,13 +22,29 @@ const screenWidth: i32 = App::screenWidth;
 const screenHeight: i32 = App::screenHeight;
 
 // eyecandy base class
-pub trait CEyecandyTrait {
+pub trait CloneEyecandy {
+    fn clone_box(&self) -> Box<dyn CEyecandyTrait>;
+}
+
+impl<T: CEyecandyTrait + Clone + 'static> CloneEyecandy for T {
+    fn clone_box(&self) -> Box<dyn CEyecandyTrait> {
+        Box::new(self.clone())
+    }
+}
+
+impl Clone for Box<dyn CEyecandyTrait> {
+    fn clone(&self) -> Self {
+        self.clone_box()
+    }
+}
+
+pub trait CEyecandyTrait: CloneEyecandy {
     fn update(&mut self, g: &mut Game);
     fn draw(&self, g: &mut Game);
     fn is_dead(&self) -> bool;
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct CEyecandy {
     pub dead: bool,
     pub _alias: Aliased,
@@ -60,6 +76,7 @@ macro_rules! impl_eyecandy {
 //------------------------------------------------------------------------------
 // EC_StillImage
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct EC_StillImage {
     pub c_eyecandy: CEyecandy,
     pub spr: SpriteId,
@@ -105,6 +122,7 @@ impl EC_StillImage {
 //------------------------------------------------------------------------------
 // base class animated
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct EC_Animated {
     pub c_eyecandy: CEyecandy,
     pub spr: SpriteId,
@@ -197,6 +215,7 @@ impl_eyecandy!(EC_Animated);
 //------------------------------------------------------------------------------
 // base class OscillatingAnimation
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct EC_OscillatingAnimation {
     pub ec_animated: EC_Animated,
     pub fForward: bool,
@@ -245,6 +264,7 @@ impl_eyecandy!(EC_OscillatingAnimation);
 //------------------------------------------------------------------------------
 // class cloud
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct EC_Cloud {
     pub ec_still_image: EC_StillImage,
     dx: f32,
@@ -280,6 +300,7 @@ impl_eyecandy!(EC_Cloud);
 //------------------------------------------------------------------------------
 // class ghost
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct EC_Ghost {
     pub ec_animated: EC_Animated,
     dx: f32,
@@ -323,6 +344,7 @@ impl_eyecandy!(EC_Ghost);
 //------------------------------------------------------------------------------
 // class leaf
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct EC_Leaf {
     pub ec_oscillating_animation: EC_OscillatingAnimation,
     dx: f32,
@@ -407,6 +429,7 @@ impl_eyecandy!(EC_Leaf);
 //------------------------------------------------------------------------------
 // class snow
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct EC_Snow {
     pub ec_still_image: EC_StillImage,
     dx: f32,
@@ -466,6 +489,7 @@ impl_eyecandy!(EC_Snow);
 //------------------------------------------------------------------------------
 // class rain
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct EC_Rain {
     pub ec_still_image: EC_StillImage,
     dx: f32,
@@ -529,6 +553,7 @@ impl_eyecandy!(EC_Rain);
 //------------------------------------------------------------------------------
 // class bubble
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct EC_Bubble {
     pub ec_oscillating_animation: EC_OscillatingAnimation,
     dx: f32,
@@ -596,6 +621,7 @@ impl_eyecandy!(EC_Bubble);
 //------------------------------------------------------------------------------
 // class corpse
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct EC_Corpse {
     pub ec_still_image: EC_StillImage,
     dx: f32,
@@ -717,6 +743,7 @@ impl_eyecandy!(EC_Corpse);
 //------------------------------------------------------------------------------
 // class EC_GravText
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct EC_GravText {
     pub c_eyecandy: CEyecandy,
     font: Ptr<gfxFont>,
@@ -762,6 +789,7 @@ impl_eyecandy!(EC_GravText);
 //------------------------------------------------------------------------------
 // class EC_Announcement
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct EC_Announcement {
     pub c_eyecandy: CEyecandy,
     font: Ptr<gfxFont>,
@@ -862,6 +890,7 @@ impl_eyecandy!(EC_Announcement);
 //------------------------------------------------------------------------------
 // class EC_FallingObject
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct EC_FallingObject {
     pub ec_animated: EC_Animated,
     fx: f32,
@@ -921,6 +950,7 @@ impl_eyecandy!(EC_FallingObject);
 //------------------------------------------------------------------------------
 // class EC_SingleAnimation
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct EC_SingleAnimation {
     pub ec_animated: EC_Animated,
 }
@@ -955,6 +985,7 @@ impl_eyecandy!(EC_SingleAnimation);
 //------------------------------------------------------------------------------
 // class EC_LoopingAnimation
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct EC_LoopingAnimation {
     pub ec_animated: EC_Animated,
     iCountLoops: i16,
@@ -1000,6 +1031,7 @@ fn emplace_fireball_explosion(g: &mut Game, x: i16, y: i16) {
 //------------------------------------------------------------------------------
 // class EC_ExplodingAward
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct EC_ExplodingAward {
     pub c_eyecandy: CEyecandy,
     spr: SpriteId,
@@ -1060,6 +1092,7 @@ impl_eyecandy!(EC_ExplodingAward);
 //------------------------------------------------------------------------------
 // class EC_SwirlingAward
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct EC_SwirlingAward {
     pub c_eyecandy: CEyecandy,
     spr: SpriteId,
@@ -1161,6 +1194,7 @@ impl_eyecandy!(EC_SwirlingAward);
 //------------------------------------------------------------------------------
 // class EC_RocketAward
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct EC_RocketAward {
     pub c_eyecandy: CEyecandy,
     spr: SpriteId,
@@ -1268,6 +1302,7 @@ impl_eyecandy!(EC_RocketAward);
 //------------------------------------------------------------------------------
 // class EC_FloatingAward
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct EC_FloatingObject {
     pub c_eyecandy: CEyecandy,
     spr: SpriteId,
@@ -1340,6 +1375,7 @@ impl_eyecandy!(EC_FloatingObject);
 //------------------------------------------------------------------------------
 // class EC_SoulsAward
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct EC_SoulsAward {
     pub c_eyecandy: CEyecandy,
     spr: SpriteId,
@@ -1477,6 +1513,7 @@ impl_eyecandy!(EC_SoulsAward);
 //------------------------------------------------------------------------------
 // class EC_DoorFront
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct EC_Door {
     pub c_eyecandy: CEyecandy,
     spr: SpriteId,
@@ -1580,6 +1617,7 @@ impl_eyecandy!(EC_Door);
 //------------------------------------------------------------------------------
 // class EC_SuperStompExplosion
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct EC_SuperStompExplosion {
     pub c_eyecandy: CEyecandy,
     spr: SpriteId,
@@ -1644,6 +1682,7 @@ impl_eyecandy!(EC_SuperStompExplosion);
 //------------------------------------------------------------------------------
 // class eyecandy_container
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct CEyecandyContainer {
     pub eyecandies: Vec<Box<dyn CEyecandyTrait>>,
     pub _alias: Aliased,
@@ -1693,6 +1732,8 @@ impl CEyecandyContainer {
 
 static iSpotlightValues: [[i16; 4]; 8] =
     [[16, 8, 240, 96], [32, 16, 336, 80], [48, 24, 416, 64], [64, 32, 416, 0], [80, 40, 336, 0], [96, 48, 240, 0], [112, 56, 128, 0], [128, 64, 0, 0]];
+
+#[derive(Clone)]
 
 pub struct Spotlight {
     ix: i16,
@@ -1824,7 +1865,7 @@ impl Default for SpotlightId {
     }
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct SpotlightManager {
     /// Draw order.
     spotlightList: Vec<SpotlightId>,

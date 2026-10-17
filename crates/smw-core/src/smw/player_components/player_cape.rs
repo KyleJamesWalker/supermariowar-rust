@@ -10,7 +10,7 @@ use crate::globals::*;
 use crate::smw::objects::moving::mo_spin_attack::MO_SpinAttack;
 use crate::smw::player::CPlayer;
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct PlayerCape {
     pub iCapeTimer: u8,
     pub iCapeFrameX: u16,

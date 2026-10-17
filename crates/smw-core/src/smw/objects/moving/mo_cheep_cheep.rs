@@ -28,6 +28,7 @@ use crate::smw::player::{get_player_from_global_id, CPlayer};
 //------------------------------------------------------------------------------
 // class cheep cheep
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct MO_CheepCheep {
     pub io_moving_object: IO_MovingObject,
 

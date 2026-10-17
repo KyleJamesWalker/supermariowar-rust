@@ -19,6 +19,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class IO_FlameCannon - shoots a flame
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct IO_FlameCannon {
     pub cobject: CObject,
 

@@ -218,6 +218,7 @@ pub fn default_powerup_setting(presetIdx: usize, powerupIdx: usize) -> i16 {
 }
 
 // the real configuration class
+#[derive(Clone)]
 pub struct CGameConfig {
     pub soundvolume: i16,
     pub musicvolume: i16,
@@ -288,6 +289,7 @@ pub struct CGameConfig {
 }
 
 // these are actually the program options
+#[derive(Clone)]
 pub struct CGameValues {
     pub cgame_config: CGameConfig,
 

@@ -28,6 +28,7 @@ use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
 //------------------------------------------------------------------------------
 // class bulletbill
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct MO_BulletBill {
     pub io_moving_object: IO_MovingObject,
 

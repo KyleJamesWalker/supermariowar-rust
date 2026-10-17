@@ -22,6 +22,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class Phanto (for phanto mode)
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct OMO_Phanto {
     pub io_over_map_object: IO_OverMapObject,
 

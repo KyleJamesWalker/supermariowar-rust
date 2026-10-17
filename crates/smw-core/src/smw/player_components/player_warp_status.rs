@@ -9,7 +9,7 @@ use crate::common::map::*;
 use crate::globals::*;
 use crate::smw::player::{CPlayer, PlayerState};
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct PlayerWarpStatus {
     pub warpcounter: i16,
     pub warpconnection: i16,

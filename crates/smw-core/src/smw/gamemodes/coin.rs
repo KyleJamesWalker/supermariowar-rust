@@ -12,6 +12,8 @@ use crate::smw::gamemodes::game_mode::*;
 use crate::smw::objects::moving::mo_coin::MO_Coin;
 use crate::smw::player::CPlayer;
 
+#[derive(Clone)]
+
 pub struct CGM_Coins {
     pub cgame_mode: CGameMode,
 }

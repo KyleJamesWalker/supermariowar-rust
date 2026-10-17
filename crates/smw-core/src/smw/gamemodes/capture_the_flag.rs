@@ -18,6 +18,7 @@ use crate::smw::player::CPlayer;
 //Capture The Flag mode - each team has a base and a flag
 //Protect your colored flag from being taken and score a point
 //for stealing another teams flag and returning it to your base
+#[derive(Clone)]
 pub struct CGM_CaptureTheFlag {
     pub cgame_mode: CGameMode,
 }

@@ -19,6 +19,8 @@ use crate::smw::objects::moving::mo_carried_object::MO_CarriedObjectTrait;
 use crate::smw::objects::throw_block_type::ThrowBlockType;
 use crate::smw::player::CPlayer;
 
+#[derive(Clone)]
+
 pub struct B_ThrowBlock {
     pub io_block: IO_Block,
 

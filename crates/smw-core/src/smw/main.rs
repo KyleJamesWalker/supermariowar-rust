@@ -60,11 +60,7 @@ extern "C" {
 
 pub fn gameloop(g: &mut Game) {
     unsafe {
-        SplashScreenState::instance(g).init(g);
-        GameStateManager::instance(g).currentState = crate::smw::game_state::StateId::Splash;
-        if let Some(segment) = harness::segment_state(g) {
-            GameStateManager::instance(g).start_segment(Box::new(segment));
-        }
+        gameloop_start(g);
 
         #[cfg(target_os = "emscripten")]
         emscripten_set_main_loop_arg(gameloop_frame_web, g as *mut Game as *mut std::ffi::c_void, 0, 1);
@@ -74,6 +70,29 @@ pub fn gameloop(g: &mut Game) {
             gameloop_frame(g);
         }
     }
+}
+
+/// The state before the first frame.
+pub fn gameloop_start(g: &mut Game) {
+    SplashScreenState::instance(g).init(g);
+    GameStateManager::instance(g).currentState = crate::smw::game_state::StateId::Splash;
+    if let Some(segment) = harness::segment_state(g) {
+        GameStateManager::instance(g).start_segment(Box::new(segment));
+    }
+}
+
+/// One frame of the native main loop.
+pub fn frame(g: &mut Game) {
+    unsafe { gameloop_frame(g) }
+}
+
+/// One frame's game logic, without pacing or presenting: the web loop's step, and a frame of a `Game::clone_match` copy.
+pub fn step(g: &mut Game) {
+    let mut gp = g.ptr();
+    assign_hotplugged(g);
+    harness::frame_start(g);
+    GameStateManager::instance(gp.get()).current(gp.get()).get().update(gp.get());
+    harness::frame_end(g);
 }
 
 /// Not in upstream, whose web build runs one game frame per requestAnimationFrame, i.e. at the
@@ -102,10 +121,7 @@ unsafe extern "C-unwind" fn gameloop_frame_web(arg: *mut std::ffi::c_void) {
 
     let mut frames = 0;
     while ml.web_accumulated >= frame_ms && frames < MAX_CATCH_UP_FRAMES && gp.game_values.appstate != crate::common::game_values::AppState::Quit {
-        assign_hotplugged(gp.get());
-        harness::frame_start(gp.get());
-        GameStateManager::instance(gp.get()).current(gp.get()).get().update(gp.get());
-        harness::frame_end(gp.get());
+        step(gp.get());
 
         ml.web_accumulated -= frame_ms;
         frames += 1;
@@ -310,6 +326,7 @@ fn assign_hotplugged(g: &mut Game) {
 }
 
 /// Not in the C++: the main loop's own state.
+#[derive(Clone)]
 pub struct MainLoopState {
     #[cfg(target_os = "emscripten")]
     web_last_time: f64,
@@ -490,6 +507,19 @@ pub fn run_with(argv: Vec<String>, services: Option<smw_platform::Services>) {
 }
 
 pub fn main_game(g: &mut Game) {
+    startup(g);
+
+    //**********************************************************
+
+    gameloop(g); // all the game logic happens here
+
+    //**********************************************************
+
+    shutdown(g);
+}
+
+/// Everything `main_game` does before its main loop.
+pub fn startup(g: &mut Game) {
     let mut gp = g.ptr();
     unsafe {
         println!("-------------------------------------------------------------------------------");
@@ -550,21 +580,18 @@ pub fn main_game(g: &mut Game) {
         }
 
         srand(harness::libc_seed(g, time(null_mut()) as u32));
-
-        //**********************************************************
-
-        gameloop(g); // all the game logic happens here
-
-        //**********************************************************
-
-        println!("\n---------------- shutdown ----------------");
-        harness::finish(g);
-
-        sfx_close(g);
-        gfx_close();
-        net_close(g);
-
-        // release all resources
-        g.rm.delete();
     }
+}
+
+/// Everything `main_game` does after its main loop.
+pub fn shutdown(g: &mut Game) {
+    println!("\n---------------- shutdown ----------------");
+    harness::finish(g);
+
+    sfx_close(g);
+    gfx_close();
+    net_close(g);
+
+    // release all resources
+    g.rm.delete();
 }

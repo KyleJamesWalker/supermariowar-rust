@@ -83,6 +83,8 @@ pub fn init_globals(g: &mut Game) {
     g.sfx.musicfinished = g.sfx.musicfinished;
 }
 
+#[derive(Clone)]
+
 pub struct GameplayState {
     iCountDownState: i16,
     iCountDownTimer: i16,
@@ -334,7 +336,7 @@ pub fn musicfinished(g: &mut Game) {
     }
 
     if g.sfx.fResumeMusic {
-        gp.rm.backgroundmusic[3].play(g, false, false);
+        gp.backgroundmusic[3].play(g, false, false);
     }
 }
 
@@ -1449,7 +1451,7 @@ impl GameplayState {
             }
 
             if g.game_values.swapstyle == 0 {
-                if !g.rm.sfx_skid.is_playing() {
+                if !g.rm.sfx_skid.is_playing(g) {
                     if_sound_on_play(g, &mut gp.rm.sfx_skid);
                 }
             }
@@ -1671,7 +1673,7 @@ pub fn update_score_board(g: &mut Game) {
         //If this was the last stage, signal that the world is over
         if g.game_values.tourstops[g.game_values.tourstopcurrent].fEndStage {
             g.game_values.tournamentwinner = 1;
-            gp.rm.backgroundmusic[4].play(g, true, true);
+            gp.backgroundmusic[4].play(g, true, true);
         }
 
         //Add up all the winnings so far and determine overall place in the standings
@@ -1770,7 +1772,7 @@ pub fn update_score_board(g: &mut Game) {
             }
 
             g.game_values.tournamentwinner = iWinningTeam;
-            gp.rm.backgroundmusic[4].play(g, true, true);
+            gp.backgroundmusic[4].play(g, true, true);
         }
     } else if g.game_values.matchtype == MatchType::Tournament {
         let mut maxScore: i16 = -1; //Max score for game
@@ -1796,7 +1798,7 @@ pub fn update_score_board(g: &mut Game) {
                 g.game_values.tournamentwinner = maxTeam;
 
                 if g.game_values.music {
-                    gp.rm.backgroundmusic[4].play(g, true, true);
+                    gp.backgroundmusic[4].play(g, true, true);
                 }
             }
         }
@@ -2097,7 +2099,7 @@ pub fn update_exit_pause_dialog(g: &mut Game, iCountDownState: i16) -> bool {
                         gp.rm.sprite(gp.rm.menu_shade).draw(g, 0, 0);
 
                         //Stop the pwings sound if it is on
-                        if g.rm.sfx_flyingsound.is_playing() {
+                        if g.rm.sfx_flyingsound.is_playing(g) {
                             gp.rm.sfx_flyingsound.stop(g);
                         }
                     }
@@ -2238,19 +2240,19 @@ pub fn play_sfx(g: &mut Game) {
         let mut gp = g.ptr();
     //Play sound for skidding players
     if g.game_values.flags.playskidsound {
-        if !g.rm.sfx_skid.is_playing() {
+        if !g.rm.sfx_skid.is_playing(g) {
             if_sound_on_play(g, &mut gp.rm.sfx_skid);
         }
-    } else if g.rm.sfx_skid.is_playing() {
+    } else if g.rm.sfx_skid.is_playing(g) {
         gp.rm.sfx_skid.stop(g);
     }
 
     //Play sound for players using PWings
     if g.game_values.flags.playflyingsound {
-        if !g.rm.sfx_flyingsound.is_playing() {
+        if !g.rm.sfx_flyingsound.is_playing(g) {
             if_sound_on_play(g, &mut gp.rm.sfx_flyingsound);
         }
-    } else if g.rm.sfx_flyingsound.is_playing() {
+    } else if g.rm.sfx_flyingsound.is_playing(g) {
         gp.rm.sfx_flyingsound.stop(g);
     }
 }
@@ -2259,46 +2261,46 @@ pub fn play_music(g: &mut Game) {
         let mut gp = g.ptr();
     //Make sure music and sound effects keep playing
     if g.game_values.flags.slowdownon != -1 {
-        if !g.rm.sfx_slowdownmusic.is_playing() {
+        if !g.rm.sfx_slowdownmusic.is_playing(g) {
             if_sound_on_play(g, &mut gp.rm.sfx_slowdownmusic);
         }
-    } else if g.rm.sfx_slowdownmusic.is_playing() {
+    } else if g.rm.sfx_slowdownmusic.is_playing(g) {
         gp.rm.sfx_slowdownmusic.stop(g);
     }
 
     if g.game_values.flags.playinvinciblesound && g.game_values.musicvolume > 0 {
-        if !g.rm.sfx_invinciblemusic.is_playing() && !g.rm.sfx_timewarning.is_playing() && !gp.rm.backgroundmusic[0].is_playing(g) {
+        if !g.rm.sfx_invinciblemusic.is_playing(g) && !g.rm.sfx_timewarning.is_playing(g) && !gp.backgroundmusic[0].is_playing(g) {
             if_sound_on_play(g, &mut gp.rm.sfx_invinciblemusic);
         }
-    } else if g.rm.sfx_invinciblemusic.is_playing() {
+    } else if g.rm.sfx_invinciblemusic.is_playing(g) {
         gp.rm.sfx_invinciblemusic.stop(g);
     }
 
     //If no background music is playing, then play some
-    if !gp.rm.backgroundmusic[0].is_playing(g) && !g.rm.sfx_invinciblemusic.is_playing() && !g.rm.sfx_timewarning.is_playing() && !g.mode().gameover {
+    if !gp.backgroundmusic[0].is_playing(g) && !g.rm.sfx_invinciblemusic.is_playing(g) && !g.rm.sfx_timewarning.is_playing(g) && !g.mode().gameover {
         if g.game_values.playnextmusic {
             let mapname = g.maplist.current_shortmapname().to_string();
             g.musiclist.set_next_music(music_category(g.g_map.musicCategoryID), &mapname, &g.g_map.szBackgroundFile);
             let path = g.musiclist.current_music().clone();
-            g.rm.backgroundmusic[0] = load_music(g, &path);
+            g.backgroundmusic[0] = load_music(g, &path);
         }
 
-        gp.rm.backgroundmusic[0].play(g, g.game_values.playnextmusic, false);
+        gp.backgroundmusic[0].play(g, g.game_values.playnextmusic, false);
     }
 }
 
 pub fn play_next_music_track(g: &mut Game) {
     let mut gp = g.ptr();
-    if g.mode().gameover || g.game_values.flags.playinvinciblesound || g.rm.sfx_timewarning.is_playing() {
+    if g.mode().gameover || g.game_values.flags.playinvinciblesound || g.rm.sfx_timewarning.is_playing(g) {
         return;
     }
 
-    gp.rm.backgroundmusic[0].stop(g);
+    gp.backgroundmusic[0].stop(g);
     let mapname = g.maplist.current_shortmapname().to_string();
     g.musiclist.set_next_music(music_category(g.g_map.musicCategoryID), &mapname, &g.g_map.szBackgroundFile);
     let path = g.musiclist.current_music().clone();
-    g.rm.backgroundmusic[0] = load_music(g, &path);
-    gp.rm.backgroundmusic[0].play(g, g.game_values.playnextmusic, false);
+    g.backgroundmusic[0] = load_music(g, &path);
+    gp.backgroundmusic[0].play(g, g.game_values.playnextmusic, false);
 }
 
 impl GameplayState {
@@ -2495,8 +2497,8 @@ pub fn start_gameplay(g: &mut Game) {
     if g.game_values.music {
         gp.musiclist.set_random_music(g, music_category(g.g_map.musicCategoryID), "", "");
         let path = g.musiclist.current_music().clone();
-        g.rm.backgroundmusic[0] = load_music(g, &path);
-        gp.rm.backgroundmusic[0].play(g, g.game_values.playnextmusic, false);
+        g.backgroundmusic[0] = load_music(g, &path);
+        gp.backgroundmusic[0].play(g, g.game_values.playnextmusic, false);
     }
 }
 

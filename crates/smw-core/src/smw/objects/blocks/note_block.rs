@@ -29,6 +29,8 @@ pub enum NoteBlockType {
 
 crate::enum_from_u8!(NoteBlockType, 3);
 
+#[derive(Clone)]
+
 pub struct B_NoteBlock {
     pub io_block: IO_Block,
 

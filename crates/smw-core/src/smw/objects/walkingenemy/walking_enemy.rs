@@ -30,6 +30,7 @@ use std::ops::{Deref, DerefMut};
 //------------------------------------------------------------------------------
 // class walking enemy (base class for goomba and koopa)
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct MO_WalkingEnemy {
     pub io_moving_object: IO_MovingObject,
 
