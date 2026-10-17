@@ -1,6 +1,6 @@
-//! Not in the C++: when every player is a CPU, the winner screen and the tour and world overviews continue on their
-//! own after three seconds. The Enter press goes through the platform's event queue, so a recording keeps it and a
-//! replay plays it back instead of pressing again.
+//! Not in the C++: when every player is a CPU, the winner screen, the bonus wheel and the tour and world overviews
+//! continue on their own after three seconds. The Enter press goes through the platform's event queue, so a
+//! recording keeps it and a replay plays it back instead of pressing again.
 
 use crate::game::Game;
 use smw_platform::{Input, InputEvent, Keycode};

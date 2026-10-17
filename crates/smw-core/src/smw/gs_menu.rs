@@ -1742,7 +1742,7 @@ impl GameState for MenuState {
             //Reset the keys that were down the last frame
             g.game_values.playerInput.clear_pressed_keys(1);
 
-            crate::smw::auto_advance::tick(g, matches!(self.mCurrentMenu, MenuId::TournamentScoreboard | MenuId::TourStop));
+            crate::smw::auto_advance::tick(g, matches!(self.mCurrentMenu, MenuId::TournamentScoreboard | MenuId::TourStop | MenuId::BonusWheel));
 
             let mut fGenerateMapThumbs = false;
 
