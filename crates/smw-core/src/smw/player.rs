@@ -5,7 +5,8 @@ use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
-use crate::common::eyecandy::{EC_Corpse, EC_Door, EC_FallingObject, EC_GravText, EC_SingleAnimation, Spotlight};
+use crate::common::map::PlatformId;
+use crate::common::eyecandy::{EC_Corpse, EC_Door, EC_FallingObject, EC_GravText, EC_SingleAnimation, SpotlightId};
 use crate::common::eyecandy_styles::{AwardStyle, SpawnStyle};
 use crate::common::game::App;
 use crate::common::game_mode::{game_mode_bonus, game_mode_shyguytag, game_mode_star};
@@ -231,7 +232,7 @@ pub struct CPlayer {
     pub fPressedAcceptItem: bool,
     pub carriedItem: ObjectId,
 
-    pub platform: Ptr<MovingPlatform>,
+    pub platform: PlatformId,
     pub iHorizontalPlatformCollision: i16,
     pub iVerticalPlatformCollision: i16,
     pub iPlatformCollisionPlayerId: i16,
@@ -250,7 +251,7 @@ pub struct CPlayer {
     pub iSuicideCreditPlayerID: i16,
     pub iSuicideCreditTimer: i16,
 
-    pub sSpotlight: Ptr<Spotlight>,
+    pub sSpotlight: SpotlightId,
 
     pub net_waitingForPowerupTrigger: bool,
 
@@ -1141,10 +1142,10 @@ impl CPlayer {
                 fFellThrough = true;
             }
 
-            if !fFellThrough && !self.platform.is_null() {
-                self.fPrecalculatedY += self.platform.fOldVelY;
+            if !fFellThrough && !self.platform.is_none() {
+                self.fPrecalculatedY += g.g_map.platform(self.platform).fOldVelY;
                 let this = self.this();
-                self.platform.get().get_tile_types_from_player(g, this, &mut lefttile, &mut righttile);
+                g.g_map.platform(self.platform).get_tile_types_from_player(g, this, &mut lefttile, &mut righttile);
 
                 if (b(lefttile & tile_flag_solid_on_top) && (b(righttile & tile_flag_solid_on_top) || righttile == tile_flag_nonsolid || righttile == tile_flag_gap))
                     || (b(righttile & tile_flag_solid_on_top) && (b(lefttile & tile_flag_solid_on_top) || lefttile == tile_flag_nonsolid || lefttile == tile_flag_gap))
@@ -1288,7 +1289,7 @@ impl CPlayer {
     }
 
     pub fn use_special_powerup(&mut self, g: &mut Game) {
-        self.fAcceptingItem = self.carriedItem.is_none();
+        self.fAcceptingItem = g.carried(self.carriedItem).is_null();
 
         if !self.lockfire {
             if self.bobomb {
@@ -1937,8 +1938,8 @@ impl CPlayer {
         self.inair = true;
 
         //Need to help the player off the platform otherwise it will collide with them again
-        if !self.platform.is_null() {
-            self.platform = Ptr::null();
+        if !self.platform.is_none() {
+            self.platform = PlatformId::NONE;
         }
     }
 
@@ -2092,7 +2093,7 @@ impl CPlayer {
         self.strip_powerups();
         self.clear_powerup_states();
 
-        self.sSpotlight = Ptr::null();
+        self.sSpotlight = SpotlightId::NONE;
 
         self.cape.reset();
 
@@ -2111,7 +2112,7 @@ impl CPlayer {
 
         self.outofarena.reset(g);
 
-        self.platform = Ptr::null();
+        self.platform = PlatformId::NONE;
         self.iHorizontalPlatformCollision = -1;
         self.iVerticalPlatformCollision = -1;
         self.iPlatformCollisionPlayerId = -1;
@@ -2326,7 +2327,7 @@ impl CPlayer {
         {
             g.player(o1).set_yi((g.player(o2).iy as i32 - PH) as i16); //set new position to top of other player
             g.player(o1).collisions.checktop(g, g.player(o1));
-            g.player(o1).platform = Ptr::null();
+            g.player(o1).platform = PlatformId::NONE;
             g.player(o1).vely = -VELSUPERJUMP;
 
             g.player(o1).superstomp.reset();
@@ -2338,12 +2339,12 @@ impl CPlayer {
     pub fn draw_spotlight(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         if g.game_values.spotlights && self.state != PlayerState::Dead {
-            if self.sSpotlight.is_null() {
+            if self.sSpotlight.is_none() {
                 self.sSpotlight = gp.spotlightManager.add_spotlight(g, (self.ix as i32 + HALFPW) as i16, (self.iy as i32 + HALFPH) as i16, 7);
             }
 
-            if !self.sSpotlight.is_null() {
-                self.sSpotlight.get().update_position((self.ix as i32 + HALFPW) as i16, (self.iy as i32 + HALFPH) as i16);
+            if !self.sSpotlight.is_none() {
+                g.spotlightManager.update_position(self.sSpotlight, (self.ix as i32 + HALFPW) as i16, (self.iy as i32 + HALFPH) as i16);
             }
         }
     }
@@ -2565,29 +2566,29 @@ impl CPlayer {
         }
     }
 
-    pub fn mapcolldet_handle_platform_velocity(&mut self, fPlatformVelX: &mut f32, fPlatformVelY: &mut f32) {
-        if !self.platform.is_null() {
-            *fPlatformVelX = self.platform.fVelX;
+    pub fn mapcolldet_handle_platform_velocity(&mut self, g: &mut Game, fPlatformVelX: &mut f32, fPlatformVelY: &mut f32) {
+        if !self.platform.is_none() {
+            *fPlatformVelX = g.g_map.platform(self.platform).fVelX;
             self.set_xf(self.fx + *fPlatformVelX);
             self.flipsidesifneeded();
 
-            *fPlatformVelY = self.platform.fVelY;
+            *fPlatformVelY = g.g_map.platform(self.platform).fVelY;
 
-            if self.platform.fOldVelY < 0.0 {
-                self.fy += self.platform.fOldVelY;
+            if g.g_map.platform(self.platform).fOldVelY < 0.0 {
+                self.fy += g.g_map.platform(self.platform).fOldVelY;
             }
 
-            self.fPrecalculatedY += self.platform.fOldVelY;
+            self.fPrecalculatedY += g.g_map.platform(self.platform).fOldVelY;
         }
     }
 
-    pub fn mapcolldet_handle_out_of_screen(&mut self) -> bool {
+    pub fn mapcolldet_handle_out_of_screen(&mut self, g: &mut Game) -> bool {
         if self.fPrecalculatedY + (PH as f32) < 0.0 {
             // on top outside of the screen
             self.set_yf(self.fPrecalculatedY);
             self.vely = cap_falling_velocity(GRAVITATION + self.vely);
 
-            if self.platform.is_null() {
+            if self.platform.is_none() {
                 self.inair = true;
                 self.onice = false;
                 self.superjumptimer = 0;
@@ -2604,9 +2605,9 @@ impl CPlayer {
 
             //Clear the platform if the player wrapped to the top of the screen
 
-            if !self.platform.is_null() {
-                self.vely = self.platform.fVelY;
-                self.platform = Ptr::null();
+            if !self.platform.is_none() {
+                self.vely = g.g_map.platform(self.platform).fVelY;
+                self.platform = PlatformId::NONE;
             }
 
             return true;
@@ -2892,7 +2893,7 @@ impl CPlayer {
             self.vely += GRAVITATION;
         }
 
-        if self.platform.is_null() {
+        if self.platform.is_none() {
             self.inair = true;
             self.onice = false;
         }
@@ -2911,7 +2912,7 @@ impl CPlayer {
             self.warpstatus.enter_warp(g, g.player(this), warp);
 
             self.fallthrough = false;
-            self.platform = Ptr::null();
+            self.platform = PlatformId::NONE;
 
             if (self.ix as i32 - PWOFFSET) < ((txl as i32) << 5) + 1 {
                 self.set_xi((((txl as i32) << 5) + PHOFFSET + 1) as i16);
@@ -2965,7 +2966,7 @@ impl CPlayer {
             }
 
             if !collisionresult {
-                self.platform = Ptr::null();
+                self.platform = PlatformId::NONE;
                 self.onice = false;
 
                 if self.iVerticalPlatformCollision == 0 {
@@ -2987,14 +2988,14 @@ impl CPlayer {
             //on ground
             //Deal with player down jumping through solid on top tiles
 
-            if self.platform.is_null() {
+            if self.platform.is_none() {
                 self.onice = false;
             }
 
             if self.fallthrough && !fSolidTileUnderPlayer {
                 self.set_yf((((ty as i32) << 5) - PH) as f32 + 0.2f32);
 
-                if self.platform.is_null() {
+                if self.platform.is_none() {
                     self.inair = true;
                 }
             } else {
@@ -3002,7 +3003,7 @@ impl CPlayer {
                 self.set_yf((((ty as i32) << 5) - PH) as f32 - 0.2f32);
                 self.vely = GRAVITATION;
 
-                if self.platform.is_null() {
+                if self.platform.is_none() {
                     let alignedtile = g.g_map.map(alignedBlockX as i32, ty as i32);
 
                     if b(alignedtile & tile_flag_ice)
@@ -3021,11 +3022,11 @@ impl CPlayer {
 
             self.fOldY = self.fy - GRAVITATION;
 
-            if self.platform.is_null() {
+            if self.platform.is_none() {
                 self.fallthrough = false;
             }
 
-            self.platform = Ptr::null();
+            self.platform = PlatformId::NONE;
 
             if self.iVerticalPlatformCollision == 0 {
                 self.kill_player_map_hazard(g, true, KillStyle::Environment, true, self.iPlatformCollisionPlayerId);
@@ -3048,7 +3049,7 @@ impl CPlayer {
             self.set_yf((((ty as i32) << 5) - PH) as f32 - 0.2f32);
             self.vely = GRAVITATION; //1 so we test against the ground again int the next frame (0 would test against the ground in the next+1 frame)
 
-            if self.platform.is_null() {
+            if self.platform.is_none() {
                 let alignedtile = g.g_map.map(alignedBlockX as i32, ty as i32);
 
                 if b(alignedtile & tile_flag_ice)
@@ -3064,7 +3065,7 @@ impl CPlayer {
                 self.killsinrowinair = 0;
             }
 
-            self.platform = Ptr::null();
+            self.platform = PlatformId::NONE;
 
             if self.iVerticalPlatformCollision == 0 {
                 self.kill_player_map_hazard(g, true, KillStyle::Environment, true, self.iPlatformCollisionPlayerId);
@@ -3079,7 +3080,7 @@ impl CPlayer {
             self.set_yf(self.fPrecalculatedY);
             self.vely = cap_falling_velocity(GRAVITATION + self.vely);
 
-            if self.platform.is_null() {
+            if self.platform.is_none() {
                 //If we're not hopping with kuribo's shoe, then zero out our super jump timer
                 if self.superjumptype != 3 {
                     self.superjumptimer = 0;
@@ -3104,7 +3105,7 @@ impl CPlayer {
 
         let fTempY = self.fy;
 
-        self.mapcolldet_handle_platform_velocity(&mut fPlatformVelX, &mut fPlatformVelY);
+        self.mapcolldet_handle_platform_velocity(g, &mut fPlatformVelX, &mut fPlatformVelY);
 
         self.iHorizontalPlatformCollision = -1;
         self.iVerticalPlatformCollision = -1;
@@ -3118,7 +3119,7 @@ impl CPlayer {
 
         self.fy = fTempY;
 
-        if self.mapcolldet_handle_out_of_screen() {
+        if self.mapcolldet_handle_out_of_screen(g) {
             return;
         }
 
@@ -3181,7 +3182,7 @@ impl CPlayer {
         }
 
         let mut fMovingUp = self.vely;
-        if !self.platform.is_null() {
+        if !self.platform.is_none() {
             fMovingUp = self.vely + fPlatformVelY - GRAVITATION;
         }
 
@@ -3193,7 +3194,7 @@ impl CPlayer {
             self.mapcolldet_move_downward(g, txl, txc, txr, alignedBlockX, unAlignedBlockX, unAlignedBlockFX);
         }
 
-        if self.platform.is_null() {
+        if self.platform.is_none() {
             self.fallthrough = false;
 
             if self.inair {

@@ -4,6 +4,7 @@ use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
+use crate::common::map::PlatformId;
 use crate::common::game::App;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::*;
@@ -55,7 +56,7 @@ pub struct IO_MovingObject {
 
     pub movingObjectType: MovingObjectType,
 
-    pub platform: Ptr<MovingPlatform>,
+    pub platform: PlatformId,
     pub iHorizontalPlatformCollision: i16,
     pub iVerticalPlatformCollision: i16,
 
@@ -99,7 +100,7 @@ impl IO_MovingObject {
             inair: false,
             onice: false,
             movingObjectType: movingobject_none,
-            platform: Ptr::null(),
+            platform: PlatformId::NONE,
             iHorizontalPlatformCollision: 0,
             iVerticalPlatformCollision: 0,
             fObjectDiesOnSuperDeathTiles: false,
@@ -157,7 +158,7 @@ impl IO_MovingObject {
         o.inair = false;
         o.onice = false;
 
-        o.platform = Ptr::null();
+        o.platform = PlatformId::NONE;
         o.iHorizontalPlatformCollision = -1;
         o.iVerticalPlatformCollision = -1;
 
@@ -273,21 +274,21 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
 
     let fTempY = o.fy;
 
-    if !o.platform.is_null() {
+    if !o.platform.is_none() {
         if !o.onice {
-            fPlatformVelX = o.platform.fVelX;
+            fPlatformVelX = g.g_map.platform(o.platform).fVelX;
             let x = o.fx + fPlatformVelX;
             o.set_xf(x);
             o.flipsidesifneeded();
         }
 
-        fPlatformVelY = o.platform.fVelY;
+        fPlatformVelY = g.g_map.platform(o.platform).fVelY;
 
-        if o.platform.fOldVelY < 0.0 {
-            o.fy += o.platform.fOldVelY;
+        if g.g_map.platform(o.platform).fOldVelY < 0.0 {
+            o.fy += g.g_map.platform(o.platform).fOldVelY;
         }
 
-        o.fPrecalculatedY += o.platform.fOldVelY;
+        o.fPrecalculatedY += g.g_map.platform(o.platform).fOldVelY;
     }
 
     o.iHorizontalPlatformCollision = -1;
@@ -303,7 +304,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
         o.set_yf(y);
         o.vely = cap_falling_velocity(GRAVITATION + o.vely);
 
-        if o.platform.is_null() {
+        if o.platform.is_none() {
             o.inair = true;
             o.onice = false;
         }
@@ -472,7 +473,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
     //-----------------------------------------------------------------
 
     let mut fMovingUp = o.vely;
-    if !o.platform.is_null() {
+    if !o.platform.is_none() {
         fMovingUp = o.vely + fPlatformVelY - o.bounce;
     }
 
@@ -520,7 +521,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
             o.vely += GRAVITATION;
         }
 
-        if o.platform.is_null() {
+        if o.platform.is_none() {
             o.inair = true;
             o.onice = false;
         }
@@ -540,7 +541,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
                 // collide with left block
                 processOtherBlock = leftblock.get().collide_object_dir(g, o, 2);
 
-                if o.platform.is_null() {
+                if o.platform.is_none() {
                     o.inair = false;
                     o.onice = false;
                 }
@@ -550,7 +551,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
                 // then right
                 rightblock.get().collide_object_dir(g, o, 2);
 
-                if o.platform.is_null() {
+                if o.platform.is_none() {
                     o.inair = false;
                     o.onice = false;
                 }
@@ -573,12 +574,12 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
                 o.set_yf(y);
                 o.fOldY = o.fy - GRAVITATION;
 
-                if o.platform.is_null() {
+                if o.platform.is_none() {
                     o.inair = false;
                     o.onice = false;
                 }
 
-                o.platform = Ptr::null();
+                o.platform = PlatformId::NONE;
 
                 if o.iVerticalPlatformCollision == 0 {
                     o.kill_object_map_hazard(g, -1);
@@ -599,7 +600,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
             o.set_yf(y);
             o.fOldY = o.fy;
 
-            if o.platform.is_null() {
+            if o.platform.is_none() {
                 o.inair = false;
 
                 if ((leftTile & tile_flag_ice) != 0 && ((rightTile & tile_flag_ice) != 0 || rightTile == tile_flag_nonsolid || rightTile == tile_flag_gap))
@@ -611,7 +612,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
                 }
             }
 
-            o.platform = Ptr::null();
+            o.platform = PlatformId::NONE;
 
             if o.iVerticalPlatformCollision == 0 {
                 o.kill_object_map_hazard(g, -1);
@@ -624,13 +625,13 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
             o.set_yf(y);
             o.vely = cap_falling_velocity(GRAVITATION + o.vely);
 
-            if o.platform.is_null() {
+            if o.platform.is_none() {
                 o.inair = true;
             }
         }
     }
 
-    if o.platform.is_null() && o.inair {
+    if o.platform.is_none() && o.inair {
         o.onice = false;
     }
 }

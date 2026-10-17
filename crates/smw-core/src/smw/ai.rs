@@ -1450,9 +1450,9 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
             //Look through all platforms and see if we are hitting solid or death tiles in them
             let mut iPlatform: i16 = 0;
             while (iPlatform as usize) < g.g_map.platforms.len() {
-                let lefttile: i32 = g.g_map.platforms[iPlatform as usize].get_tile_type_from_coord(ix, ((iDeathY as i32) << 5) as i16);
+                let lefttile: i32 = g.g_map.platform(g.g_map.platforms[iPlatform as usize]).get_tile_type_from_coord(ix, ((iDeathY as i32) << 5) as i16);
                 let righttile: i32 =
-                    g.g_map.platforms[iPlatform as usize].get_tile_type_from_coord((ix32 + PW) as i16, ((iDeathY as i32) << 5) as i16);
+                    g.g_map.platform(g.g_map.platforms[iPlatform as usize]).get_tile_type_from_coord((ix32 + PW) as i16, ((iDeathY as i32) << 5) as i16);
 
                 let fDeathTileUnderPlayer2 = ((lefttile & tile_flag_death_on_top) != 0 && (righttile & tile_flag_death_on_top) != 0)
                     || ((lefttile & tile_flag_death_on_top) != 0 && (righttile & tile_flag_solid) == 0)

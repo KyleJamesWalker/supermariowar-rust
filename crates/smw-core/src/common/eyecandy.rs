@@ -1803,9 +1803,33 @@ impl Spotlight {
     }
 }
 
+/// A spotlight in `SpotlightManager`. A handle to a removed spotlight finds nothing.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct SpotlightId {
+    slot: u16,
+    generation: u16,
+}
+
+impl SpotlightId {
+    pub const NONE: SpotlightId = SpotlightId { slot: u16::MAX, generation: 0 };
+
+    pub fn is_none(self) -> bool {
+        self == Self::NONE
+    }
+}
+
+impl Default for SpotlightId {
+    fn default() -> Self {
+        Self::NONE
+    }
+}
+
 #[derive(Default)]
 pub struct SpotlightManager {
-    spotlightList: Vec<Ptr<Spotlight>>,
+    /// Draw order.
+    spotlightList: Vec<SpotlightId>,
+    slots: Vec<Option<Spotlight>>,
+    generations: Vec<u16>,
     pub _alias: Aliased,
 }
 
@@ -1814,14 +1838,45 @@ impl SpotlightManager {
         Self::default()
     }
 
-    pub fn add_spotlight(&mut self, g: &mut Game, ix: i16, iy: i16, iSize: i16) -> Ptr<Spotlight> {
+    pub fn add_spotlight(&mut self, g: &mut Game, ix: i16, iy: i16, iSize: i16) -> SpotlightId {
         if !g.game_values.spotlights {
-            return Ptr::null();
+            return SpotlightId::NONE;
         }
 
-        let s = Ptr::new_box(Spotlight::new(ix, iy, iSize));
-        self.spotlightList.push(s);
-        s
+        let slot = match self.slots.iter().position(Option::is_none) {
+            Some(slot) => slot,
+            None => {
+                self.slots.push(None);
+                self.generations.push(0);
+                self.slots.len() - 1
+            }
+        };
+        self.slots[slot] = Some(Spotlight::new(ix, iy, iSize));
+        let id = SpotlightId { slot: slot as u16, generation: self.generations[slot] };
+        self.spotlightList.push(id);
+        id
+    }
+
+    fn get(&mut self, id: SpotlightId) -> Option<&mut Spotlight> {
+        let slot = id.slot as usize;
+        if slot >= self.slots.len() || self.generations[slot] != id.generation {
+            return None;
+        }
+        self.slots[slot].as_mut()
+    }
+
+    fn remove(&mut self, id: SpotlightId) {
+        if self.get(id).is_some() {
+            self.slots[id.slot as usize] = None;
+            self.generations[id.slot as usize] = self.generations[id.slot as usize].wrapping_add(1);
+        }
+    }
+
+    /// Does nothing for a removed spotlight, which the C++ wrote through a dangling pointer.
+    pub fn update_position(&mut self, id: SpotlightId, x: i16, y: i16) {
+        if let Some(s) = self.get(id) {
+            s.update_position(x, y);
+        }
     }
 
     pub fn draw_spotlights(&mut self, g: &mut Game) {
@@ -1833,11 +1888,12 @@ impl SpotlightManager {
 
         let mut i = 0;
         while i < self.spotlightList.len() {
-            let mut s = self.spotlightList[i];
+            let id = self.spotlightList[i];
+            let s = self.get(id).expect("listed spotlight");
             s.update();
 
             if s.is_dead() {
-                s.delete();
+                self.remove(id);
                 self.spotlightList.remove(i);
             } else {
                 s.draw(g);
@@ -1850,8 +1906,8 @@ impl SpotlightManager {
     }
 
     pub fn clear_spotlights(&mut self) {
-        for s in self.spotlightList.drain(..) {
-            s.delete();
+        for id in std::mem::take(&mut self.spotlightList) {
+            self.remove(id);
         }
     }
 }

@@ -29,6 +29,7 @@ use crate::common::version::Version;
 use crate::globals::{Aliased, Ptr};
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::player::CPlayer;
+use std::cell::UnsafeCell;
 use std::ffi::{CStr, CString};
 use std::io::Write;
 use std::ptr::{null, null_mut};
@@ -130,6 +131,28 @@ pub struct TilesetTile {
 
 const ZERO_RECT: Rect = Rect { x: 0, y: 0, w: 0, h: 0 };
 
+/// A moving platform in its map. A handle to a removed platform finds nothing.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub struct PlatformId {
+    slot: u16,
+    generation: u16,
+}
+
+impl PlatformId {
+    /// No platform: what a null `MovingPlatform*` was in the C++.
+    pub const NONE: PlatformId = PlatformId { slot: u16::MAX, generation: 0 };
+
+    pub fn is_none(self) -> bool {
+        self == Self::NONE
+    }
+}
+
+impl Default for PlatformId {
+    fn default() -> Self {
+        Self::NONE
+    }
+}
+
 pub struct AnimatedTile {
     pub id: i16,
     pub layers: [TilesetTile; 4],
@@ -138,7 +161,7 @@ pub struct AnimatedTile {
     pub rDest: Rect,
     pub fBackgroundAnimated: bool,
     pub fForegroundAnimated: bool,
-    pub pPlatform: Ptr<MovingPlatform>,
+    pub pPlatform: PlatformId,
 }
 
 impl AnimatedTile {
@@ -152,7 +175,7 @@ impl AnimatedTile {
             rDest: ZERO_RECT,
             fBackgroundAnimated: false,
             fForegroundAnimated: false,
-            pPlatform: Ptr::null(),
+            pPlatform: PlatformId::NONE,
         }
     }
 }
@@ -631,8 +654,10 @@ pub struct CMap {
 
     pub animatedtiles: Vec<Box<AnimatedTile>>,
 
-    pub platforms: Vec<Ptr<MovingPlatform>>,
-    pub tempPlatforms: Vec<Ptr<MovingPlatform>>,
+    pub platforms: Vec<PlatformId>,
+    pub tempPlatforms: Vec<PlatformId>,
+    platform_slots: Vec<Option<Box<UnsafeCell<MovingPlatform>>>>,
+    platform_generations: Vec<u16>,
 
     pub mapitems: Vec<MapItem>,
     pub maphazards: Vec<MapHazard>,
@@ -674,7 +699,7 @@ pub struct CMap {
     pub iAnimatedVectorIndices: [i16; NUM_FRAMES_BETWEEN_TILE_ANIMATION as usize + 1],
     pub animatedBackmapSurface: *mut Surface,
 
-    pub platformdrawlayer: [Vec<Ptr<MovingPlatform>>; 5],
+    pub platformdrawlayer: [Vec<PlatformId>; 5],
 
     pub _alias: Aliased,
 }
@@ -705,6 +730,8 @@ impl CMap {
             animatedtiles: Vec::new(),
             platforms: Vec::new(),
             tempPlatforms: Vec::new(),
+            platform_slots: Vec::new(),
+            platform_generations: Vec::new(),
             mapitems: Vec::with_capacity(MAXMAPITEMS as usize),
             maphazards: Vec::with_capacity(MAXMAPHAZARDS as usize),
             spawnareas: [[SpawnArea::default(); MAXSPAWNAREAS as usize]; NSPAWN],
@@ -871,12 +898,12 @@ impl CMap {
             self.platformdrawlayer[iLayer].clear();
         }
 
-        for platform in self.platforms.drain(..) {
-            platform.delete();
+        for platform in std::mem::take(&mut self.platforms) {
+            self.remove_platform(platform);
         }
 
-        for platform in self.tempPlatforms.drain(..) {
-            platform.delete();
+        for platform in std::mem::take(&mut self.tempPlatforms) {
+            self.remove_platform(platform);
         }
     }
 
@@ -1052,12 +1079,12 @@ impl CMap {
         let mut iHiddenBlockCount: i32 = 0;
 
         for platform in &self.platforms {
-            for iCol in 0..platform.iTileWidth {
-                for iRow in 0..platform.iTileHeight {
-                    let iType = platform.tile_type_at(iCol as usize, iRow as usize);
+            for iCol in 0..self.platform(*platform).iTileWidth {
+                for iRow in 0..self.platform(*platform).iTileHeight {
+                    let iType = self.platform(*platform).tile_type_at(iCol as usize, iRow as usize);
                     let iFlags = tile_to_flags(iType) as i32;
 
-                    let tile = platform.tile_at(iCol as usize, iRow as usize);
+                    let tile = self.platform(*platform).tile_at(iCol as usize, iRow as usize);
 
                     if tile.iID as i32 != TILESETNONE {
                         iPlatformCount += 1;
@@ -1185,9 +1212,9 @@ impl CMap {
         }
 
         for platform in &self.platforms {
-            for iCol in 0..platform.iTileWidth {
-                for iRow in 0..platform.iTileHeight {
-                    let tile = platform.tile_at(iCol as usize, iRow as usize);
+            for iCol in 0..self.platform(*platform).iTileWidth {
+                for iRow in 0..self.platform(*platform).iTileHeight {
+                    let tile = self.platform(*platform).tile_at(iCol as usize, iRow as usize);
                     if tile.iID >= 0 {
                         fTilesetUsed[tile.iID as usize] = true;
                     }
@@ -1242,12 +1269,12 @@ impl CMap {
         mapfile.write_i32(self.platforms.len() as i32);
 
         for platform in &self.platforms {
-            mapfile.write_i32(platform.iTileWidth as i32);
-            mapfile.write_i32(platform.iTileHeight as i32);
+            mapfile.write_i32(self.platform(*platform).iTileWidth as i32);
+            mapfile.write_i32(self.platform(*platform).iTileHeight as i32);
 
-            for iCol in 0..platform.iTileWidth {
-                for iRow in 0..platform.iTileHeight {
-                    let mut tile = *platform.tile_at(iCol as usize, iRow as usize);
+            for iCol in 0..self.platform(*platform).iTileWidth {
+                for iRow in 0..self.platform(*platform).iTileHeight {
+                    let mut tile = *self.platform(*platform).tile_at(iCol as usize, iRow as usize);
 
                     if tile.iID >= 0 {
                         let ts = gp.g_tilesetmanager.tileset(g, tile.iID as usize);
@@ -1264,17 +1291,17 @@ impl CMap {
                     mapfile.write_i8(tile.iCol as i8);
                     mapfile.write_i8(tile.iRow as i8);
 
-                    mapfile.write_i32(platform.tile_type_at(iCol as usize, iRow as usize).0 as i32);
+                    mapfile.write_i32(self.platform(*platform).tile_type_at(iCol as usize, iRow as usize).0 as i32);
                 }
             }
 
-            mapfile.write_i32(platform.iDrawLayer as i32);
+            mapfile.write_i32(self.platform(*platform).iDrawLayer as i32);
 
-            let iPathType: i16 = platform.pPath.path_type_id() as i16;
+            let iPathType: i16 = self.platform(*platform).pPath.path_type_id() as i16;
             mapfile.write_i32(iPathType as i32);
 
             let mut p = *platform;
-            let any = p.pPath.as_any();
+            let any = self.platform(p).pPath.as_any();
             if let Some(path) = any.downcast_ref::<StraightPath>() {
                 mapfile.write_float(path.start_pos().x);
                 mapfile.write_float(path.start_pos().y);
@@ -1797,6 +1824,7 @@ impl CMap {
         }
 
         for iTile in self.iAnimatedVectorIndices[f]..self.iAnimatedVectorIndices[f + 1] {
+            let platform = self.try_platform(self.animatedtiles[iTile as usize].pPlatform);
             let tile = &mut self.animatedtiles[iTile as usize];
             let frame = self.iTileAnimationFrame as usize;
 
@@ -1808,10 +1836,10 @@ impl CMap {
                 self.animatedTilesSurface.draw_src_to(&tile.rAnimationSrc[1][frame], self.animatedFrontmapSurface, &tile.rDest);
             }
 
-            if !tile.pPlatform.is_null() {
+            if let Some(platform) = platform {
                 self.animatedTilesSurface.draw_src_to(
                     &tile.rAnimationSrc[0][frame],
-                    tile.pPlatform.sprites[g.g_iCurrentDrawIndex as usize].get_surface(),
+                    platform.sprites[g.g_iCurrentDrawIndex as usize].get_surface(),
                     &tile.rDest,
                 );
             }
@@ -1846,7 +1874,7 @@ impl CMap {
 
                             animatedtile.fBackgroundAnimated = false;
                             animatedtile.fForegroundAnimated = false;
-                            animatedtile.pPlatform = Ptr::null();
+                            animatedtile.pPlatform = PlatformId::NONE;
 
                             for iLayer in 0..4usize {
                                 let layerTile = self.mapdata[i][j][iLayer];
@@ -1895,15 +1923,15 @@ impl CMap {
 
     fn add_platform_animated_tiles(&mut self) {
         for &platform in &self.platforms {
-            let iHeight = platform.iTileHeight;
-            let iWidth = platform.iTileWidth;
+            let iHeight = self.platform(platform).iTileHeight;
+            let iWidth = self.platform(platform).iTileWidth;
 
             let mut iDestX: i16 = 0;
             let mut iDestY: i16 = 0;
 
             for iRow in 0..iHeight {
                 for iCol in 0..iWidth {
-                    if platform.tile_at(iCol as usize, iRow as usize).iID as i32 == TILESETANIMATED {
+                    if self.platform(platform).tile_at(iCol as usize, iRow as usize).iID as i32 == TILESETANIMATED {
                         let mut animatedtile = Box::new(AnimatedTile::new());
                         animatedtile.id = -1;
 
@@ -1911,7 +1939,7 @@ impl CMap {
                         animatedtile.fForegroundAnimated = false;
                         animatedtile.pPlatform = platform;
 
-                        let tile = *platform.tile_at(iCol as usize, iRow as usize);
+                        let tile = *self.platform(platform).tile_at(iCol as usize, iRow as usize);
                         animatedtile.layers[0] = tile;
 
                         for iRect in 0..4i32 {
@@ -1941,10 +1969,10 @@ impl CMap {
     fn draw_thumbnail_platforms(&mut self, g: &mut Game, targetSurface: *mut Surface) {
         for &platform in &self.platforms {
             let mut p = platform;
-            let w = p.iTileWidth;
-            let h = p.iTileHeight;
-            let tiles = p.iTileData.clone();
-            let basepath = p.pPath.as_any();
+            let w = self.platform(p).iTileWidth;
+            let h = self.platform(p).iTileHeight;
+            let tiles = self.platform(p).iTileData.clone();
+            let basepath = self.platform(p).pPath.as_any();
 
             if let Some(path) = basepath.downcast_ref::<StraightPath>() {
                 draw_platform(
@@ -2347,7 +2375,7 @@ impl CMap {
                         break;
                     }
 
-                    if !tile.pPlatform.is_null() {
+                    if !tile.pPlatform.is_none() {
                         for sTileAnimationFrame in 0..4usize {
                             tile.rAnimationSrc[0][sTileAnimationFrame] = rDst;
 
@@ -2381,7 +2409,7 @@ impl CMap {
 
                     tile.fBackgroundAnimated = false;
                     tile.fForegroundAnimated = false;
-                    tile.pPlatform = Ptr::null();
+                    tile.pPlatform = PlatformId::NONE;
 
                     iter += 1;
                 }
@@ -2406,14 +2434,15 @@ impl CMap {
     pub fn update_platforms(&mut self, g: &mut Game) {
         for &platform in &self.platforms.clone() {
             let mut p = platform;
-            p.update(g);
+            self.platform(p).update(g);
         }
 
         let mut iter = 0usize;
         while iter < self.tempPlatforms.len() {
-            let mut p = self.tempPlatforms[iter];
+            let id = self.tempPlatforms[iter];
+            let p = self.platform(id);
             if p.fDead {
-                p.delete();
+                self.remove_platform(id);
                 self.tempPlatforms.remove(iter);
             } else {
                 p.update(g);
@@ -2425,13 +2454,13 @@ impl CMap {
     pub fn draw_platforms(&mut self, g: &mut Game, iLayer: i16) {
         for &platform in &self.platformdrawlayer[iLayer as usize].clone() {
             let mut p = platform;
-            p.draw(g);
+            self.platform(p).draw(g);
         }
 
         if iLayer == 2 {
             for &platform in &self.tempPlatforms.clone() {
                 let mut p = platform;
-                p.draw(g);
+                self.platform(p).draw(g);
             }
         }
     }
@@ -2440,7 +2469,7 @@ impl CMap {
     pub fn draw_platforms_offset(&mut self, g: &mut Game, iOffsetX: i16, iOffsetY: i16, iLayer: i16) {
         for &platform in &self.platformdrawlayer[iLayer as usize].clone() {
             let mut p = platform;
-            p.draw_offset(g, iOffsetX, iOffsetY);
+            self.platform(p).draw_offset(g, iOffsetX, iOffsetY);
         }
     }
 
@@ -2448,7 +2477,7 @@ impl CMap {
     pub fn moving_platform_collision_player(&mut self, g: &mut Game, player: PlayerId) {
         for i in 0..self.platforms.len() {
             let mut p = self.platforms[i];
-            p.collide_player(g, player);
+            self.platform(p).collide_player(g, player);
             if !g.player(player).isready() {
                 return;
             }
@@ -2456,7 +2485,7 @@ impl CMap {
 
         for i in 0..self.tempPlatforms.len() {
             let mut p = self.tempPlatforms[i];
-            p.collide_player(g, player);
+            self.platform(p).collide_player(g, player);
             if !g.player(player).isready() {
                 return;
             }
@@ -2467,12 +2496,12 @@ impl CMap {
     pub fn moving_platform_collision_object(&mut self, g: &mut Game, object: Ptr<dyn IO_MovingObjectTrait>) {
         for i in 0..self.platforms.len() {
             let mut p = self.platforms[i];
-            p.collide_object(g, object);
+            self.platform(p).collide_object(g, object);
         }
 
         for i in 0..self.tempPlatforms.len() {
             let mut p = self.tempPlatforms[i];
-            p.collide_object(g, object);
+            self.platform(p).collide_object(g, object);
         }
     }
 
@@ -2480,12 +2509,12 @@ impl CMap {
         let mut fRet = false;
         for i in 0..self.platforms.len() {
             let mut p = self.platforms[i];
-            fRet |= p.collision_detection_check_sides(object);
+            fRet |= self.platform(p).collision_detection_check_sides(object);
         }
 
         for i in 0..self.tempPlatforms.len() {
             let mut p = self.tempPlatforms[i];
-            fRet |= p.collision_detection_check_sides(object);
+            fRet |= self.platform(p).collision_detection_check_sides(object);
         }
 
         fRet
@@ -2494,11 +2523,11 @@ impl CMap {
     pub fn reset_platforms(&mut self, g: &mut Game) {
         for &platform in &self.platforms.clone() {
             let mut p = platform;
-            p.reset_path(g);
+            self.platform(p).reset_path(g);
         }
 
-        for platform in self.tempPlatforms.drain(..) {
-            platform.delete();
+        for platform in std::mem::take(&mut self.tempPlatforms) {
+            self.remove_platform(platform);
         }
     }
 
@@ -2657,13 +2686,13 @@ impl CMap {
         }
 
         for &platform in &self.platforms {
-            if platform.is_in_no_spawn_zone(*x, *y, width, height) {
+            if self.platform(platform).is_in_no_spawn_zone(*x, *y, width, height) {
                 return false;
             }
         }
 
         for &platform in &self.tempPlatforms {
-            if platform.is_in_no_spawn_zone(*x, *y, width, height) {
+            if self.platform(platform).is_in_no_spawn_zone(*x, *y, width, height) {
                 return false;
             }
         }
@@ -2671,24 +2700,66 @@ impl CMap {
         true
     }
 
-    pub fn add_permanent_platform(&mut self, platform: Ptr<MovingPlatform>) {
-        self.platforms.push(platform);
-        self.platformdrawlayer[platform.iDrawLayer as usize].push(platform);
+    fn insert_platform(&mut self, mut platform: Box<MovingPlatform>) -> PlatformId {
+        let slot = match self.platform_slots.iter().position(Option::is_none) {
+            Some(slot) => slot,
+            None => {
+                self.platform_slots.push(None);
+                self.platform_generations.push(0);
+                self.platform_slots.len() - 1
+            }
+        };
+        let id = PlatformId { slot: slot as u16, generation: self.platform_generations[slot] };
+        platform.id = id;
+        self.platform_slots[slot] = Some(Box::new(UnsafeCell::new(*platform)));
+        id
     }
 
-    pub fn add_temporary_platform(&mut self, platform: Ptr<MovingPlatform>) {
-        self.tempPlatforms.push(platform);
+    fn remove_platform(&mut self, id: PlatformId) {
+        if self.try_platform(id).is_some() {
+            self.platform_slots[id.slot as usize] = None;
+            self.platform_generations[id.slot as usize] = self.platform_generations[id.slot as usize].wrapping_add(1);
+        }
+    }
+
+    #[allow(clippy::mut_from_ref)]
+    pub fn try_platform(&self, id: PlatformId) -> Option<&'static mut MovingPlatform> {
+        let slot = id.slot as usize;
+        if slot >= self.platform_slots.len() || self.platform_generations[slot] != id.generation {
+            return None;
+        }
+        let platform = self.platform_slots[slot].as_deref()?.get();
+        Some(unsafe { &mut *platform })
+    }
+
+    /// Panics on a removed platform, where the C++ read freed memory.
+    pub fn platform(&self, id: PlatformId) -> &'static mut MovingPlatform {
+        self.try_platform(id).unwrap_or_else(|| panic!("no platform {:?}", id))
+    }
+
+    pub fn add_permanent_platform(&mut self, platform: Box<MovingPlatform>) -> PlatformId {
+        let layer = platform.iDrawLayer as usize;
+        let id = self.insert_platform(platform);
+        self.platforms.push(id);
+        self.platformdrawlayer[layer].push(id);
+        id
+    }
+
+    pub fn add_temporary_platform(&mut self, platform: Box<MovingPlatform>) -> PlatformId {
+        let id = self.insert_platform(platform);
+        self.tempPlatforms.push(id);
+        id
     }
 
     pub fn is_in_platform_no_spawn_zone(&self, x: i16, y: i16, width: i16, height: i16) -> bool {
         for &platform in &self.platforms {
-            if platform.is_in_no_spawn_zone(x, y, width, height) {
+            if self.platform(platform).is_in_no_spawn_zone(x, y, width, height) {
                 return true;
             }
         }
 
         for &platform in &self.tempPlatforms {
-            if platform.is_in_no_spawn_zone(x, y, width, height) {
+            if self.platform(platform).is_in_no_spawn_zone(x, y, width, height) {
                 return true;
             }
         }
@@ -2849,7 +2920,7 @@ pub(crate) mod tests {
             o += "\n";
         }
         for &platform in &m.platforms {
-            let mut p = platform;
+            let p = m.platform(platform);
             let _ = writeln!(
                 o,
                 "platform {} {} layer={} path={} x={:.6} y={:.6} vx={:.6} vy={:.6}",

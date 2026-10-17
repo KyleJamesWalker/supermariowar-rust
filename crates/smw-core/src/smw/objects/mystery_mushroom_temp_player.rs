@@ -2,6 +2,7 @@
 
 use crate::smw::players::PlayerId;
 use crate::game::Game;
+use crate::common::map::PlatformId;
 use crate::common::movingplatform::MovingPlatform;
 use crate::globals::*;
 use crate::smw::gs_gameplay::scorepowerupoffsets;
@@ -24,7 +25,7 @@ pub struct MysteryMushroomTempPlayer {
     pub inair: bool,
     pub onice: bool,
 
-    pub platform: Ptr<MovingPlatform>,
+    pub platform: PlatformId,
 
     pub gamepowerup: i16,
 
@@ -53,7 +54,7 @@ impl MysteryMushroomTempPlayer {
             burnuptimer: 0,
             inair: false,
             onice: false,
-            platform: Ptr::null(),
+            platform: PlatformId::NONE,
             gamepowerup: 0,
             iOldPowerupX: 0,
             iOldPowerupY: 0,

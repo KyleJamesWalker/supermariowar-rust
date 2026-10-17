@@ -2,6 +2,7 @@
 
 use crate::smw::players::PlayerId;
 use crate::game::Game;
+use crate::common::map::PlatformId;
 use crate::common::game::App;
 use crate::common::game_mode::{game_mode_jail, game_mode_shyguytag, game_mode_tag};
 use crate::common::game_values::if_sound_on_play;
@@ -376,7 +377,7 @@ impl PlayerCollisions {
                 g.player(player).set_yi((g.player(other).iy as i32 - PH) as i16); //set new position to top of other player
                 let pp = player;
                 g.player(player).collisions.checktop(g, g.player(pp));
-                g.player(player).platform = Ptr::null();
+                g.player(player).platform = PlatformId::NONE;
             }
 
             let mut fKillPotential = false;

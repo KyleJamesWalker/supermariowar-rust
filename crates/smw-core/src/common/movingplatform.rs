@@ -3,6 +3,7 @@
 use crate::smw::players::PlayerId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
+use crate::common::map::PlatformId;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::game::App;
 use crate::common::gfx::gfx_drawpreview;
@@ -76,6 +77,9 @@ pub struct MovingPlatform {
 
     pub iPlayerId: i16,
 
+    /// Set when a map takes the platform.
+    pub id: PlatformId,
+
     pub _alias: Aliased,
 }
 
@@ -89,7 +93,7 @@ impl MovingPlatform {
         drawlayer: i16,
         path: Box<dyn MovingPlatformPathTrait>,
         fPreview: bool,
-    ) -> Ptr<MovingPlatform> {
+    ) -> Box<MovingPlatform> {
         let mut gp = g.ptr();
         let mut iTileSize: i16 = TILESIZE as i16;
         let mut iTileSizeIndex: i16 = 0;
@@ -105,7 +109,7 @@ impl MovingPlatform {
         let iWidth = (w as i32 * iTileSize as i32) as i16;
         let iHeight = (h as i32 * iTileSize as i32) as i16;
 
-        let mut this = Ptr::new_box(MovingPlatform {
+        let mut this = Box::new(MovingPlatform {
             iTileData: tiledata,
             iTileType: tiletypes,
             ix: 0,
@@ -135,11 +139,9 @@ impl MovingPlatform {
             fVelX: 0.0,
             fVelY: 0.0,
             iPlayerId: -1,
+            id: PlatformId::NONE,
             _alias: Aliased::new(),
         });
-
-        let self_ptr = this;
-        this.pPath.path_mut().set_platform(self_ptr);
 
         this.reset_path(g);
 
@@ -277,9 +279,10 @@ impl MovingPlatform {
         self.fOldVelX = self.pPath.velocity0().x;
         self.fOldVelY = self.pPath.velocity0().y;
 
-        self.pPath.r#move(g, 0);
+        let this = Ptr::from_mut(self);
+        self.pPath.r#move(g, 0, this);
 
-        self.pPath.r#move(g, 1);
+        self.pPath.r#move(g, 1, this);
 
         self.fVelX = self.pPath.velocity0().x;
         self.fVelY = self.pPath.velocity0().y;
@@ -292,7 +295,8 @@ impl MovingPlatform {
 
     pub fn reset_path(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        self.pPath.reset(gp.get());
+        let this = Ptr::from_mut(self);
+        self.pPath.reset(gp.get(), this);
 
         let x = self.pPath.current_pos0().x;
         let y = self.pPath.current_pos0().y;
@@ -316,8 +320,8 @@ impl MovingPlatform {
 
         let mut coldec = self.coldec_player(g, player);
         if coldec == collision_none {
-            if g.player(player).platform == this {
-                g.player(player).platform = Ptr::null();
+            if g.player(player).platform == self.id {
+                g.player(player).platform = PlatformId::NONE;
             }
             return;
         }
@@ -329,11 +333,11 @@ impl MovingPlatform {
         let mut fColVelX = g.player(player).velx - self.fOldVelX;
         let mut fColVelY = g.player(player).vely - self.fOldVelY;
 
-        if !g.player(player).platform.is_null() {
-            fColVelY += g.player(player).platform.fOldVelY - GRAVITATION;
+        if !g.player(player).platform.is_none() {
+            fColVelY += g.g_map.platform(g.player(player).platform).fOldVelY - GRAVITATION;
 
             if g.player(player).velx < -0.6 || g.player(player).velx > 0.6 {
-                fColVelX += g.player(player).platform.fOldVelX;
+                fColVelX += g.g_map.platform(g.player(player).platform).fOldVelX;
             }
         } else if !g.player(player).inair {
             fColVelY -= GRAVITATION;
@@ -342,7 +346,7 @@ impl MovingPlatform {
         let fRelativeY1: f32;
         let fRelativeY2: f32;
 
-        if g.player(player).platform != this {
+        if g.player(player).platform != self.id {
             fRelativeY1 = g.player(player).fy - self.fOldY + iHalfHeight;
             fRelativeY2 = g.player(player).fy + PH as f32 - self.fOldY + iHalfHeight;
         } else {
@@ -478,8 +482,8 @@ impl MovingPlatform {
 
         coldec = self.coldec_player(g, player);
         if coldec == collision_none {
-            if g.player(player).platform == this {
-                g.player(player).platform = Ptr::null();
+            if g.player(player).platform == self.id {
+                g.player(player).platform = PlatformId::NONE;
             }
 
             return;
@@ -495,7 +499,7 @@ impl MovingPlatform {
         }
 
         if fColVelY < 0.0 {
-            let fRelativeY: f32 = if g.player(player).inair || g.player(player).platform == this {
+            let fRelativeY: f32 = if g.player(player).inair || g.player(player).platform == self.id {
                 g.player(player).fPrecalculatedY - fy + iHalfHeight
             } else {
                 g.player(player).fy - fy + iHalfHeight
@@ -582,12 +586,12 @@ impl MovingPlatform {
                         g.player(player).fPrecalculatedY =
                             (((ty as i32) << 5) - PH) as f32 + (if self.fVelY > 0.0 { self.fVelY } else { 0.0 }) + 0.2 + fy - iHalfHeight;
                         g.player(player).inair = true;
-                        g.player(player).platform = Ptr::null();
+                        g.player(player).platform = PlatformId::NONE;
                     } else if g.player(player).iVerticalPlatformCollision == 0 {
                         g.player(player).kill_player_map_hazard(g, true, KillStyle::Environment, true, iPlayerId);
                         return;
                     } else {
-                        g.player(player).platform = this;
+                        g.player(player).platform = self.id;
                         g.player(player).iVerticalPlatformCollision = 2;
                         g.player(player).iPlatformCollisionPlayerId = iPlayerId;
 
@@ -622,7 +626,7 @@ impl MovingPlatform {
                         g.player(player).kill_player_map_hazard(g, true, KillStyle::Environment, true, iPlayerId);
                         return;
                     } else {
-                        g.player(player).platform = this;
+                        g.player(player).platform = self.id;
                         g.player(player).iVerticalPlatformCollision = 2;
                         g.player(player).iPlatformCollisionPlayerId = iPlayerId;
 
@@ -650,8 +654,8 @@ impl MovingPlatform {
                     if PlayerKillType::NonKill != g.player(player).kill_player_map_hazard(g, fSuperDeathTileUnderPlayer, KillStyle::Environment, false, iPlayerId) {
                         return;
                     }
-                } else if g.player(player).platform == this {
-                    g.player(player).platform = Ptr::null();
+                } else if g.player(player).platform == self.id {
+                    g.player(player).platform = PlatformId::NONE;
                 }
             }
         }
@@ -1031,8 +1035,8 @@ impl MovingPlatform {
 
         let mut coldec = self.coldec_object(object);
         if coldec == collision_none {
-            if object.platform == this {
-                object.platform = Ptr::null();
+            if object.platform == self.id {
+                object.platform = PlatformId::NONE;
             }
 
             return;
@@ -1044,11 +1048,11 @@ impl MovingPlatform {
 
         let mut fColVelY = object.vely - self.fOldVelY;
 
-        if !object.platform.is_null() {
-            fColVelY += object.platform.fOldVelY - GRAVITATION;
+        if !object.platform.is_none() {
+            fColVelY += g.g_map.platform(object.platform).fOldVelY - GRAVITATION;
 
             if object.velx < -0.6 || object.velx > 0.6 {
-                fColVelX += object.platform.fOldVelX;
+                fColVelX += g.g_map.platform(object.platform).fOldVelX;
             }
         } else if !object.inair {
             fColVelY -= GRAVITATION;
@@ -1057,7 +1061,7 @@ impl MovingPlatform {
         let fRelativeY1: f32;
         let fRelativeY2: f32;
 
-        if object.platform != this {
+        if object.platform != self.id {
             fRelativeY1 = object.fy - self.fOldY + iHalfHeight;
             fRelativeY2 = fRelativeY1 + object.collisionHeight as f32;
         } else {
@@ -1211,8 +1215,8 @@ impl MovingPlatform {
         coldec = self.coldec_object(object);
         let cw = object.collisionWidth as f32;
         if coldec == collision_none {
-            if object.platform == this {
-                object.platform = Ptr::null();
+            if object.platform == self.id {
+                object.platform = PlatformId::NONE;
             }
 
             return;
@@ -1228,7 +1232,7 @@ impl MovingPlatform {
         }
 
         if fColVelY < 0.0 {
-            let fRelativeY: f32 = if object.inair || object.platform == this {
+            let fRelativeY: f32 = if object.inair || object.platform == self.id {
                 object.fPrecalculatedY - fy + iHalfHeight
             } else {
                 object.fy - fy + iHalfHeight
@@ -1295,7 +1299,7 @@ impl MovingPlatform {
                         return;
                     } else {
                         if object.bounce >= 0.0 {
-                            object.platform = this;
+                            object.platform = self.id;
                         }
 
                         object.iVerticalPlatformCollision = 2;
@@ -1322,7 +1326,7 @@ impl MovingPlatform {
                         return;
                     } else {
                         if object.bounce >= 0.0 {
-                            object.platform = this;
+                            object.platform = self.id;
                         }
 
                         object.iVerticalPlatformCollision = 2;
@@ -1346,8 +1350,8 @@ impl MovingPlatform {
                 } else if fSuperDeathTileUnderObject {
                     object.kill_object_map_hazard(g, -1);
                     return;
-                } else if object.platform == this {
-                    object.platform = Ptr::null();
+                } else if object.platform == self.id {
+                    object.platform = PlatformId::NONE;
                 }
             }
         }

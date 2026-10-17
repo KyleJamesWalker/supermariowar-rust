@@ -4,6 +4,7 @@ use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
+use crate::common::map::PlatformId;
 use crate::common::eyecandy::EC_FallingObject;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
@@ -130,7 +131,7 @@ impl MO_BulletBill {
         g.player(p).set_yi((self.iy as i32 - PH - 1) as i16);
         g.player(p).bouncejump();
         g.player(p).collisions.checktop(g, g.player(player));
-        g.player(p).platform = Ptr::null();
+        g.player(p).platform = PlatformId::NONE;
 
         g.player(p).add_killer_award(g, PlayerId::NONE, KillStyle::BulletBill);
 

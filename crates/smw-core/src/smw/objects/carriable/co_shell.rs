@@ -3,7 +3,8 @@
 use crate::smw::players::PlayerId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
-use crate::common::eyecandy::{EC_FallingObject, EC_SingleAnimation, Spotlight};
+use crate::common::map::PlatformId;
+use crate::common::eyecandy::{EC_FallingObject, EC_SingleAnimation, SpotlightId};
 use crate::common::eyecandy_styles::AwardStyle;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
@@ -66,7 +67,7 @@ pub struct CO_Shell {
     pub frozenvelocity: f32,
     pub frozenanimationspeed: i16,
 
-    pub sSpotlight: Ptr<Spotlight>,
+    pub sSpotlight: SpotlightId,
 }
 impl_base!(CO_Shell => mo_carried_object: MO_CarriedObject);
 
@@ -93,7 +94,7 @@ impl CO_Shell {
             frozentimer: 0,
             frozenvelocity: 0.0,
             frozenanimationspeed: 0,
-            sSpotlight: Ptr::null(),
+            sSpotlight: SpotlightId::NONE,
         };
 
         o.iShellType = r#type;
@@ -134,7 +135,7 @@ impl CO_Shell {
         o.frozenvelocity = 0.0;
         o.frozenanimationspeed = 4;
 
-        o.sSpotlight = Ptr::null();
+        o.sSpotlight = SpotlightId::NONE;
         o
     }
 
@@ -180,7 +181,7 @@ impl CO_Shell {
             g.player(player).bouncejump();
             let p = g.player(player);
             g.player(player).collisions.checktop(g, p);
-            g.player(player).platform = Ptr::null();
+            g.player(player).platform = PlatformId::NONE;
         } else if self.state == 3 {
             // Holding
             if player != self.owner && (g.game_values.teamcollision == TeamCollisionStyle::On || g.player(player).teamID != g.player(self.owner).teamID) {
@@ -195,7 +196,7 @@ impl CO_Shell {
                 g.player(player).bouncejump();
                 let p = g.player(player);
                 g.player(player).collisions.checktop(g, p);
-                g.player(player).platform = Ptr::null();
+                g.player(player).platform = PlatformId::NONE;
             }
         }
 
@@ -537,15 +538,15 @@ impl CObjectTrait for CO_Shell {
             if self.state == 1 {
                 let x = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
                 let y = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
-                if self.sSpotlight.is_null() {
+                if self.sSpotlight.is_none() {
                     self.sSpotlight = gp.spotlightManager.add_spotlight(g, x, y, 3);
                 }
 
-                if !self.sSpotlight.is_null() {
-                    self.sSpotlight.update_position(x, y);
+                if !self.sSpotlight.is_none() {
+                    g.spotlightManager.update_position(self.sSpotlight, x, y);
                 }
             } else {
-                self.sSpotlight = Ptr::null();
+                self.sSpotlight = SpotlightId::NONE;
             }
         }
     }

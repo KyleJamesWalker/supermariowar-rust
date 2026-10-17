@@ -4,7 +4,7 @@ use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
-use crate::common::eyecandy::{EC_FallingObject, EC_SingleAnimation, Spotlight};
+use crate::common::eyecandy::{EC_FallingObject, EC_SingleAnimation, SpotlightId};
 use crate::common::gfx::gfx_sprite::{gfxSprite, ClipEdge};
 use crate::common::game_values::if_sound_on_play;
 use crate::common::global_constants::*;
@@ -31,7 +31,7 @@ pub struct CO_ThrowBox {
     pub frozentimer: i16,
     pub frozenanimationspeed: i16,
 
-    pub sSpotlight: Ptr<Spotlight>,
+    pub sSpotlight: SpotlightId,
 }
 impl_base!(CO_ThrowBox => mo_carried_object: MO_CarriedObject);
 
@@ -43,7 +43,7 @@ impl CO_ThrowBox {
             frozen: false,
             frozentimer: 0,
             frozenanimationspeed: 0,
-            sSpotlight: Ptr::null(),
+            sSpotlight: SpotlightId::NONE,
         };
 
         o.state = 1;
@@ -65,7 +65,7 @@ impl CO_ThrowBox {
         o.frozentimer = 0;
         o.frozenanimationspeed = 8;
 
-        o.sSpotlight = Ptr::null();
+        o.sSpotlight = SpotlightId::NONE;
         o
     }
 
@@ -250,12 +250,12 @@ impl CObjectTrait for CO_ThrowBox {
         if g.game_values.spotlights && self.has_kill_velocity() {
             let x = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
             let y = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
-            if self.sSpotlight.is_null() {
+            if self.sSpotlight.is_none() {
                 self.sSpotlight = gp.spotlightManager.add_spotlight(g, x, y, 3);
             }
 
-            if !self.sSpotlight.is_null() {
-                self.sSpotlight.update_position(x, y);
+            if !self.sSpotlight.is_none() {
+                g.spotlightManager.update_position(self.sSpotlight, x, y);
             }
         }
     }

@@ -2763,7 +2763,7 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
         gp.rm.sprite(gp.rm.spr_number_icons).draw_src(g, 619, 5, &rect((ed(gp.get()).g_Platforms[ep].iDrawLayer as i32) << 4, 48, 16, 16));
     } else if PLATFORM_EDIT_STATE_PATH == ed(gp.get()).iPlatformEditState {
         let platform = &ed(gp.get()).g_Platforms[ep];
-        let tiledata = g.g_map.platforms[ep].iTileData.clone();
+        let tiledata = g.g_map.platform(g.g_map.platforms[ep]).iTileData.clone();
         draw_platform(
             g,
             platform.iPathType,
@@ -4563,9 +4563,9 @@ pub fn loadcurrentmap(g: &mut Game) {
         let mp = g.g_map.platforms[iPlatform];
         for iCol in 0..MW {
             for iRow in 0..MH {
-                if (iCol as i16) < mp.iTileWidth && (iRow as i16) < mp.iTileHeight {
-                    ed(gp.get()).g_Platforms[iPlatform].tiles[iCol * MH + iRow] = *mp.tile_at(iCol, iRow);
-                    ed(gp.get()).g_Platforms[iPlatform].types[iCol * MH + iRow] = mp.tile_type_at(iCol, iRow);
+                if (iCol as i16) < g.g_map.platform(mp).iTileWidth && (iRow as i16) < g.g_map.platform(mp).iTileHeight {
+                    ed(gp.get()).g_Platforms[iPlatform].tiles[iCol * MH + iRow] = *g.g_map.platform(mp).tile_at(iCol, iRow);
+                    ed(gp.get()).g_Platforms[iPlatform].types[iCol * MH + iRow] = g.g_map.platform(mp).tile_type_at(iCol, iRow);
                 } else {
                     clear_tileset_tile(&mut ed(gp.get()).g_Platforms[iPlatform].tiles[iCol * MH + iRow]);
                     ed(gp.get()).g_Platforms[iPlatform].types[iCol * MH + iRow] = TileType::NonSolid;
@@ -4573,11 +4573,11 @@ pub fn loadcurrentmap(g: &mut Game) {
             }
         }
 
-        ed(gp.get()).g_Platforms[iPlatform].iDrawLayer = mp.iDrawLayer;
-        ed(gp.get()).g_Platforms[iPlatform].iPathType = mp.pPath.path_type_id();
+        ed(gp.get()).g_Platforms[iPlatform].iDrawLayer = g.g_map.platform(mp).iDrawLayer;
+        ed(gp.get()).g_Platforms[iPlatform].iPathType = g.g_map.platform(mp).pPath.path_type_id();
 
         let mut mpm = mp;
-        let any = mpm.pPath.as_any();
+        let any = g.g_map.platform(mpm).pPath.as_any();
         if let Some(path) = any.downcast_ref::<StraightPath>() {
             ed(gp.get()).g_Platforms[iPlatform].iVelocity = (path.path().speed() * 4.0f32) as i32 as i16;
             ed(gp.get()).g_Platforms[iPlatform].iStartX = path.start_pos().x as i32 as i16;
@@ -5045,8 +5045,8 @@ pub fn takescreenshot(g: &mut Game) {
                     platform.fRadiusX,
                     platform.fRadiusY,
                     iScreenshotSize,
-                    g.g_map.platforms[iPlatform].iTileWidth,
-                    g.g_map.platforms[iPlatform].iTileHeight,
+                    g.g_map.platform(g.g_map.platforms[iPlatform]).iTileWidth,
+                    g.g_map.platform(g.g_map.platforms[iPlatform]).iTileHeight,
                     true,
                     true,
                     g.blitdest,
