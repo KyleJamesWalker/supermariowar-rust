@@ -15,6 +15,7 @@ fn keys_answer_in_sdl2_values() {
     let kb = smw_sdl3::Sdl3Keyboard;
     let mut checked = 0;
     let mut named = std::collections::HashSet::new();
+    let mut skipped = Vec::new();
     for line in SDL2_KEYS.lines().filter(|l| !l.starts_with('#')) {
         let mut f = line.splitn(3, ' ');
         let scancode: i32 = f.next().unwrap().parse().unwrap();
@@ -22,6 +23,11 @@ fn keys_answer_in_sdl2_values() {
         let name = f.next().unwrap();
         // SDL3 renamed the consumer keys; the game binds none of them.
         if (258..=290).contains(&scancode) {
+            continue;
+        }
+        // Releases differ in which scancodes have names (3.4.16 has no "Front").
+        if unsafe { *SDL_GetScancodeName(SDL_Scancode(scancode)) } == 0 {
+            skipped.push(name);
             continue;
         }
         if named.insert(name.to_lowercase()) {
@@ -36,7 +42,7 @@ fn keys_answer_in_sdl2_values() {
         assert_eq!(kb.key_from_name(&name), (c as char).to_ascii_lowercase() as i32, "key_from_name({:?})", name);
     }
     assert_eq!(kb.key_from_name("Nonsense"), 0);
-    println!("keys: {} SDL2 keys answer alike", checked);
+    println!("keys: {} SDL2 keys answer alike; this SDL3 does not name {:?}", checked, skipped);
 }
 
 fn sounds_decode_to_the_table_lengths() {
