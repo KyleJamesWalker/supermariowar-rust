@@ -72,6 +72,8 @@ As built, `Pads` also has `open` (a hotplugged pad, at the device number the cor
 
 With 1-3 done, `smw-core/Cargo.toml` loses `sdl2`. The SDL comparison tests in `soft_surface.rs`, `soft_image.rs` and `editor_event.rs` move to `smw-sdl2`, or keep `sdl2` as a dev-dependency.
 
+As built, the SDL comparison tests keep `sdl2` as a dev-dependency, and smw-core also drops `smw-sdl2`. Each app calls `services::set_backend` before the game starts. `smw-sdl2` stays a dependency only on Android, where the core's `SDL_main` installs it, and for the core's tests and examples.
+
 ## Alternatives considered
 
 - **A thin trait that mirrors SDL's joystick API**, with `pad.rs` kept in core. This is the smallest change, but it puts SDL2's controller concepts into `smw-platform`. SDL3 renamed and changed that API, so `smw-sdl3` would have to emulate SDL2 behind it.
