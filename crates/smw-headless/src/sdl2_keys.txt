@@ -96,7 +96,6 @@
 97 1073741921 Keypad 9
 98 1073741922 Keypad 0
 99 1073741923 Keypad .
-100 0 NonUSBackslash
 101 1073741925 Application
 102 1073741926 Power
 103 1073741927 Keypad =
@@ -128,24 +127,6 @@
 129 1073741953 VolumeDown
 133 1073741957 Keypad ,
 134 1073741958 Keypad = (AS400)
-135 0 International 1
-136 0 International 2
-137 0 International 3
-138 0 International 4
-139 0 International 5
-140 0 International 6
-141 0 International 7
-142 0 International 8
-143 0 International 9
-144 0 Language 1
-145 0 Language 2
-146 0 Language 3
-147 0 Language 4
-148 0 Language 5
-149 0 Language 6
-150 0 Language 7
-151 0 Language 8
-152 0 Language 9
 153 1073741977 AltErase
 154 1073741978 SysReq
 155 1073741979 Cancel
