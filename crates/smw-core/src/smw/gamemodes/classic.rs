@@ -70,7 +70,7 @@ pub fn cgm_classic_playerkilledplayer(g: &mut Game, this: &mut CGM_Classic, mut 
     }
 
     //If we are playing classic "sumo" mode, then only score hazard kills
-    if g.game_values.gamemode.gamemode != game_mode_classic || g.game_values.gamemodesettings.classic.scoring == ScoringStyle::AllKills || style == KillStyle::Push {
+    if g.mode().gamemode != game_mode_classic || g.game_values.gamemodesettings.classic.scoring == ScoringStyle::AllKills || style == KillStyle::Push {
         if this.fReverseScoring {
             g.player(other).score(g).adjust_score(g, 1);
         } else {
@@ -98,7 +98,7 @@ pub fn cgm_classic_playerkilledplayer(g: &mut Game, this: &mut CGM_Classic, mut 
         }
     }
 
-    if g.game_values.gamemode.gamemode == game_mode_classic && g.game_values.gamemodesettings.classic.style == DeathStyle::Shield {
+    if g.mode().gamemode == game_mode_classic && g.game_values.gamemodesettings.classic.style == DeathStyle::Shield {
         if_sound_on_play(g, &mut gp.rm.sfx_powerdown);
         g.player(other).shield().reset(g);
         return PlayerKillType::NonKill;
@@ -148,7 +148,7 @@ pub fn cgm_classic_playerkilledself(g: &mut Game, this: &mut CGM_Classic, mut pl
             }
         }
 
-        if g.game_values.gamemode.gamemode == game_mode_classic && g.game_values.gamemodesettings.classic.style == DeathStyle::Shield {
+        if g.mode().gamemode == game_mode_classic && g.game_values.gamemodesettings.classic.style == DeathStyle::Shield {
             if_sound_on_play(g, &mut gp.rm.sfx_powerdown);
             g.player(player).shield().reset(g);
             return PlayerKillType::NonKill;

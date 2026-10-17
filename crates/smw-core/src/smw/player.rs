@@ -280,7 +280,7 @@ fn b(v: i32) -> bool {
 
 impl CScore {
     pub fn adjust_score(&mut self, g: &mut Game, iValue: i16) {
-        if g.game_values.gamemode.gameover || crate::smw::net_outcomes::score_locked(g) {
+        if g.mode().gameover || crate::smw::net_outcomes::score_locked(g) {
             return;
         }
 
@@ -329,7 +329,7 @@ pub fn player_killed_player_now(g: &mut Game, iKiller: i16, mut killed: PlayerId
     } else {
         g.player(killed).death_awards(g);
 
-        let iKillType = g.game_values.gamemode.get().playerkilledself(g, killed, style);
+        let iKillType = g.mode().get().playerkilledself(g, killed, style);
 
         if PlayerKillType::Normal == iKillType || (fForce && PlayerKillType::NonKill == iKillType) {
             g.player(killed).die(g, PlayerDeathStyle::Jump, false, fKillCarriedItem);
@@ -349,7 +349,7 @@ pub fn player_killed_player_now(g: &mut Game, iKiller: i16, mut killed: PlayerId
 
 fn gamemode_as<T: 'static>(g: &mut Game) -> Option<&'static mut T> {
     let mut gp = g.ptr();
-    let gm = gp.game_values.gamemode;
+    let gm = gp.mode();
     if gm.is_null() {
         return None;
     }
@@ -967,19 +967,19 @@ impl CPlayer {
         match self.powerupused.unwrap() {
             PowerupType::PoisonMushroom => {}
             PowerupType::ExtraLife1 => {
-                g.game_values.gamemode.get().playerextraguy(g, this, 1);
+                g.mode().get().playerextraguy(g, this, 1);
                 if_sound_on_play(g, &mut gp.rm.sfx_extraguysound);
             }
             PowerupType::ExtraLife2 => {
-                g.game_values.gamemode.get().playerextraguy(g, this, 2);
+                g.mode().get().playerextraguy(g, this, 2);
                 if_sound_on_play(g, &mut gp.rm.sfx_extraguysound);
             }
             PowerupType::ExtraLife3 => {
-                g.game_values.gamemode.get().playerextraguy(g, this, 3);
+                g.mode().get().playerextraguy(g, this, 3);
                 if_sound_on_play(g, &mut gp.rm.sfx_extraguysound);
             }
             PowerupType::ExtraLife5 => {
-                g.game_values.gamemode.get().playerextraguy(g, this, 5);
+                g.mode().get().playerextraguy(g, this, 5);
                 if_sound_on_play(g, &mut gp.rm.sfx_extraguysound);
             }
             PowerupType::Fire => {
@@ -1108,7 +1108,7 @@ impl CPlayer {
             return self.invincibility.get_player_palette();
         }
         let this = self.id;
-        if g.game_values.gamemode.gamemode == game_mode_star {
+        if g.mode().gamemode == game_mode_star {
             let starmode = gamemode_as::<CGM_Star>(g).unwrap();
             let starmodetype = starmode.getcurrentmodetype();
             if starmodetype != StarStyle::Multi && starmode.isplayerstar(g, this) {
@@ -1264,7 +1264,7 @@ impl CPlayer {
 
     pub fn try_releasing_powerup(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        if self.tanookisuit.is_statue() || g.game_values.gamemode.gamemode == game_mode_bonus {
+        if self.tanookisuit.is_statue() || g.mode().gamemode == game_mode_bonus {
             return;
         }
 
@@ -2245,7 +2245,7 @@ impl CPlayer {
         }
 
         //now kill the player (don't call this function earlier because we need the old position, etc.
-        let iKillType = g.game_values.gamemode.get().playerkilledplayer(g, killer, killed, style);
+        let iKillType = g.mode().get().playerkilledplayer(g, killer, killed, style);
 
         if PlayerKillType::NonKill != iKillType || fForce {
             if g.player(killed).bobomb {
@@ -2317,7 +2317,7 @@ impl CPlayer {
         let o1 = self.this();
 
         //Don't shyguy tag if this isn't shyguy tag mode or if tag transfers is set to kills only
-        if g.game_values.gamemode.gamemode != game_mode_shyguytag || g.game_values.gamemodesettings.shyguytag.tagtransfer == 1 {
+        if g.mode().gamemode != game_mode_shyguytag || g.game_values.gamemodesettings.shyguytag.tagtransfer == 1 {
             return;
         }
 
@@ -3246,7 +3246,7 @@ impl CPlayer {
         } else {
             self.death_awards(g);
 
-            let iKillType = g.game_values.gamemode.get().playerkilledself(g, this, style);
+            let iKillType = g.mode().get().playerkilledself(g, this, style);
             if PlayerKillType::Normal == iKillType || (PlayerKillType::NonKill == iKillType && fForce) {
                 self.die(g, PlayerDeathStyle::Jump, false, fKillCarriedItem);
             }
@@ -3486,7 +3486,7 @@ impl CPlayer {
     pub fn set_stored_powerup(&mut self, g: &mut Game, iPowerup: i16) {
         let mut gp = g.ptr();
         //If the player as the poison mushroom or the game is over, don't store the powerup
-        if g.game_values.gamepowerups[self.globalID as usize] == PowerupType::PoisonMushroom as i16 || g.game_values.gamemode.gameover {
+        if g.game_values.gamepowerups[self.globalID as usize] == PowerupType::PoisonMushroom as i16 || g.mode().gameover {
             if_sound_on_play(g, &mut gp.rm.sfx_stun);
             return;
         }

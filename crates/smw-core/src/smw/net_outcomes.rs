@@ -67,8 +67,8 @@ pub fn score_locked(g: &mut Game) -> bool {
 
 /// A joiner keeps the game host's game over and winner, whatever its own mode logic concluded.
 pub fn frame_start(g: &mut Game) {
-    if net_random::host_decides(g) && !g.game_values.gamemode.is_null() {
-        let mut gm = g.game_values.gamemode;
+    if net_random::host_decides(g) && !g.mode().is_null() {
+        let mut gm = g.mode();
         gm.gameover = outcome_state(g).g_hostGameOver;
         gm.winningteam = outcome_state(g).g_hostWinner;
     }
@@ -76,7 +76,7 @@ pub fn frame_start(g: &mut Game) {
 
 /// End of a gameplay frame: the host sends changed scores; every client but a deciding host's joiner records them.
 pub fn sample(g: &mut Game) {
-    if !g.netplay.active || g.game_values.gamemode.is_null() {
+    if !g.netplay.active || g.mode().is_null() {
         return;
     }
     if g.netplay.theHostIsMe && net_random::in_game(g) {
@@ -92,7 +92,7 @@ pub fn sample(g: &mut Game) {
 }
 
 fn snapshot(g: &mut Game) -> Vec<i32> {
-    let gm = g.game_values.gamemode;
+    let gm = g.mode();
     let mut v = vec![gm.gameover as i32, gm.winningteam as i32];
     for t in 0..g.score_cnt as usize {
         v.push(g.score[t].score as i32);
@@ -109,7 +109,7 @@ fn record(g: &mut Game) {
         harness::note_net(g, format!("scores {}", text.join(",")));
         outcome_state(g).g_lastScores = scores;
     }
-    let gm = g.game_values.gamemode;
+    let gm = g.mode();
     if gm.gameover && !outcome_state(g).g_lastGameOver {
         harness::note_net(g, format!("gameover winner={}", gm.winningteam));
     }
@@ -132,7 +132,7 @@ pub fn net_apply_scores(g: &mut Game, args: &[i32]) {
         }
     }
     outcome_state(g).g_applying = false;
-    let mut gm = g.game_values.gamemode;
+    let mut gm = g.mode();
     gm.gameover = outcome_state(g).g_hostGameOver;
     gm.winningteam = outcome_state(g).g_hostWinner;
     record(g);

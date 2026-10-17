@@ -920,18 +920,18 @@ pub fn io_moving_object_kill_object_map_hazard<T: IO_MovingObjectTrait + ?Sized>
         this.mo_mut().dead = false;
         this.as_any().downcast_mut::<CO_PhantoKey>().unwrap().place_key(g);
         if_sound_on_play(g, &mut gp.rm.sfx_transform);
-    } else if game_mode_boxes_minigame == g.game_values.gamemode.gamemode && movingObjectType == movingobject_coin {
+    } else if game_mode_boxes_minigame == g.mode().gamemode && movingObjectType == movingobject_coin {
         this.mo_mut().dead = false;
         this.as_any().downcast_mut::<MO_Coin>().unwrap().place_coin(g);
         if_sound_on_play(g, &mut gp.rm.sfx_transform);
-    } else if g.game_values.gamemode.gamemode == game_mode_stomp
+    } else if g.mode().gamemode == game_mode_stomp
         && (movingObjectType == movingobject_goomba
             || movingObjectType == movingobject_koopa
             || movingObjectType == movingobject_spiny
             || movingObjectType == movingobject_buzzybeetle
             || movingObjectType == movingobject_cheepcheep)
     {
-        if !g.game_values.gamemode.gameover {
+        if !g.mode().gameover {
             let mut player = get_player_from_global_id(g, playerID);
 
             if !player.is_none() {

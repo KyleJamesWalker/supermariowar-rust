@@ -80,7 +80,7 @@ impl MO_CheepCheep {
 
         g.player(p).add_killer_award(g, PlayerId::NONE, KillStyle::CheepCheep);
 
-        if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
+        if g.mode().gamemode == game_mode_stomp && !g.mode().gameover {
             g.player(p).score(g).adjust_score(g, 1);
         }
 
@@ -158,7 +158,7 @@ impl CObjectTrait for MO_CheepCheep {
         if g.player(player).is_invincible() || self.frozen {
             g.player(player).add_killer_award(g, PlayerId::NONE, KillStyle::CheepCheep);
 
-            if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
+            if g.mode().gamemode == game_mode_stomp && !g.mode().gameover {
                 g.player(player).score(g).adjust_score(g, 1);
             }
 
@@ -207,7 +207,7 @@ impl CObjectTrait for MO_CheepCheep {
                     return;
                 }
 
-                if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
+                if g.mode().gamemode == game_mode_stomp && !g.mode().gameover {
                     // Find the player that shot this projectile so we can attribute a kill
                     let mut killer = get_player_from_global_id(g, object.iPlayerID);
 

@@ -358,7 +358,7 @@ fn walk(g: &mut Game, s: &mut Snap, online: bool) {
         
         use crate::common::game_mode::*;
         s.io(&mut g.currentgamemode);
-        let mut mode = gv.gamemode.gamemode;
+        let mut mode = g.mode().gamemode;
         s.io(&mut mode);
         let mut boss = g.bossgamemode.get_boss_type();
         s.io(&mut boss);
@@ -369,11 +369,11 @@ fn walk(g: &mut Game, s: &mut Snap, online: bool) {
         if s.load {
             g.bossgamemode.set_boss_type(boss);
             gv.gamemode = match mode {
-                game_mode_bonus => Ptr::from_raw(g.bonushousemode.as_ptr() as *mut dyn CGameModeTrait),
-                game_mode_pipe_minigame => Ptr::from_raw(g.pipegamemode.as_ptr() as *mut dyn CGameModeTrait),
-                game_mode_boss_minigame => Ptr::from_raw(g.bossgamemode.as_ptr() as *mut dyn CGameModeTrait),
-                game_mode_boxes_minigame => Ptr::from_raw(g.boxesgamemode.as_ptr() as *mut dyn CGameModeTrait),
-                m => g.gamemodes[(m as usize).min(GAMEMODE_LAST as usize - 1)],
+                game_mode_bonus => Some(crate::common::game_mode::ModeId::BonusHouse),
+                game_mode_pipe_minigame => Some(crate::common::game_mode::ModeId::Pipe),
+                game_mode_boss_minigame => Some(crate::common::game_mode::ModeId::Boss),
+                game_mode_boxes_minigame => Some(crate::common::game_mode::ModeId::Boxes),
+                m => Some(crate::common::game_mode::ModeId::Standard((m as usize).min(GAMEMODE_LAST as usize - 1) as u8)),
             };
         }
 
@@ -531,7 +531,7 @@ pub fn start_fields(g: &mut Game) -> String {
         MatchType::QuickGame => "quick",
         MatchType::NetGame => "online",
     }));
-    let gm = gv.gamemode;
+    let gm = g.mode();
     f.push(kv("mode", &slug(gm.get_mode_name())));
     if gm.gamemode == crate::common::game_mode::game_mode_star {
         f.push(kv("style", match gv.gamemodesettings.star.shine {
@@ -589,7 +589,7 @@ pub fn start_fields(g: &mut Game) -> String {
 /// The result fields of a match's later markers.
 pub fn result_fields(g: &mut Game) -> String {
     let mut gp = g.ptr();
-    let gm = g.game_values.gamemode;
+    let gm = g.mode();
     let scores: Vec<String> = (0..gp.score_cnt.max(0) as usize).map(|k| g.score[k].score.to_string()).collect();
     let mut f = vec![kv("scores", &scores.join(","))];
     if gm.gameover {

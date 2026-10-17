@@ -91,7 +91,7 @@ pub fn setup_score_board_now(g: &mut Game, fOrderMatters: bool) {
             if !doneWithScore[j as usize] {
                 let sj = g.score[j as usize];
                 //The boxes minigame doesn't use "score" it uses "subscore[0]" to determine the winner
-                if g.game_values.gamemode.gamemode == game_mode_boxes_minigame {
+                if g.mode().gamemode == game_mode_boxes_minigame {
                     if max == -1
                         || sj.subscore[0] > g.score[max as usize].subscore[0]
                         || (sj.subscore[0] == g.score[max as usize].subscore[0] && sj.score > g.score[max as usize].score)
@@ -116,7 +116,7 @@ pub fn setup_score_board_now(g: &mut Game, fOrderMatters: bool) {
         g.score[max as usize].place = i;
 
         if !fOrderMatters && i > 0 {
-            if g.game_values.gamemode.gamemode == game_mode_boxes_minigame {
+            if g.mode().gamemode == game_mode_boxes_minigame {
                 if g.score[oldmax as usize].subscore[0] == g.score[max as usize].subscore[0]
                     && g.score[oldmax as usize].score == g.score[max as usize].score
                 {
@@ -131,7 +131,7 @@ pub fn setup_score_board_now(g: &mut Game, fOrderMatters: bool) {
     }
 
     //Add the treasure chests to the map in world mode if there were any awards for winning this match
-    if g.game_values.matchtype == MatchType::World && g.game_values.gamemode.winningteam > -1 && g.game_values.gamemode.gamemode != game_mode_bonus {
+    if g.game_values.matchtype == MatchType::World && g.mode().winningteam > -1 && g.mode().gamemode != game_mode_bonus {
         let tourStop = g.game_values.tourstops[g.game_values.tourstopcurrent];
         let iNumBonuses: i16 = tourStop.iNumBonuses;
 
@@ -158,9 +158,9 @@ pub fn show_score_board_now(g: &mut Game) {
     g.game_values.flags.showscoreboard = true;
 
     let mut iScoreboardElementHeight: i16 = 45;
-    if g.game_values.gamemode.gamemode == game_mode_health
-        || g.game_values.gamemode.gamemode == game_mode_collection
-        || g.game_values.gamemode.gamemode == game_mode_boxes_minigame
+    if g.mode().gamemode == game_mode_health
+        || g.mode().gamemode == game_mode_collection
+        || g.mode().gamemode == game_mode_boxes_minigame
     {
         iScoreboardElementHeight = 63;
     }

@@ -133,7 +133,7 @@ impl CObjectTrait for OMO_PipeCoin {
             return false;
         }
 
-        if !g.game_values.gamemode.gameover {
+        if !g.mode().gameover {
             if self.iTeamID != -1 {
                 if g.player(player).teamID == self.iTeamID {
                     g.player(player).score(g).adjust_score(g, 1);
@@ -150,7 +150,7 @@ impl CObjectTrait for OMO_PipeCoin {
                 if_sound_on_play(g, &mut gp.rm.sfx_extraguysound);
             }
 
-            gp.game_values.gamemode.check_winner(g, player);
+            gp.mode().check_winner(g, player);
         }
 
         g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, g.rm.spr_coinsparkle, self.ix, self.iy, 7, 4));

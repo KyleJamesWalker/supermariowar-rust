@@ -408,7 +408,7 @@ fn time_out(g: &mut Game, this: &mut CGM_Star) {
 
 fn star_mode(g: &mut Game) -> Option<&'static mut CGM_Star> {
     let mut gp = g.ptr();
-    gp.game_values.gamemode.get().as_any().downcast_mut::<CGM_Star>()
+    gp.mode().get().as_any().downcast_mut::<CGM_Star>()
 }
 
 pub fn net_reassign(g: &mut Game) {

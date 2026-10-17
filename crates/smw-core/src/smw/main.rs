@@ -398,7 +398,7 @@ pub fn create_gamemodes(g: &mut Game) {
     g.gamemodes[21] = new_mode(CGM_ShyGuyTag::new());
 
     g.currentgamemode = 0;
-    g.game_values.gamemode = g.gamemodes[g.currentgamemode as usize];
+    g.game_values.gamemode = Some(crate::common::game_mode::ModeId::Standard((g.currentgamemode as usize) as u8));
 
     //Special modes
     g.bonushousemode = Ptr::new_box(CGM_Bonus::new());

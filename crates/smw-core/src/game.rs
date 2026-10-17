@@ -179,6 +179,20 @@ impl Game {
         unsafe { &mut *(controls as *mut crate::common::input::COutputControl) }
     }
 
+    /// The current game mode, or null before one is chosen.
+    pub fn mode(&self) -> Ptr<dyn CGameModeTrait> {
+        use crate::common::game_mode::ModeId;
+        let dyn_mode = |p: *mut dyn CGameModeTrait| Ptr::from_raw(p);
+        match self.game_values.gamemode {
+            None => Ptr::null(),
+            Some(ModeId::Standard(i)) => self.gamemodes[i as usize],
+            Some(ModeId::BonusHouse) => dyn_mode(self.bonushousemode.as_ptr()),
+            Some(ModeId::Pipe) => dyn_mode(self.pipegamemode.as_ptr()),
+            Some(ModeId::Boss) => dyn_mode(self.bossgamemode.as_ptr()),
+            Some(ModeId::Boxes) => dyn_mode(self.boxesgamemode.as_ptr()),
+        }
+    }
+
     pub fn map_block(&self, x: i16, y: i16) -> Ptr<dyn crate::common::io_block::IO_BlockTrait> {
         self.g_map.block(&self.noncolcontainer, x, y)
     }

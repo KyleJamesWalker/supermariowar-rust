@@ -1138,7 +1138,7 @@ fn marker_state(g: &mut Game) -> &'static str {
     let mut gp = g.ptr();
     match state_name(g) {
         "menu" if MenuState::instance(gp.get()).harness_menu_name() == "world" => "worldmap",
-        "gameplay" if gp.game_values.gamemode.gameover => "scoreboard",
+        "gameplay" if gp.mode().gameover => "scoreboard",
         name => name,
     }
 }

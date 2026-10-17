@@ -46,7 +46,7 @@ impl CObjectTrait for PU_ExtraHeartPowerup {
         let mut gp = g.ptr();
         let mut player = player;
         if self.state > 0 {
-            if g.game_values.gamemode.gamemode == game_mode_health {
+            if g.mode().gamemode == game_mode_health {
                 if g.player(player).score(g).subscore[1] < g.game_values.gamemodesettings.health.maxlife {
                     g.player(player).score(g).subscore[1] += 1;
                 }

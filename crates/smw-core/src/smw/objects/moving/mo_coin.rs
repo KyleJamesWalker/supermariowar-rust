@@ -112,14 +112,14 @@ impl CObjectTrait for MO_Coin {
             return false;
         }
 
-        if !g.game_values.gamemode.gameover {
+        if !g.mode().gameover {
             if self.iType == 2 {
                 g.player(player).score(g).subscore[0] += 1;
             } else {
                 g.player(player).score(g).adjust_score(g, 1);
             }
 
-            gp.game_values.gamemode.check_winner(g, player);
+            gp.mode().check_winner(g, player);
         }
 
         g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, g.rm.spr_coinsparkle, self.ix, self.iy, 7, 4));

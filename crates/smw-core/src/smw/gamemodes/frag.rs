@@ -54,7 +54,7 @@ pub fn cgm_frag_playerkilledplayer<T: CGameModeTrait + ?Sized>(g: &mut Game, thi
     }
 
     //Don't score if "sumo" style scoring is turned on
-    if g.game_values.gamemode.gamemode != game_mode_frag || g.game_values.gamemodesettings.frag.scoring == ScoringStyle::AllKills || style == KillStyle::Push {
+    if g.mode().gamemode != game_mode_frag || g.game_values.gamemodesettings.frag.scoring == ScoringStyle::AllKills || style == KillStyle::Push {
         //Penalize killing your team mates
         if g.player(inflictor).get_team_id() == g.player(other).get_team_id() {
             g.player(inflictor).score(g).adjust_score(g, -1);
@@ -65,7 +65,7 @@ pub fn cgm_frag_playerkilledplayer<T: CGameModeTrait + ?Sized>(g: &mut Game, thi
 
     let iRet = this.check_winner(g, inflictor);
 
-    if g.game_values.gamemode.gamemode == game_mode_frag && g.game_values.gamemodesettings.frag.style == DeathStyle::Shield {
+    if g.mode().gamemode == game_mode_frag && g.game_values.gamemodesettings.frag.style == DeathStyle::Shield {
         if_sound_on_play(g, &mut gp.rm.sfx_powerdown);
         g.player(other).shield().reset(g);
         return PlayerKillType::NonKill;
@@ -81,7 +81,7 @@ pub fn cgm_frag_playerkilledself<T: CGameModeTrait + ?Sized>(g: &mut Game, this:
     if !this.gm().gameover {
         g.player(player).score(g).adjust_score(g, -1);
 
-        if g.game_values.gamemode.gamemode == game_mode_frag && g.game_values.gamemodesettings.frag.style == DeathStyle::Shield {
+        if g.mode().gamemode == game_mode_frag && g.game_values.gamemodesettings.frag.style == DeathStyle::Shield {
             if_sound_on_play(g, &mut gp.rm.sfx_powerdown);
             g.player(player).shield().reset(g);
             return PlayerKillType::NonKill;

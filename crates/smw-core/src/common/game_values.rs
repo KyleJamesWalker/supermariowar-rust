@@ -298,7 +298,7 @@ pub struct CGameValues {
     pub appstate: AppState,
 
     pub flags: GameplayFlags,
-    pub gamemode: Ptr<dyn CGameModeTrait>,
+    pub gamemode: Option<crate::common::game_mode::ModeId>,
 
     pub screenfade: i16,
     pub screenfadespeed: i16,
@@ -458,7 +458,7 @@ impl CGameValues {
             autokill: false,
             appstate: AppState::Splash,
             flags: GameplayFlags::default(),
-            gamemode: Ptr::null(),
+            gamemode: None,
             screenfade: 0,
             screenfadespeed: 0,
             matchtype: MatchType::default(),
@@ -638,7 +638,7 @@ impl CGameValues {
         self.screenfadespeed = -8;
 
         //Initialize game mode
-        self.gamemode.get().init(g);
+        g.mode().get().init(g);
     }
 
     pub fn reset_secret_counters(&mut self) {

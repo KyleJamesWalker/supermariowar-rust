@@ -95,7 +95,7 @@ impl CGM_Survival {
 }
 
 pub fn net_spawn_enemy(g: &mut Game) {
-    if let Some(this) = g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Survival>() {
+    if let Some(this) = g.mode().get().as_any().downcast_mut::<CGM_Survival>() {
         this.spawn_enemy(g);
     }
 }

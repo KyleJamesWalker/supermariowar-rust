@@ -232,7 +232,7 @@ impl CGameModeTrait for CGM_Tag {
 
 fn tag_mode(g: &mut Game) -> Option<&'static mut CGM_Tag> {
     let mut gp = g.ptr();
-    gp.game_values.gamemode.get().as_any().downcast_mut::<CGM_Tag>()
+    gp.mode().get().as_any().downcast_mut::<CGM_Tag>()
 }
 
 pub fn net_reassign(g: &mut Game) {

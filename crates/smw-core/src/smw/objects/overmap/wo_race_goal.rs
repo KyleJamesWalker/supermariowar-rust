@@ -205,8 +205,8 @@ impl CObjectTrait for OMO_RaceGoal {
 
     fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut gp = g.ptr();
-        if g.game_values.gamemode.getgamemode() == game_mode_race && g.player(player).tanookisuit.not_statue() {
-            let gamemode: &mut CGM_Race = g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Race>().unwrap();
+        if g.mode().getgamemode() == game_mode_race && g.player(player).tanookisuit.not_statue() {
+            let gamemode: &mut CGM_Race = g.mode().get().as_any().downcast_mut::<CGM_Race>().unwrap();
 
             if self.tagged[g.player(player).teamID as usize] != g.player(player).colorID && gamemode.get_next_goal(g.player(player).teamID) >= self.goalID {
                 self.tagged[g.player(player).teamID as usize] = g.player(player).colorID;

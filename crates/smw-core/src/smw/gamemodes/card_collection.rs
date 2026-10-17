@@ -86,7 +86,7 @@ pub fn net_spawn_card(g: &mut Game) {
 }
 
 pub fn net_release_card(g: &mut Game, mut player: PlayerId, x: i16, y: i16) {
-    if let Some(this) = g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Collection>() {
+    if let Some(this) = g.mode().get().as_any().downcast_mut::<CGM_Collection>() {
         if !player.is_none() && g.player(player).score(g).subscore[0] > 0 {
             this.drop_card(g, player, Vec2s::new(x, y));
         }
