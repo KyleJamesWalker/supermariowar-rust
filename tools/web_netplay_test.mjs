@@ -39,15 +39,19 @@ const scenario = (game) => {
     const script = (role) => readFileSync(join(dir, `${role}.txt`), 'utf8');
     const param = (key) => script('host').match(new RegExp(`^#@ ${key}=(.*)$`, 'm'))?.[1];
     const frames = Number(param('frames')) + SHIFT;
-    const shifted = (role, from) =>
-        script(role)
+    // From a script's `await gameplay` on, the await already absorbs the delay.
+    const shifted = (role, from) => {
+        let awaited = false;
+        return script(role)
             .split('\n')
             .map((line) => {
                 if (line.startsWith('#@ frames=')) return `#@ frames=${frames}`;
                 const m = line.match(/^(\d+)( .*)$/);
-                return m && Number(m[1]) >= from ? `${Number(m[1]) + SHIFT}${m[2]}` : line;
+                awaited ||= / await gameplay$/.test(line);
+                return m && !awaited && Number(m[1]) >= from ? `${Number(m[1]) + SHIFT}${m[2]}` : line;
             })
             .join('\n');
+    };
     const map = param('map');
     const netSeed = param('net_seed');
     const mapFile = map && { name: `${map}.map`, base64: readFileSync(join(repo, 'tools', 'ref', 'net_maps', `${map}.map`)).toString('base64') };
