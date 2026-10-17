@@ -1,7 +1,7 @@
 //! The boundary between the game and a platform backend (docs/ARCHITECTURE_V2.md, Trait boundaries and
 //! Normalized input). Nothing implements or calls these yet; phases 2 and 3 move the SDL calls behind them.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub const SCREEN_W: usize = 640;
 pub const SCREEN_H: usize = 480;
@@ -126,6 +126,11 @@ pub trait Storage {
     fn root_dir(&self) -> PathBuf;
     /// Flushes written settings where that needs a step (IDBFS on the web).
     fn persist(&mut self) {}
+    /// The entries of a directory in the order the game lists them, empty when it cannot be read. The game keeps
+    /// that order for packs, tours, filters and backgrounds, so it decides which one is first.
+    fn list_dir(&self, dir: &Path) -> Vec<PathBuf> {
+        std::fs::read_dir(dir).map(|entries| entries.filter_map(|e| e.ok()).map(|e| e.path()).collect()).unwrap_or_default()
+    }
 }
 
 /// What the game reaches through its context.
