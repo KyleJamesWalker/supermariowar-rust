@@ -508,7 +508,7 @@ pub fn main_game(g: &mut Game) {
         println!("\n---------------- loading ----------------");
 
         for iScore in 0..4 {
-            g.score[iScore] = Ptr::new_box(CScore::new(iScore as i16));
+            g.score[iScore].init(CScore::new(iScore as i16));
         }
 
         CGameValues::init(&mut gp.game_values, g);
@@ -557,11 +557,6 @@ pub fn main_game(g: &mut Game) {
         sfx_close(g);
         gfx_close();
         net_close(g);
-
-        //Delete player skins
-        for k in 0..MAX_PLAYERS as usize {
-            g.score[k].delete();
-        }
 
         // release all resources
         g.rm.delete();

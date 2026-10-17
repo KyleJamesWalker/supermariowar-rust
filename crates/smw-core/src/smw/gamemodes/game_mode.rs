@@ -89,7 +89,7 @@ pub fn setup_score_board_now(g: &mut Game, fOrderMatters: bool) {
 
         for j in 0..g.score_cnt {
             if !doneWithScore[j as usize] {
-                let sj = g.score[j as usize];
+                let sj = g.score[j as usize].as_ptr();
                 //The boxes minigame doesn't use "score" it uses "subscore[0]" to determine the winner
                 if g.mode().gamemode == game_mode_boxes_minigame {
                     if max == -1
@@ -166,7 +166,7 @@ pub fn show_score_board_now(g: &mut Game) {
     }
 
     for i in 0..g.score_cnt {
-        let mut s = g.score[i as usize];
+        let mut s = g.score[i as usize].as_ptr();
         s.destx = (309 - 34 * g.game_values.teamcounts[i as usize] as i32) as i16;
         s.desty = (s.displayorder as i32 * iScoreboardElementHeight as i32 + 140) as i16;
     }

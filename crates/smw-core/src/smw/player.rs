@@ -768,8 +768,8 @@ impl CPlayer {
         self.superstomp.is_stomping()
     }
 
-    pub fn score(&self, g: &Game) -> &'static mut CScore {
-        g.score[self.score_slot].get()
+    pub fn score(&self, g: &mut Game) -> &'static mut CScore {
+        g.score[self.score_slot].as_ptr().get()
     }
 
     pub fn respawncounter(&self, g: &mut Game) -> &'static mut i16 {

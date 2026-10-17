@@ -79,7 +79,7 @@ pub fn cgm_classic_playerkilledplayer(g: &mut Game, this: &mut CGM_Classic, mut 
             if !this.playedwarningsound {
                 let mut countscore: i16 = 0;
                 for k in 0..g.score_cnt {
-                    if Ptr::from_mut(g.player(inflictor).score(g)) == g.score[k as usize] {
+                    if g.player(inflictor).score_slot == (k as usize) as usize {
                         continue;
                     }
 

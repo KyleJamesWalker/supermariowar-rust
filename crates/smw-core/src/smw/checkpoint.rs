@@ -388,7 +388,7 @@ fn walk(g: &mut Game, s: &mut Snap, online: bool) {
         }
 
         for k in 0..4 {
-            let mut sc = g.score[k];
+            let mut sc = g.score[k].as_ptr();
             s.io(&mut sc.score);
             s.io(&mut sc.subscore);
             s.io(&mut sc.x);

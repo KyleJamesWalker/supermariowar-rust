@@ -108,7 +108,7 @@ impl CGameModeTrait for CGM_Boxes_MiniGame {
         if !self.playedwarningsound {
             let mut countscore: i16 = 0;
             for k in 0..g.score_cnt as usize {
-                if Ptr::from_mut(g.player(inflictor).score(g)) == g.score[k] {
+                if g.player(inflictor).score_slot == (k) as usize {
                     continue;
                 }
 

@@ -168,8 +168,8 @@ impl GameplayState {
         let gm = g.mode();
         writeln!(out, "G mode={} gameover={} winner={}", gm.gamemode as i32, gm.gameover as i32, gm.winningteam)?;
 
-        for player in g.players.iter() {
-            let p = *player;
+        for i in 0..g.players.len() {
+            let p = g.players[i];
             let s = g.player(p).score(g).score as i32;
             writeln!(
                 out,
@@ -426,7 +426,7 @@ impl GameplayState {
         totalspace = (totalspace as i32 + 20 * (g.score_cnt as i32 - 1)) as i16;
 
         for i in 0..g.score_cnt as usize {
-            let mut s = g.score[i];
+            let mut s = g.score[i].as_ptr();
             if g.game_values.scoreboardstyle == ScoreboardStyle::Top || g.game_values.scoreboardstyle == ScoreboardStyle::Bottom {
                 s.x = ((App::screenWidth - totalspace as i32) >> 1) as i16;
 
@@ -1173,7 +1173,7 @@ impl GameplayState {
 
             //in game scoreboards
             for i in 0..g.score_cnt as usize {
-                let s = g.score[i];
+                let s = g.score[i].as_ptr();
                 let teamcount = g.game_values.teamcounts[i];
                 let gm = g.mode().gamemode;
                 if gm == game_mode_health || gm == game_mode_collection || gm == game_mode_boxes_minigame {
@@ -2213,7 +2213,7 @@ pub fn update_scoreboard_animation(g: &mut Game) {
         }
 
         for i in 0..g.score_cnt as usize {
-            let mut s = g.score[i];
+            let mut s = g.score[i].as_ptr();
             s.x = ((((s.destx as i32 - s.fromx as i32) as f32 * g.game_values.flags.scorepercentmove) as i16) as i32 + s.fromx as i32) as i16;
             s.y = ((((s.desty as i32 - s.fromy as i32) as f32 * g.game_values.flags.scorepercentmove) as i16) as i32 + s.fromy as i32) as i16;
         }
