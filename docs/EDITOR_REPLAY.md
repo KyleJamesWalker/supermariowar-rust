@@ -26,7 +26,7 @@ tools/make_editor_golden.sh [script ...]     # regenerate tools/editor_golden/
 - It uses a fresh `HOME`, so no `worldeditor.bin` or `leveleditor.bin` from a previous run is read.
 - It sets the same `SDL_VIDEODRIVER=dummy` / `SDL_AUDIODRIVER=dummy` / `SMW_*` environment as `run_ref.sh`.
 
-Without `SMW_BIN` it runs `~/work/supermariowar-cpp-reference/build/smw-<editor>` (`SMW_EDITOR_REF_DIR` overrides the tree). `editor_parity.sh` points it at `target/release/<editor>or` (`worldeditor`, `leveleditor`) and the repository's `data/`.
+Without `SMW_BIN` it runs `~/work/supermariowar-cpp-reference/build/smw-<editor>` (`SMW_EDITOR_REF_DIR` overrides the tree). `editor_parity.sh` points it at `target/release/<editor>or` (`worldeditor`, `leveleditor`) and the repository's `data/`. With `SMW_EDITOR_BIN_SUFFIX=_replay` it runs `leveleditor_replay` and `worldeditor_replay` instead, the editors on the headless backend (`apps/smw_replay`), which CI's parity job checks on every OS and adds to the `headless-<os>` determinism manifests.
 
 Script directives, given as `#@ key=value` lines:
 

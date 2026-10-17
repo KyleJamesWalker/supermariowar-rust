@@ -3,6 +3,7 @@
 # per-frame dump, screenshots, and every saved file (byte for byte).
 # Usage: editor_parity.sh [editor_replays/<editor>/<x>.txt ...]   (default: all)
 # GOLDEN_ROOT=<dir> reads <dir>/editor_golden/ instead. SMW_NO_BUILD=1 skips cargo.
+# SMW_EDITOR_BIN_SUFFIX=_replay runs the headless editors (apps/smw_replay) instead.
 # Exit status 1 if anything differs.
 set -uo pipefail
 
@@ -32,7 +33,7 @@ for script in "${scripts[@]}"; do
     out="$out_root/$editor/$name"
     echo "=== $editor/$name"
 
-    SMW_BIN="$port/target/release/${editor%it}itor" SMW_DATA_DIR="$port/data" \
+    SMW_BIN="$port/target/release/${editor%it}itor${SMW_EDITOR_BIN_SUFFIX:-}" SMW_DATA_DIR="$port/data" \
         "$tools/run_editor.sh" "$editor" "$script" "$out" > /dev/null
     status=$?
     if [[ $status -ne 0 ]]; then
