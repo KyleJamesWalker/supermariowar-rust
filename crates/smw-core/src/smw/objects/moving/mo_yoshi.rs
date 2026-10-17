@@ -139,8 +139,8 @@ impl CObjectTrait for MO_Yoshi {
 
     fn collide_player(&mut self, g: &mut Game, mut player: PlayerId) -> bool {
         let mut gp = g.ptr();
-        if !g.player(player).carriedItem.is_null() && g.player(player).carriedItem.get_moving_object_type() == movingobject_egg {
-            let mut egg: Ptr<CO_Egg> = Ptr::from_mut(g.player(player).carriedItem.as_any().downcast_mut::<CO_Egg>().unwrap());
+        if !g.carried_item(player).is_null() && g.carried_item(player).get_moving_object_type() == movingobject_egg {
+            let mut egg: Ptr<CO_Egg> = Ptr::from_mut(g.carried_item(player).as_any().downcast_mut::<CO_Egg>().unwrap());
 
             if egg.color == self.color {
                 if !g.game_values.gamemode.gameover {

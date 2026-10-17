@@ -2856,8 +2856,8 @@ pub fn net_mystery_swap(g: &mut Game, iUsingPlayerID: i16) -> bool {
             g.player(player).set_xf(nx);
             g.player(player).set_yf(ny);
 
-            if !g.player(player).carriedItem.is_null() {
-                g.player(player).carriedItem.move_to_owner(g);
+            if !g.carried_item(player).is_null() {
+                g.carried_item(player).move_to_owner(g);
             }
         }
     }

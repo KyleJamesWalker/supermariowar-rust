@@ -1,5 +1,6 @@
 //! Port of src/smw/player.cpp
 
+use crate::smw::object_container::ObjectId;
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
@@ -228,7 +229,7 @@ pub struct CPlayer {
 
     pub fAcceptingItem: bool,
     pub fPressedAcceptItem: bool,
-    pub carriedItem: Ptr<dyn MO_CarriedObjectTrait>,
+    pub carriedItem: ObjectId,
 
     pub platform: Ptr<MovingPlatform>,
     pub iHorizontalPlatformCollision: i16,
@@ -375,7 +376,7 @@ impl CPlayer {
             powerupangle: 0.0,
             fAcceptingItem: false,
             fPressedAcceptItem: false,
-            carriedItem: Ptr::null(),
+            carriedItem: ObjectId::NONE,
             ownerPlayerID: -1,
             ownerColorOffsetX: 0,
             spawntext: 20, // set it to 20 so there is an immediate text spawned upon winning
@@ -871,6 +872,7 @@ impl CPlayer {
             ttl,
         ));
 
+        gp.objectcontainer[1].reserve(bomb);
         if self.accept_item(bomb.get().as_carried_ptr()) {
             bomb.owner = this;
             bomb.get().move_to_owner(g);
@@ -1286,7 +1288,7 @@ impl CPlayer {
     }
 
     pub fn use_special_powerup(&mut self, g: &mut Game) {
-        self.fAcceptingItem = self.carriedItem.is_null();
+        self.fAcceptingItem = self.carriedItem.is_none();
 
         if !self.lockfire {
             if self.bobomb {
@@ -1332,8 +1334,9 @@ impl CPlayer {
         self.lockfire = false;
         self.fAcceptingItem = false;
 
-        if !self.carriedItem.is_null() {
-            let item = self.carriedItem.get();
+        let mut item = g.carried(self.carriedItem);
+        if !item.is_null() {
+            let item = item.get();
             if self.keys().game_down().fDown {
                 MO_CarriedObjectTrait::drop(item, g);
             } else {
@@ -1348,7 +1351,7 @@ impl CPlayer {
                 item.kick(g);
             }
 
-            self.carriedItem = Ptr::null();
+            self.carriedItem = ObjectId::NONE;
         }
     }
 
@@ -2002,14 +2005,15 @@ impl CPlayer {
         }
 
         //Drop any item the dead player was carrying
-        if !self.carriedItem.is_null() {
+        let mut item = g.carried(self.carriedItem);
+        if !item.is_null() {
             if fKillCarriedItem {
-                self.carriedItem.get().kill_object_map_hazard(g, -1);
+                item.get().kill_object_map_hazard(g, -1);
             } else {
-                MO_CarriedObjectTrait::drop(self.carriedItem.get(), g);
+                MO_CarriedObjectTrait::drop(item.get(), g);
             }
 
-            self.carriedItem = Ptr::null();
+            self.carriedItem = ObjectId::NONE;
         }
 
         //Drop a shoe item if the player died in one
@@ -2044,9 +2048,10 @@ impl CPlayer {
         debug_assert!(r#type > 0);
         self.kuriboshoe.set_type(r#type);
 
-        if !self.carriedItem.is_null() && !self.carriedItem.is_carried_by_kuribo_shoe() {
-            MO_CarriedObjectTrait::drop(self.carriedItem.get(), g);
-            self.carriedItem = Ptr::null();
+        let mut item = g.carried(self.carriedItem);
+        if !item.is_null() && !item.is_carried_by_kuribo_shoe() {
+            MO_CarriedObjectTrait::drop(item.get(), g);
+            self.carriedItem = ObjectId::NONE;
         }
 
         //Clear out powerup states that the player might be in the middle of
@@ -2536,8 +2541,9 @@ impl CPlayer {
             self.set_yf(((self.fNewSwapY - self.fOldSwapY) * g.game_values.flags.swapplayersposition) + self.fOldSwapY);
         }
 
-        if !self.carriedItem.is_null() {
-            self.carriedItem.get().move_to_owner(g);
+        let mut item = g.carried(self.carriedItem);
+        if !item.is_null() {
+            item.get().move_to_owner(g);
         }
     }
 
@@ -2553,8 +2559,9 @@ impl CPlayer {
 
         self.draw(g);
 
-        if !self.carriedItem.is_null() {
-            self.carriedItem.get().draw(g);
+        let mut item = g.carried(self.carriedItem);
+        if !item.is_null() {
+            item.get().draw(g);
         }
     }
 
@@ -3320,10 +3327,11 @@ impl CPlayer {
         if self.fAcceptingItem && self.tanookisuit.not_statue() && (!self.kuriboshoe.is_on() || item.is_carried_by_kuribo_shoe()) {
             self.action = PlayerAction::None;
 
-            self.carriedItem = item;
+            self.carriedItem = item.get().as_object_ptr().id;
+            debug_assert!(!self.carriedItem.is_none(), "carried item has no handle; reserve it first");
             item.owner = self.id;
-            self.carriedItem.velx = 0.0;
-            self.carriedItem.vely = 0.0;
+            item.velx = 0.0;
+            item.vely = 0.0;
 
             self.fAcceptingItem = false;
             return true;

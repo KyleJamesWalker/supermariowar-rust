@@ -2,6 +2,7 @@
 
 use crate::common::gfx::soft_surface::Surface;
 use crate::smw::object_container::ObjectId;
+use crate::smw::players::PlayerId;
 use crate::common::eyecandy::{CEyecandyContainer, SpotlightManager};
 use crate::common::game_mode::{CGameModeTrait, GAMEMODE_LAST};
 use crate::common::file_list::{AnnouncerList, FiltersList, GraphicsList, MusicList, SkinList, SoundsList, TourList, WorldList, WorldMusicList};
@@ -145,6 +146,18 @@ impl Game {
             3 => self.noncolcontainer.get(id),
             c => self.objectcontainer.get(c as usize)?.get(id),
         }
+    }
+
+    /// The item `id` names, or null: what the C++ `carriedItem` pointer held.
+    pub fn carried(&self, id: ObjectId) -> Ptr<dyn crate::smw::objects::moving::mo_carried_object::MO_CarriedObjectTrait> {
+        match self.object(id) {
+            Some(mut obj) => obj.get().as_io_moving_object().and_then(|m| m.as_carried_object()).map(Ptr::from_mut).unwrap_or_else(Ptr::null),
+            None => Ptr::null(),
+        }
+    }
+
+    pub fn carried_item(&self, player: PlayerId) -> Ptr<dyn crate::smw::objects::moving::mo_carried_object::MO_CarriedObjectTrait> {
+        self.carried(self.player(player).carriedItem)
     }
 
     /// The object `id` names, if it is still alive and a `T`.

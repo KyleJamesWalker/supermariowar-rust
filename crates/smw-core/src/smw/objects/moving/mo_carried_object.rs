@@ -120,7 +120,7 @@ impl MO_CarriedObject {
 impl Drop for MO_CarriedObject {
     fn drop(&mut self) {
         if let Some(owner) = self.game.players.get(self.owner) {
-            owner.carriedItem = Ptr::null();
+            owner.carriedItem = crate::smw::object_container::ObjectId::NONE;
         }
     }
 }
@@ -151,7 +151,7 @@ pub fn mo_carried_object_drop<T: MO_CarriedObjectTrait + ?Sized>(g: &mut Game, t
     {
         let o = this.carried_mut();
         if !o.owner.is_none() {
-            g.player(o.owner).carriedItem = Ptr::null();
+            g.player(o.owner).carriedItem = crate::smw::object_container::ObjectId::NONE;
         }
 
         o.owner = PlayerId::NONE;

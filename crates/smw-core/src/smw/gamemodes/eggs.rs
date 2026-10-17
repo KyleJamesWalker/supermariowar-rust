@@ -85,7 +85,7 @@ impl CGameModeTrait for CGM_Eggs {
     fn playerkilledself(&mut self, g: &mut Game, player: PlayerId, style: KillStyle) -> PlayerKillType {
         cgamemode_playerkilledself(g, self, player, style);
 
-        let mut item = g.player(player).carriedItem;
+        let mut item = g.carried_item(player);
         if !item.is_null() && item.get_moving_object_type() == movingobject_egg {
             item.as_any().downcast_mut::<CO_Egg>().expect("carried egg").place_egg(g);
         }

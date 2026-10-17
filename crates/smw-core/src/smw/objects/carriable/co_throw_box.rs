@@ -109,7 +109,7 @@ impl CO_ThrowBox {
         if_sound_on_play(g, &mut gp.rm.sfx_breakblock);
 
         if !self.owner.is_none() {
-            g.player(self.owner).carriedItem = Ptr::null();
+            g.player(self.owner).carriedItem = crate::smw::object_container::ObjectId::NONE;
             self.owner = PlayerId::NONE;
         }
 

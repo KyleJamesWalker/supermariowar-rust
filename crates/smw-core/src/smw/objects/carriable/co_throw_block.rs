@@ -102,7 +102,7 @@ impl CO_ThrowBlock {
             // Holding
             if player != self.owner {
                 if !self.owner.is_none() {
-                    g.player(self.owner).carriedItem = Ptr::null();
+                    g.player(self.owner).carriedItem = crate::smw::object_container::ObjectId::NONE;
                 }
 
                 self.kick(g);
@@ -189,7 +189,7 @@ impl CO_ThrowBlock {
         if_sound_on_play(g, &mut gp.rm.sfx_breakblock);
 
         if !self.owner.is_none() {
-            g.player(self.owner).carriedItem = Ptr::null();
+            g.player(self.owner).carriedItem = crate::smw::object_container::ObjectId::NONE;
             self.owner = PlayerId::NONE;
         }
     }
@@ -278,7 +278,7 @@ impl CObjectTrait for CO_ThrowBlock {
             self.dead = true;
 
             if !self.owner.is_none() {
-                g.player(self.owner).carriedItem = Ptr::null();
+                g.player(self.owner).carriedItem = crate::smw::object_container::ObjectId::NONE;
                 self.owner = PlayerId::NONE;
             }
 

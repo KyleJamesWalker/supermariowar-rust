@@ -79,7 +79,7 @@ impl CGameModeTrait for CGM_CaptureTheFlag {
         let mut gp = g.ptr();
         cgamemode_playerkilledself(g, self, player, style);
 
-        let mut item = g.player(player).carriedItem;
+        let mut item = g.carried_item(player);
         if !item.is_null() && item.get_moving_object_type() == movingobject_flag {
             item.as_any().downcast_mut::<CO_Flag>().expect("carried flag").place_flag(g);
             if_sound_on_play(g, &mut gp.rm.sfx_transform);

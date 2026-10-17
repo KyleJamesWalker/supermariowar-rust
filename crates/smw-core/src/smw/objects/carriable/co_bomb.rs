@@ -153,7 +153,7 @@ impl IO_MovingObjectTrait for CO_Bomb {
         let mut gp = g.ptr();
         let mut rm = g.rm;
         if !self.owner.is_none() {
-            g.player(self.owner).carriedItem = Ptr::null();
+            g.player(self.owner).carriedItem = crate::smw::object_container::ObjectId::NONE;
             self.owner = PlayerId::NONE;
         }
 

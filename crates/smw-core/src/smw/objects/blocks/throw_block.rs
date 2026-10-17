@@ -57,6 +57,7 @@ impl B_ThrowBlock {
         let mut gp = g.ptr();
         let mut rm = g.rm;
         let mut block = Ptr::new_box(CO_ThrowBlock::new(g, rm.spr_blueblock, Vec2s::new(self.ix, self.iy), self.iType));
+        gp.objectcontainer[1].reserve(block);
         let item: Ptr<dyn MO_CarriedObjectTrait> = Ptr::from_mut(block.get() as &mut dyn MO_CarriedObjectTrait);
         if g.player(player).accept_item(item) {
             self.dead = true;
@@ -67,7 +68,7 @@ impl B_ThrowBlock {
             block.iPlayerID = g.player(player).globalID;
             gp.objectcontainer[1].add(g, block);
         } else {
-            block.delete();
+            gp.objectcontainer[1].unreserve(block);
         }
     }
 }

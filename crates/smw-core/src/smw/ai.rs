@@ -423,7 +423,7 @@ impl CPlayerAI {
         self.nearestObjects.reset();
 
         let pPlayer = self.pPlayer;
-        let carriedItem = g.player(pPlayer).carriedItem;
+        let carriedItem = g.carried_item(pPlayer);
         let carriedObj = carried_as_object(carriedItem);
         let fInvincible = g.player(pPlayer).is_invincible() || g.player(pPlayer).is_shielded() || g.player(pPlayer).shyguy;
         let iTeamID: i16 = g.player(pPlayer).teamID;
@@ -1011,7 +1011,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
         }
 
         let iStoredPowerup: i16 = g.game_values.gamepowerups[g.player(pPlayer).globalID as usize];
-        let mut carriedItem = g.player(pPlayer).carriedItem;
+        let mut carriedItem = g.carried_item(pPlayer);
         let carriedObj = carried_as_object(carriedItem);
         let ix: i16 = g.player(pPlayer).ix;
         let iy: i16 = g.player(pPlayer).iy;

@@ -185,7 +185,7 @@ impl CO_Shell {
             // Holding
             if player != self.owner && (g.game_values.teamcollision == TeamCollisionStyle::On || g.player(player).teamID != g.player(self.owner).teamID) {
                 if !self.owner.is_none() {
-                    g.player(self.owner).carriedItem = Ptr::null();
+                    g.player(self.owner).carriedItem = crate::smw::object_container::ObjectId::NONE;
                 }
 
                 self.kick(g);
@@ -293,7 +293,7 @@ impl CO_Shell {
         self.iKillCounter = 0;
 
         if !self.owner.is_none() {
-            g.player(self.owner).carriedItem = Ptr::null();
+            g.player(self.owner).carriedItem = crate::smw::object_container::ObjectId::NONE;
             self.owner = PlayerId::NONE;
         }
 
@@ -493,7 +493,7 @@ impl CObjectTrait for CO_Shell {
                 if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
 
                 if !self.owner.is_none() {
-                    g.player(self.owner).carriedItem = Ptr::null();
+                    g.player(self.owner).carriedItem = crate::smw::object_container::ObjectId::NONE;
                     self.owner = PlayerId::NONE;
                 }
 
@@ -657,7 +657,7 @@ impl IO_MovingObjectTrait for CO_Shell {
         self.iKillCounter = 0;
 
         if !self.owner.is_none() {
-            g.player(self.owner).carriedItem = Ptr::null();
+            g.player(self.owner).carriedItem = crate::smw::object_container::ObjectId::NONE;
             self.owner = PlayerId::NONE;
         }
     }
@@ -686,7 +686,7 @@ impl MO_CarriedObjectTrait for CO_Shell {
 
     fn drop(&mut self, g: &mut Game) {
         if !self.owner.is_none() {
-            g.player(self.owner).carriedItem = Ptr::null();
+            g.player(self.owner).carriedItem = crate::smw::object_container::ObjectId::NONE;
             let xi = (g.player(self.owner).ix as i32 + if g.player(self.owner).is_facing_right(g) { PW + 1 } else { -31 }) as i16;
             self.set_xi(xi);
         }
