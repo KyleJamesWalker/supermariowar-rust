@@ -179,8 +179,6 @@ pub struct MenuState {
     iDisplayErrorTimer: i16,
     fNeedMenuMusicReset: bool,
 
-    /// Aliases the map field's name buffer, like the C++ `const char*` into `char szMapName[256]`.
-    szCurrentMapName: Ptr<String>,
 
     iUnlockMinigameOptionIndex: i16,
 
@@ -231,7 +229,6 @@ impl MenuState {
             iDisplayError: DISPLAY_ERROR_NONE,
             iDisplayErrorTimer: 0,
             fNeedMenuMusicReset: false,
-            szCurrentMapName: Ptr::null(),
             iUnlockMinigameOptionIndex: 0,
             iTournamentAIStep: 0,
             iTournamentAITimer: 0,
@@ -715,8 +712,8 @@ impl MenuState {
 
                 if MatchType::SingleGame == g.game_values.matchtype || MatchType::Tournament == g.game_values.matchtype || MatchType::NetGame == g.game_values.matchtype {
                     println!("  MatchType::SingleGame || MatchType::Tournament");
-                    println!("current map: {}", *self.szCurrentMapName);
-                    let szCurrentMapName = (*self.szCurrentMapName).clone();
+                    let szCurrentMapName = g.ctl(self.mGameSettingsMenu.miMapField).szMapName.clone();
+                    println!("current map: {}", szCurrentMapName);
                     g.maplist.findexact(&szCurrentMapName, false);
                     g.ctl(self.mGameSettingsMenu.miMapField).load_current_map(g);
 
@@ -1359,7 +1356,6 @@ impl MenuState {
                 println!("[net] Selected map: {}", g.netplay.mapfilepath);
                 self.mNetRoomMenu.set_preview_map_path(g, &gp.netplay.mapfilepath);
             } else if g.game_values.matchtype != MatchType::Tour {
-                self.szCurrentMapName = Ptr::from_mut(&mut g.ctl(self.mGameSettingsMenu.miMapField).szMapName);
             }
         } else if MENU_CODE_MAP_FILTER_EXIT == code {
             let gv = gp;
@@ -1368,7 +1364,6 @@ impl MenuState {
             //If the filtered map list has at least 1 map in it, then allow exiting the filter menu
             if g.maplist.map_in_filtered_set() {
                 g.ctl(self.mGameSettingsMenu.miMapField).load_current_map(g);
-                self.szCurrentMapName = Ptr::from_mut(&mut g.ctl(self.mGameSettingsMenu.miMapField).szMapName);
 
                 self.mGameSettingsMenu.close_map_filters(g);
 
@@ -1387,7 +1382,6 @@ impl MenuState {
             self.current().reset_menu(g);
         } else if MENU_CODE_MAP_BROWSER_EXIT == code {
             g.ctl(self.mGameSettingsMenu.miMapField).load_current_map(g);
-            self.szCurrentMapName = Ptr::from_mut(&mut g.ctl(self.mGameSettingsMenu.miMapField).szMapName);
 
             self.mCurrentMenu = MenuId::GameSettings;
             //mCurrentMenu->ResetMenu();
@@ -1594,7 +1588,6 @@ impl GameState for MenuState {
             g.ctl(self.mGameSettingsMenu.miMapField).load_current_map(g);
         }
 
-        self.szCurrentMapName = Ptr::from_mut(&mut g.ctl(self.mGameSettingsMenu.miMapField).szMapName);
 
         true
     }
