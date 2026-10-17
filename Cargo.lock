@@ -676,6 +676,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "smw3"
+version = "0.1.0"
+dependencies = [
+ "smw-core",
+ "smw-sdl3",
+]
+
+[[package]]
 name = "smw_relay"
 version = "0.1.0"
 dependencies = [

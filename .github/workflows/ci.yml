@@ -189,12 +189,14 @@ jobs:
           "$SMW_REF_DIR/build-reference.sh"
 
       - name: Build
-        run: cargo build --release --locked --bins
+        run: |
+          cargo build --release --locked --bins
+          cargo build --release --locked -p smw3 ${{ runner.os == 'Linux' && '--features smw-sdl3/build-from-source' || '' }}
 
       - name: Pack
         run: |
           exe="${{ runner.os == 'Windows' && '.exe' || '' }}"
-          tar -cf rust-bin.tar -C target/release "smw$exe" "smw_replay$exe" "leveleditor$exe" "worldeditor$exe" "leveleditor_replay$exe" "worldeditor_replay$exe"
+          tar -cf rust-bin.tar -C target/release "smw$exe" "smw3$exe" "smw_replay$exe" "leveleditor$exe" "worldeditor$exe" "leveleditor_replay$exe" "worldeditor_replay$exe"
           if [[ $RUNNER_OS != Windows ]]; then
             tar -cf cpp-ref.tar -C "$SMW_REF_DIR" build/smw build/smw-leveledit build/smw-worldedit
           fi
@@ -357,6 +359,26 @@ jobs:
           [[ -s summary.txt ]] || exit 1
           exit $status
 
+      - name: SDL3 parity
+        if: matrix.check == 'goldens'
+        env:
+          SMW_NO_BUILD: '1'
+          PARITY_OUT: ${{ runner.temp }}/parity-sdl3/game
+        run: |
+          status=0
+          SMW_BIN="$PWD/target/release/smw3" tools/parity.sh > sdl3.log || status=$?
+          sed -n '/^=== summary/,$p' sdl3.log > sdl3-summary.txt
+          {
+            echo "### SDL3 parity vs the committed goldens (${{ matrix.os }})"
+            echo "$(grep -c 'MATCH all' sdl3-summary.txt) of $(($(wc -l < sdl3-summary.txt) - 1)) dumps match"
+            echo '```'
+            grep -v -E 'MATCH all .* shots ([0-9]+)/\1$' sdl3-summary.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat sdl3.log
+          [[ -s sdl3-summary.txt ]] || exit 1
+          exit $status
+
       - name: Headless editor parity
         if: ${{ !cancelled() && matrix.check == 'goldens' }}
         env:
@@ -493,6 +515,9 @@ jobs:
           if [[ -d $RUNNER_TEMP/parity-headless ]]; then
             python3 tools/determinism.py manifest "headless-${{ matrix.os }}" game "$RUNNER_TEMP/parity-headless/game" editor "$RUNNER_TEMP/parity-headless/editor" > "$RUNNER_TEMP/determinism-headless-${{ matrix.os }}.txt"
           fi
+          if [[ -d $RUNNER_TEMP/parity-sdl3 ]]; then
+            python3 tools/determinism.py manifest "sdl3-${{ matrix.os }}" game "$RUNNER_TEMP/parity-sdl3/game" > "$RUNNER_TEMP/determinism-sdl3-${{ matrix.os }}.txt"
+          fi
 
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() && matrix.suites }}
@@ -511,12 +536,21 @@ jobs:
           retention-days: 7
 
       - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() && matrix.check == 'goldens' }}
+        with:
+          name: determinism-sdl3-${{ matrix.os }}
+          path: ${{ runner.temp }}/determinism-sdl3-${{ matrix.os }}.txt
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - uses: actions/upload-artifact@v7
         if: failure() && !matrix.shard
         with:
           name: parity-${{ matrix.os }}-${{ matrix.check }}
           path: |
             ${{ runner.temp }}/parity
             ${{ runner.temp }}/parity-headless
+            ${{ runner.temp }}/parity-sdl3
             *.log
           retention-days: 7
 
