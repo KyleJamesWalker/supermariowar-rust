@@ -322,6 +322,16 @@ impl MenuState {
         "unknown"
     }
 
+    /// The names an `await` line can give the current menu: its dump name, and for `mode_settings` and
+    /// `boss_settings`, which the dump calls `unknown`, that name too.
+    pub fn harness_names(&self) -> Vec<&'static str> {
+        match self.mCurrentMenu {
+            MenuId::ModeSettings(_) => vec!["mode_settings", "unknown"],
+            MenuId::BossSettings => vec!["boss_settings", "unknown"],
+            _ => vec![self.harness_menu_name()],
+        }
+    }
+
     pub fn harness_focus_index(&mut self) -> i32 {
         if self.mCurrentMenu != MenuId::None {
             self.current().current_focus_index()

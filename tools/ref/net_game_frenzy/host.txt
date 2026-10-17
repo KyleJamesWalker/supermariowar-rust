@@ -3,18 +3,22 @@
 #@ map=netplay_arena
 #@ compare=--min frenzycard=1 --min-close 0.5
 10 down Return
+12 await main
 12 up Return
 30 down Down
 32 up Down
 40 down Down
 42 up Down
 50 down Return
+52 await net_servers
 52 up Return
 70 down Down
 72 up Down
 80 down Return
 82 up Return
+150 await net_lobby
 150 down Return
+152 await net_new_room_settings
 152 up Return
 154 down Up
 155 up Up
@@ -67,6 +71,7 @@
 202 down Up
 203 up Up
 250 down Return
+252 await net_new_room
 252 up Return
 270 down Return
 272 up Return
@@ -84,10 +89,12 @@
 322 up Down
 330 down Return
 332 up Return
+620 await net_room
 620 down Up
 622 up Up
 630 down Return
 632 up Return
+665 await gameplay
 700 down Right
 702 down Up
 708 up Up

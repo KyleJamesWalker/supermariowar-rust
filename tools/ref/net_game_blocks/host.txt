@@ -3,18 +3,22 @@
 #@ map=netplay_blocks
 #@ compare=--min-spawns 3 --min-close 0.6
 10 down Return
+12 await main
 12 up Return
 30 down Down
 32 up Down
 40 down Down
 42 up Down
 50 down Return
+52 await net_servers
 52 up Return
 70 down Down
 72 up Down
 80 down Return
 82 up Return
+150 await net_lobby
 150 down Return
+152 await net_new_room_settings
 152 up Return
 154 down Up
 155 up Up
@@ -29,6 +33,7 @@
 164 down Down
 165 up Down
 170 down Return
+172 await net_new_room
 172 up Return
 190 down Return
 192 up Return
@@ -46,10 +51,12 @@
 242 up Down
 250 down Return
 252 up Return
+540 await net_room
 540 down Up
 542 up Up
 550 down Return
 552 up Return
+586 await gameplay
 700 down Right
 702 down Up
 708 up Up
