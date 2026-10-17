@@ -203,7 +203,7 @@ pub fn init_joysticks(g: &mut Game) {
     let replay = harness::replay_joysticks(g);
     #[cfg(not(target_os = "emscripten"))]
     let pads = {
-        let translate = !harness::replaying(g) && std::env::var_os("SMW_PAD_TRANSLATE").is_some();
+        let translate = !harness::replaying(g) && std::env::var_os("SMW_PAD_TRANSLATE").is_none_or(|v| v != "0");
         crate::smw::pad::init(g, replay.is_none(), translate)
     };
     #[cfg(target_os = "emscripten")]
