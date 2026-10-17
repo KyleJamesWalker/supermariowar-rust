@@ -623,9 +623,78 @@ jobs:
           path: ${{ runner.temp }}/web-*
           retention-days: 7
 
+  headless-aarch64:
+    name: headless (aarch64 under qemu-user)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    # Debian names the arm64 packages on the main mirror; Ubuntu needs ports.ubuntu.com for them.
+    container: mirror.gcr.io/library/rust:1.94-bookworm
+    defaults:
+      run:
+        shell: bash
+    env:
+      CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
+      CC_aarch64_unknown_linux_gnu: aarch64-linux-gnu-gcc
+      CXX_aarch64_unknown_linux_gnu: aarch64-linux-gnu-g++
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+      - name: arm64 toolchain, libraries and qemu-user
+        run: |
+          dpkg --add-architecture arm64
+          apt-get update
+          apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libsdl2-dev:arm64 libsdl2-image-dev:arm64 libsdl2-mixer-dev:arm64 qemu-user-static cmake python3
+          rustup target add aarch64-unknown-linux-gnu
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: aarch64
+      - name: Build smw_replay for aarch64
+        run: cargo build --release --locked --target aarch64-unknown-linux-gnu -p smw_replay
+      - name: Headless parity under qemu-aarch64
+        env:
+          SMW_NO_BUILD: '1'
+          JOBS: '4'
+          PARITY_OUT: ${{ github.workspace }}/headless-aarch64/game
+        run: |
+          mkdir -p "$RUNNER_TEMP/bin"
+          printf '#!/bin/sh\nexec qemu-aarch64-static "%s" "$@"\n' "$PWD/target/aarch64-unknown-linux-gnu/release/smw_replay" > "$RUNNER_TEMP/bin/smw_replay"
+          chmod +x "$RUNNER_TEMP/bin/smw_replay"
+          status=0
+          SMW_BIN="$RUNNER_TEMP/bin/smw_replay" tools/parity.sh > headless.log || status=$?
+          sed -n '/^=== summary/,$p' headless.log > headless-summary.txt
+          {
+            echo "### Headless parity, aarch64 under qemu-user"
+            echo "$(grep -c 'MATCH all' headless-summary.txt) of $(($(wc -l < headless-summary.txt) - 1)) dumps match"
+            echo '```'
+            grep -v -E 'MATCH all .* shots ([0-9]+)/\1$' headless-summary.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat headless.log
+          [[ -s headless-summary.txt ]] || exit 1
+          exit $status
+      - name: Determinism manifest
+        if: ${{ !cancelled() }}
+        run: python3 tools/determinism.py manifest headless-aarch64-qemu game headless-aarch64/game > determinism-headless-aarch64-qemu.txt
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: determinism-headless-aarch64-qemu
+          path: determinism-headless-aarch64-qemu.txt
+          if-no-files-found: ignore
+          retention-days: 7
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: headless-aarch64
+          path: |
+            headless-aarch64
+            headless.log
+          retention-days: 7
+
   determinism:
     name: determinism (report-only)
-    needs: [parity, web]
+    needs: [parity, web, headless-aarch64]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
     steps:
