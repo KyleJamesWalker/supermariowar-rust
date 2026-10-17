@@ -1,6 +1,6 @@
 # CPU AI overhaul
 
-Status: steps 1 to 3 and 7 are done, and step 4 has a first cut: objective modes prefer the goal (2026-10-17). Steps 5, 6, 8 and 9 remain.
+Status: steps 1 to 3 and 7 are done, and steps 4 and 6 have a first cut (2026-10-17). Steps 5, 8 and 9 remain.
 
 ## Summary
 
@@ -68,8 +68,10 @@ The steps run from most payoff per effort to least.
    First cut: in coins, eggs, Capture the Flag, domination, King of the Hill, race and collection, a stomp target beats the goal only within 60 px and the nearest player only within 45 px.
 5. **Height advantage**.
    The score rewards positions above an opponent and penalizes positions below a non-invincible one.
+   Weighting target choice by height (below at three quarters, above at five quarters) was mixed in the benchmark, so this needs positioning rather than target choice.
 6. **Per-mode behaviors**.
    Flag defense, Chicken and Tag evasion, Jail rescue, and Race checkpoints get explicit behaviors, not only target filters.
+   First cut: a flag carrier ignores stomps and nearby players and runs home, and other CPUs count a flag carrier's distance at half.
 7. **Target spreading**.
    A target that another CPU already chases scores lower.
    The current leader scores higher.
