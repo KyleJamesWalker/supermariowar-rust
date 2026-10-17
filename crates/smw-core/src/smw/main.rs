@@ -221,7 +221,13 @@ unsafe fn paced_frame(g: &mut Game) {
     if ticks == MAX_CATCH_UP_TICKS {
         ml.accumulated_us = ml.accumulated_us.min(tick_us);
     }
-    if ticks > 0 {
+    let present_hz = *ml.present_hz.get_or_insert_with(|| std::env::var("SMW_PRESENT_HZ").ok().and_then(|v| v.parse::<f64>().ok()).filter(|&hz| hz > 0.0));
+    if let Some(hz) = present_hz {
+        // A display at `hz`: present every refresh, ticks or not, and wait for the next one.
+        present(gp.get(), frame_start, std::time::Instant::now());
+        let elapsed_us = crate::services::services(gp.get()).clock.now_us().saturating_sub(now) as f64;
+        crate::services::delay(gp.get(), ((1_000_000.0 / hz - elapsed_us) / 1000.0).max(0.0) as u32);
+    } else if ticks > 0 {
         present(gp.get(), frame_start, std::time::Instant::now());
     } else {
         let wait_ms = ((tick_us - ml.accumulated_us) / 1000.0) as u32;
@@ -395,6 +401,8 @@ pub struct MainLoopState {
     /// The tick pacing's last clock reading and the wall time not yet spent on ticks.
     last_us: Option<u64>,
     accumulated_us: f64,
+    /// `SMW_PRESENT_HZ`, read on the first paced frame: a test display rate the loop presents at instead of once per tick.
+    present_hz: Option<Option<f64>>,
     /// Frames the current screen has waited for an all-CPU game to continue (smw/auto_advance.rs).
     pub(crate) auto_advance: u16,
 }
@@ -412,6 +420,7 @@ impl MainLoopState {
             perf: None,
             last_us: None,
             accumulated_us: 0.0,
+            present_hz: None,
             auto_advance: 0,
         }
     }

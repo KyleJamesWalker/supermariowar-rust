@@ -118,12 +118,23 @@ jobs:
           NET_GAME_WORK: ${{ runner.temp }}/net-games
         run: timeout 20m tools/ref/net_game_interop.sh
 
+      - name: Net games with clients presenting at different rates
+        env:
+          SDL_RENDER_DRIVER: software
+          NET_GAME_WORK: ${{ runner.temp }}/net-games-mixed-rate
+          NET_GAMES: net_game net_game_coins net_game_stompkill
+          HOST_PRESENT_HZ: '50'
+          JOIN_PRESENT_HZ: '144'
+        run: timeout 10m tools/ref/net_game_interop.sh
+
       - name: Upload net game logs
         if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: net-game-logs
-          path: ${{ runner.temp }}/net-games
+          path: |
+            ${{ runner.temp }}/net-games
+            ${{ runner.temp }}/net-games-mixed-rate
           retention-days: 7
 
   relay:
