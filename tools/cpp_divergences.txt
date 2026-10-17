@@ -8,3 +8,18 @@ text_shift #60 replays apply the replayed Shift to text fields
 osk_pad #71 the on-screen keyboard for text fields without a keyboard
 menu_tap #109 menu taps as InputEvent::Tap
 ai_spawnarea_read #162 Rust-only session directives; the C++ build cannot replay the recording
+cov_tour_options 4ea02bc CPU AI: wrap-aware distance, wall jumps and objective priority (docs/CPU_AI.md)
+cpu_chase 4ea02bc CPU AI: wrap-aware distance, wall jumps and objective priority (docs/CPU_AI.md)
+cpu_coins 4ea02bc CPU AI: wrap-aware distance, wall jumps and objective priority (docs/CPU_AI.md)
+cpu_collection 4ea02bc CPU AI: wrap-aware distance, wall jumps and objective priority (docs/CPU_AI.md)
+cpu_ctf 4ea02bc CPU AI: wrap-aware distance, wall jumps and objective priority (docs/CPU_AI.md)
+cpu_domination 4ea02bc CPU AI: wrap-aware distance, wall jumps and objective priority (docs/CPU_AI.md)
+cpu_eggs 4ea02bc CPU AI: wrap-aware distance, wall jumps and objective priority (docs/CPU_AI.md)
+cpu_frenzy 4ea02bc CPU AI: wrap-aware distance, wall jumps and objective priority (docs/CPU_AI.md)
+cpu_jail 4ea02bc CPU AI: wrap-aware distance, wall jumps and objective priority (docs/CPU_AI.md)
+cpu_kingofthehill 4ea02bc CPU AI: wrap-aware distance, wall jumps and objective priority (docs/CPU_AI.md)
+cpu_race 4ea02bc CPU AI: wrap-aware distance, wall jumps and objective priority (docs/CPU_AI.md)
+flow_tour 4ea02bc CPU AI: wrap-aware distance, wall jumps and objective priority (docs/CPU_AI.md)
+flow_world 4ea02bc CPU AI: wrap-aware distance, wall jumps and objective priority (docs/CPU_AI.md)
+opt_gameplay 4ea02bc CPU AI: wrap-aware distance, wall jumps and objective priority (docs/CPU_AI.md)
+players_c_h_c_n 4ea02bc CPU AI: wrap-aware distance, wall jumps and objective priority (docs/CPU_AI.md)
