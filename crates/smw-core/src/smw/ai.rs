@@ -831,6 +831,7 @@ impl CPlayerAI {
         }
 
         let gmChicken = dynamic_cast_gamemode::<CGM_Chicken>(g);
+        let mut best_weighted = i32::MAX;
 
         //Figure out where the other players are
         for iPlayer in 0..g.players.len() {
@@ -856,7 +857,17 @@ impl CPlayerAI {
                 }
             }
 
-            nearest!(self.distance_to_player(g, g.players[iPlayer], player, playerdistance, playerwrap));
+            let opponent = g.players[iPlayer];
+            let (mut target, mut distance, mut wrap) = (PlayerId::default(), i32::MAX, false);
+            self.distance_to_player(g, opponent, &mut target, &mut distance, &mut wrap);
+            let (num, den) = spread_weight(g, pPlayer, opponent);
+            let weighted = (distance as i64 * num / den).min(i32::MAX as i64) as i32;
+            if weighted < best_weighted {
+                best_weighted = weighted;
+                self.nearestObjects.player = opponent;
+                self.nearestObjects.playerdistance = distance;
+                self.nearestObjects.playerwrap = wrap;
+            }
         }
     }
 
@@ -948,6 +959,32 @@ fn wrap_open(g: &Game, y: i32) -> bool {
     let first = (y / TILESIZE).max(0);
     let last = ((y + PH - 1) / TILESIZE).min(MAPHEIGHT - 1);
     (first..=last).all(|row| (g.g_map.map(0, row) | g.g_map.map(MAPWIDTH - 1, row)) & tile_flag_solid as i32 == 0)
+}
+
+/// How much farther `opponent` counts when `me` picks whom to chase: each other CPU already chasing it doubles,
+/// triples and so on its distance, and the score leader counts at three quarters.
+fn spread_weight(g: &mut Game, me: PlayerId, opponent: PlayerId) -> (i64, i64) {
+    let mut chasers = 0;
+    let mut leader = true;
+    let score = g.player(opponent).score(g).score;
+    for i in 0..g.players.len() {
+        let other = g.players[i];
+        if other == opponent {
+            continue;
+        }
+        if g.player(other).score(g).score >= score {
+            leader = false;
+        }
+        if other == me {
+            continue;
+        }
+        if let Some(ai) = g.player(other).pPlayerAI.as_mut() {
+            if ai.ai().nearestObjects.player == opponent {
+                chasers += 1;
+            }
+        }
+    }
+    (if leader { 3 } else { 4 } * (1 + chasers), 4)
 }
 
 /// Modes won by collecting or holding a goal, where a nearby player should not pull the AI off it.
