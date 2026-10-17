@@ -1,6 +1,6 @@
 # CPU AI overhaul
 
-Status: steps 1 to 3 and 7 are done, and steps 4 and 6 have a first cut (2026-10-17). Steps 5, 8 and 9 remain.
+Status: steps 1 to 3, 7 and 8 are done, and steps 4 and 6 have a first cut (2026-10-17). Steps 5 and 9 remain.
 
 ## Summary
 
@@ -60,7 +60,7 @@ The steps run from most payoff per effort to least.
    `distance_to_object` and its siblings consider the wrapped path only when the CPU's rows or the target's rows have no solid tile in either edge column.
 3. **Wall look-ahead**.
    If a solid tile blocks the move direction, the AI jumps (`wall_ahead`).
-   If the wall rises four tiles above the CPU's head, the AI ignores the goal it was heading for for 90 frames.
+   If the wall rises four tiles above the CPU's head, or the CPU has jumped at it for 45 frames, the AI ignores its goal or opponent for 90 frames, unless that opponent is the only one.
 4. **Mode-aware utility scoring**.
    Each candidate action (goal, stomp, flee, regroup) gets a score from mode weights, distance, height difference, and game state.
    The AI picks the highest score.
@@ -72,6 +72,9 @@ The steps run from most payoff per effort to least.
 6. **Per-mode behaviors**.
    Flag defense, Chicken and Tag evasion, Jail rescue, and Race checkpoints get explicit behaviors, not only target filters.
    First cut: a flag carrier ignores stomps and nearby players and runs home, and other CPUs count a flag carrier's distance at half.
+   Thwomps and podobos count their vertical distance at a quarter, so one anywhere in the CPU's column is near, and the CPU runs sideways out of the column instead of ducking or jumping.
+   A fleeing CPU (the chicken, a player near the tagged one, any CPU facing an invincible opponent) steps to the neighbouring tile farthest from the threat, and when cornered jumps over it.
+   Focusing untagged players on the tagged one in Tag left them pinned in corners, so Tag keeps the nearest-player target.
 7. **Target spreading**.
    A target that another CPU already chases scores lower.
    The current leader scores higher.
@@ -79,7 +82,9 @@ The steps run from most payoff per effort to least.
 8. **Navigation graph and A\*.**
    Build a graph from the tile map: walkable tiles, jump and fall links, wrap edges, and warp pipes.
    Steer along the path, not straight at the target.
-   This replaces the look-ahead from step 3.
+   Done in `ai_nav.rs`: the tiles a player can stand on, linked by walks, falls, drops through solid-on-top ledges, jumps of up to three tiles up and four across, screen wraps and pipes, searched cheapest-first on each think.
+   Goals always follow the path. Chasing a player, or a goal a player carries, the AI follows it only once the straight line is blocked or the target is three rows away, because the straight line wins fights.
+   The graph has no moving platforms, springs or breakable blocks, so an unreachable route keeps the straight-line steering, and step 3's wall jump stays as a fallback.
 9. **Skill-based difficulty and personalities**.
    Difficulty sets planning depth, jump precision, and objective focus.
    Personalities (aggressive, objective, cautious) are weight presets for step 4.
