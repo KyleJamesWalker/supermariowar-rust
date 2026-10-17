@@ -2989,7 +2989,7 @@ pub fn editor_vehicles(g: &mut Game) -> i32 {
     g.ctl(ed(gp.get()).miVehicleStageField).clear();
 
     for iStage in 0..g.g_worldmap.iNumStages {
-        let ts = g.game_values.tourstops[iStage as usize];
+        let ts = g.game_values.tour_stop(iStage as usize as usize);
         let szStageName = format!("({}) {}", iStage + 1, ts.szName);
 
         let item = g.ctl(ed(gp.get()).miVehicleStageField).add(szStageName, iStage);
@@ -3135,7 +3135,7 @@ pub fn editor_path(g: &mut Game) -> i32 {
 
 pub fn DisplayStageDetails(g: &mut Game, fForce: bool, iStageId: i16, mut iMouseX: i16, mut iMouseY: i16) {
         let mut gp = g.ptr();
-    let ts = g.game_values.tourstops[iStageId as usize];
+    let ts = g.game_values.tour_stop(iStageId as usize as usize);
 
     //If we're pointing to a new stage or no stage at all
     if iStageId != ed(gp.get()).iOldStageId || fForce {
@@ -3363,7 +3363,7 @@ pub fn AdjustBonuses(g: &mut Game, mut ts: Ptr<TourStop>) {
 }
 
 pub fn SaveStage(g: &mut Game, iEditStage: i16) {
-    let mut ts = g.game_values.tourstops[iEditStage as usize];
+    let mut ts = g.game_values.tour_stop(iEditStage as usize as usize);
 
     if ts.iMode >= 25 && ts.iMode <= 27 {
         ts.iMode += 975;
@@ -3379,7 +3379,7 @@ pub fn SaveStage(g: &mut Game, iEditStage: i16) {
 
 pub fn EditStage(g: &mut Game, iEditStage: i16) {
     let mut gp = g.ptr();
-    let mut ts = g.game_values.tourstops[iEditStage as usize];
+    let mut ts = g.game_values.tour_stop(iEditStage as usize as usize);
 
     g.game_values.gamemodemenusettings = ts.gmsSettings.clone();
 
@@ -3500,7 +3500,7 @@ pub fn EnableStageMenu(g: &mut Game, fEnable: bool) {
 }
 
 pub fn NewStage(g: &mut Game, iEditStage: &mut i16) {
-    let mut ts = Ptr::new_box(TourStop::default());
+    let mut ts = Box::new(TourStop::default());
 
     ts.iStageType = 0;
 
@@ -3611,7 +3611,7 @@ pub fn editor_stage(g: &mut Game) -> i32 {
 
                             return EDITOR_EDIT;
                         } else if ed(gp.get()).mCurrentMenu == EditorMenu::BonusItemPicker && key_sym(g) >= SDLK_1 && key_sym(g) <= SDLK_4 {
-                            let ts = g.game_values.tourstops[iEditStage as usize];
+                            let ts = g.game_values.tour_stop(iEditStage as usize as usize);
                             if ts.iStageType == 0 {
                                 let iPlace: i16 = (key_sym(g) - SDLK_1 + 1) as i16;
 
@@ -3661,7 +3661,7 @@ pub fn editor_stage(g: &mut Game) -> i32 {
                                     NewStage(g, &mut iEditStage);
                                 }
                             } else if ed(gp.get()).mCurrentMenu == EditorMenu::BonusItemPicker {
-                                let mut ts = g.game_values.tourstops[iEditStage as usize];
+                                let mut ts = g.game_values.tour_stop(iEditStage as usize as usize);
 
                                 //See if we clicked an item and add it if we did
                                 TestAndSetBonusItem(g, ts, 0, iButtonX, iButtonY);
@@ -3755,7 +3755,7 @@ pub fn editor_stage(g: &mut Game) -> i32 {
 
                     g.ctl(ed(gp.get()).miBonusItemsButton).set_position(430, if iMode != 24 { 220 } else { 340 });
 
-                    let mut ts = g.game_values.tourstops[iEditStage as usize];
+                    let mut ts = g.game_values.tour_stop(iEditStage as usize as usize);
 
                     if iMode >= 0 && (iMode as i32) < GAMEMODE_LAST {
                         g.ctl(ed(gp.get()).miModeSettingsButton).set_visible(iMode as i32 != game_mode_owned);
@@ -3816,7 +3816,7 @@ pub fn editor_stage(g: &mut Game) -> i32 {
                     ed(gp.get()).mCurrentMenu = EditorMenu::StageSettings;
                     current_menu(gp.get()).reset_menu(g);
                 } else if MENU_CODE_MAP_CHANGED == code {
-                    let mut ts = g.game_values.tourstops[iEditStage as usize];
+                    let mut ts = g.game_values.tour_stop(iEditStage as usize as usize);
                     ts.pszMapFile = g.maplist.current_shortmapname().to_string();
                     fForceStageDisplay = true;
                 } else if MENU_CODE_TO_BONUS_PICKER_MENU == code {
@@ -3879,7 +3879,6 @@ pub fn editor_stage(g: &mut Game) -> i32 {
                         let mut iIndex: i16 = 0;
                         while (iIndex as usize) < g.game_values.tourstops.len() {
                             if iIndex == iEditStage {
-                                g.game_values.tourstops[iIndex as usize].delete();
 
                                 g.game_values.tourstops.remove(iIndex as usize);
                                 g.g_worldmap.iNumStages -= 1;
@@ -3943,7 +3942,7 @@ pub fn editor_stage(g: &mut Game) -> i32 {
             }
 
             if ed(gp.get()).mCurrentMenu == EditorMenu::BonusItemPicker {
-                let ts = g.game_values.tourstops[iEditStage as usize];
+                let ts = g.game_values.tour_stop(iEditStage as usize as usize);
 
                 //Game powerups
                 for iItem in 0..NUM_POWERUPS as usize {

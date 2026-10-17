@@ -380,7 +380,7 @@ impl MenuState {
             }
 
             let ts: TourStop = parse_tour_stop_line(g, buffer.as_bytes(), &version, false);
-            g.game_values.tourstops.push(Ptr::new_box(ts));
+            g.game_values.tourstops.push(Box::new(ts));
         }
 
         if !g.game_values.tourstops.is_empty() {

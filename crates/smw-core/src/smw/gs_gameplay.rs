@@ -1689,7 +1689,7 @@ pub fn update_score_board(g: &mut Game) {
         }
 
         //Give players the item bonuses that were won
-        let tourStop = g.game_values.tourstops[g.game_values.tourstopcurrent];
+        let tourStop = g.game_values.current_tour_stop();
 
         for iScore in 0..g.score_cnt as usize {
             for iBonus in 0..tourStop.iNumBonuses as usize {

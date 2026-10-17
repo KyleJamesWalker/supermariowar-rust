@@ -132,7 +132,7 @@ pub fn setup_score_board_now(g: &mut Game, fOrderMatters: bool) {
 
     //Add the treasure chests to the map in world mode if there were any awards for winning this match
     if g.game_values.matchtype == MatchType::World && g.mode().winningteam > -1 && g.mode().gamemode != game_mode_bonus {
-        let tourStop = g.game_values.tourstops[g.game_values.tourstopcurrent];
+        let tourStop = g.game_values.current_tour_stop();
         let iNumBonuses: i16 = tourStop.iNumBonuses;
 
         for iBonus in 0..iNumBonuses {

@@ -380,7 +380,7 @@ fn walk(g: &mut Game, s: &mut Snap, online: bool) {
         if s.load {
             gv.tourstops.clear();
             for line in stops.iter() {
-                gv.tourstops.push(Ptr::new_box(parse_tour_stop_line(g, line.as_bytes(), &GAME_VERSION, world)));
+                gv.tourstops.push(Box::new(parse_tour_stop_line(g, line.as_bytes(), &GAME_VERSION, world)));
             }
         }
 

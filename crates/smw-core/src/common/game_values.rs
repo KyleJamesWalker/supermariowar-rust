@@ -19,7 +19,7 @@ use Keycode;
 
 pub const TITLESTRING: &str = "Super Mario War";
 
-pub type TourStopVec = Vec<Ptr<crate::common::world_tour_stop::TourStop>>;
+pub type TourStopVec = Vec<Box<crate::common::world_tour_stop::TourStop>>;
 
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
@@ -449,6 +449,15 @@ impl CGameConfig {
 }
 
 impl CGameValues {
+    /// Tour stop `i`, for code that holds it while it also uses `g`.
+    pub fn tour_stop(&mut self, i: usize) -> Ptr<crate::common::world_tour_stop::TourStop> {
+        Ptr::from_mut(&mut *self.tourstops[i])
+    }
+
+    pub fn current_tour_stop(&mut self) -> Ptr<crate::common::world_tour_stop::TourStop> {
+        self.tour_stop(self.tourstopcurrent)
+    }
+
     /// Zero-initialized plus the in-class member initializers, like the C++ global.
     pub fn new() -> Self {
         CGameValues {
