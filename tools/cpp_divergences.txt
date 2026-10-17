@@ -46,3 +46,4 @@ players_h_n_c_c cf7af3f CPU AI: unreachable goals and target spreading (docs/CPU
 star_multi_3p cf7af3f CPU AI: unreachable goals and target spreading (docs/CPU_AI.md)
 star_multi_4p cf7af3f CPU AI: unreachable goals and target spreading (docs/CPU_AI.md)
 teams_2v2 cf7af3f CPU AI: unreachable goals and target spreading (docs/CPU_AI.md)
+star_multi_2p 836a925 CPU AI pathfinding and mode behaviors (docs/CPU_AI.md)
