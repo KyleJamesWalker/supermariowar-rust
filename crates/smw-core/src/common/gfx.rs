@@ -18,7 +18,6 @@ use crate::common::gfx::gfx_sdl::GraphicsSDL;
 use crate::common::gfx::gfx_sprite::{gfxSprite, ClipEdge, ImageLoader};
 use crate::common::global_constants::PGFX_LAST;
 use crate::globals::*;
-use sdl2::sys::{SDL_Joystick, SDL_JoystickSetLED};
 use std::path::Path;
 
 pub type SpriteStrip = [gfxSprite; PGFX_LAST as usize];
@@ -366,20 +365,14 @@ pub fn gfx_drawpreview(g: &mut Game,
     }
 }
 
-pub fn gfx_setjoystickteamcolor(g: &mut Game, joystick: *mut SDL_Joystick, team: i16, mut brightness: f32) {
+pub fn gfx_setjoystickteamcolor(g: &mut Game, player: i32, team: i16, mut brightness: f32) {
     if team < 0 {
         // A non-playing user has no team
         return;
     }
     brightness = 0f32.max(1f32.min(brightness));
-    unsafe {
-        if let Some(color) = g.gfx_palette.replacement_for(RGB { r: 0x80, g: 0x00, b: 0x00 }, team as usize, gfx_palette::normal) {
-            SDL_JoystickSetLED(
-                joystick,
-                (brightness * color.r as f32) as u8,
-                (brightness * color.g as f32) as u8,
-                (brightness * color.b as f32) as u8,
-            );
-        }
+    if let Some(color) = g.gfx_palette.replacement_for(RGB { r: 0x80, g: 0x00, b: 0x00 }, team as usize, gfx_palette::normal) {
+        let rgb = [(brightness * color.r as f32) as u8, (brightness * color.g as f32) as u8, (brightness * color.b as f32) as u8];
+        crate::services::services(g).pads.set_led(player, rgb);
     }
 }

@@ -16,7 +16,7 @@ use crate::common::uicontrol::{ctl_ptr, TextAlign, UI_Control, UI_ControlTrait};
 use crate::common::uimenu::UI_Menu;
 use crate::globals::*;
 use crate::smw::harness;
-use sdl2::sys::{SDL_Event, SDL_GetKeyName, SDL_JoystickName, SDL_JoystickNameForIndex, SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP};
+use sdl2::sys::{SDL_Event, SDL_GetKeyName, SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP};
 use std::ffi::CStr;
 
 const GameInputNames: [&str; NUM_KEYS] = ["Left", "Right", "Jump", "Down", "Turbo", "Use Item", "Pause", "Exit"];
@@ -320,19 +320,20 @@ crate::impl_base!(MI_InputControlContainer => ui_control: UI_Control);
 
 unsafe fn add_joysticks(g: &mut Game, field: &mut MI_SelectField<i16>) {
     for iJoystick in 0..g.devices.len() as i16 {
-        let js = g.joystick(iJoystick as usize);
-        let p = if js.is_null() { SDL_JoystickNameForIndex(iJoystick as i32) } else { SDL_JoystickName(js) };
+        let pad = g.pad(iJoystick as usize);
+        let p = crate::services::services(g).pads.name(iJoystick as usize, pad);
         let name = if harness::replay_joysticks(g).is_some() {
             "Virtual Controller".to_string()
-        } else if p.is_null() {
-            String::new()
-        } else if harness::replaying(g) {
-            CStr::from_ptr(p).to_string_lossy().into_owned()
+        } else if let Some(name) = p {
+            if harness::replaying(g) {
+                name
+            } else {
+                let label = crate::smw::pad_type::controller_type(g, iJoystick as usize, &name).label();
+                // The field is about 30 characters wide; browser ids are longer, so those show the family alone.
+                if label.len() + name.len() < 30 { format!("{}: {}", label, name) } else { label.to_string() }
+            }
         } else {
-            let name = CStr::from_ptr(p).to_string_lossy().into_owned();
-            let label = crate::smw::pad_type::controller_type(iJoystick as i32, &name).label();
-            // The field is about 30 characters wide; browser ids are longer, so those show the family alone.
-            if label.len() + name.len() < 30 { format!("{}: {}", label, name) } else { label.to_string() }
+            String::new()
         };
         field.add_random(name, iJoystick, false);
     }
