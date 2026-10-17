@@ -664,7 +664,7 @@ jobs:
         run: |
           dpkg --add-architecture arm64
           apt-get update
-          apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libsdl2-dev:arm64 libsdl2-image-dev:arm64 libsdl2-mixer-dev:arm64 qemu-user-static cmake python3
+          apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libsdl2-dev:arm64 libsdl2-image-dev:arm64 libsdl2-mixer-dev:arm64 qemu-user-static cmake libclang-dev python3
           rustup target add aarch64-unknown-linux-gnu
       - uses: Swatinem/rust-cache@v2
         with:
