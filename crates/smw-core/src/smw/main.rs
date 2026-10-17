@@ -157,6 +157,7 @@ unsafe fn gameloop_frame(g: &mut Game) {
 
     phase(1);
     FPSLimiter::instance(gp.get()).frame_start(g);
+    let frame_start = std::time::Instant::now();
 
     assign_hotplugged(gp.get());
     #[cfg(not(target_os = "emscripten"))]
@@ -167,10 +168,15 @@ unsafe fn gameloop_frame(g: &mut Game) {
     phase(6);
     harness::frame_end(gp.get());
 
+    let update_end = std::time::Instant::now();
     phase(1);
     FPSLimiter::instance(gp.get()).before_flip(gp.get());
     phase(7);
     gfx_flipscreen(gp.get());
+    let flip_end = std::time::Instant::now();
+    if let Some(perf) = gp.main_loop.perf.get_or_insert_with(crate::smw::perf_log::PerfLog::from_env) {
+        perf.record(frame_start, update_end, flip_end);
+    }
     phase(1);
     FPSLimiter::instance(gp.get()).after_flip(gp.get());
 }
@@ -336,6 +342,8 @@ pub struct MainLoopState {
     #[cfg(target_os = "emscripten")]
     web_replay_touch_first: Option<bool>,
     hotplug_pending: bool,
+    /// `SMW_PERF` read on the first frame, then the frame-time log it turns on.
+    perf: Option<Option<crate::smw::perf_log::PerfLog>>,
     /// Frames the current screen has waited for an all-CPU game to continue (smw/auto_advance.rs).
     pub(crate) auto_advance: u16,
 }
@@ -350,6 +358,7 @@ impl MainLoopState {
             #[cfg(target_os = "emscripten")]
             web_accumulated: 0.0,
             hotplug_pending: false,
+            perf: None,
             auto_advance: 0,
         }
     }
