@@ -438,7 +438,13 @@ pub fn main() {
 }
 
 pub fn run(argv: Vec<String>) {
+    run_with(argv, None);
+}
+
+/// `run` on the given backend instead of SDL2.
+pub fn run_with(argv: Vec<String>, services: Option<smw_platform::Services>) {
     let g = Game::create();
+    g.services = services;
     crate::globals::init_globals(g);
 
     let cmd = cmd::parse_args(&argv);
