@@ -287,18 +287,15 @@ fn walk(g: &mut Game, s: &mut Snap, online: bool) {
         // Which input configuration each player reads, as `inputConfiguration` index * 2 + keyboard/joystick.
         let mut inputs = [0u8; 4];
         for p in 0..4 {
-            let current = gv.playerInput.inputControls[p].as_ptr();
-            for i in 0..8 {
-                if std::ptr::eq(current, &gv.inputConfiguration[i / 2][i % 2]) {
-                    inputs[p] = i as u8;
-                }
+            if let Some((set, kind)) = gv.playerInput.inputControls[p] {
+                inputs[p] = set * 2 + kind;
             }
         }
         s.io(&mut inputs);
         if s.load {
             for p in 0..4 {
                 let i = inputs[p] as usize % 8;
-                gv.cgame_config.playerInput.inputControls[p] = Ptr::from_mut(&mut gv.cgame_config.inputConfiguration[i / 2][i % 2]);
+                gv.cgame_config.playerInput.inputControls[p] = Some(((i / 2) as u8, (i % 2) as u8));
             }
         }
         s.io(gv.playerInput.joy_directions_mut());
@@ -572,11 +569,15 @@ pub fn start_fields(g: &mut Game) -> String {
         let who = if control == 2 {
             format!("cpu-{}", difficulty.get(gv.cpudifficulty as usize).unwrap_or(&"?"))
         } else {
-            let input = gv.playerInput.inputControls[p];
+            let slot = gv.playerInput.inputControls[p];
+            let input = g.input_control(slot);
             if input.iDevice >= 0 {
                 format!("pad{}", input.iDevice)
             } else {
-                let set = (0..4).find(|&i| std::ptr::eq(input.as_ptr(), &gv.inputConfiguration[i][0])).unwrap_or(p);
+                let set = match slot {
+                    Some((set, 0)) => set as usize,
+                    _ => p,
+                };
                 format!("keys{}", set + 1)
             }
         };

@@ -92,7 +92,7 @@ impl MI_InputControlField {
             let mut iSwapKey: i16 = 0;
 
             for iPlayer in 0..4i32 {
-                if g.game_values.playerInput.inputControls[iPlayer as usize].iDevice != device {
+                if g.input_control(g.game_values.playerInput.inputControls[iPlayer as usize]).iDevice != device {
                     continue;
                 }
 
@@ -101,7 +101,7 @@ impl MI_InputControlField {
                         continue;
                     }
 
-                    if g.game_values.playerInput.inputControls[iPlayer as usize].inputGameControls[self.iType as usize].keys[selKey as usize] == key {
+                    if g.input_control(g.game_values.playerInput.inputControls[iPlayer as usize]).inputGameControls[self.iType as usize].keys[selKey as usize] == key {
                         fNeedSwap = true;
                         iSwapPlayer = iPlayer as i16;
                         iSwapKey = selKey as i16;
@@ -115,7 +115,7 @@ impl MI_InputControlField {
             }
 
             if fNeedSwap {
-                g.game_values.playerInput.inputControls[iSwapPlayer as usize].inputGameControls[self.iType as usize].keys[iSwapKey as usize] = *iSetKey;
+                g.input_control(g.game_values.playerInput.inputControls[iSwapPlayer as usize]).inputGameControls[self.iType as usize].keys[iSwapKey as usize] = *iSetKey;
             }
 
             *iSetKey = key;
@@ -340,7 +340,7 @@ unsafe fn add_joysticks(g: &mut Game, field: &mut MI_SelectField<i16>) {
 }
 
 fn key_ptr(g: &mut Game, iPlayerID: i16, iType: usize, iKey: usize) -> *mut Keycode {
-    &mut g.game_values.playerInput.inputControls[iPlayerID as usize].inputGameControls[iType].keys[iKey] as *mut Keycode
+    &mut g.input_control(g.game_values.playerInput.inputControls[iPlayerID as usize]).inputGameControls[iType].keys[iKey] as *mut Keycode
 }
 
 impl MI_InputControlContainer {
@@ -349,7 +349,7 @@ impl MI_InputControlContainer {
         let mut gp = g.ptr();
         unsafe {
             let iPlayerID = playerID;
-            let mut iDevice = g.game_values.playerInput.inputControls[iPlayerID as usize].iDevice;
+            let mut iDevice = g.input_control(g.game_values.playerInput.inputControls[iPlayerID as usize]).iDevice;
             let iSelectedInputType: i16 = 0;
 
             let szTitle = format!("Player {} Controls", iPlayerID as i32 + 1);
@@ -489,14 +489,14 @@ impl MI_InputControlContainer {
                 continue;
             }
 
-            let device = g.game_values.playerInput.inputControls[iPlayer as usize].iDevice;
+            let device = g.input_control(g.game_values.playerInput.inputControls[iPlayer as usize]).iDevice;
             if device > -1 {
                 g.ctl(self.miDeviceSelectField).hide_item(device, true);
             }
         }
 
         self.iPlayerID = playerID;
-        self.iDevice = g.game_values.playerInput.inputControls[self.iPlayerID as usize].iDevice;
+        self.iDevice = g.input_control(g.game_values.playerInput.inputControls[self.iPlayerID as usize]).iDevice;
         let iDevice = self.iDevice;
         g.ctl(self.miDeviceSelectField).set_current_value(iDevice);
 
@@ -530,14 +530,14 @@ impl MI_InputControlContainer {
         // Not in upstream: a joystick keeps its own bindings, and a keyboard player takes the first
         // keyboard set no other player has (player p's own unless joysticks moved them, see assign_inputs).
         let control = if lDevice == DEVICE_KEYBOARD {
-            let mut taken = |q: usize| (0..4).any(|o| o != p && g.game_values.playerInput.inputControls[o].as_ptr() == &mut g.game_values.inputConfiguration[q][0] as *mut CInputPlayerControl);
+            let taken = |q: usize| (0..4).any(|o| o != p && g.game_values.playerInput.inputControls[o] == Some((q as u8, 0)));
             let q = (0..4).find(|&q| !taken(q)).unwrap_or(p);
-            &mut g.game_values.inputConfiguration[q][0]
+            (q as u8, 0)
         } else {
-            &mut g.game_values.inputConfiguration[lDevice as usize][1]
+            (lDevice as u8, 1)
         };
-        g.game_values.playerInput.inputControls[p] = Ptr::from_mut(control);
-        g.game_values.playerInput.inputControls[p].iDevice = lDevice;
+        g.game_values.playerInput.inputControls[p] = Some(control);
+        g.input_control(g.game_values.playerInput.inputControls[p]).iDevice = lDevice;
 
         for iKey in 0..NUM_KEYS {
             let mut f = self.miGameInputControlFields[iKey];

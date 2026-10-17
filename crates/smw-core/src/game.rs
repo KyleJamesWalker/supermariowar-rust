@@ -193,6 +193,14 @@ impl Game {
         }
     }
 
+    /// The input configuration `slot` names, or null.
+    pub fn input_control(&self, slot: Option<(u8, u8)>) -> Ptr<crate::common::input::CInputPlayerControl> {
+        match slot {
+            Some((set, kind)) => Ptr::from_raw(&self.game_values.inputConfiguration[set as usize][kind as usize] as *const _ as *mut _),
+            None => Ptr::null(),
+        }
+    }
+
     pub fn map_block(&self, x: i16, y: i16) -> Ptr<dyn crate::common::io_block::IO_BlockTrait> {
         self.g_map.block(&self.noncolcontainer, x, y)
     }

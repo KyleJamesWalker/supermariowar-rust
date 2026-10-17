@@ -1235,7 +1235,7 @@ impl UI_ControlTrait for MI_World {
             if self.iState == -1 && (self.state_transition(iTeamId) == 0 || self.state_transition(iTeamId) == 3) {
                 let t = iTeamId as usize;
                 if playerKeys.menu_cancel().fPressed {
-                    if DEVICE_KEYBOARD != playerInput.inputControls[p].iDevice || iPlayer == 0 {
+                    if DEVICE_KEYBOARD != g.input_control(playerInput.inputControls[p]).iDevice || iPlayer == 0 {
                         self.fModifying = false;
                         return MENU_CODE_BACK_TEAM_SELECT_MENU;
                     }
@@ -1244,7 +1244,7 @@ impl UI_ControlTrait for MI_World {
                 if (g.game_values.playercontrol[p] == 1 || self.fNoInterestingMoves)
                     && (self.iPopupFlag[t]
                         || playerKeys.menu_random().fPressed
-                        || (iPlayer != 0 && playerInput.inputControls[p].iDevice == DEVICE_KEYBOARD && playerKeys.menu_cancel().fPressed))
+                        || (iPlayer != 0 && g.input_control(playerInput.inputControls[p]).iDevice == DEVICE_KEYBOARD && playerKeys.menu_cancel().fPressed))
                 {
                     self.iPopupFlag[t] = true;
 

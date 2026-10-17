@@ -122,8 +122,8 @@ pub struct CInputPlayerControl {
 }
 
 pub struct CPlayerInput {
-    //Points to the input controls in the global inputConfiguration class
-    pub inputControls: [Ptr<CInputPlayerControl>; 4],
+    /// Each player's `inputConfiguration[set][kind]` (kind 0 is the keyboard, 1 the joystick); `Game::input_control` reads it.
+    pub inputControls: [Option<(u8, u8)>; 4],
 
     //Use these structures to see what input has been pressed
     pub outputControls: [COutputControl; 4],
@@ -158,7 +158,7 @@ fn sdl_button(x: i32) -> u32 {
 impl CPlayerInput {
     pub fn new() -> Self {
         let mut this = CPlayerInput { _alias: Aliased::new(),
-            inputControls: [Ptr::null(); 4],
+            inputControls: [None; 4],
             outputControls: [COutputControl::default(); 4],
             iPressedKey: 0,
             joyDirections: Vec::new(),
@@ -276,7 +276,7 @@ impl CPlayerInput {
                 // Not in upstream: unless another player now has those keys (see assign_inputs).
                 if iPlayer == -1 {
                     let keyboard = &mut g.game_values.inputConfiguration[0][0] as *mut CInputPlayerControl;
-                    if iGameState == 1 && self.inputControls[0].iDevice != DEVICE_KEYBOARD && !self.inputControls.iter().any(|c| c.as_ptr() == keyboard) {
+                    if iGameState == 1 && g.input_control(self.inputControls[0]).iDevice != DEVICE_KEYBOARD && !self.inputControls.contains(&Some((0, 0))) {
                         inputControl = &g.game_values.inputConfiguration[0][0].inputGameControls[1];
                         outputControl = &mut self.outputControls[0];
                         iDeviceID = g.game_values.inputConfiguration[0][0].iDevice;
@@ -284,13 +284,13 @@ impl CPlayerInput {
                         continue;
                     }
                 } else {
-                    if self.inputControls[iPlayer as usize].is_null() {
+                    if g.input_control(self.inputControls[iPlayer as usize]).is_null() {
                         continue;
                     }
 
-                    inputControl = &self.inputControls[iPlayer as usize].inputGameControls[iGameState as usize];
+                    inputControl = &g.input_control(self.inputControls[iPlayer as usize]).inputGameControls[iGameState as usize];
                     outputControl = &mut self.outputControls[iPlayer as usize];
-                    iDeviceID = self.inputControls[iPlayer as usize].iDevice;
+                    iDeviceID = g.input_control(self.inputControls[iPlayer as usize]).iDevice;
                 }
 
                 let inputControl = &*inputControl;

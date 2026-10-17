@@ -620,7 +620,7 @@ impl CGameValues {
             }
 
             //Set the players input to the default configuration (will be overwritten by options.bin settings)
-            self.cgame_config.playerInput.inputControls[iPlayer] = Ptr::from_mut(&mut self.cgame_config.inputConfiguration[iPlayer][0]);
+            self.cgame_config.playerInput.inputControls[iPlayer] = Some(((iPlayer) as u8, (0) as u8));
         }
 
         //Set the default powerup weights for bonus wheel and [?] boxes
@@ -863,8 +863,7 @@ impl CGameConfig {
                 iDevice = DEVICE_KEYBOARD;
             }
 
-            self.playerInput.inputControls[iPlayer] =
-                Ptr::from_mut(&mut self.inputConfiguration[iPlayer][if iDevice == DEVICE_KEYBOARD { 0 } else { 1 }]);
+            self.playerInput.inputControls[iPlayer] = Some((iPlayer as u8, if iDevice == DEVICE_KEYBOARD { 0 } else { 1 }));
         }
     }
 
@@ -983,7 +982,8 @@ impl CGameConfig {
         controls.write_raw(&raw);
 
         for iPlayer in 0..4 {
-            controls.write_i16(self.playerInput.inputControls[iPlayer].iDevice);
+            let (set, kind) = self.playerInput.inputControls[iPlayer].expect("player input set");
+            controls.write_i16(self.inputConfiguration[set as usize][kind as usize].iDevice);
         }
     }
 

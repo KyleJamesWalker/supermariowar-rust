@@ -440,7 +440,7 @@ impl CPlayer {
             this.playerKeys = PlayerKeys::Local(this.globalID as u8);
         }
 
-        this.playerDevice = g.game_values.playerInput.inputControls[this.globalID as usize].iDevice;
+        this.playerDevice = g.input_control(g.game_values.playerInput.inputControls[this.globalID as usize]).iDevice;
         this.sprites = nsprites;
 
         //Do this so we have a valid x,y to say the player is so other items that init with the player will get valid positions

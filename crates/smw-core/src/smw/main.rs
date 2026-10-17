@@ -241,7 +241,7 @@ fn assign_inputs(g: &mut Game) {
             let saved: Vec<i16> = text.split_whitespace().filter_map(|v| v.parse().ok()).collect();
             if saved.len() == MAX_PLAYERS as usize {
                 for p in 0..MAX_PLAYERS as usize {
-                    g.game_values.playerInput.inputControls[p] = Ptr::from_mut(&mut g.game_values.inputConfiguration[p][0]);
+                    g.game_values.playerInput.inputControls[p] = Some(((p) as u8, (0) as u8));
                     g.game_values.playercontrol[p] = saved[p];
                 }
                 gp.game_values.write_config(g);
@@ -274,18 +274,18 @@ fn assign_inputs(g: &mut Game) {
         let control = match order.get(p) {
             Some(&(true, k)) => {
                 g.game_values.inputConfiguration[k][1].iDevice = k as i16;
-                &mut g.game_values.inputConfiguration[k][1]
+                (k as u8, 1)
             }
-            Some(&(false, q)) => &mut g.game_values.inputConfiguration[q][0],
+            Some(&(false, q)) => (q as u8, 0),
             None => {
-                g.game_values.playerInput.inputControls[p] = Ptr::from_mut(&mut g.game_values.inputConfiguration[p][0]);
+                g.game_values.playerInput.inputControls[p] = Some(((p) as u8, (0) as u8));
                 if !keyboard && g.game_values.playercontrol[p] == 1 {
                     g.game_values.playercontrol[p] = 2;
                 }
                 continue;
             }
         };
-        g.game_values.playerInput.inputControls[p] = Ptr::from_mut(control);
+        g.game_values.playerInput.inputControls[p] = Some(control);
         g.game_values.playercontrol[p] = 1;
     }
 }

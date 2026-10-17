@@ -616,7 +616,7 @@ pub fn inner_main(g: &mut Game) {
             }
         }
 
-        g.game_values.playerInput.inputControls[0] = Ptr::from_mut(&mut g.game_values.inputConfiguration[0][0]);
+        g.game_values.playerInput.inputControls[0] = Some(((0) as u8, (0) as u8));
 
         ed(gp.get()).stagemodes = vec![StageMode { options: vec![StageModeOption::default(); GAMEMODE_NUM_OPTIONS - 1], ..Default::default() }; GAMEMODE_LAST as usize];
 
