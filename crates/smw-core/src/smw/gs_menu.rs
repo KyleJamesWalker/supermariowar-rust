@@ -1021,7 +1021,7 @@ pub fn enter_gameplay_tail(g: &mut Game) {
     gp.g_map.setup_animated_tiles(g);
     crate::smw::gs_gameplay::load_map_objects(g, false);
 
-    GameStateManager::instance(g).change_state_to(gp.get(), Ptr::from_mut(GameplayState::instance(gp.get()) as &mut dyn GameState));
+    GameStateManager::instance(g).change_state_to(gp.get(), crate::smw::game_state::StateId::Gameplay);
 }
 
 impl MenuState {

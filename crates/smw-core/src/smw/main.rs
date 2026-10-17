@@ -62,9 +62,9 @@ extern "C" {
 pub fn gameloop(g: &mut Game) {
     unsafe {
         SplashScreenState::instance(g).init(g);
-        GameStateManager::instance(g).currentState = Ptr::from_mut(SplashScreenState::instance(g) as &mut dyn GameState);
+        GameStateManager::instance(g).currentState = crate::smw::game_state::StateId::Splash;
         if let Some(segment) = harness::segment_state(g) {
-            GameStateManager::instance(g).currentState = Ptr::from_box(Box::new(segment) as Box<dyn GameState>);
+            GameStateManager::instance(g).start_segment(Box::new(segment));
         }
 
         #[cfg(target_os = "emscripten")]
@@ -105,7 +105,7 @@ unsafe extern "C-unwind" fn gameloop_frame_web(arg: *mut std::ffi::c_void) {
     while ml.web_accumulated >= frame_ms && frames < MAX_CATCH_UP_FRAMES && gp.game_values.appstate != crate::common::game_values::AppState::Quit {
         assign_hotplugged(gp.get());
         harness::frame_start(gp.get());
-        GameStateManager::instance(gp.get()).currentState.get().update(gp.get());
+        GameStateManager::instance(gp.get()).current(gp.get()).get().update(gp.get());
         harness::frame_end(gp.get());
 
         ml.web_accumulated -= frame_ms;
@@ -148,7 +148,7 @@ unsafe fn gameloop_frame(g: &mut Game) {
     crate::smw::touch::flush(g);
     harness::frame_start(gp.get());
     phase(5);
-    GameStateManager::instance(gp.get()).currentState.get().update(gp.get());
+    GameStateManager::instance(gp.get()).current(gp.get()).get().update(gp.get());
     phase(6);
     harness::frame_end(gp.get());
 
@@ -303,7 +303,7 @@ fn assign_hotplugged(g: &mut Game) {
     if crate::smw::pad::hotplug(g) {
         *pending = true;
     }
-    let playing = GameStateManager::instance(g).currentState.addr() == crate::smw::gs_gameplay::GameplayState::instance(g) as *mut _ as usize;
+    let playing = GameStateManager::instance(g).currentState == crate::smw::game_state::StateId::Gameplay;
     if *pending && !playing {
         *pending = false;
         assign_inputs(g);

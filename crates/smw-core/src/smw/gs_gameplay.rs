@@ -2505,7 +2505,7 @@ pub fn end_gameplay(g: &mut Game) {
     clean_up(g);
     g.game_values.appstate = AppState::Menu;
     g.game_values.screenfadespeed = -8;
-    GameStateManager::instance(g).change_state_to(gp.get(), Ptr::from_mut(MenuState::instance(gp.get()) as &mut dyn GameState));
+    GameStateManager::instance(g).change_state_to(gp.get(), crate::smw::game_state::StateId::Menu);
 }
 
 impl GameplayState {
@@ -2665,7 +2665,7 @@ impl GameState for GameplayState {
             if g.netplay.active {
                 gp.netplay.client.send_leave_game_message(g);
             }
-            GameStateManager::instance(g).change_state_to(gp.get(), Ptr::from_mut(MenuState::instance(gp.get()) as &mut dyn GameState));
+            GameStateManager::instance(g).change_state_to(gp.get(), crate::smw::game_state::StateId::Menu);
             return;
         }
 
