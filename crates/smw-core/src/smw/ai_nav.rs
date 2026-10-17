@@ -3,6 +3,7 @@
 
 use crate::common::game::App;
 use crate::common::global_constants::*;
+use crate::common::map::{WARP_DOWN, WARP_LEFT, WARP_RIGHT, WARP_UP};
 use crate::common::tile_types::*;
 use crate::game::Game;
 use std::cmp::Reverse;
@@ -15,6 +16,8 @@ pub enum Move {
     /// Down through a ledge that is solid on top only.
     Drop,
     Jump,
+    /// Into a pipe: `dir` is its `WARP_*` enter direction and `x` the pixel column of its middle.
+    Warp { dir: i32, x: i32 },
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -121,6 +124,41 @@ impl NavGraph {
                 }
             }
         }
+        let map = &g.g_map;
+        for wx in 0..W {
+            for wy in 0..H {
+                let warp = &map.warpdata[wx as usize][wy as usize];
+                let pair = [wx - 1, wx + 1].into_iter().find(|&px| {
+                    (0..W).contains(&px) && map.warpdata[px as usize][wy as usize].id == warp.id && map.warpdata[px as usize][wy as usize].direction == warp.direction
+                });
+                let entrance = match warp.direction {
+                    WARP_DOWN => Some((wx, wy - 1)),
+                    WARP_UP => (wy + 1..(wy + 4).min(H)).take_while(|&ny| !solid(wx, ny)).find(|&ny| stand(wx, ny)).map(|ny| (wx, ny)),
+                    WARP_LEFT => Some((wx + 1, wy)),
+                    WARP_RIGHT => Some((wx - 1, wy)),
+                    _ => None,
+                };
+                let Some((ex, ey)) = entrance.filter(|&(ex, ey)| stand(ex, ey)) else { continue };
+                let middle = match (warp.direction, pair) {
+                    (WARP_DOWN | WARP_UP, Some(px)) => (wx.min(px) + 1) * TILESIZE,
+                    (WARP_DOWN | WARP_UP, None) => continue,
+                    _ => wx * TILESIZE + TILESIZE / 2,
+                };
+                for exit in &map.warpexits[..map.numwarpexits.max(0) as usize] {
+                    if exit.connection != warp.connection || exit.id == warp.id {
+                        continue;
+                    }
+                    let cx = (exit.x as i32 + HALFPW).rem_euclid(App::screenWidth) / TILESIZE;
+                    let cy = ((exit.y as i32 + PH - 1).max(0) / TILESIZE).min(H - 1);
+                    if let Some(ly) = (cy..H).find(|&ny| stand(cx, ny)) {
+                        let edge = (idx(cx, ly) as u16, Move::Warp { dir: warp.direction, x: middle });
+                        if !edges[idx(ex, ey)].contains(&edge) {
+                            edges[idx(ex, ey)].push(edge);
+                        }
+                    }
+                }
+            }
+        }
         NavGraph { standable, edges }
     }
 
@@ -171,6 +209,7 @@ impl NavGraph {
                 let step = match how {
                     Move::Walk | Move::Fall => 1,
                     Move::Drop | Move::Jump => 2,
+                    Move::Warp { .. } => 3,
                 };
                 let nc = c + step;
                 if nc < cost[m as usize] {

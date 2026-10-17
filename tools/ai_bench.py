@@ -52,10 +52,10 @@ def play(job):
         script.write_text(script_for(src, seed, map_name, frames))
         out = Path(tmp) / 'out'
         env = dict(os.environ, SMW_NO_BUILD='1')
-        subprocess.run([str(TOOLS / 'run_rust.sh'), str(script), str(out)], env=env, capture_output=True)
+        run = subprocess.run([str(TOOLS / 'run_rust.sh'), str(script), str(out)], env=env, capture_output=True)
         dump = out / 'dump.txt'
-        if not dump.exists():
-            return {'mode': mode, 'seed': seed, 'map': map_name, 'error': 'no dump'}
+        if run.returncode != 0 or not dump.exists():
+            return {'mode': mode, 'seed': seed, 'map': map_name, 'error': f'exit {run.returncode}'}
         return summarize(mode, seed, map_name, dump.read_text())
 
 

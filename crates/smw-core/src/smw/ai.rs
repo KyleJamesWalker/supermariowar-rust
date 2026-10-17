@@ -1,6 +1,7 @@
 //! Port of src/smw/ai.cpp
 
 use crate::smw::object_container::ObjectId;
+use crate::common::map::{WARP_DOWN, WARP_LEFT, WARP_RIGHT};
 use crate::smw::ai_nav::{Move, NavGraph, Route};
 use crate::smw::players::PlayerId;
 use crate::game::Game;
@@ -333,6 +334,9 @@ fn cmap_byte(g: &mut Game, off: i32) -> u8 {
     }
     if (CMAP_OFF_WARPLOCKED..CMAP_OFF_MAXCONNECTION).contains(&off) {
         return g.g_map.warplocked[(off - CMAP_OFF_WARPLOCKED) as usize] as u8;
+    }
+    if (CMAP_OFF_OBJECTDATA + MAPWIDTH * MAPHEIGHT * CMAP_SIZEOF_MAPBLOCK..CMAP_OFF_BLOCKDATA).contains(&off) {
+        return 0;
     }
     panic!("ai: C++ out-of-bounds CMap read at offset {} is not modelled", off);
 }
@@ -1108,16 +1112,52 @@ fn follow_path(g: &mut Game, this: &mut CPlayerAI, actionType: i16, mut keys: Pt
                 keys.game_jump_mut().fDown = true;
             }
             this.nav_step = Some((x, how));
+        } else {
+            // Cornered: jump over the chaser rather than wait against the wall.
+            let right = heads_right(me.0, to.0);
+            keys.game_left_mut().fDown = !right;
+            keys.game_right_mut().fDown = right;
+            keys.game_jump_mut().fDown = true;
+            this.nav_step = Some((to.0, Move::Jump));
         }
         return;
     }
     if (to.0 - me.0).abs() <= 1 && (to.1 - me.1).abs() <= 1 {
         return;
     }
+    // Chasing a player, or a goal a player carries, the straight line wins fights; the path only takes over when
+    // that line is blocked.
+    let carried = actionType == 1 && {
+        let goal = g.carried(this.nearestObjects.goal);
+        !goal.is_null() && !goal.owner.is_none()
+    };
+    if (actionType != 1 || carried) && this.wall_frames == 0 && (to.1 - me.1).abs() < 3 {
+        return;
+    }
     match nav.route(me, to) {
         Route::Here => {}
         // The graph has no moving platforms or springs, so an unreachable target keeps the straight-line steering.
         Route::Unreachable => {}
+        Route::Step { how: Move::Warp { dir, x }, .. } => {
+            let centre = ix + HALFPW;
+            let aligned = (centre - x).abs() <= 4;
+            let toward_right = x > centre;
+            keys.game_left_mut().fDown = false;
+            keys.game_right_mut().fDown = false;
+            keys.game_jump_mut().fDown = false;
+            keys.game_down_mut().fDown = false;
+            match dir {
+                WARP_LEFT => keys.game_left_mut().fDown = true,
+                WARP_RIGHT => keys.game_right_mut().fDown = true,
+                _ if !aligned => {
+                    keys.game_left_mut().fDown = !toward_right;
+                    keys.game_right_mut().fDown = toward_right;
+                }
+                WARP_DOWN => keys.game_down_mut().fDown = true,
+                _ => keys.game_jump_mut().fDown = true,
+            }
+            this.nav_step = Some((me.0, Move::Warp { dir, x }));
+        }
         Route::Step { x, y, how } => {
             let right = heads_right(me.0, x);
             let chosen = if right { keys.game_right().fDown } else { keys.game_left().fDown };
@@ -1134,7 +1174,7 @@ fn follow_path(g: &mut Game, this: &mut CPlayerAI, actionType: i16, mut keys: Pt
                     keys.game_jump_mut().fDown = false;
                     keys.game_down_mut().fDown = true;
                 }
-                Move::Walk | Move::Fall => {}
+                Move::Walk | Move::Fall | Move::Warp { .. } => {}
             }
             this.nav_step = Some((x, how));
         }
@@ -1524,7 +1564,8 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
             } else if actionType == 2 {
                 //Evade Threat
                 let mut threat = ai_target(g, no.threat);
-                let column_threat = threat.get_object_type() == object_thwomp || moving_object_type(threat) == movingobject_podobo;
+                let column_threat = threat.get_object_type() == object_thwomp
+                    || (threat.get_object_type() == object_moving && moving_object_type(threat) == movingobject_podobo);
 
                 //If threat, always use turbo
                 playerKeys.game_turbo_mut().fDown = true;
