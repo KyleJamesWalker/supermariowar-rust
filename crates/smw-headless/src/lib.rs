@@ -202,10 +202,13 @@ pub fn apfs_key(name: &str) -> u32 {
     ((crc & 0x3F_FFFF) << 10) | ((name.len() as u32 + 1) & 0x3FF)
 }
 
-/// An in-memory queue: what the game pushes, it polls back.
+/// An in-memory queue: what the game pushes, it polls back, in SDL2's poll cycles. A poll marks the end of the queue
+/// (`SDL_POLLSENTINEL`) unless a mark is already in it, and returns `None` on reaching the mark, so input pushed after a
+/// cycle started waits for the next one.
 #[derive(Default)]
 pub struct HeadlessEvents {
-    queue: VecDeque<Input>,
+    queue: VecDeque<Option<Input>>,
+    sentinel: bool,
 }
 
 impl HeadlessEvents {
@@ -216,16 +219,27 @@ impl HeadlessEvents {
 
 impl Events for HeadlessEvents {
     fn poll(&mut self) -> Option<Input> {
-        self.queue.pop_front()
+        if !self.sentinel {
+            self.queue.push_back(None);
+            self.sentinel = true;
+        }
+        let entry = self.queue.pop_front()?;
+        if entry.is_none() {
+            self.sentinel = false;
+        }
+        entry
     }
 
-    /// Nothing else delivers input, so an empty queue quits.
+    /// Skips the mark, as `SDL_WaitEvent` does. Nothing else delivers input, so an empty queue quits.
     fn wait(&mut self) -> Input {
-        self.queue.pop_front().unwrap_or(Input { timestamp: 0, event: InputEvent::Quit })
+        match self.queue.iter().position(Option::is_some) {
+            Some(i) => self.queue.remove(i).flatten().unwrap(),
+            None => Input { timestamp: 0, event: InputEvent::Quit },
+        }
     }
 
     fn push(&mut self, input: &Input) {
-        self.queue.push_back(input.clone());
+        self.queue.push_back(Some(input.clone()));
     }
 
     fn pump(&mut self) {}
@@ -271,5 +285,37 @@ pub fn services(settings_dir: PathBuf, root_dir: PathBuf) -> Services {
         events: Box::new(HeadlessEvents::new()),
         keyboard: Box::new(HeadlessKeyboard::new()),
         pads: Box::new(HeadlessPads),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn input(x: i16) -> Input {
+        Input { timestamp: 0, event: InputEvent::Tap { x, y: 0 } }
+    }
+
+    #[test]
+    fn a_push_after_a_cycle_started_waits_for_the_next() {
+        let mut events = HeadlessEvents::new();
+        events.push(&input(1));
+        assert_eq!(events.poll(), Some(input(1)));
+        events.push(&input(2));
+        assert_eq!(events.poll(), None);
+        assert_eq!(events.poll(), Some(input(2)));
+        assert_eq!(events.poll(), None);
+        assert_eq!(events.poll(), None);
+    }
+
+    #[test]
+    fn wait_skips_the_mark() {
+        let mut events = HeadlessEvents::new();
+        events.push(&input(3));
+        assert_eq!(events.poll(), Some(input(3)));
+        events.push(&input(4));
+        assert_eq!(events.wait(), input(4));
+        assert_eq!(events.poll(), None);
+        assert_eq!(events.wait(), Input { timestamp: 0, event: InputEvent::Quit });
     }
 }

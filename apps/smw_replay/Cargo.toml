@@ -2,9 +2,10 @@
 name = "smw_replay"
 version.workspace = true
 edition.workspace = true
-description = "Super Mario War - the game on the headless backend, for replays"
+description = "Super Mario War - the game and editors on the headless backend, for replays and editor scripts"
 publish.workspace = true
 
 [dependencies]
 smw-core = { path = "../../crates/smw-core" }
 smw-headless = { path = "../../crates/smw-headless" }
+smw-platform = { path = "../../crates/smw-platform" }

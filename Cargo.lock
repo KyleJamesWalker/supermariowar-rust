@@ -620,6 +620,7 @@ version = "0.1.0"
 dependencies = [
  "smw-core",
  "smw-headless",
+ "smw-platform",
 ]
 
 [[package]]
