@@ -166,6 +166,10 @@ pub struct CPlayerAI {
 
     pub attentionObjects: BTreeMap<i32, Box<AttentionObject>>,
     pub currentAttentionObject: AttentionObject,
+    /// Frames in a row the AI has jumped at a wall it is walking into.
+    pub wall_frames: i16,
+    /// An opponent the AI gave up on behind a wall, and for how many more frames.
+    pub ignored_player: (PlayerId, i16),
 
     pub _alias: Aliased,
 }
@@ -450,6 +454,8 @@ impl CPlayerAI {
             nearestObjects: NearestObjects::new(),
             attentionObjects: BTreeMap::new(),
             currentAttentionObject: AttentionObject { iID: -1, iType: 0, iTimer: 0 },
+            wall_frames: 0,
+            ignored_player: (PlayerId::NONE, 0),
             _alias: Aliased::new(),
         }
     }
@@ -858,6 +864,9 @@ impl CPlayerAI {
             }
 
             let opponent = g.players[iPlayer];
+            if opponent == self.ignored_player.0 && self.ignored_player.1 > 0 {
+                continue;
+            }
             let (mut target, mut distance, mut wrap) = (PlayerId::default(), i32::MAX, false);
             self.distance_to_player(g, opponent, &mut target, &mut distance, &mut wrap);
             let (num, den) = spread_weight(g, pPlayer, opponent);
@@ -997,8 +1006,10 @@ fn objective_mode(mode: GameModeType) -> bool {
     )
 }
 
-/// How long the AI ignores a goal behind a wall it cannot jump.
+/// How long the AI ignores a goal or an opponent behind a wall it cannot jump.
 const UNREACHABLE_FRAMES: i16 = 90;
+/// Jumping at a wall this long without getting past it means the wall cannot be jumped.
+const WALL_GIVE_UP_FRAMES: i16 = 45;
 
 fn solid_at(g: &mut Game, tx: i32, ty: i32) -> bool {
     g.g_map.map(tx, ty) & tile_flag_solid as i32 != 0 || !g.map_block(tx as i16, ty as i16).is_null()
@@ -1022,9 +1033,10 @@ fn wall_ahead(g: &mut Game, x: i32, y: i32, left: bool, right: bool) -> Option<i
 }
 
 /// Whether the wall in column `tx` rises four tiles above the head of a player whose top is at `y`, beyond a jump.
+/// A wall that reaches the top row counts as going on above the map.
 fn wall_too_tall(g: &mut Game, tx: i32, y: i32) -> bool {
-    let top = y / TILESIZE;
-    top >= 4 && (top - 4..top).all(|ty| solid_at(g, tx, ty))
+    let top = y.div_euclid(TILESIZE);
+    top <= 0 || ((top - 4).max(0)..top).all(|ty| solid_at(g, tx, ty))
 }
 
 //Setup AI so that it can ignore or pay attention to some objects
@@ -1121,6 +1133,10 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
             }
         } else {
             this.currentAttentionObject.iID = -1;
+        }
+
+        if this.ignored_player.1 > 0 {
+            this.ignored_player.1 -= 1;
         }
 
         //Expire attention objects
@@ -1541,10 +1557,18 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
 
         if let Some(column) = wall_ahead(g, ix32, iy32, playerKeys.game_left().fDown, playerKeys.game_right().fDown) {
             playerKeys.game_jump_mut().fDown = true;
-            if actionType == 1 && wall_too_tall(g, column, iy32) {
-                let id = ai_target(g, this.nearestObjects.goal).network_id();
-                this.attentionObjects.insert(id, Box::new(AttentionObject { iID: id, iType: 1, iTimer: UNREACHABLE_FRAMES }));
+            this.wall_frames += 1;
+            if this.wall_frames >= WALL_GIVE_UP_FRAMES || wall_too_tall(g, column, iy32) {
+                this.wall_frames = 0;
+                if actionType == 1 {
+                    let id = ai_target(g, this.nearestObjects.goal).network_id();
+                    this.attentionObjects.insert(id, Box::new(AttentionObject { iID: id, iType: 1, iTimer: UNREACHABLE_FRAMES }));
+                } else if actionType == 0 {
+                    this.ignored_player = (this.nearestObjects.player, UNREACHABLE_FRAMES);
+                }
             }
+        } else {
+            this.wall_frames = 0;
         }
 
         /***************************************************
