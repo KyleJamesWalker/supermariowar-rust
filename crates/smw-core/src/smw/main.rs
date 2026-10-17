@@ -315,6 +315,9 @@ pub struct MainLoopState {
     web_last_time: f64,
     #[cfg(target_os = "emscripten")]
     web_accumulated: f64,
+    /// A replay of a touch session: whether no pad was open at launch, as Android's `touch::init` decides.
+    #[cfg(target_os = "emscripten")]
+    web_replay_touch_first: Option<bool>,
     hotplug_pending: bool,
 }
 
@@ -323,6 +326,8 @@ impl MainLoopState {
         MainLoopState {
             #[cfg(target_os = "emscripten")]
             web_last_time: -1.0,
+            #[cfg(target_os = "emscripten")]
+            web_replay_touch_first: None,
             #[cfg(target_os = "emscripten")]
             web_accumulated: 0.0,
             hotplug_pending: false,
@@ -350,7 +355,7 @@ fn touch_session(g: &mut Game) -> bool {
     #[cfg(not(target_os = "emscripten"))]
     return crate::smw::touch::session(g);
     #[cfg(target_os = "emscripten")]
-    false
+    harness::replay_touch(g)
 }
 
 /// Whether the touch keys go to player 1 ahead of the pads: the page shows its touch controls (web/touch.js), decided
@@ -358,6 +363,10 @@ fn touch_session(g: &mut Game) -> bool {
 fn touch_controls_on(g: &mut Game) -> bool {
     #[cfg(target_os = "emscripten")]
     unsafe {
+        if harness::replay_touch(g) {
+            let no_pads = g.devices.is_empty();
+            return *g.main_loop.web_replay_touch_first.get_or_insert(no_pads);
+        }
         return emscripten_run_script_int(c"document.documentElement.classList.contains('touch') ? 1 : 0".as_ptr()) != 0;
     }
     #[cfg(not(target_os = "emscripten"))]
