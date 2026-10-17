@@ -1,5 +1,5 @@
-name: Set up SDL2 for MSVC
-description: Downloads the SDL2, SDL2_image and SDL2_mixer Visual C++ development releases, verifies them, and puts their import libraries on the linker path and their DLLs on PATH.
+name: Set up SDL2 and SDL3 for MSVC
+description: Downloads the SDL2, SDL2_image, SDL2_mixer and SDL3 Visual C++ development releases, verifies them, and puts their import libraries on the linker path and their DLLs on PATH.
 
 outputs:
   dir:
@@ -28,8 +28,16 @@ runs:
         076cebe070c5762bff0c854d2307078e53348d0225e04748feeb7c944453a86e https://github.com/libsdl-org/SDL_image/releases/download/release-2.8.8/SDL2_image-devel-2.8.8-VC.zip
         12dc2bb724afaf19bcc23fdd7e6fcdcf40274edf13b8c6ec3723089a72537832 https://github.com/libsdl-org/SDL_mixer/releases/download/release-2.8.1/SDL2_mixer-devel-2.8.1-VC.zip
         EOF
-        ls -l "$dir/lib"
+        # SDL3 is for smw-sdl3's tests only; the packages ship lib/ and licenses/.
+        mkdir -p "$dir/sdl3"
+        curl -fsSLO https://github.com/libsdl-org/SDL/releases/download/release-3.4.18/SDL3-devel-3.4.18-VC.zip
+        echo "78d84602ae616cfe26b33a73b7d3b9b6b56e8a6650e53d92c9c6ca938f747acd  SDL3-devel-3.4.18-VC.zip" | sha256sum -c -
+        unzip -q SDL3-devel-3.4.18-VC.zip
+        cp SDL3-3.4.18/lib/x64/SDL3.lib SDL3-3.4.18/lib/x64/SDL3.dll "$dir/sdl3/"
+        ls -l "$dir/lib" "$dir/sdl3"
         lib="$(cygpath -m "$dir/lib")"
-        echo "RUSTFLAGS=-L native=$lib" >> "$GITHUB_ENV"
+        sdl3="$(cygpath -m "$dir/sdl3")"
+        echo "RUSTFLAGS=-L native=$lib -L native=$sdl3" >> "$GITHUB_ENV"
         cygpath -w "$dir/lib" >> "$GITHUB_PATH"
+        cygpath -w "$dir/sdl3" >> "$GITHUB_PATH"
         echo "dir=$dir" >> "$GITHUB_OUTPUT"

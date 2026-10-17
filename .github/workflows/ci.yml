@@ -90,8 +90,8 @@ jobs:
         with:
           key: ${{ matrix.profile }}
       - name: cargo test
-        # Only the macOS runners have SDL3 (Homebrew).
-        run: cargo test --locked --workspace --exclude smw_relay ${{ runner.os != 'macOS' && '--exclude smw-sdl3' || '' }} ${{ matrix.profile == 'release' && '--release' || '' }}
+        # Ubuntu 24.04 has no SDL3 package, so Linux builds it (cached with the target directory).
+        run: cargo test --locked --workspace --exclude smw_relay ${{ runner.os == 'Linux' && '--features smw-sdl3/build-from-source' || '' }} ${{ matrix.profile == 'release' && '--release' || '' }}
 
   net:
     runs-on: ubuntu-24.04
