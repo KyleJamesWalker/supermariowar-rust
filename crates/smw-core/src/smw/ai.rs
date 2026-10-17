@@ -958,21 +958,34 @@ fn objective_mode(mode: GameModeType) -> bool {
     )
 }
 
-/// Whether a solid tile or block touches the side of the player at (`x`, `y`) that it is walking toward.
-fn wall_ahead(g: &mut Game, x: i32, y: i32, left: bool, right: bool) -> bool {
+/// How long the AI ignores a goal behind a wall it cannot jump.
+const UNREACHABLE_FRAMES: i16 = 90;
+
+fn solid_at(g: &mut Game, tx: i32, ty: i32) -> bool {
+    g.g_map.map(tx, ty) & tile_flag_solid as i32 != 0 || !g.map_block(tx as i16, ty as i16).is_null()
+}
+
+/// The tile column of a solid tile or block touching the side of the player at (`x`, `y`) that it is walking toward.
+fn wall_ahead(g: &mut Game, x: i32, y: i32, left: bool, right: bool) -> Option<i32> {
     if left == right {
-        return false;
+        return None;
     }
     let mut column = if right { x + PW } else { x - 1 };
     if column < 0 || column >= App::screenWidth {
         if !wrap_open(g, y) {
-            return false;
+            return None;
         }
         column = column.rem_euclid(App::screenWidth);
     }
     let tx = column / TILESIZE;
-    let rows = (y / TILESIZE).max(0)..=((y + PH - 1) / TILESIZE).min(MAPHEIGHT - 1);
-    rows.into_iter().any(|ty| g.g_map.map(tx, ty) & tile_flag_solid as i32 != 0 || !g.map_block(tx as i16, ty as i16).is_null())
+    let mut rows = (y / TILESIZE).max(0)..=((y + PH - 1) / TILESIZE).min(MAPHEIGHT - 1);
+    rows.any(|ty| solid_at(g, tx, ty)).then_some(tx)
+}
+
+/// Whether the wall in column `tx` rises four tiles above the head of a player whose top is at `y`, beyond a jump.
+fn wall_too_tall(g: &mut Game, tx: i32, y: i32) -> bool {
+    let top = y / TILESIZE;
+    top >= 4 && (top - 4..top).all(|ty| solid_at(g, tx, ty))
 }
 
 //Setup AI so that it can ignore or pay attention to some objects
@@ -1480,8 +1493,12 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
             }
         }
 
-        if wall_ahead(g, ix32, iy32, playerKeys.game_left().fDown, playerKeys.game_right().fDown) {
+        if let Some(column) = wall_ahead(g, ix32, iy32, playerKeys.game_left().fDown, playerKeys.game_right().fDown) {
             playerKeys.game_jump_mut().fDown = true;
+            if actionType == 1 && wall_too_tall(g, column, iy32) {
+                let id = ai_target(g, this.nearestObjects.goal).network_id();
+                this.attentionObjects.insert(id, Box::new(AttentionObject { iID: id, iType: 1, iTimer: UNREACHABLE_FRAMES }));
+            }
         }
 
         /***************************************************
