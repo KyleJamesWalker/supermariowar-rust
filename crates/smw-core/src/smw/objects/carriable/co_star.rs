@@ -80,11 +80,11 @@ impl CO_Star {
     }
 
     pub fn place_star(&mut self, g: &mut Game) {
-        if g.game_values.gamemode.gamemode != game_mode_star {
+        if g.mode().gamemode != game_mode_star {
             return;
         }
 
-        let mut starmode: Ptr<CGM_Star> = Ptr::from_mut(g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Star>().unwrap());
+        let mut starmode: Ptr<CGM_Star> = Ptr::from_mut(g.mode().get().as_any().downcast_mut::<CGM_Star>().unwrap());
 
         self.timer = 0;
 
@@ -110,11 +110,11 @@ impl CObjectTrait for CO_Star {
 
     fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut player = player;
-        if g.game_values.gamemode.gamemode != game_mode_star {
+        if g.mode().gamemode != game_mode_star {
             return false;
         }
 
-        let mut starmode: Ptr<CGM_Star> = Ptr::from_mut(g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Star>().unwrap());
+        let mut starmode: Ptr<CGM_Star> = Ptr::from_mut(g.mode().get().as_any().downcast_mut::<CGM_Star>().unwrap());
 
         self.timer = 0;
         if self.owner.is_none() && g.player(player).isready() {
@@ -123,7 +123,7 @@ impl CObjectTrait for CO_Star {
             }
         }
 
-        if (self.iType == 0 && g.player(player).is_invincible()) || g.player(player).is_shielded() || starmode.isplayerstar(g, player) || g.game_values.gamemode.gameover {
+        if (self.iType == 0 && g.player(player).is_invincible()) || g.player(player).is_shielded() || starmode.isplayerstar(g, player) || g.mode().gameover {
             return false;
         }
 

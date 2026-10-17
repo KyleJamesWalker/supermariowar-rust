@@ -187,7 +187,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
 
     fn playerkilledplayer(&mut self, g: &mut Game, _inflictor: PlayerId, mut other: PlayerId, _style: KillStyle) -> PlayerKillType {
         if !self.gameover {
-            g.player(other).score().adjust_score(g, -1);
+            g.player(other).score(g).adjust_score(g, -1);
 
             if !self.playedwarningsound {
                 let mut countscore: i16 = 0;
@@ -200,7 +200,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
                 }
             }
 
-            if g.player(other).score().score <= 0 {
+            if g.player(other).score(g).score <= 0 {
                 remove_team(g, g.player(other).get_team_id());
                 return PlayerKillType::Removed;
             }
@@ -213,7 +213,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
         gm::cgamemode_playerkilledself(g, self, player, style);
 
         if !self.gameover {
-            g.player(player).score().adjust_score(g, -1);
+            g.player(player).score(g).adjust_score(g, -1);
 
             if !self.playedwarningsound {
                 let mut countscore: i16 = 0;
@@ -226,7 +226,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
                 }
             }
 
-            if g.player(player).score().score <= 0 {
+            if g.player(player).score(g).score <= 0 {
                 remove_team(g, g.player(player).get_team_id());
                 return PlayerKillType::Removed;
             }
@@ -237,7 +237,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
 
     fn playerextraguy(&mut self, g: &mut Game, mut player: PlayerId, iType: i16) {
         if !self.gameover {
-            g.player(player).score().adjust_score(g, iType);
+            g.player(player).score(g).adjust_score(g, iType);
         }
     }
 

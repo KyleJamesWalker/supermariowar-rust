@@ -94,11 +94,11 @@ impl CGM_Greed {
         let mut iDamage: i16 = (kill_style_damage(style) as i32 * g.game_values.gamemodesettings.greed.multiplier as i32 / 2) as i16;
 
         if self.goal != -1 {
-            if g.player(player).score().score < iDamage {
-                iDamage = g.player(player).score().score;
+            if g.player(player).score(g).score < iDamage {
+                iDamage = g.player(player).score(g).score;
             }
 
-            g.player(player).score().adjust_score(g, -iDamage);
+            g.player(player).score(g).adjust_score(g, -iDamage);
         }
 
         let pos: Vec2s = Vec2s::new((g.player(player).center_x() as i32 - 16) as i16, (g.player(player).center_y() as i32 - 16) as i16);
@@ -131,7 +131,7 @@ impl CGM_Greed {
             }
         }
 
-        if self.goal != -1 && g.player(player).score().score <= 0 {
+        if self.goal != -1 && g.player(player).score(g).score <= 0 {
             remove_team(g, g.player(player).get_team_id());
             return PlayerKillType::Removed;
         }
@@ -174,7 +174,7 @@ impl CGameModeTrait for CGM_Greed {
 
     fn playerextraguy(&mut self, g: &mut Game, mut player: PlayerId, iType: i16) {
         if !self.gameover {
-            g.player(player).score().adjust_score(g, (iType as i32 * 5) as i16);
+            g.player(player).score(g).adjust_score(g, (iType as i32 * 5) as i16);
         }
     }
 }

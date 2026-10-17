@@ -125,16 +125,16 @@ impl CObjectTrait for MO_CollectionCard {
         let value = self.value as i32;
 
         // Add this card to the team's score
-        if g.player(player).score().subscore[0] < 3 {
-            let shift = (g.player(player).score().subscore[0] as i32) << 1;
-            g.player(player).score().subscore[1] = (g.player(player).score().subscore[1] as i32 | (value << shift)) as i16;
-            g.player(player).score().subscore[0] += 1;
+        if g.player(player).score(g).subscore[0] < 3 {
+            let shift = (g.player(player).score(g).subscore[0] as i32) << 1;
+            g.player(player).score(g).subscore[1] = (g.player(player).score(g).subscore[1] as i32 | (value << shift)) as i16;
+            g.player(player).score(g).subscore[0] += 1;
         } else {
-            g.player(player).score().subscore[1] = (g.player(player).score().subscore[1] as i32 & !48) as i16; // Clear previous card in 3rd slot
-            g.player(player).score().subscore[1] = (g.player(player).score().subscore[1] as i32 | (value << 4)) as i16; // Set card to newly collected one in 3rd slot
+            g.player(player).score(g).subscore[1] = (g.player(player).score(g).subscore[1] as i32 & !48) as i16; // Clear previous card in 3rd slot
+            g.player(player).score(g).subscore[1] = (g.player(player).score(g).subscore[1] as i32 | (value << 4)) as i16; // Set card to newly collected one in 3rd slot
         }
 
-        g.player(player).score().subscore[2] = 0;
+        g.player(player).score(g).subscore[2] = 0;
 
         if self.r#type == 1 {
             self.dead = true;

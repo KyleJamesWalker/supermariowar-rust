@@ -109,13 +109,13 @@ impl MO_WalkingEnemyTrait for MO_Koopa {
         let mut gp = g.ptr();
         let mut player = player;
         g.player(player).set_yi((self.iy as i32 - PH - 1) as i16);
-        g.player(player).bouncejump();
+        g.player(player).bouncejump(g);
         let p = player;
         g.player(player).collisions.checktop(g, g.player(p));
         g.player(player).platform = PlatformId::NONE;
 
-        if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
-            g.player(player).score().adjust_score(g, 1);
+        if g.mode().gamemode == game_mode_stomp && !g.mode().gameover {
+            g.player(player).score(g).adjust_score(g, 1);
         }
 
         if self.fBouncing {

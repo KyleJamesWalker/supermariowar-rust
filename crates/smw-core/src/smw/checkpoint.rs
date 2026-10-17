@@ -287,18 +287,15 @@ fn walk(g: &mut Game, s: &mut Snap, online: bool) {
         // Which input configuration each player reads, as `inputConfiguration` index * 2 + keyboard/joystick.
         let mut inputs = [0u8; 4];
         for p in 0..4 {
-            let current = gv.playerInput.inputControls[p].as_ptr();
-            for i in 0..8 {
-                if std::ptr::eq(current, &gv.inputConfiguration[i / 2][i % 2]) {
-                    inputs[p] = i as u8;
-                }
+            if let Some((set, kind)) = gv.playerInput.inputControls[p] {
+                inputs[p] = set * 2 + kind;
             }
         }
         s.io(&mut inputs);
         if s.load {
             for p in 0..4 {
                 let i = inputs[p] as usize % 8;
-                gv.cgame_config.playerInput.inputControls[p] = Ptr::from_mut(&mut gv.cgame_config.inputConfiguration[i / 2][i % 2]);
+                gv.cgame_config.playerInput.inputControls[p] = Some(((i / 2) as u8, (i % 2) as u8));
             }
         }
         s.io(gv.playerInput.joy_directions_mut());
@@ -358,7 +355,7 @@ fn walk(g: &mut Game, s: &mut Snap, online: bool) {
         
         use crate::common::game_mode::*;
         s.io(&mut g.currentgamemode);
-        let mut mode = gv.gamemode.gamemode;
+        let mut mode = g.mode().gamemode;
         s.io(&mut mode);
         let mut boss = g.bossgamemode.get_boss_type();
         s.io(&mut boss);
@@ -369,11 +366,11 @@ fn walk(g: &mut Game, s: &mut Snap, online: bool) {
         if s.load {
             g.bossgamemode.set_boss_type(boss);
             gv.gamemode = match mode {
-                game_mode_bonus => Ptr::from_raw(g.bonushousemode.as_ptr() as *mut dyn CGameModeTrait),
-                game_mode_pipe_minigame => Ptr::from_raw(g.pipegamemode.as_ptr() as *mut dyn CGameModeTrait),
-                game_mode_boss_minigame => Ptr::from_raw(g.bossgamemode.as_ptr() as *mut dyn CGameModeTrait),
-                game_mode_boxes_minigame => Ptr::from_raw(g.boxesgamemode.as_ptr() as *mut dyn CGameModeTrait),
-                m => g.gamemodes[(m as usize).min(GAMEMODE_LAST as usize - 1)],
+                game_mode_bonus => Some(crate::common::game_mode::ModeId::BonusHouse),
+                game_mode_pipe_minigame => Some(crate::common::game_mode::ModeId::Pipe),
+                game_mode_boss_minigame => Some(crate::common::game_mode::ModeId::Boss),
+                game_mode_boxes_minigame => Some(crate::common::game_mode::ModeId::Boxes),
+                m => Some(crate::common::game_mode::ModeId::Standard((m as usize).min(GAMEMODE_LAST as usize - 1) as u8)),
             };
         }
 
@@ -383,12 +380,12 @@ fn walk(g: &mut Game, s: &mut Snap, online: bool) {
         if s.load {
             gv.tourstops.clear();
             for line in stops.iter() {
-                gv.tourstops.push(Ptr::new_box(parse_tour_stop_line(g, line.as_bytes(), &GAME_VERSION, world)));
+                gv.tourstops.push(Box::new(parse_tour_stop_line(g, line.as_bytes(), &GAME_VERSION, world)));
             }
         }
 
         for k in 0..4 {
-            let mut sc = g.score[k];
+            let mut sc = g.score[k].as_ptr();
             s.io(&mut sc.score);
             s.io(&mut sc.subscore);
             s.io(&mut sc.x);
@@ -531,7 +528,7 @@ pub fn start_fields(g: &mut Game) -> String {
         MatchType::QuickGame => "quick",
         MatchType::NetGame => "online",
     }));
-    let gm = gv.gamemode;
+    let gm = g.mode();
     f.push(kv("mode", &slug(gm.get_mode_name())));
     if gm.gamemode == crate::common::game_mode::game_mode_star {
         f.push(kv("style", match gv.gamemodesettings.star.shine {
@@ -572,11 +569,15 @@ pub fn start_fields(g: &mut Game) -> String {
         let who = if control == 2 {
             format!("cpu-{}", difficulty.get(gv.cpudifficulty as usize).unwrap_or(&"?"))
         } else {
-            let input = gv.playerInput.inputControls[p];
+            let slot = gv.playerInput.inputControls[p];
+            let input = g.input_control(slot);
             if input.iDevice >= 0 {
                 format!("pad{}", input.iDevice)
             } else {
-                let set = (0..4).find(|&i| std::ptr::eq(input.as_ptr(), &gv.inputConfiguration[i][0])).unwrap_or(p);
+                let set = match slot {
+                    Some((set, 0)) => set as usize,
+                    _ => p,
+                };
                 format!("keys{}", set + 1)
             }
         };
@@ -589,7 +590,7 @@ pub fn start_fields(g: &mut Game) -> String {
 /// The result fields of a match's later markers.
 pub fn result_fields(g: &mut Game) -> String {
     let mut gp = g.ptr();
-    let gm = g.game_values.gamemode;
+    let gm = g.mode();
     let scores: Vec<String> = (0..gp.score_cnt.max(0) as usize).map(|k| g.score[k].score.to_string()).collect();
     let mut f = vec![kv("scores", &scores.join(","))];
     if gm.gameover {

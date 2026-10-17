@@ -27,7 +27,7 @@ impl PlayerSuicideTimer {
     }
 
     pub fn update(&mut self, g: &mut Game, player: &mut CPlayer) {
-        if g.game_values.gamemode.gameover || g.game_values.singleplayermode >= 0 {
+        if g.mode().gameover || g.game_values.singleplayermode >= 0 {
             self.reset();
         }
 
