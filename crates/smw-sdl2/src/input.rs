@@ -2,8 +2,48 @@
 //! `from_sdl` keeps every field the game reads, so `to_sdl(&from_sdl(e))` reads the same as `e`.
 
 use sdl2::sys::SDL_EventType::*;
-use sdl2::sys::{SDL_Event, SDL_PRESSED, SDL_RELEASED};
+use sdl2::sys::{SDL_Event, SDL_TouchFingerEvent, SDL_PRESSED, SDL_RELEASED};
+use std::collections::VecDeque;
+use std::ffi::c_void;
+use std::sync::Mutex;
 use smw_platform::{DeviceChange, Input, InputEvent, Keycode, MouseEvent, PadSlot, TouchPhase};
+
+/// A finger event as SDL reported it, before the renderer's event watch maps it into the logical viewport and
+/// clamps it there; the touch controls sit outside that viewport.
+#[derive(Clone, Copy)]
+struct RawFinger {
+    type_: u32,
+    timestamp: u32,
+    finger: i64,
+    x: f32,
+    y: f32,
+    dx: f32,
+    dy: f32,
+}
+
+static RAW_FINGERS: Mutex<VecDeque<RawFinger>> = Mutex::new(VecDeque::new());
+
+/// An `SDL_AddEventWatch` callback that must be added before the renderer is created, so it runs first.
+pub unsafe extern "C" fn keep_raw_finger(_: *mut c_void, e: *mut SDL_Event) -> i32 {
+    let t = (*e).type_;
+    if t == SDL_FINGERDOWN as u32 || t == SDL_FINGERMOTION as u32 || t == SDL_FINGERUP as u32 {
+        let f = (*e).tfinger;
+        let mut raw = RAW_FINGERS.lock().unwrap_or_else(|p| p.into_inner());
+        if raw.len() >= 1024 {
+            raw.pop_front();
+        }
+        raw.push_back(RawFinger { type_: t, timestamp: f.timestamp, finger: f.fingerId, x: f.x, y: f.y, dx: f.dx, dy: f.dy });
+    }
+    1
+}
+
+/// The raw position of finger event `f`, dropping any recorded before it that never reached the queue's reader.
+fn raw_finger(f: &SDL_TouchFingerEvent) -> Option<RawFinger> {
+    let mut raw = RAW_FINGERS.lock().unwrap_or_else(|p| p.into_inner());
+    let i = raw.iter().position(|r| r.type_ == f.type_ && r.timestamp == f.timestamp && r.finger == f.fingerId)?;
+    raw.drain(..i);
+    raw.pop_front()
+}
 
 /// The `SDL_USEREVENT` code that carries an `InputEvent::Tap`.
 const TAP_CODE: i32 = 0x5441;
@@ -51,7 +91,10 @@ pub fn from_sdl(e: &SDL_Event) -> Input {
             };
             InputEvent::Gamepad { pad: PadSlot(e.cdevice.which), change }
         } else if is(SDL_FINGERDOWN) || is(SDL_FINGERMOTION) || is(SDL_FINGERUP) {
-            let f = e.tfinger;
+            let mut f = e.tfinger;
+            if let Some(raw) = raw_finger(&f) {
+                (f.x, f.y, f.dx, f.dy) = (raw.x, raw.y, raw.dx, raw.dy);
+            }
             let phase = if is(SDL_FINGERDOWN) {
                 TouchPhase::Down
             } else if is(SDL_FINGERMOTION) {
@@ -244,6 +287,21 @@ mod tests {
         round_trip(InputEvent::Mouse { window: 1, which: 0, event: MouseEvent::Wheel { x: 0, y: -1 } });
         round_trip(InputEvent::Tap { x: 639, y: 0 });
         round_trip(InputEvent::Other(0x200));
+    }
+
+    #[test]
+    fn finger_keeps_its_position_from_before_the_renderer_watch() {
+        let mut e: SDL_Event = unsafe { std::mem::zeroed() };
+        e.tfinger.type_ = SDL_FINGERDOWN as u32;
+        e.tfinger.timestamp = 77;
+        e.tfinger.fingerId = 5;
+        (e.tfinger.x, e.tfinger.y) = (0.02, 0.6);
+        unsafe { keep_raw_finger(std::ptr::null_mut(), &mut e) };
+        (e.tfinger.x, e.tfinger.y) = (0.0, 0.6);
+        match from_sdl(&e).event {
+            InputEvent::Touch { x, y, .. } => assert_eq!((x, y), (0.02, 0.6)),
+            other => panic!("{:?}", other),
+        }
     }
 
     #[test]
