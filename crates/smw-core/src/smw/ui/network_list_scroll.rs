@@ -208,7 +208,7 @@ impl UI_ControlTrait for MI_NetworkListScroll {
             }
 
             if out.menu_left().fPressed {
-                if !self.neighbor(MenuNavDirection::Left).is_null() {
+                if !self.neighbor(MenuNavDirection::Left).is_none() {
                     self.iSelectedLineBackup = self.iSelectedLine;
                     self.iSelectedLine = -1;
                     return MENU_CODE_UNSELECT_ITEM;
@@ -217,7 +217,7 @@ impl UI_ControlTrait for MI_NetworkListScroll {
             }
 
             if out.menu_right().fPressed {
-                if !self.neighbor(MenuNavDirection::Right).is_null() {
+                if !self.neighbor(MenuNavDirection::Right).is_none() {
                     self.iSelectedLineBackup = self.iSelectedLine;
                     self.iSelectedLine = -1;
                     return MENU_CODE_UNSELECT_ITEM;

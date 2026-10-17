@@ -1,10 +1,10 @@
 //! Port of src/smw/menu/options/PowerupDropRatesMenu.cpp
 
+use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_image::MI_Image;
 use crate::common::ui::mi_text::{MI_HeaderText, MI_Text};
-use crate::common::uicontrol::ctl_ptr;
 use crate::common::uimenu::UI_Menu;
 use crate::globals::*;
 use crate::smw::ui::mi_powerup_selection::MI_PowerupSelection;
@@ -17,14 +17,14 @@ use crate::smw::ui::mi_powerup_selection::MI_PowerupSelection;
 pub struct UI_PowerupDropRatesMenu {
     pub ui_menu: UI_Menu,
 
-    pub miPowerupSelection: Ptr<MI_PowerupSelection>,
+    pub miPowerupSelection: Ctl<MI_PowerupSelection>,
 
     // MI_PowerupSlider * miPowerupSlider[NUM_POWERUPS];
     // MI_Button * miPowerupSelectionBackButton;
     // MI_Button * miPowerupSelectionRestoreDefaultsButton;
-    pub miPowerupSelectionLeftHeaderBar: Ptr<MI_Image>,
-    pub miPowerupSelectionMenuRightHeaderBar: Ptr<MI_Image>,
-    pub miPowerupSelectionMenuHeaderText: Ptr<MI_Text>,
+    pub miPowerupSelectionLeftHeaderBar: Ctl<MI_Image>,
+    pub miPowerupSelectionMenuRightHeaderBar: Ctl<MI_Image>,
+    pub miPowerupSelectionMenuHeaderText: Ctl<MI_Text>,
 }
 crate::impl_base!(UI_PowerupDropRatesMenu => ui_menu: UI_Menu);
 
@@ -33,21 +33,21 @@ impl UI_PowerupDropRatesMenu {
         let mut this = Box::<Self>::default();
         let menu_plain_field = g.rm.menu_plain_field;
 
-        this.miPowerupSelection = Ptr::new_box(MI_PowerupSelection::new(g, 50, 44, 640, 8));
-        this.miPowerupSelection.set_auto_modify(true);
+        this.miPowerupSelection = Ctl::new(MI_PowerupSelection::new(g, 50, 44, 640, 8), g);
+        g.ctl(this.miPowerupSelection).set_auto_modify(true);
 
-        this.miPowerupSelectionLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-        this.miPowerupSelectionMenuRightHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-        this.miPowerupSelectionMenuHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Item Selection Menu", 320, 5));
+        this.miPowerupSelectionLeftHeaderBar = Ctl::new(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0), g);
+        this.miPowerupSelectionMenuRightHeaderBar = Ctl::new(MI_Image::new(menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0), g);
+        this.miPowerupSelectionMenuHeaderText = Ctl::new(MI_HeaderText::new(g, "Item Selection Menu", 320, 5), g);
 
-        let sel = ctl_ptr(this.miPowerupSelection);
-        this.add_control(sel, Ptr::null(), Ptr::null(), Ptr::null(), Ptr::null());
+        let sel = this.miPowerupSelection.id();
+        this.add_control(g, sel, ControlId::NONE, ControlId::NONE, ControlId::NONE, ControlId::NONE);
 
-        let c = ctl_ptr(this.miPowerupSelectionLeftHeaderBar);
+        let c = this.miPowerupSelectionLeftHeaderBar.id();
         this.add_non_control(c);
-        let c = ctl_ptr(this.miPowerupSelectionMenuRightHeaderBar);
+        let c = this.miPowerupSelectionMenuRightHeaderBar.id();
         this.add_non_control(c);
-        let c = ctl_ptr(this.miPowerupSelectionMenuHeaderText);
+        let c = this.miPowerupSelectionMenuHeaderText.id();
         this.add_non_control(c);
 
         this.set_initial_focus(g, sel);

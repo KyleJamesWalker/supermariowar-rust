@@ -1,5 +1,6 @@
 //! Port of src/smw/net.cpp
 
+use crate::common::uicontrol::{ControlId, Ctl};
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game_mode::{GameModeType, *};
@@ -364,7 +365,7 @@ pub struct NetClient {
     foreign_lobbyserver: Ptr<dyn NetPeer>,
     foreign_gamehost: Ptr<dyn NetPeer>,
 
-    uiRoomList: Ptr<MI_NetworkListScroll>,
+    uiRoomList: Ctl<MI_NetworkListScroll>,
 
     pub _alias: Aliased,
 }
@@ -378,7 +379,7 @@ impl NetClient {
             local_gamehost: NetGameHost::new(),
             foreign_lobbyserver: Ptr::null(),
             foreign_gamehost: Ptr::null(),
-            uiRoomList: Ptr::null(),
+            uiRoomList: Default::default(),
             _alias: Aliased::new(),
         }
     }
@@ -427,7 +428,7 @@ impl NetClient {
         self.stop(g);
     }
 
-    pub fn set_room_list_ui_control(&mut self, control: Ptr<MI_NetworkListScroll>) {
+    pub fn set_room_list_ui_control(&mut self, control: Ctl<MI_NetworkListScroll>) {
         self.uiRoomList = control;
     }
 
@@ -475,8 +476,8 @@ impl NetClient {
         self.send_message_to_lobby_server(g, msg.as_bytes());
 
         g.netplay.currentRooms.clear();
-        if !self.uiRoomList.is_null() {
-            self.uiRoomList.clear();
+        if !self.uiRoomList.is_none() {
+            g.ctl(self.uiRoomList).clear();
         }
     }
 
@@ -488,10 +489,10 @@ impl NetClient {
         let name = newRoom.name.clone();
         g.netplay.currentRooms.push(newRoom);
 
-        if !self.uiRoomList.is_null() {
+        if !self.uiRoomList.is_none() {
             let playerCountString: String =
                 [(b'0'.wrapping_add(roomInfo.currentPlayerCount)) as char, '/', '4'].iter().collect();
-            self.uiRoomList.add(&name, &playerCountString);
+            g.ctl(self.uiRoomList).add(&name, &playerCountString);
         }
     }
 

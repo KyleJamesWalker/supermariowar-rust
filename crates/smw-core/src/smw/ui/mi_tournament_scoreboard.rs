@@ -504,66 +504,64 @@ impl UI_ControlTrait for MI_TournamentScoreboard {
             }
         }
 
-        if !self.m_parentMenu.is_null() {
-            if self.iTournamentWinner != -1 {
-                //Single tournament winning team
-                self.iFireworksCounter -= 1;
-                if self.iFireworksCounter < 0 && self.iTournamentWinner >= 0 {
-                    self.iFireworksCounter = (RANDOM_INT(gp.get(), 30) + 10) as i16;
+        if self.iTournamentWinner != -1 {
+            //Single tournament winning team
+            self.iFireworksCounter -= 1;
+            if self.iFireworksCounter < 0 && self.iTournamentWinner >= 0 {
+                self.iFireworksCounter = (RANDOM_INT(gp.get(), 30) + 10) as i16;
 
-                    let w = self.iTournamentWinner as usize;
-                    self.iExplosionCounter -= 1;
-                    if self.iExplosionCounter < 0 {
-                        self.iExplosionCounter = (RANDOM_INT(gp.get(), 6) + 5) as i16;
+                let w = self.iTournamentWinner as usize;
+                self.iExplosionCounter -= 1;
+                if self.iExplosionCounter < 0 {
+                    self.iExplosionCounter = (RANDOM_INT(gp.get(), 6) + 5) as i16;
 
-                        if_sound_on_play(g, &mut gp.rm.sfx_bobombsound);
+                    if_sound_on_play(g, &mut gp.rm.sfx_bobombsound);
 
-                        let mut dAngle: f32 = 0.0;
-                        let iRandX = (RANDOM_INT(gp.get(), 440) + 100) as i16;
-                        let iRandY = (RANDOM_INT(gp.get(), 280) + 100) as i16;
+                    let mut dAngle: f32 = 0.0;
+                    let iRandX = (RANDOM_INT(gp.get(), 440) + 100) as i16;
+                    let iRandY = (RANDOM_INT(gp.get(), 280) + 100) as i16;
 
-                        for iBlock in 0..28i16 {
-                            let dVel: f32 = 7.0f32 + ((iBlock % 2) as f32 * 5.0f32);
-                            let dVelX = dVel * cosf(dAngle);
-                            let dVelY = dVel * sinf(dAngle);
+                    for iBlock in 0..28i16 {
+                        let dVel: f32 = 7.0f32 + ((iBlock % 2) as f32 * 5.0f32);
+                        let dVelX = dVel * cosf(dAngle);
+                        let dVelY = dVel * sinf(dAngle);
 
-                            let iRandomColor = RANDOM_INT(gp.get(), self.iTeamCounts[w] as i32) as i16;
-                            let _ = (iRandX, iRandY, dVelX, dVelY, g.game_values.colorids[self.iTeamIDs[w][iRandomColor as usize] as usize] << 4);
-                            // TODO(eyecandy): m_parentMenu->AddEyeCandy<EC_FallingObject>(&rm->spr_bonus, iRandX, iRandY, dVelX, dVelY, 4, 2, 0, game_values.colorids[iTeamIDs[iTournamentWinner][iRandomColor]] << 4, 16, 16);
-                            dAngle -= PI / 14.0f32;
-                        }
-                    } else {
-                        if_sound_on_play(g, &mut gp.rm.sfx_cannon);
-
-                        let iRandX = RANDOM_INT(gp.get(), 576) as i16;
-                        let iRandY = RANDOM_INT(gp.get(), 416) as i16;
                         let iRandomColor = RANDOM_INT(gp.get(), self.iTeamCounts[w] as i32) as i16;
-
-                        let _ = (iRandX, iRandY, g.game_values.colorids[self.iTeamIDs[w][iRandomColor as usize] as usize] << 6);
-                        // TODO(eyecandy): m_parentMenu->AddEyeCandy<EC_SingleAnimation>(&rm->spr_fireworks, iRandX, iRandY, 8, 4, 0, game_values.colorids[iTeamIDs[iTournamentWinner][iRandomColor]] << 6, 64, 64);
+                        let _ = (iRandX, iRandY, dVelX, dVelY, g.game_values.colorids[self.iTeamIDs[w][iRandomColor as usize] as usize] << 4);
+                        // TODO(eyecandy): m_parentMenu->AddEyeCandy<EC_FallingObject>(&rm->spr_bonus, iRandX, iRandY, dVelX, dVelY, 4, 2, 0, game_values.colorids[iTeamIDs[iTournamentWinner][iRandomColor]] << 4, 16, 16);
+                        dAngle -= PI / 14.0f32;
                     }
+                } else {
+                    if_sound_on_play(g, &mut gp.rm.sfx_cannon);
+
+                    let iRandX = RANDOM_INT(gp.get(), 576) as i16;
+                    let iRandY = RANDOM_INT(gp.get(), 416) as i16;
+                    let iRandomColor = RANDOM_INT(gp.get(), self.iTeamCounts[w] as i32) as i16;
+
+                    let _ = (iRandX, iRandY, g.game_values.colorids[self.iTeamIDs[w][iRandomColor as usize] as usize] << 6);
+                    // TODO(eyecandy): m_parentMenu->AddEyeCandy<EC_SingleAnimation>(&rm->spr_fireworks, iRandX, iRandY, 8, 4, 0, game_values.colorids[iTeamIDs[iTournamentWinner][iRandomColor]] << 6, 64, 64);
+                }
+            }
+
+            self.iWinnerTextCounter -= 1;
+            if self.iWinnerTextCounter < 0 {
+                self.iWinnerTextCounter = (RANDOM_INT(gp.get(), 35) + 15) as i16;
+
+                let mut szWinnerText = String::new();
+                if self.iTournamentWinner == -2 {
+                    szWinnerText = "Tied Game!".to_string();
+                } else if self.iTeamCounts[self.iTournamentWinner as usize] == 1 {
+                    szWinnerText = format!("Player {} Wins!", self.iTeamIDs[self.iTournamentWinner as usize][0] + 1);
+                } else if self.iTeamCounts[self.iTournamentWinner as usize] > 1 {
+                    szWinnerText = format!("Team {} Wins!", self.iTournamentWinner + 1);
                 }
 
-                self.iWinnerTextCounter -= 1;
-                if self.iWinnerTextCounter < 0 {
-                    self.iWinnerTextCounter = (RANDOM_INT(gp.get(), 35) + 15) as i16;
+                let iStringWidth = g.rm.menu_font_large.get_width(&szWinnerText) as i16;
+                let iRandX = (RANDOM_INT(gp.get(), App::screenWidth - iStringWidth as i32) + (iStringWidth >> 1) as i32) as i16;
+                let iRandY = (RANDOM_INT(gp.get(), App::screenHeight - 100) + 100) as i16;
 
-                    let mut szWinnerText = String::new();
-                    if self.iTournamentWinner == -2 {
-                        szWinnerText = "Tied Game!".to_string();
-                    } else if self.iTeamCounts[self.iTournamentWinner as usize] == 1 {
-                        szWinnerText = format!("Player {} Wins!", self.iTeamIDs[self.iTournamentWinner as usize][0] + 1);
-                    } else if self.iTeamCounts[self.iTournamentWinner as usize] > 1 {
-                        szWinnerText = format!("Team {} Wins!", self.iTournamentWinner + 1);
-                    }
-
-                    let iStringWidth = g.rm.menu_font_large.get_width(&szWinnerText) as i16;
-                    let iRandX = (RANDOM_INT(gp.get(), App::screenWidth - iStringWidth as i32) + (iStringWidth >> 1) as i32) as i16;
-                    let iRandY = (RANDOM_INT(gp.get(), App::screenHeight - 100) + 100) as i16;
-
-                    let _ = (iRandX, iRandY, -VELJUMP);
-                    // TODO(eyecandy): m_parentMenu->AddEyeCandy<EC_GravText>(&rm->menu_font_large, iRandX, iRandY, szWinnerText, -VELJUMP);
-                }
+                let _ = (iRandX, iRandY, -VELJUMP);
+                // TODO(eyecandy): m_parentMenu->AddEyeCandy<EC_GravText>(&rm->menu_font_large, iRandX, iRandY, szWinnerText, -VELJUMP);
             }
         }
     }

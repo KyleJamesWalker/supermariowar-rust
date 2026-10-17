@@ -1,5 +1,6 @@
 //! Port of src/smw/menu/options/GameplayOptionsMenu.cpp
 
+use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
 use crate::common::gameplay_styles::{ShieldStyle, WarpLockStyle};
 use crate::common::ui::menu_code::*;
@@ -7,7 +8,7 @@ use crate::common::ui::mi_button::MI_Button;
 use crate::common::ui::mi_image::MI_Image;
 use crate::common::ui::mi_select_field::MI_SelectField;
 use crate::common::ui::mi_text::{MI_HeaderText, MI_Text};
-use crate::common::uicontrol::{ctl_ptr, TextAlign};
+use crate::common::uicontrol::{TextAlign};
 use crate::common::uimenu::UI_Menu;
 use crate::globals::*;
 use crate::smw::menu::options::{select_field, OFF_ON};
@@ -20,21 +21,21 @@ use crate::smw::menu::options::{select_field, OFF_ON};
 pub struct UI_GameplayOptionsMenu {
     pub ui_menu: UI_Menu,
 
-    pub miRespawnField: Ptr<MI_SelectField<i16>>,
-    pub miShieldStyleField: Ptr<MI_SelectField<ShieldStyle>>,
-    pub miShieldTimeField: Ptr<MI_SelectField<i16>>,
-    pub miBoundsTimeField: Ptr<MI_SelectField<i16>>,
-    pub miSuicideTimeField: Ptr<MI_SelectField<i16>>,
-    pub miWarpLockStyleField: Ptr<MI_SelectField<WarpLockStyle>>,
-    pub miWarpLockTimeField: Ptr<MI_SelectField<i16>>,
-    pub miBotsField: Ptr<MI_SelectField<i16>>,
-    pub miPointSpeedField: Ptr<MI_SelectField<i16>>,
-    pub miSecretsField: Ptr<MI_SelectField<bool>>,
-    pub miGameplayOptionsMenuBackButton: Ptr<MI_Button>,
+    pub miRespawnField: Ctl<MI_SelectField<i16>>,
+    pub miShieldStyleField: Ctl<MI_SelectField<ShieldStyle>>,
+    pub miShieldTimeField: Ctl<MI_SelectField<i16>>,
+    pub miBoundsTimeField: Ctl<MI_SelectField<i16>>,
+    pub miSuicideTimeField: Ctl<MI_SelectField<i16>>,
+    pub miWarpLockStyleField: Ctl<MI_SelectField<WarpLockStyle>>,
+    pub miWarpLockTimeField: Ctl<MI_SelectField<i16>>,
+    pub miBotsField: Ctl<MI_SelectField<i16>>,
+    pub miPointSpeedField: Ctl<MI_SelectField<i16>>,
+    pub miSecretsField: Ctl<MI_SelectField<bool>>,
+    pub miGameplayOptionsMenuBackButton: Ctl<MI_Button>,
 
-    pub miGameplayOptionsMenuLeftHeaderBar: Ptr<MI_Image>,
-    pub miGameplayOptionsMenuRightHeaderBar: Ptr<MI_Image>,
-    pub miGameplayOptionsMenuHeaderText: Ptr<MI_Text>,
+    pub miGameplayOptionsMenuLeftHeaderBar: Ctl<MI_Image>,
+    pub miGameplayOptionsMenuRightHeaderBar: Ctl<MI_Image>,
+    pub miGameplayOptionsMenuHeaderText: Ctl<MI_Text>,
 }
 crate::impl_base!(UI_GameplayOptionsMenu => ui_menu: UI_Menu);
 
@@ -69,7 +70,7 @@ impl UI_GameplayOptionsMenu {
                     ("9.5 Seconds", 19),
                     ("10.0 Seconds", 20),
                 ],
-                &mut g.game_values.respawn);
+                &mut g.game_values.respawn, g);
 
             this.miShieldStyleField = select_field(spr_selectfield, 70, 80, "Shield Style", 500, 220,
                 &[
@@ -78,7 +79,7 @@ impl UI_GameplayOptionsMenu {
                     ("Soft with Stomp", ShieldStyle::SoftWithStomp),
                     ("Hard", ShieldStyle::Hard),
                 ],
-                &mut g.game_values.shieldstyle);
+                &mut g.game_values.shieldstyle, g);
 
             this.miShieldTimeField = select_field(spr_selectfield, 70, 120, "Shield Time", 500, 220,
                 &[
@@ -93,7 +94,7 @@ impl UI_GameplayOptionsMenu {
                     ("4.5 Seconds", 279),
                     ("5.0 Seconds", 310),
                 ],
-                &mut g.game_values.shieldtime);
+                &mut g.game_values.shieldtime, g);
 
             this.miBoundsTimeField = select_field(spr_selectfield, 70, 160, "Bounds Time", 500, 220,
                 &[
@@ -109,7 +110,7 @@ impl UI_GameplayOptionsMenu {
                     ("9 Seconds", 9),
                     ("10 Seconds", 10),
                 ],
-                &mut g.game_values.outofboundstime);
+                &mut g.game_values.outofboundstime, g);
 
             this.miSuicideTimeField = select_field(spr_selectfield, 70, 200, "Suicide Time", 500, 220,
                 &[
@@ -121,7 +122,7 @@ impl UI_GameplayOptionsMenu {
                     ("15 Seconds", 930),
                     ("20 Seconds", 1240),
                 ],
-                &mut g.game_values.suicidetime);
+                &mut g.game_values.suicidetime, g);
 
             this.miWarpLockStyleField = select_field(spr_selectfield, 70, 240, "Warp Lock Style", 500, 220,
                 &[
@@ -131,7 +132,7 @@ impl UI_GameplayOptionsMenu {
                     ("Entire Connection", WarpLockStyle::EntireConnection),
                     ("All Warps", WarpLockStyle::AllWarps),
                 ],
-                &mut g.game_values.warplockstyle);
+                &mut g.game_values.warplockstyle, g);
 
             this.miWarpLockTimeField = select_field(spr_selectfield, 70, 280, "Warp Lock Time", 500, 220,
                 &[
@@ -147,57 +148,57 @@ impl UI_GameplayOptionsMenu {
                     ("9 Seconds", 558),
                     ("10 Seconds", 620),
                 ],
-                &mut g.game_values.warplocktime);
+                &mut g.game_values.warplocktime, g);
 
             this.miBotsField = select_field(spr_selectfield, 70, 320, "Bot Difficulty", 500, 220,
                 &[("Very Easy", 0), ("Easy", 1), ("Moderate", 2), ("Hard", 3), ("Very Hard", 4)],
-                &mut g.game_values.cpudifficulty);
+                &mut g.game_values.cpudifficulty, g);
 
             this.miPointSpeedField = select_field(spr_selectfield, 70, 360, "Point Speed", 500, 220,
                 &[("Very Slow", 60), ("Slow", 40), ("Moderate", 20), ("Fast", 10), ("Very Fast", 5)],
-                &mut g.game_values.pointspeed);
+                &mut g.game_values.pointspeed, g);
 
-            this.miSecretsField = select_field(spr_selectfield, 70, 400, "Secrets", 500, 220, OFF_ON, &mut g.game_values.secretsenabled);
+            this.miSecretsField = select_field(spr_selectfield, 70, 400, "Secrets", 500, 220, OFF_ON, &mut g.game_values.secretsenabled, g);
 
-            this.miGameplayOptionsMenuBackButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
-            this.miGameplayOptionsMenuBackButton.set_code(MENU_CODE_BACK_TO_OPTIONS_MENU);
+            this.miGameplayOptionsMenuBackButton = Ctl::new(MI_Button::new(g, spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER), g);
+            g.ctl(this.miGameplayOptionsMenuBackButton).set_code(MENU_CODE_BACK_TO_OPTIONS_MENU);
 
-            this.miGameplayOptionsMenuLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-            this.miGameplayOptionsMenuRightHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miGameplayOptionsMenuHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Gameplay Options Menu", 320, 5));
+            this.miGameplayOptionsMenuLeftHeaderBar = Ctl::new(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0), g);
+            this.miGameplayOptionsMenuRightHeaderBar = Ctl::new(MI_Image::new(menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0), g);
+            this.miGameplayOptionsMenuHeaderText = Ctl::new(MI_HeaderText::new(g, "Gameplay Options Menu", 320, 5), g);
         }
 
-        let respawn = ctl_ptr(this.miRespawnField);
-        let shieldstyle = ctl_ptr(this.miShieldStyleField);
-        let shieldtime = ctl_ptr(this.miShieldTimeField);
-        let bounds = ctl_ptr(this.miBoundsTimeField);
-        let suicide = ctl_ptr(this.miSuicideTimeField);
-        let warpstyle = ctl_ptr(this.miWarpLockStyleField);
-        let warptime = ctl_ptr(this.miWarpLockTimeField);
-        let bots = ctl_ptr(this.miBotsField);
-        let pointspeed = ctl_ptr(this.miPointSpeedField);
-        let secrets = ctl_ptr(this.miSecretsField);
-        let back = ctl_ptr(this.miGameplayOptionsMenuBackButton);
-        let null = Ptr::null();
+        let respawn = this.miRespawnField.id();
+        let shieldstyle = this.miShieldStyleField.id();
+        let shieldtime = this.miShieldTimeField.id();
+        let bounds = this.miBoundsTimeField.id();
+        let suicide = this.miSuicideTimeField.id();
+        let warpstyle = this.miWarpLockStyleField.id();
+        let warptime = this.miWarpLockTimeField.id();
+        let bots = this.miBotsField.id();
+        let pointspeed = this.miPointSpeedField.id();
+        let secrets = this.miSecretsField.id();
+        let back = this.miGameplayOptionsMenuBackButton.id();
+        let null = ControlId::NONE;
 
-        this.add_control(respawn, back, shieldstyle, null, back);
-        this.add_control(shieldstyle, respawn, shieldtime, null, back);
-        this.add_control(shieldtime, shieldstyle, bounds, null, back);
-        this.add_control(bounds, shieldtime, suicide, null, back);
-        this.add_control(suicide, bounds, warpstyle, null, back);
-        this.add_control(warpstyle, suicide, warptime, null, back);
-        this.add_control(warptime, warpstyle, bots, null, back);
-        this.add_control(bots, warptime, pointspeed, null, back);
-        this.add_control(pointspeed, bots, secrets, null, back);
-        this.add_control(secrets, pointspeed, back, null, back);
+        this.add_control(g, respawn, back, shieldstyle, null, back);
+        this.add_control(g, shieldstyle, respawn, shieldtime, null, back);
+        this.add_control(g, shieldtime, shieldstyle, bounds, null, back);
+        this.add_control(g, bounds, shieldtime, suicide, null, back);
+        this.add_control(g, suicide, bounds, warpstyle, null, back);
+        this.add_control(g, warpstyle, suicide, warptime, null, back);
+        this.add_control(g, warptime, warpstyle, bots, null, back);
+        this.add_control(g, bots, warptime, pointspeed, null, back);
+        this.add_control(g, pointspeed, bots, secrets, null, back);
+        this.add_control(g, secrets, pointspeed, back, null, back);
 
-        this.add_control(back, secrets, respawn, secrets, null);
+        this.add_control(g, back, secrets, respawn, secrets, null);
 
-        let c = ctl_ptr(this.miGameplayOptionsMenuLeftHeaderBar);
+        let c = this.miGameplayOptionsMenuLeftHeaderBar.id();
         this.add_non_control(c);
-        let c = ctl_ptr(this.miGameplayOptionsMenuRightHeaderBar);
+        let c = this.miGameplayOptionsMenuRightHeaderBar.id();
         this.add_non_control(c);
-        let c = ctl_ptr(this.miGameplayOptionsMenuHeaderText);
+        let c = this.miGameplayOptionsMenuHeaderText.id();
         this.add_non_control(c);
 
         this.set_initial_focus(g, respawn);

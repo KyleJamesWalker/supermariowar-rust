@@ -1,5 +1,6 @@
 //! Port of src/smw/menu/network/NetNewRoomSettingsMenu.cpp
 
+use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
 use crate::common::game_mode::GAMEMODE_LAST;
 use crate::common::ui::menu_code::*;
@@ -9,7 +10,6 @@ use crate::common::ui::mi_image_select_field::MI_ImageSelectField;
 use crate::common::ui::mi_map_field::MI_MapField;
 use crate::common::ui::mi_select_field::MI_SelectField;
 use crate::common::ui::mi_text::{MI_HeaderText, MI_Text};
-use crate::common::uicontrol::ctl_ptr;
 use crate::common::uimenu::UI_Menu;
 use crate::globals::Ptr;
 use crate::smw::menu::game_settings_menu::UI_GameSettingsMenu;
@@ -20,17 +20,17 @@ const GM_LAST: usize = GAMEMODE_LAST as usize;
 pub struct UI_NetNewRoomSettingsMenu {
     pub ui_menu: UI_Menu,
 
-    miModeField: Ptr<MI_ImageSelectField>,
-    miGoalField: [Ptr<MI_SelectField<i16>>; GM_LAST],
-    miModeSettingsButton: Ptr<MI_Button>,
+    miModeField: Ctl<MI_ImageSelectField>,
+    miGoalField: [Ctl<MI_SelectField<i16>>; GM_LAST],
+    miModeSettingsButton: Ctl<MI_Button>,
     /// Not in the C++: roll the mode settings when the match starts, as upstream always did.
-    miRandomizeField: Ptr<MI_SelectField<bool>>,
-    miMapField: Ptr<MI_MapField>,
-    miContinueButton: Ptr<MI_Button>,
+    miRandomizeField: Ctl<MI_SelectField<bool>>,
+    miMapField: Ctl<MI_MapField>,
+    miContinueButton: Ctl<MI_Button>,
 
-    miLeftHeaderBar: Ptr<MI_Image>,
-    miRightHeaderBar: Ptr<MI_Image>,
-    miHeaderText: Ptr<MI_Text>,
+    miLeftHeaderBar: Ctl<MI_Image>,
+    miRightHeaderBar: Ctl<MI_Image>,
+    miHeaderText: Ctl<MI_Text>,
 }
 crate::impl_base!(UI_NetNewRoomSettingsMenu => ui_menu: UI_Menu);
 
@@ -39,51 +39,51 @@ impl UI_NetNewRoomSettingsMenu {
         let mut this = Box::<Self>::default();
         let selectfield = g.rm.spr_selectfield;
 
-        this.miContinueButton = Ptr::new_box(MI_Button::new_left(g, selectfield, 70, 45, "Continue", 500));
-        this.miContinueButton.set_code(MENU_CODE_TO_NET_NEW_ROOM_SETTINGS_MENU);
+        this.miContinueButton = Ctl::new(MI_Button::new_left(g, selectfield, 70, 45, "Continue", 500), g);
+        g.ctl(this.miContinueButton).set_code(MENU_CODE_TO_NET_NEW_ROOM_SETTINGS_MENU);
 
-        this.miModeField = Ptr::new_box(MI_ImageSelectField::copy_from(&gsm.miModeField));
+        this.miModeField = Ctl::new(MI_ImageSelectField::copy_from(g.ctl(gsm.miModeField)), g);
         for iGoalField in 0..GM_LAST {
-            this.miGoalField[iGoalField] = Ptr::new_box(MI_SelectField::copy_from(&gsm.miGoalField[iGoalField]));
+            this.miGoalField[iGoalField] = Ctl::new(MI_SelectField::copy_from(g.ctl(gsm.miGoalField[iGoalField])), g);
         }
 
-        this.miMapField = Ptr::new_box(MI_MapField::new(g, selectfield, 70, 165, "Map", 400, 120, true));
+        this.miMapField = Ctl::new(MI_MapField::new(g, selectfield, 70, 165, "Map", 400, 120, true), g);
         g.netplay.mapfilepath = this.get_current_map_path(g);
 
-        this.miModeSettingsButton = Ptr::new_box(MI_Button::new_left(g, selectfield, 430, 125, "Settings", 140));
-        this.miModeSettingsButton.set_code(MENU_CODE_TO_MODE_SETTINGS_MENU);
+        this.miModeSettingsButton = Ctl::new(MI_Button::new_left(g, selectfield, 430, 125, "Settings", 140), g);
+        g.ctl(this.miModeSettingsButton).set_code(MENU_CODE_TO_MODE_SETTINGS_MENU);
 
-        this.miRandomizeField = Ptr::new_box(MI_SelectField::<bool>::new(selectfield, 440, 205, "Random", 130, 80));
-        this.miRandomizeField.add("Off", false);
-        this.miRandomizeField.add("On", true);
-        this.miRandomizeField.set_output_ptr(&mut g.netplay.randomize_settings as *mut _);
-        this.miRandomizeField.set_current_value(g.netplay.randomize_settings);
+        this.miRandomizeField = Ctl::new(MI_SelectField::<bool>::new(selectfield, 440, 205, "Random", 130, 80), g);
+        g.ctl(this.miRandomizeField).add("Off", false);
+        g.ctl(this.miRandomizeField).add("On", true);
+        g.ctl(this.miRandomizeField).set_output_ptr(&mut g.netplay.randomize_settings as *mut _);
+        g.ctl(this.miRandomizeField).set_current_value(g.netplay.randomize_settings);
 
-        let cont = ctl_ptr(this.miContinueButton);
-        let mode = ctl_ptr(this.miModeField);
-        let goals: Vec<_> = this.miGoalField.iter().map(|g| ctl_ptr(*g)).collect();
-        let settings = ctl_ptr(this.miModeSettingsButton);
-        let map = ctl_ptr(this.miMapField);
-        let randomize = ctl_ptr(this.miRandomizeField);
-        let null = Ptr::null();
+        let cont = this.miContinueButton.id();
+        let mode = this.miModeField.id();
+        let goals: Vec<_> = this.miGoalField.iter().map(|c| c.id()).collect();
+        let settings = this.miModeSettingsButton.id();
+        let map = this.miMapField.id();
+        let randomize = this.miRandomizeField.id();
+        let null = ControlId::NONE;
 
-        this.add_control(cont, map, mode, null, null);
-        this.add_control(mode, cont, goals[0], null, null);
-        this.add_control(goals[0], mode, goals[1], null, settings);
+        this.add_control(g, cont, map, mode, null, null);
+        this.add_control(g, mode, cont, goals[0], null, null);
+        this.add_control(g, goals[0], mode, goals[1], null, settings);
         for iGoalField in 1..GM_LAST - 1 {
-            this.add_control(goals[iGoalField], goals[iGoalField - 1], goals[iGoalField + 1], goals[iGoalField - 1], settings);
+            this.add_control(g, goals[iGoalField], goals[iGoalField - 1], goals[iGoalField + 1], goals[iGoalField - 1], settings);
         }
-        this.add_control(goals[GM_LAST - 1], goals[GM_LAST - 2], map, goals[GM_LAST - 2], null);
-        this.add_control(settings, mode, randomize, goals[GM_LAST - 1], randomize);
-        this.add_control(randomize, settings, map, settings, null);
-        this.add_control(map, goals[GM_LAST - 1], cont, null, null);
+        this.add_control(g, goals[GM_LAST - 1], goals[GM_LAST - 2], map, goals[GM_LAST - 2], null);
+        this.add_control(g, settings, mode, randomize, goals[GM_LAST - 1], randomize);
+        this.add_control(g, randomize, settings, map, settings, null);
+        this.add_control(g, map, goals[GM_LAST - 1], cont, null, null);
 
         let plain = g.rm.menu_plain_field;
-        this.miLeftHeaderBar = Ptr::new_box(MI_Image::new(plain, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-        this.miRightHeaderBar = Ptr::new_box(MI_Image::new(plain, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-        this.miHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Multiplayer Level Select Menu", 320, 5));
+        this.miLeftHeaderBar = Ctl::new(MI_Image::new(plain, 0, 0, 0, 0, 320, 32, 1, 1, 0), g);
+        this.miRightHeaderBar = Ctl::new(MI_Image::new(plain, 320, 0, 192, 0, 320, 32, 1, 1, 0), g);
+        this.miHeaderText = Ctl::new(MI_HeaderText::new(g, "Multiplayer Level Select Menu", 320, 5), g);
 
-        let (l, r, h) = (ctl_ptr(this.miLeftHeaderBar), ctl_ptr(this.miRightHeaderBar), ctl_ptr(this.miHeaderText));
+        let (l, r, h) = (this.miLeftHeaderBar.id(), this.miRightHeaderBar.id(), this.miHeaderText.id());
         this.add_non_control(l);
         this.add_non_control(r);
         this.add_non_control(h);
@@ -93,20 +93,20 @@ impl UI_NetNewRoomSettingsMenu {
         this
     }
 
-    pub fn refresh_game_mode_buttons(&mut self) {
-        let current = self.miModeField.current_value();
+    pub fn refresh_game_mode_buttons(&mut self, g: &mut Game) {
+        let current = g.ctl(self.miModeField).current_value();
         for iMode in 0..GM_LAST {
-            self.miGoalField[iMode].set_visible(current == iMode as i16);
+            g.ctl(self.miGoalField[iMode]).set_visible(current == iMode as i16);
         }
     }
 
     pub fn get_current_map_path(&self, g: &mut Game) -> String {
-        self.miMapField.get_map_file_path(g)
+        g.ctl(self.miMapField).get_map_file_path(g)
     }
 
-    pub fn get_selected_game_mode_id(&self) -> i16 {
+    pub fn get_selected_game_mode_id(&self, g: &Game) -> i16 {
         for iGameMode in 0..GM_LAST {
-            if self.miGoalField[iGameMode].is_visible() {
+            if g.ctl(self.miGoalField[iGameMode]).is_visible() {
                 return iGameMode as i16;
             }
         }

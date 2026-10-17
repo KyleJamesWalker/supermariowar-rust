@@ -4,6 +4,7 @@
 //! other game globals the shared code links against; the port reuses the crate's (smw::main,
 //! smw::gs_gameplay) and only defines the editor's own state here.
 
+use crate::common::uicontrol::{ControlId, Ctl};
 use crate::common::resource_manager::SpriteId;
 use crate::common::keys::*;
 use crate::common::gfx::soft_surface::Surface;
@@ -37,7 +38,7 @@ use crate::common::ui::mi_map_field::MI_MapField;
 use crate::common::ui::mi_select_field::MI_SelectField;
 use crate::common::ui::mi_text::{MI_HeaderText, MI_Text};
 use crate::common::ui::mi_text_field::MI_TextField;
-use crate::common::uicontrol::{ctl_ptr, TextAlign, UI_ControlTrait};
+use crate::common::uicontrol::{TextAlign, UI_ControlTrait};
 use crate::common::uimenu::UI_Menu;
 use crate::common::world_tour_stop::TourStop;
 use crate::globals::*;
@@ -134,34 +135,34 @@ pub struct WorldEditorState {
     pub mCurrentMenu: Ptr<UI_Menu>,
     pub mStageSettingsMenu: Global<UI_Menu>,
     pub mBonusItemPicker: Global<UI_Menu>,
-    pub miModeField: Ptr<MI_ImageSelectField>,
-    pub miGoalField: [Ptr<MI_SelectField<i16>>; GAMEMODE_LAST as usize],
-    pub miModeSettingsButton: Ptr<MI_Button>,
-    pub miBonusItemsButton: Ptr<MI_Button>,
-    pub miSpecialGoalField: [Ptr<MI_SelectField<i16>>; 3],
-    pub miFinalStageField: Ptr<MI_SelectField<bool>>,
-    pub miPointsField: Ptr<MI_SelectField<i16>>,
-    pub miNameField: Ptr<MI_TextField>,
-    pub miBonusType: Ptr<MI_SelectField<i16>>,
-    pub miBonusTextField: [Ptr<MI_TextField>; 5],
-    pub miMapField: Ptr<MI_MapField>,
-    pub miDeleteStageButton: Ptr<MI_Button>,
-    pub miDeleteStageDialogImage: Ptr<MI_Image>,
-    pub miDeleteStageDialogAreYouText: Ptr<MI_Text>,
-    pub miDeleteStageDialogSureText: Ptr<MI_Text>,
-    pub miDeleteStageDialogYesButton: Ptr<MI_Button>,
-    pub miDeleteStageDialogNoButton: Ptr<MI_Button>,
+    pub miModeField: Ctl<MI_ImageSelectField>,
+    pub miGoalField: [Ctl<MI_SelectField<i16>>; GAMEMODE_LAST as usize],
+    pub miModeSettingsButton: Ctl<MI_Button>,
+    pub miBonusItemsButton: Ctl<MI_Button>,
+    pub miSpecialGoalField: [Ctl<MI_SelectField<i16>>; 3],
+    pub miFinalStageField: Ctl<MI_SelectField<bool>>,
+    pub miPointsField: Ctl<MI_SelectField<i16>>,
+    pub miNameField: Ctl<MI_TextField>,
+    pub miBonusType: Ctl<MI_SelectField<i16>>,
+    pub miBonusTextField: [Ctl<MI_TextField>; 5],
+    pub miMapField: Ctl<MI_MapField>,
+    pub miDeleteStageButton: Ctl<MI_Button>,
+    pub miDeleteStageDialogImage: Ctl<MI_Image>,
+    pub miDeleteStageDialogAreYouText: Ctl<MI_Text>,
+    pub miDeleteStageDialogSureText: Ctl<MI_Text>,
+    pub miDeleteStageDialogYesButton: Ctl<MI_Button>,
+    pub miDeleteStageDialogNoButton: Ctl<MI_Button>,
     //Vehicle Creation Menu
     pub mVehicleMenu: Global<UI_Menu>,
-    pub miVehicleSpriteField: Ptr<MI_ImageSelectField>,
-    pub miVehicleStageField: Ptr<MI_ImageSelectField>,
-    pub miVehicleMinMovesField: Ptr<MI_SelectField<i16>>,
-    pub miVehicleMaxMovesField: Ptr<MI_SelectField<i16>>,
-    pub miVehiclePacesField: Ptr<MI_SelectField<bool>>,
-    pub miVehicleDirectionField: Ptr<MI_SelectField<i16>>,
-    pub miVehicleBoundaryField: Ptr<MI_SelectField<i16>>,
-    pub miVehicleCreateButton: Ptr<MI_Button>,
-    pub miTitleText: Ptr<MI_Text>,
+    pub miVehicleSpriteField: Ctl<MI_ImageSelectField>,
+    pub miVehicleStageField: Ctl<MI_ImageSelectField>,
+    pub miVehicleMinMovesField: Ctl<MI_SelectField<i16>>,
+    pub miVehicleMaxMovesField: Ctl<MI_SelectField<i16>>,
+    pub miVehiclePacesField: Ctl<MI_SelectField<bool>>,
+    pub miVehicleDirectionField: Ctl<MI_SelectField<i16>>,
+    pub miVehicleBoundaryField: Ctl<MI_SelectField<i16>>,
+    pub miVehicleCreateButton: Ctl<MI_Button>,
+    pub miTitleText: Ctl<MI_Text>,
     pub mModeOptionsMenu: Ptr<UI_ModeOptionsMenu>,
     pub sMapThumbnail: gfxSprite,
     pub iOldStageId: i16,
@@ -212,33 +213,33 @@ impl WorldEditorState {
             mCurrentMenu: Ptr::null(),
             mStageSettingsMenu: Global::uninit(),
             mBonusItemPicker: Global::uninit(),
-            miModeField: Ptr::null(),
-            miGoalField: [Ptr::null(); GAMEMODE_LAST as usize],
-            miModeSettingsButton: Ptr::null(),
-            miBonusItemsButton: Ptr::null(),
-            miSpecialGoalField: [Ptr::null(); 3],
-            miFinalStageField: Ptr::null(),
-            miPointsField: Ptr::null(),
-            miNameField: Ptr::null(),
-            miBonusType: Ptr::null(),
-            miBonusTextField: [Ptr::null(); 5],
-            miMapField: Ptr::null(),
-            miDeleteStageButton: Ptr::null(),
-            miDeleteStageDialogImage: Ptr::null(),
-            miDeleteStageDialogAreYouText: Ptr::null(),
-            miDeleteStageDialogSureText: Ptr::null(),
-            miDeleteStageDialogYesButton: Ptr::null(),
-            miDeleteStageDialogNoButton: Ptr::null(),
+            miModeField: Ctl::NONE,
+            miGoalField: [Ctl::NONE; GAMEMODE_LAST as usize],
+            miModeSettingsButton: Ctl::NONE,
+            miBonusItemsButton: Ctl::NONE,
+            miSpecialGoalField: [Ctl::NONE; 3],
+            miFinalStageField: Ctl::NONE,
+            miPointsField: Ctl::NONE,
+            miNameField: Ctl::NONE,
+            miBonusType: Ctl::NONE,
+            miBonusTextField: [Ctl::NONE; 5],
+            miMapField: Ctl::NONE,
+            miDeleteStageButton: Ctl::NONE,
+            miDeleteStageDialogImage: Ctl::NONE,
+            miDeleteStageDialogAreYouText: Ctl::NONE,
+            miDeleteStageDialogSureText: Ctl::NONE,
+            miDeleteStageDialogYesButton: Ctl::NONE,
+            miDeleteStageDialogNoButton: Ctl::NONE,
             mVehicleMenu: Global::uninit(),
-            miVehicleSpriteField: Ptr::null(),
-            miVehicleStageField: Ptr::null(),
-            miVehicleMinMovesField: Ptr::null(),
-            miVehicleMaxMovesField: Ptr::null(),
-            miVehiclePacesField: Ptr::null(),
-            miVehicleDirectionField: Ptr::null(),
-            miVehicleBoundaryField: Ptr::null(),
-            miVehicleCreateButton: Ptr::null(),
-            miTitleText: Ptr::null(),
+            miVehicleSpriteField: Ctl::NONE,
+            miVehicleStageField: Ctl::NONE,
+            miVehicleMinMovesField: Ctl::NONE,
+            miVehicleMaxMovesField: Ctl::NONE,
+            miVehiclePacesField: Ctl::NONE,
+            miVehicleDirectionField: Ctl::NONE,
+            miVehicleBoundaryField: Ctl::NONE,
+            miVehicleCreateButton: Ctl::NONE,
+            miTitleText: Ctl::NONE,
             mModeOptionsMenu: Ptr::null(),
             sMapThumbnail: gfxSprite::new(),
             iOldStageId: -1,
@@ -626,184 +627,184 @@ pub fn inner_main(g: &mut Game) {
         ed(gp.get()).mCurrentMenu = ed(gp.get()).mStageSettingsMenu.as_ptr();
 
         //Name
-        ed(gp.get()).miNameField = Ptr::new_box(MI_TextField::new(g.rm.spr_selectfield, 70, 20, "Name", 500, 120));
-        ed(gp.get()).miNameField.set_disallowed_chars(",");
+        ed(gp.get()).miNameField = Ctl::new(MI_TextField::new(g.rm.spr_selectfield, 70, 20, "Name", 500, 120), g);
+        g.ctl(ed(gp.get()).miNameField).set_disallowed_chars(",");
 
-        ed(gp.get()).miModeField = Ptr::new_box(MI_ImageSelectField::new(g.rm.spr_selectfield, g.rm.menu_mode_small, 70, 60, "Mode", 500, 120, 16, 16));
+        ed(gp.get()).miModeField = Ctl::new(MI_ImageSelectField::new(g.rm.spr_selectfield, g.rm.menu_mode_small, 70, 60, "Mode", 500, 120, 16, 16), g);
         //miModeField->SetData(game_values.tourstops[0]->iMode, NULL, NULL);
         //miModeField->SetKey(0);
-        ed(gp.get()).miModeField.set_item_changed_code(MENU_CODE_MODE_CHANGED);
+        g.ctl(ed(gp.get()).miModeField).set_item_changed_code(MENU_CODE_MODE_CHANGED);
 
         for iGameMode in 0..GAMEMODE_LAST as usize {
-            ed(gp.get()).miModeField.add(ed(gp.get()).stagemodes[iGameMode].szName.clone(), iGameMode as i16);
+            g.ctl(ed(gp.get()).miModeField).add(ed(gp.get()).stagemodes[iGameMode].szName.clone(), iGameMode as i16);
 
-            ed(gp.get()).miGoalField[iGameMode] = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 70, 100, ed(gp.get()).stagemodes[iGameMode].szGoal.clone(), 352, 120));
-            ed(gp.get()).miGoalField[iGameMode].set_visible(iGameMode == 0);
+            ed(gp.get()).miGoalField[iGameMode] = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 70, 100, ed(gp.get()).stagemodes[iGameMode].szGoal.clone(), 352, 120), g);
+            g.ctl(ed(gp.get()).miGoalField[iGameMode]).set_visible(iGameMode == 0);
 
             for iGameModeOption in 0..(GAMEMODE_NUM_OPTIONS - 1) {
                 let option = ed(gp.get()).stagemodes[iGameMode].options[iGameModeOption].clone();
-                ed(gp.get()).miGoalField[iGameMode].add(option.szName, option.iValue);
+                g.ctl(ed(gp.get()).miGoalField[iGameMode]).add(option.szName, option.iValue);
             }
 
             //miGoalField[iGameMode]->SetData(&gamemodes[iGameMode]->goal, NULL, NULL);
             //miGoalField[iGameMode]->SetKey(gamemodes[iGameMode]->goal);
         }
 
-        ed(gp.get()).miModeField.add("Bonus House", 24);
-        ed(gp.get()).miModeField.add("Pipe Minigame", 25);
-        ed(gp.get()).miModeField.add("Boss Minigame", 26);
-        ed(gp.get()).miModeField.add("Boxes Minigame", 27);
+        g.ctl(ed(gp.get()).miModeField).add("Bonus House", 24);
+        g.ctl(ed(gp.get()).miModeField).add("Pipe Minigame", 25);
+        g.ctl(ed(gp.get()).miModeField).add("Boss Minigame", 26);
+        g.ctl(ed(gp.get()).miModeField).add("Boxes Minigame", 27);
 
         //Create goal field for pipe game
-        ed(gp.get()).miSpecialGoalField[0] = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 70, 100, "Points", 352, 120));
-        ed(gp.get()).miSpecialGoalField[0].set_visible(false);
+        ed(gp.get()).miSpecialGoalField[0] = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 70, 100, "Points", 352, 120), g);
+        g.ctl(ed(gp.get()).miSpecialGoalField[0]).set_visible(false);
 
         for iGameModeOption in 0..(GAMEMODE_NUM_OPTIONS as i16 - 1) {
             let iValue: i16 = 10 + iGameModeOption * 10;
-            ed(gp.get()).miSpecialGoalField[0].add(format!("{}", iValue), iValue);
+            g.ctl(ed(gp.get()).miSpecialGoalField[0]).add(format!("{}", iValue), iValue);
         }
 
         //Create goal field for boss game
-        ed(gp.get()).miSpecialGoalField[1] = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 70, 100, "Lives", 352, 120));
-        ed(gp.get()).miSpecialGoalField[1].set_visible(false);
+        ed(gp.get()).miSpecialGoalField[1] = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 70, 100, "Lives", 352, 120), g);
+        g.ctl(ed(gp.get()).miSpecialGoalField[1]).set_visible(false);
 
         for iGameLives in 1..=30i16 {
-            ed(gp.get()).miSpecialGoalField[1].add(format!("{}", iGameLives), iGameLives);
+            g.ctl(ed(gp.get()).miSpecialGoalField[1]).add(format!("{}", iGameLives), iGameLives);
         }
 
         //Create goal field for boxes game
-        ed(gp.get()).miSpecialGoalField[2] = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 70, 100, "Lives", 352, 120));
-        ed(gp.get()).miSpecialGoalField[2].set_visible(false);
+        ed(gp.get()).miSpecialGoalField[2] = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 70, 100, "Lives", 352, 120), g);
+        g.ctl(ed(gp.get()).miSpecialGoalField[2]).set_visible(false);
 
         for iGameLives in 1..=30i16 {
-            ed(gp.get()).miSpecialGoalField[2].add(format!("{}", iGameLives), iGameLives);
+            g.ctl(ed(gp.get()).miSpecialGoalField[2]).add(format!("{}", iGameLives), iGameLives);
         }
 
         //Mode Settings Button
-        ed(gp.get()).miModeSettingsButton = Ptr::new_box(MI_Button::new_left(g, gp.rm.spr_selectfield, 430, 100, "Settings", 140));
-        ed(gp.get()).miModeSettingsButton.set_code(MENU_CODE_TO_MODE_SETTINGS_MENU);
+        ed(gp.get()).miModeSettingsButton = Ctl::new(MI_Button::new_left(g, gp.rm.spr_selectfield, 430, 100, "Settings", 140), g);
+        g.ctl(ed(gp.get()).miModeSettingsButton).set_code(MENU_CODE_TO_MODE_SETTINGS_MENU);
 
         //Points Field
-        ed(gp.get()).miPointsField = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 70, 140, "Points", 245, 120));
+        ed(gp.get()).miPointsField = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 70, 140, "Points", 245, 120), g);
         for iPoints in 0..=20i16 {
-            ed(gp.get()).miPointsField.add(format!("{}", iPoints), iPoints);
+            g.ctl(ed(gp.get()).miPointsField).add(format!("{}", iPoints), iPoints);
         }
 
         //Final Stage Field
-        ed(gp.get()).miFinalStageField = Ptr::new_box(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 325, 140, "End Stage", 245, 120));
-        ed(gp.get()).miFinalStageField.add("No", false);
-        ed(gp.get()).miFinalStageField.add("Yes", true);
-        ed(gp.get()).miFinalStageField.set_auto_advance(true);
+        ed(gp.get()).miFinalStageField = Ctl::new(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 325, 140, "End Stage", 245, 120), g);
+        g.ctl(ed(gp.get()).miFinalStageField).add("No", false);
+        g.ctl(ed(gp.get()).miFinalStageField).add("Yes", true);
+        g.ctl(ed(gp.get()).miFinalStageField).set_auto_advance(true);
 
         //Map Select Field
-        ed(gp.get()).miMapField = Ptr::new_box(MI_MapField::new(g, rm.spr_selectfield, 70, 180, "Map", 500, 120, true));
+        ed(gp.get()).miMapField = Ctl::new(MI_MapField::new(g, rm.spr_selectfield, 70, 180, "Map", 500, 120, true), g);
 
         //Bonus Item Picker Menu Button
-        ed(gp.get()).miBonusItemsButton = Ptr::new_box(MI_Button::new_left(g, gp.rm.spr_selectfield, 430, 220, "Bonuses", 140));
-        ed(gp.get()).miBonusItemsButton.set_code(MENU_CODE_TO_BONUS_PICKER_MENU);
+        ed(gp.get()).miBonusItemsButton = Ctl::new(MI_Button::new_left(g, gp.rm.spr_selectfield, 430, 220, "Bonuses", 140), g);
+        g.ctl(ed(gp.get()).miBonusItemsButton).set_code(MENU_CODE_TO_BONUS_PICKER_MENU);
 
         //Bonus Type
-        ed(gp.get()).miBonusType = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 70, 100, "Type", 500, 120));
-        ed(gp.get()).miBonusType.add("Fixed", false as i16);
-        ed(gp.get()).miBonusType.add("Random", true as i16);
-        ed(gp.get()).miBonusType.set_auto_advance(true);
+        ed(gp.get()).miBonusType = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 70, 100, "Type", 500, 120), g);
+        g.ctl(ed(gp.get()).miBonusType).add("Fixed", false as i16);
+        g.ctl(ed(gp.get()).miBonusType).add("Random", true as i16);
+        g.ctl(ed(gp.get()).miBonusType).set_auto_advance(true);
 
         //Bonus House Text * 5
-        ed(gp.get()).miBonusTextField[0] = Ptr::new_box(MI_TextField::new(g.rm.spr_selectfield, 70, 140, "Text", 500, 120));
-        ed(gp.get()).miBonusTextField[1] = Ptr::new_box(MI_TextField::new(g.rm.spr_selectfield, 70, 180, "Text", 500, 120));
-        ed(gp.get()).miBonusTextField[2] = Ptr::new_box(MI_TextField::new(g.rm.spr_selectfield, 70, 220, "Text", 500, 120));
-        ed(gp.get()).miBonusTextField[3] = Ptr::new_box(MI_TextField::new(g.rm.spr_selectfield, 70, 260, "Text", 500, 120));
-        ed(gp.get()).miBonusTextField[4] = Ptr::new_box(MI_TextField::new(g.rm.spr_selectfield, 70, 300, "Text", 500, 120));
+        ed(gp.get()).miBonusTextField[0] = Ctl::new(MI_TextField::new(g.rm.spr_selectfield, 70, 140, "Text", 500, 120), g);
+        ed(gp.get()).miBonusTextField[1] = Ctl::new(MI_TextField::new(g.rm.spr_selectfield, 70, 180, "Text", 500, 120), g);
+        ed(gp.get()).miBonusTextField[2] = Ctl::new(MI_TextField::new(g.rm.spr_selectfield, 70, 220, "Text", 500, 120), g);
+        ed(gp.get()).miBonusTextField[3] = Ctl::new(MI_TextField::new(g.rm.spr_selectfield, 70, 260, "Text", 500, 120), g);
+        ed(gp.get()).miBonusTextField[4] = Ctl::new(MI_TextField::new(g.rm.spr_selectfield, 70, 300, "Text", 500, 120), g);
 
-        ed(gp.get()).miBonusTextField[0].set_disallowed_chars(",|");
-        ed(gp.get()).miBonusTextField[1].set_disallowed_chars(",|");
-        ed(gp.get()).miBonusTextField[2].set_disallowed_chars(",|");
-        ed(gp.get()).miBonusTextField[3].set_disallowed_chars(",|");
-        ed(gp.get()).miBonusTextField[4].set_disallowed_chars(",|");
+        g.ctl(ed(gp.get()).miBonusTextField[0]).set_disallowed_chars(",|");
+        g.ctl(ed(gp.get()).miBonusTextField[1]).set_disallowed_chars(",|");
+        g.ctl(ed(gp.get()).miBonusTextField[2]).set_disallowed_chars(",|");
+        g.ctl(ed(gp.get()).miBonusTextField[3]).set_disallowed_chars(",|");
+        g.ctl(ed(gp.get()).miBonusTextField[4]).set_disallowed_chars(",|");
 
         //Delete Stage Button
-        ed(gp.get()).miDeleteStageButton = Ptr::new_box(MI_Button::new_left(g, gp.rm.spr_selectfield, 430, 440, "Delete", 140));
-        ed(gp.get()).miDeleteStageButton.set_code(MENU_CODE_DELETE_STAGE_BUTTON);
+        ed(gp.get()).miDeleteStageButton = Ctl::new(MI_Button::new_left(g, gp.rm.spr_selectfield, 430, 440, "Delete", 140), g);
+        g.ctl(ed(gp.get()).miDeleteStageButton).set_code(MENU_CODE_DELETE_STAGE_BUTTON);
 
         //Are You Sure Dialog for Delete Stage
-        ed(gp.get()).miDeleteStageDialogImage = Ptr::new_box(MI_Image::new(ed(gp.get()).spr_dialog, 224, 176, 0, 0, 192, 128, 1, 1, 0));
-        ed(gp.get()).miDeleteStageDialogAreYouText = Ptr::new_box(MI_HeaderText::new(g, "Are You", 320, 195));
-        ed(gp.get()).miDeleteStageDialogSureText = Ptr::new_box(MI_HeaderText::new(g, "Sure?", 320, 220));
-        ed(gp.get()).miDeleteStageDialogYesButton = Ptr::new_box(MI_Button::new(g, gp.rm.spr_selectfield, 235, 250, "Yes", 80, TextAlign::CENTER));
-        ed(gp.get()).miDeleteStageDialogNoButton = Ptr::new_box(MI_Button::new(g, gp.rm.spr_selectfield, 325, 250, "No", 80, TextAlign::CENTER));
+        ed(gp.get()).miDeleteStageDialogImage = Ctl::new(MI_Image::new(ed(gp.get()).spr_dialog, 224, 176, 0, 0, 192, 128, 1, 1, 0), g);
+        ed(gp.get()).miDeleteStageDialogAreYouText = Ctl::new(MI_HeaderText::new(g, "Are You", 320, 195), g);
+        ed(gp.get()).miDeleteStageDialogSureText = Ctl::new(MI_HeaderText::new(g, "Sure?", 320, 220), g);
+        ed(gp.get()).miDeleteStageDialogYesButton = Ctl::new(MI_Button::new(g, gp.rm.spr_selectfield, 235, 250, "Yes", 80, TextAlign::CENTER), g);
+        ed(gp.get()).miDeleteStageDialogNoButton = Ctl::new(MI_Button::new(g, gp.rm.spr_selectfield, 325, 250, "No", 80, TextAlign::CENTER), g);
 
-        ed(gp.get()).miDeleteStageDialogYesButton.set_code(MENU_CODE_DELETE_STAGE_YES);
-        ed(gp.get()).miDeleteStageDialogNoButton.set_code(MENU_CODE_DELETE_STAGE_NO);
+        g.ctl(ed(gp.get()).miDeleteStageDialogYesButton).set_code(MENU_CODE_DELETE_STAGE_YES);
+        g.ctl(ed(gp.get()).miDeleteStageDialogNoButton).set_code(MENU_CODE_DELETE_STAGE_NO);
 
-        ed(gp.get()).miDeleteStageDialogImage.set_visible(false);
-        ed(gp.get()).miDeleteStageDialogAreYouText.set_visible(false);
-        ed(gp.get()).miDeleteStageDialogSureText.set_visible(false);
-        ed(gp.get()).miDeleteStageDialogYesButton.set_visible(false);
-        ed(gp.get()).miDeleteStageDialogNoButton.set_visible(false);
+        g.ctl(ed(gp.get()).miDeleteStageDialogImage).set_visible(false);
+        g.ctl(ed(gp.get()).miDeleteStageDialogAreYouText).set_visible(false);
+        g.ctl(ed(gp.get()).miDeleteStageDialogSureText).set_visible(false);
+        g.ctl(ed(gp.get()).miDeleteStageDialogYesButton).set_visible(false);
+        g.ctl(ed(gp.get()).miDeleteStageDialogNoButton).set_visible(false);
 
-        let null = Ptr::null();
+        let null = ControlId::NONE;
 
         //Add Name Field
-        ed(gp.get()).mStageSettingsMenu.add_control(ctl_ptr(ed(gp.get()).miNameField), ctl_ptr(ed(gp.get()).miDeleteStageButton), ctl_ptr(ed(gp.get()).miModeField), null, null);
+        ed(gp.get()).mStageSettingsMenu.add_control(g, ed(gp.get()).miNameField.id(), ed(gp.get()).miDeleteStageButton.id(), ed(gp.get()).miModeField.id(), null, null);
 
         //Add Mode Field
-        ed(gp.get()).mStageSettingsMenu.add_control(ctl_ptr(ed(gp.get()).miModeField), ctl_ptr(ed(gp.get()).miNameField), ctl_ptr(ed(gp.get()).miGoalField[0]), null, null);
+        ed(gp.get()).mStageSettingsMenu.add_control(g, ed(gp.get()).miModeField.id(), ed(gp.get()).miNameField.id(), ed(gp.get()).miGoalField[0].id(), null, null);
 
         //Add Mode Goal Fields
-        ed(gp.get()).mStageSettingsMenu.add_control(ctl_ptr(ed(gp.get()).miGoalField[0]), ctl_ptr(ed(gp.get()).miModeField), ctl_ptr(ed(gp.get()).miGoalField[1]), null, ctl_ptr(ed(gp.get()).miModeSettingsButton));
+        ed(gp.get()).mStageSettingsMenu.add_control(g, ed(gp.get()).miGoalField[0].id(), ed(gp.get()).miModeField.id(), ed(gp.get()).miGoalField[1].id(), null, ed(gp.get()).miModeSettingsButton.id());
 
         for iGoalField in 1..(GAMEMODE_LAST as usize - 1) {
-            ed(gp.get()).mStageSettingsMenu.add_control(
-                ctl_ptr(ed(gp.get()).miGoalField[iGoalField]),
-                ctl_ptr(ed(gp.get()).miGoalField[iGoalField - 1]),
-                ctl_ptr(ed(gp.get()).miGoalField[iGoalField + 1]),
-                ctl_ptr(ed(gp.get()).miGoalField[iGoalField - 1]),
-                ctl_ptr(ed(gp.get()).miModeSettingsButton),
+            ed(gp.get()).mStageSettingsMenu.add_control(g, 
+                ed(gp.get()).miGoalField[iGoalField].id(),
+                ed(gp.get()).miGoalField[iGoalField - 1].id(),
+                ed(gp.get()).miGoalField[iGoalField + 1].id(),
+                ed(gp.get()).miGoalField[iGoalField - 1].id(),
+                ed(gp.get()).miModeSettingsButton.id(),
             );
         }
 
         let last = GAMEMODE_LAST as usize - 1;
-        ed(gp.get()).mStageSettingsMenu.add_control(ctl_ptr(ed(gp.get()).miGoalField[last]), ctl_ptr(ed(gp.get()).miGoalField[last - 1]), ctl_ptr(ed(gp.get()).miSpecialGoalField[0]), ctl_ptr(ed(gp.get()).miGoalField[last - 1]), ctl_ptr(ed(gp.get()).miModeSettingsButton));
+        ed(gp.get()).mStageSettingsMenu.add_control(g, ed(gp.get()).miGoalField[last].id(), ed(gp.get()).miGoalField[last - 1].id(), ed(gp.get()).miSpecialGoalField[0].id(), ed(gp.get()).miGoalField[last - 1].id(), ed(gp.get()).miModeSettingsButton.id());
 
-        ed(gp.get()).mStageSettingsMenu.add_control(ctl_ptr(ed(gp.get()).miSpecialGoalField[0]), ctl_ptr(ed(gp.get()).miGoalField[last]), ctl_ptr(ed(gp.get()).miSpecialGoalField[1]), ctl_ptr(ed(gp.get()).miGoalField[last]), ctl_ptr(ed(gp.get()).miSpecialGoalField[1]));
-        ed(gp.get()).mStageSettingsMenu.add_control(ctl_ptr(ed(gp.get()).miSpecialGoalField[1]), ctl_ptr(ed(gp.get()).miSpecialGoalField[0]), ctl_ptr(ed(gp.get()).miSpecialGoalField[2]), ctl_ptr(ed(gp.get()).miSpecialGoalField[0]), ctl_ptr(ed(gp.get()).miSpecialGoalField[2]));
-        ed(gp.get()).mStageSettingsMenu.add_control(ctl_ptr(ed(gp.get()).miSpecialGoalField[2]), ctl_ptr(ed(gp.get()).miSpecialGoalField[1]), ctl_ptr(ed(gp.get()).miPointsField), ctl_ptr(ed(gp.get()).miSpecialGoalField[1]), ctl_ptr(ed(gp.get()).miModeSettingsButton));
+        ed(gp.get()).mStageSettingsMenu.add_control(g, ed(gp.get()).miSpecialGoalField[0].id(), ed(gp.get()).miGoalField[last].id(), ed(gp.get()).miSpecialGoalField[1].id(), ed(gp.get()).miGoalField[last].id(), ed(gp.get()).miSpecialGoalField[1].id());
+        ed(gp.get()).mStageSettingsMenu.add_control(g, ed(gp.get()).miSpecialGoalField[1].id(), ed(gp.get()).miSpecialGoalField[0].id(), ed(gp.get()).miSpecialGoalField[2].id(), ed(gp.get()).miSpecialGoalField[0].id(), ed(gp.get()).miSpecialGoalField[2].id());
+        ed(gp.get()).mStageSettingsMenu.add_control(g, ed(gp.get()).miSpecialGoalField[2].id(), ed(gp.get()).miSpecialGoalField[1].id(), ed(gp.get()).miPointsField.id(), ed(gp.get()).miSpecialGoalField[1].id(), ed(gp.get()).miModeSettingsButton.id());
 
         //Add Mode Settings Button
-        ed(gp.get()).mStageSettingsMenu.add_control(ctl_ptr(ed(gp.get()).miModeSettingsButton), ctl_ptr(ed(gp.get()).miModeField), ctl_ptr(ed(gp.get()).miFinalStageField), ctl_ptr(ed(gp.get()).miSpecialGoalField[2]), null);
+        ed(gp.get()).mStageSettingsMenu.add_control(g, ed(gp.get()).miModeSettingsButton.id(), ed(gp.get()).miModeField.id(), ed(gp.get()).miFinalStageField.id(), ed(gp.get()).miSpecialGoalField[2].id(), null);
 
         //Add Points Field
-        ed(gp.get()).mStageSettingsMenu.add_control(ctl_ptr(ed(gp.get()).miPointsField), ctl_ptr(ed(gp.get()).miSpecialGoalField[2]), ctl_ptr(ed(gp.get()).miMapField), null, ctl_ptr(ed(gp.get()).miFinalStageField));
+        ed(gp.get()).mStageSettingsMenu.add_control(g, ed(gp.get()).miPointsField.id(), ed(gp.get()).miSpecialGoalField[2].id(), ed(gp.get()).miMapField.id(), null, ed(gp.get()).miFinalStageField.id());
 
         //Add Final Stage Field
-        ed(gp.get()).mStageSettingsMenu.add_control(ctl_ptr(ed(gp.get()).miFinalStageField), ctl_ptr(ed(gp.get()).miSpecialGoalField[2]), ctl_ptr(ed(gp.get()).miMapField), ctl_ptr(ed(gp.get()).miPointsField), null);
+        ed(gp.get()).mStageSettingsMenu.add_control(g, ed(gp.get()).miFinalStageField.id(), ed(gp.get()).miSpecialGoalField[2].id(), ed(gp.get()).miMapField.id(), ed(gp.get()).miPointsField.id(), null);
 
         //Add Map Field
-        ed(gp.get()).mStageSettingsMenu.add_control(ctl_ptr(ed(gp.get()).miMapField), ctl_ptr(ed(gp.get()).miFinalStageField), ctl_ptr(ed(gp.get()).miBonusType), null, ctl_ptr(ed(gp.get()).miBonusItemsButton));
+        ed(gp.get()).mStageSettingsMenu.add_control(g, ed(gp.get()).miMapField.id(), ed(gp.get()).miFinalStageField.id(), ed(gp.get()).miBonusType.id(), null, ed(gp.get()).miBonusItemsButton.id());
 
         //Add Bonus House Fields
-        ed(gp.get()).mStageSettingsMenu.add_control(ctl_ptr(ed(gp.get()).miBonusType), ctl_ptr(ed(gp.get()).miMapField), ctl_ptr(ed(gp.get()).miBonusTextField[0]), null, null);
-        ed(gp.get()).mStageSettingsMenu.add_control(ctl_ptr(ed(gp.get()).miBonusTextField[0]), ctl_ptr(ed(gp.get()).miBonusType), ctl_ptr(ed(gp.get()).miBonusTextField[1]), null, null);
-        ed(gp.get()).mStageSettingsMenu.add_control(ctl_ptr(ed(gp.get()).miBonusTextField[1]), ctl_ptr(ed(gp.get()).miBonusTextField[0]), ctl_ptr(ed(gp.get()).miBonusTextField[2]), null, null);
-        ed(gp.get()).mStageSettingsMenu.add_control(ctl_ptr(ed(gp.get()).miBonusTextField[2]), ctl_ptr(ed(gp.get()).miBonusTextField[1]), ctl_ptr(ed(gp.get()).miBonusTextField[3]), null, null);
-        ed(gp.get()).mStageSettingsMenu.add_control(ctl_ptr(ed(gp.get()).miBonusTextField[3]), ctl_ptr(ed(gp.get()).miBonusTextField[2]), ctl_ptr(ed(gp.get()).miBonusTextField[4]), null, null);
-        ed(gp.get()).mStageSettingsMenu.add_control(ctl_ptr(ed(gp.get()).miBonusTextField[4]), ctl_ptr(ed(gp.get()).miBonusTextField[3]), ctl_ptr(ed(gp.get()).miBonusItemsButton), null, null);
+        ed(gp.get()).mStageSettingsMenu.add_control(g, ed(gp.get()).miBonusType.id(), ed(gp.get()).miMapField.id(), ed(gp.get()).miBonusTextField[0].id(), null, null);
+        ed(gp.get()).mStageSettingsMenu.add_control(g, ed(gp.get()).miBonusTextField[0].id(), ed(gp.get()).miBonusType.id(), ed(gp.get()).miBonusTextField[1].id(), null, null);
+        ed(gp.get()).mStageSettingsMenu.add_control(g, ed(gp.get()).miBonusTextField[1].id(), ed(gp.get()).miBonusTextField[0].id(), ed(gp.get()).miBonusTextField[2].id(), null, null);
+        ed(gp.get()).mStageSettingsMenu.add_control(g, ed(gp.get()).miBonusTextField[2].id(), ed(gp.get()).miBonusTextField[1].id(), ed(gp.get()).miBonusTextField[3].id(), null, null);
+        ed(gp.get()).mStageSettingsMenu.add_control(g, ed(gp.get()).miBonusTextField[3].id(), ed(gp.get()).miBonusTextField[2].id(), ed(gp.get()).miBonusTextField[4].id(), null, null);
+        ed(gp.get()).mStageSettingsMenu.add_control(g, ed(gp.get()).miBonusTextField[4].id(), ed(gp.get()).miBonusTextField[3].id(), ed(gp.get()).miBonusItemsButton.id(), null, null);
 
         //Add Bonus Button
-        ed(gp.get()).mStageSettingsMenu.add_control(ctl_ptr(ed(gp.get()).miBonusItemsButton), ctl_ptr(ed(gp.get()).miBonusTextField[4]), ctl_ptr(ed(gp.get()).miDeleteStageButton), ctl_ptr(ed(gp.get()).miMapField), null);
+        ed(gp.get()).mStageSettingsMenu.add_control(g, ed(gp.get()).miBonusItemsButton.id(), ed(gp.get()).miBonusTextField[4].id(), ed(gp.get()).miDeleteStageButton.id(), ed(gp.get()).miMapField.id(), null);
 
         //Add Delete Stage Button
-        ed(gp.get()).mStageSettingsMenu.add_control(ctl_ptr(ed(gp.get()).miDeleteStageButton), ctl_ptr(ed(gp.get()).miBonusItemsButton), ctl_ptr(ed(gp.get()).miNameField), ctl_ptr(ed(gp.get()).miMapField), null);
+        ed(gp.get()).mStageSettingsMenu.add_control(g, ed(gp.get()).miDeleteStageButton.id(), ed(gp.get()).miBonusItemsButton.id(), ed(gp.get()).miNameField.id(), ed(gp.get()).miMapField.id(), null);
 
         //Add Are You Sure Dialog
-        ed(gp.get()).mStageSettingsMenu.add_non_control(ctl_ptr(ed(gp.get()).miDeleteStageDialogImage));
-        ed(gp.get()).mStageSettingsMenu.add_non_control(ctl_ptr(ed(gp.get()).miDeleteStageDialogAreYouText));
-        ed(gp.get()).mStageSettingsMenu.add_non_control(ctl_ptr(ed(gp.get()).miDeleteStageDialogSureText));
+        ed(gp.get()).mStageSettingsMenu.add_non_control(ed(gp.get()).miDeleteStageDialogImage.id());
+        ed(gp.get()).mStageSettingsMenu.add_non_control(ed(gp.get()).miDeleteStageDialogAreYouText.id());
+        ed(gp.get()).mStageSettingsMenu.add_non_control(ed(gp.get()).miDeleteStageDialogSureText.id());
 
-        ed(gp.get()).mStageSettingsMenu.add_control(ctl_ptr(ed(gp.get()).miDeleteStageDialogYesButton), null, null, null, ctl_ptr(ed(gp.get()).miDeleteStageDialogNoButton));
-        ed(gp.get()).mStageSettingsMenu.add_control(ctl_ptr(ed(gp.get()).miDeleteStageDialogNoButton), null, null, ctl_ptr(ed(gp.get()).miDeleteStageDialogYesButton), null);
+        ed(gp.get()).mStageSettingsMenu.add_control(g, ed(gp.get()).miDeleteStageDialogYesButton.id(), null, null, null, ed(gp.get()).miDeleteStageDialogNoButton.id());
+        ed(gp.get()).mStageSettingsMenu.add_control(g, ed(gp.get()).miDeleteStageDialogNoButton.id(), null, null, ed(gp.get()).miDeleteStageDialogYesButton.id(), null);
 
-        ed(gp.get()).mStageSettingsMenu.set_initial_focus(g, ctl_ptr(ed(gp.get()).miNameField));
+        ed(gp.get()).mStageSettingsMenu.set_initial_focus(g, ed(gp.get()).miNameField.id());
         ed(gp.get()).mStageSettingsMenu.set_cancel_code(MENU_CODE_EXIT_APPLICATION);
 
         ed(gp.get()).mBonusItemPicker.set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
@@ -822,88 +823,88 @@ pub fn inner_main(g: &mut Game) {
         ed(gp.get()).g_wvVehicleStamp.iBoundary = 0;
 
         //Create Vehicle Menu
-        ed(gp.get()).miVehicleSpriteField = Ptr::new_box(MI_ImageSelectField::new(g.rm.spr_selectfield, ed(gp.get()).spr_vehicleicons, 70, 80, "Sprite", 500, 150, 16, 16));
-        ed(gp.get()).miVehicleSpriteField.add("Hammer Brother", 0);
-        ed(gp.get()).miVehicleSpriteField.add("Boomerang Brother", 1);
-        ed(gp.get()).miVehicleSpriteField.add("Fire Brother", 2);
-        ed(gp.get()).miVehicleSpriteField.add("Tank 1", 3);
-        ed(gp.get()).miVehicleSpriteField.add("Boat 1", 4);
-        ed(gp.get()).miVehicleSpriteField.add("Boat 2", 5);
-        ed(gp.get()).miVehicleSpriteField.add("Airship 1", 6);
-        ed(gp.get()).miVehicleSpriteField.add("Airship 2", 7);
-        ed(gp.get()).miVehicleSpriteField.add("Tank 2", 8);
-        ed(gp.get()).miVehicleSpriteField.set_output_ptr(&mut ed(gp.get()).g_wvVehicleStamp.iDrawSprite as *mut i16);
-        ed(gp.get()).miVehicleSpriteField.set_current_value(ed(gp.get()).g_wvVehicleStamp.iDrawSprite);
+        ed(gp.get()).miVehicleSpriteField = Ctl::new(MI_ImageSelectField::new(g.rm.spr_selectfield, ed(gp.get()).spr_vehicleicons, 70, 80, "Sprite", 500, 150, 16, 16), g);
+        g.ctl(ed(gp.get()).miVehicleSpriteField).add("Hammer Brother", 0);
+        g.ctl(ed(gp.get()).miVehicleSpriteField).add("Boomerang Brother", 1);
+        g.ctl(ed(gp.get()).miVehicleSpriteField).add("Fire Brother", 2);
+        g.ctl(ed(gp.get()).miVehicleSpriteField).add("Tank 1", 3);
+        g.ctl(ed(gp.get()).miVehicleSpriteField).add("Boat 1", 4);
+        g.ctl(ed(gp.get()).miVehicleSpriteField).add("Boat 2", 5);
+        g.ctl(ed(gp.get()).miVehicleSpriteField).add("Airship 1", 6);
+        g.ctl(ed(gp.get()).miVehicleSpriteField).add("Airship 2", 7);
+        g.ctl(ed(gp.get()).miVehicleSpriteField).add("Tank 2", 8);
+        g.ctl(ed(gp.get()).miVehicleSpriteField).set_output_ptr(&mut ed(gp.get()).g_wvVehicleStamp.iDrawSprite as *mut i16);
+        g.ctl(ed(gp.get()).miVehicleSpriteField).set_current_value(ed(gp.get()).g_wvVehicleStamp.iDrawSprite);
 
-        ed(gp.get()).miVehicleStageField = Ptr::new_box(MI_ImageSelectField::new(g.rm.spr_selectfield, g.rm.menu_mode_small, 70, 120, "Stage", 500, 150, 16, 16));
-        ed(gp.get()).miVehicleStageField.set_output_ptr(&mut ed(gp.get()).g_wvVehicleStamp.iActionId as *mut i16);
+        ed(gp.get()).miVehicleStageField = Ctl::new(MI_ImageSelectField::new(g.rm.spr_selectfield, g.rm.menu_mode_small, 70, 120, "Stage", 500, 150, 16, 16), g);
+        g.ctl(ed(gp.get()).miVehicleStageField).set_output_ptr(&mut ed(gp.get()).g_wvVehicleStamp.iActionId as *mut i16);
 
-        ed(gp.get()).miVehicleMinMovesField = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 70, 160, "Min Moves", 500, 150));
+        ed(gp.get()).miVehicleMinMovesField = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 70, 160, "Min Moves", 500, 150), g);
 
         for iMinMoves in 0..=100i16 {
-            ed(gp.get()).miVehicleMinMovesField.add(format!("{}", iMinMoves), iMinMoves);
+            g.ctl(ed(gp.get()).miVehicleMinMovesField).add(format!("{}", iMinMoves), iMinMoves);
         }
 
-        ed(gp.get()).miVehicleMinMovesField.set_output_ptr(&mut ed(gp.get()).g_wvVehicleStamp.iMinMoves as *mut i16);
-        ed(gp.get()).miVehicleMinMovesField.set_current_value(ed(gp.get()).g_wvVehicleStamp.iMinMoves);
-        ed(gp.get()).miVehicleMinMovesField.set_item_changed_code(MENU_CODE_VEHICLE_MIN_MOVES_CHANGED);
-        ed(gp.get()).miVehicleMinMovesField.allow_wrap(false);
-        ed(gp.get()).miVehicleMinMovesField.allow_fast_scroll(true);
+        g.ctl(ed(gp.get()).miVehicleMinMovesField).set_output_ptr(&mut ed(gp.get()).g_wvVehicleStamp.iMinMoves as *mut i16);
+        g.ctl(ed(gp.get()).miVehicleMinMovesField).set_current_value(ed(gp.get()).g_wvVehicleStamp.iMinMoves);
+        g.ctl(ed(gp.get()).miVehicleMinMovesField).set_item_changed_code(MENU_CODE_VEHICLE_MIN_MOVES_CHANGED);
+        g.ctl(ed(gp.get()).miVehicleMinMovesField).allow_wrap(false);
+        g.ctl(ed(gp.get()).miVehicleMinMovesField).allow_fast_scroll(true);
 
-        ed(gp.get()).miVehicleMaxMovesField = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 70, 200, "Max Moves", 500, 150));
+        ed(gp.get()).miVehicleMaxMovesField = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 70, 200, "Max Moves", 500, 150), g);
 
         for iMaxMoves in 0..=100i16 {
-            ed(gp.get()).miVehicleMaxMovesField.add(format!("{}", iMaxMoves), iMaxMoves);
+            g.ctl(ed(gp.get()).miVehicleMaxMovesField).add(format!("{}", iMaxMoves), iMaxMoves);
         }
 
-        ed(gp.get()).miVehicleMaxMovesField.set_output_ptr(&mut ed(gp.get()).g_wvVehicleStamp.iMaxMoves as *mut i16);
-        ed(gp.get()).miVehicleMaxMovesField.set_current_value(ed(gp.get()).g_wvVehicleStamp.iMaxMoves);
-        ed(gp.get()).miVehicleMaxMovesField.set_item_changed_code(MENU_CODE_VEHICLE_MAX_MOVES_CHANGED);
-        ed(gp.get()).miVehicleMaxMovesField.allow_wrap(false);
-        ed(gp.get()).miVehicleMaxMovesField.allow_fast_scroll(true);
+        g.ctl(ed(gp.get()).miVehicleMaxMovesField).set_output_ptr(&mut ed(gp.get()).g_wvVehicleStamp.iMaxMoves as *mut i16);
+        g.ctl(ed(gp.get()).miVehicleMaxMovesField).set_current_value(ed(gp.get()).g_wvVehicleStamp.iMaxMoves);
+        g.ctl(ed(gp.get()).miVehicleMaxMovesField).set_item_changed_code(MENU_CODE_VEHICLE_MAX_MOVES_CHANGED);
+        g.ctl(ed(gp.get()).miVehicleMaxMovesField).allow_wrap(false);
+        g.ctl(ed(gp.get()).miVehicleMaxMovesField).allow_fast_scroll(true);
 
-        ed(gp.get()).miVehiclePacesField = Ptr::new_box(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 70, 240, "Paces", 500, 150));
-        ed(gp.get()).miVehiclePacesField.add("No", false);
-        ed(gp.get()).miVehiclePacesField.add("Yes", true);
-        ed(gp.get()).miVehiclePacesField.set_output_ptr(&mut ed(gp.get()).g_wvVehicleStamp.fSpritePaces as *mut bool);
-        ed(gp.get()).miVehiclePacesField.set_current_value(if ed(gp.get()).g_wvVehicleStamp.fSpritePaces { 1 } else { 0 } != 0);
-        ed(gp.get()).miVehiclePacesField.set_auto_advance(true);
+        ed(gp.get()).miVehiclePacesField = Ctl::new(MI_SelectField::<bool>::new(g.rm.spr_selectfield, 70, 240, "Paces", 500, 150), g);
+        g.ctl(ed(gp.get()).miVehiclePacesField).add("No", false);
+        g.ctl(ed(gp.get()).miVehiclePacesField).add("Yes", true);
+        g.ctl(ed(gp.get()).miVehiclePacesField).set_output_ptr(&mut ed(gp.get()).g_wvVehicleStamp.fSpritePaces as *mut bool);
+        g.ctl(ed(gp.get()).miVehiclePacesField).set_current_value(if ed(gp.get()).g_wvVehicleStamp.fSpritePaces { 1 } else { 0 } != 0);
+        g.ctl(ed(gp.get()).miVehiclePacesField).set_auto_advance(true);
 
-        ed(gp.get()).miVehicleDirectionField = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 70, 280, "Direction", 500, 150));
-        ed(gp.get()).miVehicleDirectionField.add("Left", false as i16);
-        ed(gp.get()).miVehicleDirectionField.add("Right", true as i16);
-        ed(gp.get()).miVehicleDirectionField.set_output_ptr(&mut ed(gp.get()).g_wvVehicleStamp.iDrawDirection as *mut i16);
-        ed(gp.get()).miVehicleDirectionField.set_current_value(ed(gp.get()).g_wvVehicleStamp.iDrawDirection);
-        ed(gp.get()).miVehicleDirectionField.set_auto_advance(true);
+        ed(gp.get()).miVehicleDirectionField = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 70, 280, "Direction", 500, 150), g);
+        g.ctl(ed(gp.get()).miVehicleDirectionField).add("Left", false as i16);
+        g.ctl(ed(gp.get()).miVehicleDirectionField).add("Right", true as i16);
+        g.ctl(ed(gp.get()).miVehicleDirectionField).set_output_ptr(&mut ed(gp.get()).g_wvVehicleStamp.iDrawDirection as *mut i16);
+        g.ctl(ed(gp.get()).miVehicleDirectionField).set_current_value(ed(gp.get()).g_wvVehicleStamp.iDrawDirection);
+        g.ctl(ed(gp.get()).miVehicleDirectionField).set_auto_advance(true);
 
-        ed(gp.get()).miVehicleBoundaryField = Ptr::new_box(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 70, 320, "Boundary", 500, 150));
-        ed(gp.get()).miVehicleBoundaryField.add("No Boundary", 0);
+        ed(gp.get()).miVehicleBoundaryField = Ctl::new(MI_SelectField::<i16>::new(g.rm.spr_selectfield, 70, 320, "Boundary", 500, 150), g);
+        g.ctl(ed(gp.get()).miVehicleBoundaryField).add("No Boundary", 0);
 
         for iBoundary in 1..=100i16 {
-            ed(gp.get()).miVehicleBoundaryField.add(format!("{}", iBoundary), iBoundary);
+            g.ctl(ed(gp.get()).miVehicleBoundaryField).add(format!("{}", iBoundary), iBoundary);
         }
 
-        ed(gp.get()).miVehicleBoundaryField.set_output_ptr(&mut ed(gp.get()).g_wvVehicleStamp.iBoundary as *mut i16);
-        ed(gp.get()).miVehicleBoundaryField.set_current_value(ed(gp.get()).g_wvVehicleStamp.iBoundary);
-        ed(gp.get()).miVehicleBoundaryField.allow_fast_scroll(true);
+        g.ctl(ed(gp.get()).miVehicleBoundaryField).set_output_ptr(&mut ed(gp.get()).g_wvVehicleStamp.iBoundary as *mut i16);
+        g.ctl(ed(gp.get()).miVehicleBoundaryField).set_current_value(ed(gp.get()).g_wvVehicleStamp.iBoundary);
+        g.ctl(ed(gp.get()).miVehicleBoundaryField).allow_fast_scroll(true);
 
-        ed(gp.get()).miVehicleCreateButton = Ptr::new_box(MI_Button::new(g, gp.rm.spr_selectfield, 430, 360, "OK", 140, TextAlign::CENTER));
-        ed(gp.get()).miVehicleCreateButton.set_code(MENU_CODE_CREATE_VEHICLE);
+        ed(gp.get()).miVehicleCreateButton = Ctl::new(MI_Button::new(g, gp.rm.spr_selectfield, 430, 360, "OK", 140, TextAlign::CENTER), g);
+        g.ctl(ed(gp.get()).miVehicleCreateButton).set_code(MENU_CODE_CREATE_VEHICLE);
 
-        ed(gp.get()).miTitleText = Ptr::new_box(MI_Text::new(g, "Clicking on the map will add the vehicle configured below", 320, 50, 640, true, TextAlign::CENTER));
+        ed(gp.get()).miTitleText = Ctl::new(MI_Text::new(g, "Clicking on the map will add the vehicle configured below", 320, 50, 640, true, TextAlign::CENTER), g);
 
-        ed(gp.get()).mVehicleMenu.add_non_control(ctl_ptr(ed(gp.get()).miTitleText));
+        ed(gp.get()).mVehicleMenu.add_non_control(ed(gp.get()).miTitleText.id());
 
-        ed(gp.get()).mVehicleMenu.add_control(ctl_ptr(ed(gp.get()).miVehicleSpriteField), ctl_ptr(ed(gp.get()).miVehicleCreateButton), ctl_ptr(ed(gp.get()).miVehicleStageField), null, null);
-        ed(gp.get()).mVehicleMenu.add_control(ctl_ptr(ed(gp.get()).miVehicleStageField), ctl_ptr(ed(gp.get()).miVehicleSpriteField), ctl_ptr(ed(gp.get()).miVehicleMinMovesField), null, null);
-        ed(gp.get()).mVehicleMenu.add_control(ctl_ptr(ed(gp.get()).miVehicleMinMovesField), ctl_ptr(ed(gp.get()).miVehicleStageField), ctl_ptr(ed(gp.get()).miVehicleMaxMovesField), null, null);
-        ed(gp.get()).mVehicleMenu.add_control(ctl_ptr(ed(gp.get()).miVehicleMaxMovesField), ctl_ptr(ed(gp.get()).miVehicleMinMovesField), ctl_ptr(ed(gp.get()).miVehiclePacesField), null, null);
-        ed(gp.get()).mVehicleMenu.add_control(ctl_ptr(ed(gp.get()).miVehiclePacesField), ctl_ptr(ed(gp.get()).miVehicleMaxMovesField), ctl_ptr(ed(gp.get()).miVehicleDirectionField), null, null);
-        ed(gp.get()).mVehicleMenu.add_control(ctl_ptr(ed(gp.get()).miVehicleDirectionField), ctl_ptr(ed(gp.get()).miVehiclePacesField), ctl_ptr(ed(gp.get()).miVehicleBoundaryField), null, null);
-        ed(gp.get()).mVehicleMenu.add_control(ctl_ptr(ed(gp.get()).miVehicleBoundaryField), ctl_ptr(ed(gp.get()).miVehicleDirectionField), ctl_ptr(ed(gp.get()).miVehicleCreateButton), null, null);
-        ed(gp.get()).mVehicleMenu.add_control(ctl_ptr(ed(gp.get()).miVehicleCreateButton), ctl_ptr(ed(gp.get()).miVehicleBoundaryField), ctl_ptr(ed(gp.get()).miVehicleSpriteField), null, null);
+        ed(gp.get()).mVehicleMenu.add_control(g, ed(gp.get()).miVehicleSpriteField.id(), ed(gp.get()).miVehicleCreateButton.id(), ed(gp.get()).miVehicleStageField.id(), null, null);
+        ed(gp.get()).mVehicleMenu.add_control(g, ed(gp.get()).miVehicleStageField.id(), ed(gp.get()).miVehicleSpriteField.id(), ed(gp.get()).miVehicleMinMovesField.id(), null, null);
+        ed(gp.get()).mVehicleMenu.add_control(g, ed(gp.get()).miVehicleMinMovesField.id(), ed(gp.get()).miVehicleStageField.id(), ed(gp.get()).miVehicleMaxMovesField.id(), null, null);
+        ed(gp.get()).mVehicleMenu.add_control(g, ed(gp.get()).miVehicleMaxMovesField.id(), ed(gp.get()).miVehicleMinMovesField.id(), ed(gp.get()).miVehiclePacesField.id(), null, null);
+        ed(gp.get()).mVehicleMenu.add_control(g, ed(gp.get()).miVehiclePacesField.id(), ed(gp.get()).miVehicleMaxMovesField.id(), ed(gp.get()).miVehicleDirectionField.id(), null, null);
+        ed(gp.get()).mVehicleMenu.add_control(g, ed(gp.get()).miVehicleDirectionField.id(), ed(gp.get()).miVehiclePacesField.id(), ed(gp.get()).miVehicleBoundaryField.id(), null, null);
+        ed(gp.get()).mVehicleMenu.add_control(g, ed(gp.get()).miVehicleBoundaryField.id(), ed(gp.get()).miVehicleDirectionField.id(), ed(gp.get()).miVehicleCreateButton.id(), null, null);
+        ed(gp.get()).mVehicleMenu.add_control(g, ed(gp.get()).miVehicleCreateButton.id(), ed(gp.get()).miVehicleBoundaryField.id(), ed(gp.get()).miVehicleSpriteField.id(), null, null);
 
-        ed(gp.get()).mVehicleMenu.set_initial_focus(g, ctl_ptr(ed(gp.get()).miVehicleSpriteField));
+        ed(gp.get()).mVehicleMenu.set_initial_focus(g, ed(gp.get()).miVehicleSpriteField.id());
         ed(gp.get()).mVehicleMenu.set_cancel_code(MENU_CODE_EXIT_APPLICATION);
 
         println!("\n---------------- ready, steady, go! ----------------");
@@ -1176,13 +1177,13 @@ fn copy_vehicle_into_stamp(g: &mut Game, vehicle: &WorldVehicle) {
     ed(gp.get()).g_wvVehicleStamp.iDrawDirection = vehicle.iDrawDirection;
     ed(gp.get()).g_wvVehicleStamp.iBoundary = vehicle.iBoundary;
 
-    ed(gp.get()).miVehicleSpriteField.set_current_value(ed(gp.get()).g_wvVehicleStamp.iDrawSprite);
-    ed(gp.get()).miVehicleStageField.set_current_value(ed(gp.get()).g_wvVehicleStamp.iActionId);
-    ed(gp.get()).miVehicleMinMovesField.set_current_value(ed(gp.get()).g_wvVehicleStamp.iMinMoves);
-    ed(gp.get()).miVehicleMaxMovesField.set_current_value(ed(gp.get()).g_wvVehicleStamp.iMaxMoves);
-    ed(gp.get()).miVehiclePacesField.set_current_value((if ed(gp.get()).g_wvVehicleStamp.fSpritePaces { 1 } else { 0 }) != 0);
-    ed(gp.get()).miVehicleDirectionField.set_current_value(ed(gp.get()).g_wvVehicleStamp.iDrawDirection);
-    ed(gp.get()).miVehicleBoundaryField.set_current_value(ed(gp.get()).g_wvVehicleStamp.iBoundary);
+    g.ctl(ed(gp.get()).miVehicleSpriteField).set_current_value(ed(gp.get()).g_wvVehicleStamp.iDrawSprite);
+    g.ctl(ed(gp.get()).miVehicleStageField).set_current_value(ed(gp.get()).g_wvVehicleStamp.iActionId);
+    g.ctl(ed(gp.get()).miVehicleMinMovesField).set_current_value(ed(gp.get()).g_wvVehicleStamp.iMinMoves);
+    g.ctl(ed(gp.get()).miVehicleMaxMovesField).set_current_value(ed(gp.get()).g_wvVehicleStamp.iMaxMoves);
+    g.ctl(ed(gp.get()).miVehiclePacesField).set_current_value((if ed(gp.get()).g_wvVehicleStamp.fSpritePaces { 1 } else { 0 }) != 0);
+    g.ctl(ed(gp.get()).miVehicleDirectionField).set_current_value(ed(gp.get()).g_wvVehicleStamp.iDrawDirection);
+    g.ctl(ed(gp.get()).miVehicleBoundaryField).set_current_value(ed(gp.get()).g_wvVehicleStamp.iBoundary);
 }
 
 pub fn editor_edit(g: &mut Game) -> i32 {
@@ -2960,17 +2961,17 @@ pub fn editor_vehicles(g: &mut Game) -> i32 {
 
     let done = false;
 
-    ed(gp.get()).miVehicleStageField.clear();
+    g.ctl(ed(gp.get()).miVehicleStageField).clear();
 
     for iStage in 0..g.g_worldmap.iNumStages {
         let ts = g.game_values.tourstops[iStage as usize];
         let szStageName = format!("({}) {}", iStage + 1, ts.szName);
 
-        let item = ed(gp.get()).miVehicleStageField.add(szStageName, iStage);
+        let item = g.ctl(ed(gp.get()).miVehicleStageField).add(szStageName, iStage);
         item.iconOverride = if ts.iStageType == 1 { 24 } else if ts.iMode >= 1000 { ts.iMode - 975 } else { ts.iMode };
     }
 
-    ed(gp.get()).miVehicleStageField.set_current_value(ed(gp.get()).g_wvVehicleStamp.iActionId);
+    g.ctl(ed(gp.get()).miVehicleStageField).set_current_value(ed(gp.get()).g_wvVehicleStamp.iActionId);
 
     while !done {
         let framestart = crate::services::ticks(gp.get()) as i32;
@@ -3022,14 +3023,14 @@ pub fn editor_vehicles(g: &mut Game) -> i32 {
             g.game_values.playerInput.reset_keys();
             return EDITOR_EDIT;
         } else if MENU_CODE_VEHICLE_MIN_MOVES_CHANGED == code {
-            let iMaxMoves: i16 = ed(gp.get()).miVehicleMaxMovesField.current_value();
-            if ed(gp.get()).miVehicleMinMovesField.current_value() > iMaxMoves {
-                ed(gp.get()).miVehicleMinMovesField.set_current_value(iMaxMoves);
+            let iMaxMoves: i16 = g.ctl(ed(gp.get()).miVehicleMaxMovesField).current_value();
+            if g.ctl(ed(gp.get()).miVehicleMinMovesField).current_value() > iMaxMoves {
+                g.ctl(ed(gp.get()).miVehicleMinMovesField).set_current_value(iMaxMoves);
             }
         } else if MENU_CODE_VEHICLE_MAX_MOVES_CHANGED == code {
-            let iMinMoves: i16 = ed(gp.get()).miVehicleMinMovesField.current_value();
-            if ed(gp.get()).miVehicleMaxMovesField.current_value() < iMinMoves {
-                ed(gp.get()).miVehicleMaxMovesField.set_current_value(iMinMoves);
+            let iMinMoves: i16 = g.ctl(ed(gp.get()).miVehicleMinMovesField).current_value();
+            if g.ctl(ed(gp.get()).miVehicleMaxMovesField).current_value() < iMinMoves {
+                g.ctl(ed(gp.get()).miVehicleMaxMovesField).set_current_value(iMinMoves);
             }
         } else if MENU_CODE_CREATE_VEHICLE == code {
             ed(gp.get()).edit_mode = 5;
@@ -3358,25 +3359,25 @@ pub fn EditStage(g: &mut Game, iEditStage: i16) {
     g.game_values.gamemodemenusettings = ts.gmsSettings.clone();
 
     //Set fields to write data to the selected stage
-    ed(gp.get()).miModeField.set_output_ptr(&mut ts.iMode as *mut i16);
-    ed(gp.get()).miNameField.set_data(g, &mut ts.szName, 128);
+    g.ctl(ed(gp.get()).miModeField).set_output_ptr(&mut ts.iMode as *mut i16);
+    g.ctl(ed(gp.get()).miNameField).set_data(g, &mut ts.szName, 128);
 
-    ed(gp.get()).miPointsField.set_output_ptr(&mut ts.iPoints as *mut i16);
-    ed(gp.get()).miFinalStageField.set_output_ptr(&mut ts.fEndStage as *mut bool);
+    g.ctl(ed(gp.get()).miPointsField).set_output_ptr(&mut ts.iPoints as *mut i16);
+    g.ctl(ed(gp.get()).miFinalStageField).set_output_ptr(&mut ts.fEndStage as *mut bool);
 
     if ts.pszMapFile.is_empty() {
         ts.pszMapFile = g.maplist.current_shortmapname().to_string();
     }
 
     let mapfile = ts.pszMapFile.clone();
-    ed(gp.get()).miMapField.set_map(g, &mapfile, false);
+    g.ctl(ed(gp.get()).miMapField).set_map(g, &mapfile, false);
 
-    ed(gp.get()).miBonusType.set_output_ptr(&mut ts.iBonusType as *mut i16);
-    ed(gp.get()).miBonusTextField[0].set_data(g, &mut ts.szBonusText[0], 128);
-    ed(gp.get()).miBonusTextField[1].set_data(g, &mut ts.szBonusText[1], 128);
-    ed(gp.get()).miBonusTextField[2].set_data(g, &mut ts.szBonusText[2], 128);
-    ed(gp.get()).miBonusTextField[3].set_data(g, &mut ts.szBonusText[3], 128);
-    ed(gp.get()).miBonusTextField[4].set_data(g, &mut ts.szBonusText[4], 128);
+    g.ctl(ed(gp.get()).miBonusType).set_output_ptr(&mut ts.iBonusType as *mut i16);
+    g.ctl(ed(gp.get()).miBonusTextField[0]).set_data(g, &mut ts.szBonusText[0], 128);
+    g.ctl(ed(gp.get()).miBonusTextField[1]).set_data(g, &mut ts.szBonusText[1], 128);
+    g.ctl(ed(gp.get()).miBonusTextField[2]).set_data(g, &mut ts.szBonusText[2], 128);
+    g.ctl(ed(gp.get()).miBonusTextField[3]).set_data(g, &mut ts.szBonusText[3], 128);
+    g.ctl(ed(gp.get()).miBonusTextField[4]).set_data(g, &mut ts.szBonusText[4], 128);
 
     ts.iBonusTextLines = 5;
 
@@ -3388,57 +3389,57 @@ pub fn EditStage(g: &mut Game, iEditStage: i16) {
     }
 
     //Show fields applicable for this mode
-    ed(gp.get()).miPointsField.set_visible(iStageType == 0);
-    ed(gp.get()).miFinalStageField.set_visible(iStageType == 0);
-    ed(gp.get()).miMapField.set_visible(iStageType == 0);
+    g.ctl(ed(gp.get()).miPointsField).set_visible(iStageType == 0);
+    g.ctl(ed(gp.get()).miFinalStageField).set_visible(iStageType == 0);
+    g.ctl(ed(gp.get()).miMapField).set_visible(iStageType == 0);
 
-    ed(gp.get()).miBonusType.set_visible(iStageType == 1);
-    ed(gp.get()).miBonusTextField[0].set_visible(iStageType == 1);
-    ed(gp.get()).miBonusTextField[1].set_visible(iStageType == 1);
-    ed(gp.get()).miBonusTextField[2].set_visible(iStageType == 1);
-    ed(gp.get()).miBonusTextField[3].set_visible(iStageType == 1);
-    ed(gp.get()).miBonusTextField[4].set_visible(iStageType == 1);
+    g.ctl(ed(gp.get()).miBonusType).set_visible(iStageType == 1);
+    g.ctl(ed(gp.get()).miBonusTextField[0]).set_visible(iStageType == 1);
+    g.ctl(ed(gp.get()).miBonusTextField[1]).set_visible(iStageType == 1);
+    g.ctl(ed(gp.get()).miBonusTextField[2]).set_visible(iStageType == 1);
+    g.ctl(ed(gp.get()).miBonusTextField[3]).set_visible(iStageType == 1);
+    g.ctl(ed(gp.get()).miBonusTextField[4]).set_visible(iStageType == 1);
 
-    ed(gp.get()).miSpecialGoalField[0].set_visible(iMode == 1000);
-    ed(gp.get()).miSpecialGoalField[1].set_visible(iMode == 1001);
-    ed(gp.get()).miSpecialGoalField[2].set_visible(iMode == 1002);
+    g.ctl(ed(gp.get()).miSpecialGoalField[0]).set_visible(iMode == 1000);
+    g.ctl(ed(gp.get()).miSpecialGoalField[1]).set_visible(iMode == 1001);
+    g.ctl(ed(gp.get()).miSpecialGoalField[2]).set_visible(iMode == 1002);
 
-    ed(gp.get()).miBonusItemsButton.set_position(430, if iStageType == 0 { 220 } else { 340 });
+    g.ctl(ed(gp.get()).miBonusItemsButton).set_position(430, if iStageType == 0 { 220 } else { 340 });
 
     if iStageType == 0 && iMode >= 0 && (iMode as i32) < GAMEMODE_LAST {
-        ed(gp.get()).miModeField.set_current_value(iMode);
+        g.ctl(ed(gp.get()).miModeField).set_current_value(iMode);
 
-        ed(gp.get()).miModeSettingsButton.set_visible(iMode as i32 != game_mode_owned);
+        g.ctl(ed(gp.get()).miModeSettingsButton).set_visible(iMode as i32 != game_mode_owned);
 
         for iGameMode in 0..GAMEMODE_LAST as usize {
-            ed(gp.get()).miGoalField[iGameMode].set_visible(iMode as usize == iGameMode);
+            g.ctl(ed(gp.get()).miGoalField[iGameMode]).set_visible(iMode as usize == iGameMode);
         }
 
-        ed(gp.get()).miGoalField[iMode as usize].set_output_ptr(&mut ts.iGoal as *mut i16);
-        ed(gp.get()).miGoalField[iMode as usize].set_current_value(ts.iGoal);
-        ed(gp.get()).miPointsField.set_current_value(ts.iPoints);
-        ed(gp.get()).miFinalStageField.set_current_value((if ts.fEndStage { 1 } else { 0 }) != 0);
+        g.ctl(ed(gp.get()).miGoalField[iMode as usize]).set_output_ptr(&mut ts.iGoal as *mut i16);
+        g.ctl(ed(gp.get()).miGoalField[iMode as usize]).set_current_value(ts.iGoal);
+        g.ctl(ed(gp.get()).miPointsField).set_current_value(ts.iPoints);
+        g.ctl(ed(gp.get()).miFinalStageField).set_current_value((if ts.fEndStage { 1 } else { 0 }) != 0);
 
         ts.fUseSettings = true;
         ts.iNumUsedSettings = g_iNumGameModeSettings[iMode as usize];
     } else {
         //Show the settings button for boss mode
-        ed(gp.get()).miModeSettingsButton.set_visible(iMode == 1001);
+        g.ctl(ed(gp.get()).miModeSettingsButton).set_visible(iMode == 1001);
 
         for iGameMode in 0..GAMEMODE_LAST as usize {
-            ed(gp.get()).miGoalField[iGameMode].set_visible(false);
+            g.ctl(ed(gp.get()).miGoalField[iGameMode]).set_visible(false);
         }
 
         if iStageType == 1 {
             //Bonus House
-            ed(gp.get()).miModeField.set_current_value(24);
+            g.ctl(ed(gp.get()).miModeField).set_current_value(24);
         } else if iMode >= 1000 && iMode <= 1002 {
             //Pipe, Boss and Boxes Game
-            ed(gp.get()).miModeField.set_current_value(iMode - 975);
-            ed(gp.get()).miSpecialGoalField[(iMode - 1000) as usize].set_output_ptr(&mut ts.iGoal as *mut i16);
-            ed(gp.get()).miSpecialGoalField[(iMode - 1000) as usize].set_current_value(ts.iGoal);
-            ed(gp.get()).miPointsField.set_current_value(ts.iPoints);
-            ed(gp.get()).miFinalStageField.set_current_value((if ts.fEndStage { 1 } else { 0 }) != 0);
+            g.ctl(ed(gp.get()).miModeField).set_current_value(iMode - 975);
+            g.ctl(ed(gp.get()).miSpecialGoalField[(iMode - 1000) as usize]).set_output_ptr(&mut ts.iGoal as *mut i16);
+            g.ctl(ed(gp.get()).miSpecialGoalField[(iMode - 1000) as usize]).set_current_value(ts.iGoal);
+            g.ctl(ed(gp.get()).miPointsField).set_current_value(ts.iPoints);
+            g.ctl(ed(gp.get()).miFinalStageField).set_current_value((if ts.fEndStage { 1 } else { 0 }) != 0);
 
             ts.iMode = iMode;
         }
@@ -3447,30 +3448,30 @@ pub fn EditStage(g: &mut Game, iEditStage: i16) {
 
 pub fn EnableStageMenu(g: &mut Game, fEnable: bool) {
     let mut gp = g.ptr();
-    ed(gp.get()).miNameField.disable(!fEnable);
-    ed(gp.get()).miModeField.disable(!fEnable);
+    g.ctl(ed(gp.get()).miNameField).disable(!fEnable);
+    g.ctl(ed(gp.get()).miModeField).disable(!fEnable);
 
     for iGameMode in 0..GAMEMODE_LAST as usize {
-        ed(gp.get()).miGoalField[iGameMode].disable(!fEnable);
+        g.ctl(ed(gp.get()).miGoalField[iGameMode]).disable(!fEnable);
     }
 
-    ed(gp.get()).miSpecialGoalField[0].disable(!fEnable);
-    ed(gp.get()).miSpecialGoalField[1].disable(!fEnable);
-    ed(gp.get()).miSpecialGoalField[2].disable(!fEnable);
+    g.ctl(ed(gp.get()).miSpecialGoalField[0]).disable(!fEnable);
+    g.ctl(ed(gp.get()).miSpecialGoalField[1]).disable(!fEnable);
+    g.ctl(ed(gp.get()).miSpecialGoalField[2]).disable(!fEnable);
 
-    ed(gp.get()).miModeSettingsButton.disable(!fEnable);
+    g.ctl(ed(gp.get()).miModeSettingsButton).disable(!fEnable);
 
-    ed(gp.get()).miPointsField.disable(!fEnable);
-    ed(gp.get()).miFinalStageField.disable(!fEnable);
-    ed(gp.get()).miMapField.disable(!fEnable);
-    ed(gp.get()).miBonusItemsButton.disable(!fEnable);
-    ed(gp.get()).miBonusType.disable(!fEnable);
-    ed(gp.get()).miBonusTextField[0].disable(!fEnable);
-    ed(gp.get()).miBonusTextField[1].disable(!fEnable);
-    ed(gp.get()).miBonusTextField[2].disable(!fEnable);
-    ed(gp.get()).miBonusTextField[3].disable(!fEnable);
-    ed(gp.get()).miBonusTextField[4].disable(!fEnable);
-    ed(gp.get()).miDeleteStageButton.disable(!fEnable);
+    g.ctl(ed(gp.get()).miPointsField).disable(!fEnable);
+    g.ctl(ed(gp.get()).miFinalStageField).disable(!fEnable);
+    g.ctl(ed(gp.get()).miMapField).disable(!fEnable);
+    g.ctl(ed(gp.get()).miBonusItemsButton).disable(!fEnable);
+    g.ctl(ed(gp.get()).miBonusType).disable(!fEnable);
+    g.ctl(ed(gp.get()).miBonusTextField[0]).disable(!fEnable);
+    g.ctl(ed(gp.get()).miBonusTextField[1]).disable(!fEnable);
+    g.ctl(ed(gp.get()).miBonusTextField[2]).disable(!fEnable);
+    g.ctl(ed(gp.get()).miBonusTextField[3]).disable(!fEnable);
+    g.ctl(ed(gp.get()).miBonusTextField[4]).disable(!fEnable);
+    g.ctl(ed(gp.get()).miDeleteStageButton).disable(!fEnable);
 }
 
 pub fn NewStage(g: &mut Game, iEditStage: &mut i16) {
@@ -3709,37 +3710,37 @@ pub fn editor_stage(g: &mut Game) -> i32 {
 
                     iEditStage = -1;
                 } else if MENU_CODE_MODE_CHANGED == code {
-                    let iMode: i16 = ed(gp.get()).miModeField.current_value();
+                    let iMode: i16 = g.ctl(ed(gp.get()).miModeField).current_value();
 
-                    ed(gp.get()).miPointsField.set_visible(iMode != 24);
-                    ed(gp.get()).miFinalStageField.set_visible(iMode != 24);
+                    g.ctl(ed(gp.get()).miPointsField).set_visible(iMode != 24);
+                    g.ctl(ed(gp.get()).miFinalStageField).set_visible(iMode != 24);
 
-                    ed(gp.get()).miMapField.set_visible(iMode != 24);
+                    g.ctl(ed(gp.get()).miMapField).set_visible(iMode != 24);
 
-                    ed(gp.get()).miBonusType.set_visible(iMode == 24);
-                    ed(gp.get()).miBonusTextField[0].set_visible(iMode == 24);
-                    ed(gp.get()).miBonusTextField[1].set_visible(iMode == 24);
-                    ed(gp.get()).miBonusTextField[2].set_visible(iMode == 24);
-                    ed(gp.get()).miBonusTextField[3].set_visible(iMode == 24);
-                    ed(gp.get()).miBonusTextField[4].set_visible(iMode == 24);
+                    g.ctl(ed(gp.get()).miBonusType).set_visible(iMode == 24);
+                    g.ctl(ed(gp.get()).miBonusTextField[0]).set_visible(iMode == 24);
+                    g.ctl(ed(gp.get()).miBonusTextField[1]).set_visible(iMode == 24);
+                    g.ctl(ed(gp.get()).miBonusTextField[2]).set_visible(iMode == 24);
+                    g.ctl(ed(gp.get()).miBonusTextField[3]).set_visible(iMode == 24);
+                    g.ctl(ed(gp.get()).miBonusTextField[4]).set_visible(iMode == 24);
 
-                    ed(gp.get()).miSpecialGoalField[0].set_visible(iMode == 25);
-                    ed(gp.get()).miSpecialGoalField[1].set_visible(iMode == 26);
-                    ed(gp.get()).miSpecialGoalField[2].set_visible(iMode == 27);
+                    g.ctl(ed(gp.get()).miSpecialGoalField[0]).set_visible(iMode == 25);
+                    g.ctl(ed(gp.get()).miSpecialGoalField[1]).set_visible(iMode == 26);
+                    g.ctl(ed(gp.get()).miSpecialGoalField[2]).set_visible(iMode == 27);
 
-                    ed(gp.get()).miBonusItemsButton.set_position(430, if iMode != 24 { 220 } else { 340 });
+                    g.ctl(ed(gp.get()).miBonusItemsButton).set_position(430, if iMode != 24 { 220 } else { 340 });
 
                     let mut ts = g.game_values.tourstops[iEditStage as usize];
 
                     if iMode >= 0 && (iMode as i32) < GAMEMODE_LAST {
-                        ed(gp.get()).miModeSettingsButton.set_visible(iMode as i32 != game_mode_owned);
+                        g.ctl(ed(gp.get()).miModeSettingsButton).set_visible(iMode as i32 != game_mode_owned);
 
                         for iGameMode in 0..GAMEMODE_LAST as usize {
-                            ed(gp.get()).miGoalField[iGameMode].set_visible(iMode as usize == iGameMode);
+                            g.ctl(ed(gp.get()).miGoalField[iGameMode]).set_visible(iMode as usize == iGameMode);
                         }
 
-                        ed(gp.get()).miGoalField[iMode as usize].set_output_ptr(&mut ts.iGoal as *mut i16);
-                        ed(gp.get()).miGoalField[iMode as usize].update_output();
+                        g.ctl(ed(gp.get()).miGoalField[iMode as usize]).set_output_ptr(&mut ts.iGoal as *mut i16);
+                        g.ctl(ed(gp.get()).miGoalField[iMode as usize]).update_output();
 
                         ts.iStageType = 0;
 
@@ -3747,10 +3748,10 @@ pub fn editor_stage(g: &mut Game) -> i32 {
                         ts.iNumUsedSettings = g_iNumGameModeSettings[iMode as usize];
                     } else {
                         //Show the settings button for boss mode
-                        ed(gp.get()).miModeSettingsButton.set_visible(iMode == 26);
+                        g.ctl(ed(gp.get()).miModeSettingsButton).set_visible(iMode == 26);
 
                         for iGameMode in 0..GAMEMODE_LAST as usize {
-                            ed(gp.get()).miGoalField[iGameMode].set_visible(false);
+                            g.ctl(ed(gp.get()).miGoalField[iGameMode]).set_visible(false);
                         }
 
                         if iMode == 24 {
@@ -3767,7 +3768,7 @@ pub fn editor_stage(g: &mut Game) -> i32 {
                 } else if MENU_CODE_TO_MODE_SETTINGS_MENU == code {
                     let mut fModeFound = false;
                     for iGameMode in 0..GAMEMODE_LAST as usize {
-                        if ed(gp.get()).miGoalField[iGameMode].is_visible() {
+                        if g.ctl(ed(gp.get()).miGoalField[iGameMode]).is_visible() {
                             ed(gp.get()).mCurrentMenu = ed(gp.get()).mModeOptionsMenu.get_options_menu(iGameMode as i16);
                             ed(gp.get()).mCurrentMenu.reset_menu(g);
                             fModeFound = true;
@@ -3777,15 +3778,15 @@ pub fn editor_stage(g: &mut Game) -> i32 {
 
                     //Look to see if this is the boss mode and go to boss settings
                     if !fModeFound {
-                        if ed(gp.get()).miSpecialGoalField[1].is_visible() {
+                        if g.ctl(ed(gp.get()).miSpecialGoalField[1]).is_visible() {
                             ed(gp.get()).mCurrentMenu = ed(gp.get()).mModeOptionsMenu.get_boss_options_menu();
                             ed(gp.get()).mCurrentMenu.reset_menu(g);
                         }
                     }
                 } else if MENU_CODE_HEALTH_MODE_START_LIFE_CHANGED == code {
-                    ed(gp.get()).mModeOptionsMenu.health_mode_start_life_changed();
+                    ed(gp.get()).mModeOptionsMenu.health_mode_start_life_changed(g);
                 } else if MENU_CODE_HEALTH_MODE_MAX_LIFE_CHANGED == code {
-                    ed(gp.get()).mModeOptionsMenu.health_mode_max_life_changed();
+                    ed(gp.get()).mModeOptionsMenu.health_mode_max_life_changed(g);
                 } else if MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS == code {
                     ed(gp.get()).mCurrentMenu = ed(gp.get()).mStageSettingsMenu.as_ptr();
                     ed(gp.get()).mCurrentMenu.reset_menu(g);
@@ -3797,27 +3798,27 @@ pub fn editor_stage(g: &mut Game) -> i32 {
                     ed(gp.get()).mCurrentMenu = ed(gp.get()).mBonusItemPicker.as_ptr();
                     ed(gp.get()).mCurrentMenu.reset_menu(g);
                 } else if MENU_CODE_DELETE_STAGE_BUTTON == code {
-                    ed(gp.get()).miDeleteStageDialogImage.set_visible(true);
-                    ed(gp.get()).miDeleteStageDialogAreYouText.set_visible(true);
-                    ed(gp.get()).miDeleteStageDialogSureText.set_visible(true);
-                    ed(gp.get()).miDeleteStageDialogYesButton.set_visible(true);
-                    ed(gp.get()).miDeleteStageDialogNoButton.set_visible(true);
+                    g.ctl(ed(gp.get()).miDeleteStageDialogImage).set_visible(true);
+                    g.ctl(ed(gp.get()).miDeleteStageDialogAreYouText).set_visible(true);
+                    g.ctl(ed(gp.get()).miDeleteStageDialogSureText).set_visible(true);
+                    g.ctl(ed(gp.get()).miDeleteStageDialogYesButton).set_visible(true);
+                    g.ctl(ed(gp.get()).miDeleteStageDialogNoButton).set_visible(true);
 
                     EnableStageMenu(g, false);
 
                     ed(gp.get()).mStageSettingsMenu.remember_current();
 
-                    ed(gp.get()).mStageSettingsMenu.set_initial_focus(g, ctl_ptr(ed(gp.get()).miDeleteStageDialogNoButton));
+                    ed(gp.get()).mStageSettingsMenu.set_initial_focus(g, ed(gp.get()).miDeleteStageDialogNoButton.id());
                     ed(gp.get()).mStageSettingsMenu.set_cancel_code(MENU_CODE_DELETE_STAGE_NO);
                     ed(gp.get()).mStageSettingsMenu.reset_menu(g);
                 } else if MENU_CODE_DELETE_STAGE_YES == code || MENU_CODE_DELETE_STAGE_NO == code {
-                    ed(gp.get()).miDeleteStageDialogImage.set_visible(false);
-                    ed(gp.get()).miDeleteStageDialogAreYouText.set_visible(false);
-                    ed(gp.get()).miDeleteStageDialogSureText.set_visible(false);
-                    ed(gp.get()).miDeleteStageDialogYesButton.set_visible(false);
-                    ed(gp.get()).miDeleteStageDialogNoButton.set_visible(false);
+                    g.ctl(ed(gp.get()).miDeleteStageDialogImage).set_visible(false);
+                    g.ctl(ed(gp.get()).miDeleteStageDialogAreYouText).set_visible(false);
+                    g.ctl(ed(gp.get()).miDeleteStageDialogSureText).set_visible(false);
+                    g.ctl(ed(gp.get()).miDeleteStageDialogYesButton).set_visible(false);
+                    g.ctl(ed(gp.get()).miDeleteStageDialogNoButton).set_visible(false);
 
-                    ed(gp.get()).mStageSettingsMenu.set_initial_focus(g, ctl_ptr(ed(gp.get()).miNameField));
+                    ed(gp.get()).mStageSettingsMenu.set_initial_focus(g, ed(gp.get()).miNameField.id());
                     ed(gp.get()).mStageSettingsMenu.set_cancel_code(MENU_CODE_EXIT_APPLICATION);
                     ed(gp.get()).mStageSettingsMenu.restore_current(g);
 

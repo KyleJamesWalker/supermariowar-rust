@@ -1,11 +1,12 @@
 //! Port of src/smw/menu/TourStopMenu.cpp
 
+use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_button::MI_Button;
 use crate::common::ui::mi_image::MI_Image;
 use crate::common::ui::mi_text::{MI_HeaderText, MI_Text};
-use crate::common::uicontrol::{ctl_ptr, TextAlign};
+use crate::common::uicontrol::{TextAlign};
 use crate::common::uimenu::UI_Menu;
 use crate::globals::*;
 use crate::smw::ui::mi_tour_stop::MI_TourStop;
@@ -14,12 +15,12 @@ use crate::smw::ui::mi_tour_stop::MI_TourStop;
 pub struct UI_TourStopMenu {
     pub ui_menu: UI_Menu,
 
-    pub miTourStop: Ptr<MI_TourStop>,
+    pub miTourStop: Ctl<MI_TourStop>,
 
-    pub miTourStopExitDialogImage: Ptr<MI_Image>,
-    pub miTourStopExitDialogExitTourText: Ptr<MI_Text>,
-    pub miTourStopExitDialogYesButton: Ptr<MI_Button>,
-    pub miTourStopExitDialogNoButton: Ptr<MI_Button>,
+    pub miTourStopExitDialogImage: Ctl<MI_Image>,
+    pub miTourStopExitDialogExitTourText: Ctl<MI_Text>,
+    pub miTourStopExitDialogYesButton: Ctl<MI_Button>,
+    pub miTourStopExitDialogNoButton: Ctl<MI_Button>,
 }
 crate::impl_base!(UI_TourStopMenu => ui_menu: UI_Menu);
 
@@ -28,36 +29,36 @@ impl UI_TourStopMenu {
         let mut this = Box::<Self>::default();
         let spr_selectfield = g.rm.spr_selectfield;
 
-        this.miTourStop = Ptr::new_box(MI_TourStop::new(g, 70, 45, false));
+        this.miTourStop = Ctl::new(MI_TourStop::new(g, 70, 45, false), g);
 
         // Exit tour dialog box
-        this.miTourStopExitDialogImage = Ptr::new_box(MI_Image::new(g.rm.spr_dialog, 224, 176, 0, 0, 192, 128, 1, 1, 0));
-        this.miTourStopExitDialogExitTourText = Ptr::new_box(MI_HeaderText::new(g, "Exit Tour", 320, 205));
+        this.miTourStopExitDialogImage = Ctl::new(MI_Image::new(g.rm.spr_dialog, 224, 176, 0, 0, 192, 128, 1, 1, 0), g);
+        this.miTourStopExitDialogExitTourText = Ctl::new(MI_HeaderText::new(g, "Exit Tour", 320, 205), g);
 
-        this.miTourStopExitDialogYesButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 235, 250, "Yes", 80, TextAlign::CENTER));
-        this.miTourStopExitDialogNoButton = Ptr::new_box(MI_Button::new(g, spr_selectfield, 325, 250, "No", 80, TextAlign::CENTER));
+        this.miTourStopExitDialogYesButton = Ctl::new(MI_Button::new(g, spr_selectfield, 235, 250, "Yes", 80, TextAlign::CENTER), g);
+        this.miTourStopExitDialogNoButton = Ctl::new(MI_Button::new(g, spr_selectfield, 325, 250, "No", 80, TextAlign::CENTER), g);
 
-        this.miTourStopExitDialogYesButton.set_code(MENU_CODE_EXIT_TOUR_YES);
-        this.miTourStopExitDialogNoButton.set_code(MENU_CODE_EXIT_TOUR_NO);
+        g.ctl(this.miTourStopExitDialogYesButton).set_code(MENU_CODE_EXIT_TOUR_YES);
+        g.ctl(this.miTourStopExitDialogNoButton).set_code(MENU_CODE_EXIT_TOUR_NO);
 
-        this.miTourStopExitDialogImage.set_visible(false);
-        this.miTourStopExitDialogExitTourText.set_visible(false);
-        this.miTourStopExitDialogYesButton.set_visible(false);
-        this.miTourStopExitDialogNoButton.set_visible(false);
+        g.ctl(this.miTourStopExitDialogImage).set_visible(false);
+        g.ctl(this.miTourStopExitDialogExitTourText).set_visible(false);
+        g.ctl(this.miTourStopExitDialogYesButton).set_visible(false);
+        g.ctl(this.miTourStopExitDialogNoButton).set_visible(false);
 
-        let stop = ctl_ptr(this.miTourStop);
-        let img = ctl_ptr(this.miTourStopExitDialogImage);
-        let text = ctl_ptr(this.miTourStopExitDialogExitTourText);
-        let yes = ctl_ptr(this.miTourStopExitDialogYesButton);
-        let no = ctl_ptr(this.miTourStopExitDialogNoButton);
+        let stop = this.miTourStop.id();
+        let img = this.miTourStopExitDialogImage.id();
+        let text = this.miTourStopExitDialogExitTourText.id();
+        let yes = this.miTourStopExitDialogYesButton.id();
+        let no = this.miTourStopExitDialogNoButton.id();
 
-        this.add_control(stop, Ptr::null(), Ptr::null(), Ptr::null(), Ptr::null());
+        this.add_control(g, stop, ControlId::NONE, ControlId::NONE, ControlId::NONE, ControlId::NONE);
 
         this.add_non_control(img);
         this.add_non_control(text);
 
-        this.add_control(yes, Ptr::null(), Ptr::null(), Ptr::null(), no);
-        this.add_control(no, Ptr::null(), Ptr::null(), yes, Ptr::null());
+        this.add_control(g, yes, ControlId::NONE, ControlId::NONE, ControlId::NONE, no);
+        this.add_control(g, no, ControlId::NONE, ControlId::NONE, yes, ControlId::NONE);
 
         this.set_initial_focus(g, stop);
         this.set_cancel_code(MENU_CODE_BACK_TEAM_SELECT_MENU);
@@ -65,26 +66,26 @@ impl UI_TourStopMenu {
     }
 
     pub fn open_exit_dialog(&mut self, g: &mut Game) {
-        self.miTourStopExitDialogImage.set_visible(true);
-        self.miTourStopExitDialogExitTourText.set_visible(true);
-        self.miTourStopExitDialogYesButton.set_visible(true);
-        self.miTourStopExitDialogNoButton.set_visible(true);
+        g.ctl(self.miTourStopExitDialogImage).set_visible(true);
+        g.ctl(self.miTourStopExitDialogExitTourText).set_visible(true);
+        g.ctl(self.miTourStopExitDialogYesButton).set_visible(true);
+        g.ctl(self.miTourStopExitDialogNoButton).set_visible(true);
 
         self.remember_current();
 
-        let focus = ctl_ptr(self.miTourStopExitDialogNoButton);
+        let focus = self.miTourStopExitDialogNoButton.id();
         self.set_initial_focus(g, focus);
         self.set_cancel_code(MENU_CODE_NONE);
         self.reset_menu(g);
     }
 
     pub fn close_exit_dialog(&mut self, g: &mut Game) {
-        self.miTourStopExitDialogImage.set_visible(false);
-        self.miTourStopExitDialogExitTourText.set_visible(false);
-        self.miTourStopExitDialogYesButton.set_visible(false);
-        self.miTourStopExitDialogNoButton.set_visible(false);
+        g.ctl(self.miTourStopExitDialogImage).set_visible(false);
+        g.ctl(self.miTourStopExitDialogExitTourText).set_visible(false);
+        g.ctl(self.miTourStopExitDialogYesButton).set_visible(false);
+        g.ctl(self.miTourStopExitDialogNoButton).set_visible(false);
 
-        let focus = ctl_ptr(self.miTourStop);
+        let focus = self.miTourStop.id();
         self.set_initial_focus(g, focus);
         self.set_cancel_code(MENU_CODE_BACK_TEAM_SELECT_MENU);
 

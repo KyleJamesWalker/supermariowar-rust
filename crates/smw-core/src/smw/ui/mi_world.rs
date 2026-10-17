@@ -250,7 +250,7 @@ impl MI_World {
             format!("Team {} Is In Control", self.iControllingTeam as i32 + 1)
         };
 
-        let mut parent = self.m_parentMenu;
+        let mut parent = crate::smw::gs_menu::MenuState::instance(g).world_menu();
         parent.eyeCandy.emplace(EC_Announcement::new(
             Ptr::from_mut(&mut g.rm.menu_font_large),
             g.rm.spr_announcementicons,
@@ -503,7 +503,7 @@ impl MI_World {
 
                 self.update_tile_both(g, iDest.x - self.iMapDrawOffsetCol, iDest.y - self.iMapDrawOffsetRow);
 
-                let mut parent = self.m_parentMenu;
+                let mut parent = crate::smw::gs_menu::MenuState::instance(g).world_menu();
                 parent.eyeCandy.emplace(EC_SingleAnimation::new(&gp.rm, 
                     g.rm.spr_poof,
                     (((iDest.x as i32) << 5) + self.iMapOffsetX as i32 - 8) as i16,
@@ -529,28 +529,28 @@ impl MI_World {
                 let ts = TILESIZE as i16;
 
                 if iDoorsOpened & 0x1 != 0 {
-                    let mut parent = self.m_parentMenu;
+                    let mut parent = crate::smw::gs_menu::MenuState::instance(g).world_menu();
                     parent.eyeCandy.emplace(EC_SingleAnimation::new(&g.rm, g.rm.spr_fireballexplosion, iPlayerX - ts, iPlayerY, 3, 8));
 
                     self.update_tile_both(g, col - 1, row);
                 }
 
                 if iDoorsOpened & 0x2 != 0 {
-                    let mut parent = self.m_parentMenu;
+                    let mut parent = crate::smw::gs_menu::MenuState::instance(g).world_menu();
                     parent.eyeCandy.emplace(EC_SingleAnimation::new(&g.rm, g.rm.spr_fireballexplosion, iPlayerX + ts, iPlayerY, 3, 8));
 
                     self.update_tile_both(g, col + 1, row);
                 }
 
                 if iDoorsOpened & 0x4 != 0 {
-                    let mut parent = self.m_parentMenu;
+                    let mut parent = crate::smw::gs_menu::MenuState::instance(g).world_menu();
                     parent.eyeCandy.emplace(EC_SingleAnimation::new(&g.rm, g.rm.spr_fireballexplosion, iPlayerX, iPlayerY - ts, 3, 8));
 
                     self.update_tile_both(g, col, row - 1);
                 }
 
                 if iDoorsOpened & 0x8 != 0 {
-                    let mut parent = self.m_parentMenu;
+                    let mut parent = crate::smw::gs_menu::MenuState::instance(g).world_menu();
                     parent.eyeCandy.emplace(EC_SingleAnimation::new(&g.rm, g.rm.spr_fireballexplosion, iPlayerX, iPlayerY + ts, 3, 8));
 
                     self.update_tile_both(g, col, row + 1);
@@ -613,7 +613,7 @@ impl MI_World {
         if_sound_on_play(g, &mut gp.rm.sfx_transform);
 
         let iPlayerDrawPos = g.g_worldmap.get_player_position();
-        let mut parent = self.m_parentMenu;
+        let mut parent = crate::smw::gs_menu::MenuState::instance(g).world_menu();
         parent.eyeCandy.emplace(EC_SingleAnimation::new(&gp.rm, 
             g.rm.spr_poof,
             (iPlayerDrawPos.x as i32 + self.iMapOffsetX as i32 - 8) as i16,
