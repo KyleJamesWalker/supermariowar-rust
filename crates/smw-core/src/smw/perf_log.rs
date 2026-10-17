@@ -1,5 +1,5 @@
-//! Not in the C++: with `SMW_PERF=1`, the game logs how long each frame's work takes every five seconds, to measure
-//! the headroom on slow hardware. It reads the wall clock only for the log, so it never changes the game.
+//! With `SMW_PERF=1`, logs how long each frame's work takes every five seconds. It reads the wall clock only for the
+//! log, so it never changes the game.
 
 use std::time::Instant;
 
