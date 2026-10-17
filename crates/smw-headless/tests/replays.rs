@@ -1,7 +1,5 @@
 //! In-process replays on the headless backend (docs/ARCHITECTURE_V2.md, Testing): the game runs a replay as
 //! `tools/run_rust.sh` does, and its dump and screenshots must equal the goldens `tools/parity.sh` reads.
-// The game lists some of data/ in readdir order, and the goldens have APFS's (tools/apfs_order.py).
-#![cfg(target_os = "macos")]
 
 use std::io::Read;
 use std::path::{Path, PathBuf};

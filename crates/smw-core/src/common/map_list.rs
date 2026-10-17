@@ -89,7 +89,7 @@ fn add_maps_from(g: &mut Game, dirpath: &str, container: &mut MapMultimap) {
 }
 
 fn add_maps_from_with(g: &mut Game, dirpath: &str, mut emplace: impl FnMut(String, MapListNode)) {
-    let mut dir = FilesIterator::new(dirpath.to_string(), vec![".map".to_string()]);
+    let mut dir = FilesIterator::new(g, dirpath.to_string(), vec![".map".to_string()]);
     while let Some(path) = dir.next() {
         let node = MapListNode::new(g, path.to_string_lossy().into_owned());
         let fname = path.file_name().map(|f| f.to_string_lossy().into_owned()).unwrap_or_default();
@@ -129,7 +129,8 @@ impl MapList {
         if fWorldEditor {
             add_maps_from(g, &convert_path(gp.get(), "maps/tour/"), &mut maps);
 
-            let mut worldeditormapdirs = SimpleDirectoryList::new(convert_path(g, "worlds/"));
+            let worlds = convert_path(g, "worlds/");
+            let mut worldeditormapdirs = SimpleDirectoryList::new(g, worlds);
             for _iDir in 0..worldeditormapdirs.count() {
                 let szName = worldeditormapdirs.current_path().to_string_lossy().into_owned() + "/";
                 add_maps_from(g, &szName, &mut maps);
@@ -155,7 +156,8 @@ impl MapList {
 
         add_maps_from(g, &convert_path(gp.get(), "maps/tour/"), &mut worldmaps);
 
-        let mut worldmapdirs = SimpleDirectoryList::new(convert_path(g, "worlds/"));
+        let worlds = convert_path(g, "worlds/");
+        let mut worldmapdirs = SimpleDirectoryList::new(g, worlds);
         for _iDir in 0..worldmapdirs.count() {
             let szName = worldmapdirs.current_path().to_string_lossy().into_owned() + "/";
             add_maps_from(g, &szName, &mut worldmaps);
@@ -178,7 +180,8 @@ impl MapList {
     }
 
     pub fn add_world_maps(&mut self, g: &mut Game) {
-        let mut worldmapdirs = SimpleDirectoryList::new(convert_path(g, "worlds/"));
+        let worlds = convert_path(g, "worlds/");
+        let mut worldmapdirs = SimpleDirectoryList::new(g, worlds);
         for _iDir in 0..worldmapdirs.count() {
             let szName = worldmapdirs.current_path().to_string_lossy().into_owned() + "/";
             add_maps_from_with(g, &szName, |key, node| self.emplace_map(key, node));
