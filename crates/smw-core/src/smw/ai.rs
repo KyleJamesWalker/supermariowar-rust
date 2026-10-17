@@ -1,6 +1,8 @@
 //! Port of src/smw/ai.cpp
 
 use crate::smw::object_container::ObjectId;
+use crate::common::map::{WARP_DOWN, WARP_LEFT, WARP_RIGHT};
+use crate::smw::ai_nav::{Move, NavGraph, Route};
 use crate::smw::players::PlayerId;
 use crate::game::Game;
 use crate::common::game::App;
@@ -166,6 +168,13 @@ pub struct CPlayerAI {
 
     pub attentionObjects: BTreeMap<i32, Box<AttentionObject>>,
     pub currentAttentionObject: AttentionObject,
+    /// Frames in a row the AI has jumped at a wall it is walking into.
+    pub wall_frames: i16,
+    /// An opponent the AI gave up on behind a wall, and for how many more frames.
+    pub ignored_player: (PlayerId, i16),
+    pub nav: Option<NavGraph>,
+    /// The tile column and move the AI left the ground for, followed while in the air.
+    pub nav_step: Option<(i32, Move)>,
 
     pub _alias: Aliased,
 }
@@ -326,6 +335,9 @@ fn cmap_byte(g: &mut Game, off: i32) -> u8 {
     if (CMAP_OFF_WARPLOCKED..CMAP_OFF_MAXCONNECTION).contains(&off) {
         return g.g_map.warplocked[(off - CMAP_OFF_WARPLOCKED) as usize] as u8;
     }
+    if (CMAP_OFF_OBJECTDATA + MAPWIDTH * MAPHEIGHT * CMAP_SIZEOF_MAPBLOCK..CMAP_OFF_BLOCKDATA).contains(&off) {
+        return 0;
+    }
     panic!("ai: C++ out-of-bounds CMap read at offset {} is not modelled", off);
 }
 
@@ -450,6 +462,10 @@ impl CPlayerAI {
             nearestObjects: NearestObjects::new(),
             attentionObjects: BTreeMap::new(),
             currentAttentionObject: AttentionObject { iID: -1, iType: 0, iTimer: 0 },
+            wall_frames: 0,
+            ignored_player: (PlayerId::NONE, 0),
+            nav: None,
+            nav_step: None,
             _alias: Aliased::new(),
         }
     }
@@ -794,7 +810,7 @@ impl CPlayerAI {
                             continue;
                         }
 
-                        nearest!(self.distance_to_object(g, obj, threat, threatdistance, threatwrap));
+                        nearest!(self.distance_to_column_threat(g, obj, threat, threatdistance, threatwrap));
                     } else if movingobject_explosion == movingtype && static_cast::<MO_Explosion>(obj).iTeamID != iTeamID {
                         if fInvincible {
                             continue;
@@ -803,7 +819,14 @@ impl CPlayerAI {
                         nearest!(self.distance_to_object_center(g, obj, threat, threatdistance, threatwrap));
                     }
                 }
-                object_thwomp | object_bowserfire => {
+                object_thwomp => {
+                    if fInvincible {
+                        continue;
+                    }
+
+                    nearest!(self.distance_to_column_threat(g, obj, threat, threatdistance, threatwrap));
+                }
+                object_bowserfire => {
                     if fInvincible {
                         continue;
                     }
@@ -832,6 +855,7 @@ impl CPlayerAI {
 
         let gmChicken = dynamic_cast_gamemode::<CGM_Chicken>(g);
         let mut best_weighted = i32::MAX;
+        let mut fallback = PlayerId::NONE;
 
         //Figure out where the other players are
         for iPlayer in 0..g.players.len() {
@@ -858,6 +882,10 @@ impl CPlayerAI {
             }
 
             let opponent = g.players[iPlayer];
+            if opponent == self.ignored_player.0 && self.ignored_player.1 > 0 {
+                fallback = opponent;
+                continue;
+            }
             let (mut target, mut distance, mut wrap) = (PlayerId::default(), i32::MAX, false);
             self.distance_to_player(g, opponent, &mut target, &mut distance, &mut wrap);
             let (num, den) = spread_weight(g, pPlayer, opponent);
@@ -868,6 +896,11 @@ impl CPlayerAI {
                 self.nearestObjects.playerdistance = distance;
                 self.nearestObjects.playerwrap = wrap;
             }
+        }
+
+        // The opponent given up on behind a wall is still better than standing with no target.
+        if self.nearestObjects.player.is_none() && !fallback.is_none() {
+            nearest!(self.distance_to_player(g, fallback, player, playerdistance, playerwrap));
         }
     }
 
@@ -923,6 +956,22 @@ impl CPlayerAI {
             *target = object.id;
             *nearest = distance_player_pow2;
             *wrap = fScreenWrap;
+        }
+    }
+
+    /// `distance_to_object_center` with the vertical distance counted at a quarter, for threats that fall or rise
+    /// through a whole column (thwomps, podobos).
+    pub fn distance_to_column_threat(&self, g: &Game, object: Ptr<dyn CObjectTrait>, target: &mut ObjectId, nearest: &mut i32, wrap: &mut bool) {
+        let mut distance = i32::MAX;
+        let mut found = ObjectId::NONE;
+        let mut found_wrap = false;
+        self.distance_to_object_center(g, object, &mut found, &mut distance, &mut found_wrap);
+        let ty = object.y() + object.collision_rect_h() as i32 / 2 - g.player(self.pPlayer).iy as i32 - HALFPH;
+        let squeezed = distance - ty * ty + (ty / 4) * (ty / 4);
+        if squeezed < *nearest {
+            *target = object.id;
+            *nearest = squeezed;
+            *wrap = found_wrap;
         }
     }
 
@@ -997,8 +1046,145 @@ fn objective_mode(mode: GameModeType) -> bool {
     )
 }
 
-/// How long the AI ignores a goal behind a wall it cannot jump.
+/// Where the AI is headed for `actionType`, as the top left of a player standing there.
+fn path_target(g: &mut Game, this: &CPlayerAI, actionType: i16) -> Option<(i32, i32)> {
+    let no = &this.nearestObjects;
+    let player = match actionType {
+        0 => no.player,
+        3 => no.teammate,
+        1 if !no.goal.is_none() => {
+            let goal = ai_target(g, no.goal);
+            return Some((goal.x() + goal.collision_rect_w() as i32 / 2 - HALFPW, goal.y() + goal.collision_rect_h() as i32 - PH));
+        }
+        _ => return None,
+    };
+    (!player.is_none()).then(|| (g.player(player).ix as i32, g.player(player).iy as i32))
+}
+
+/// Whether going from tile column `from` to `to` heads right, the short way where the move crosses the screen edge.
+fn heads_right(from: i32, to: i32) -> bool {
+    if (to - from).abs() > MAPWIDTH / 2 {
+        to < from
+    } else {
+        to > from
+    }
+}
+
+/// Steers along the navigation graph when the straight line the action chose is not the path, and gives up on a
+/// target the graph cannot reach.
+fn follow_path(g: &mut Game, this: &mut CPlayerAI, actionType: i16, mut keys: Ptr<COutputControl>) {
+    let Some(target) = path_target(g, this, actionType) else {
+        this.nav_step = None;
+        return;
+    };
+    if this.nav.is_none() {
+        this.nav = Some(NavGraph::build(g));
+    }
+    let pPlayer = this.pPlayer;
+    let (ix, iy) = (g.player(pPlayer).ix as i32, g.player(pPlayer).iy as i32);
+    let mut fleeing = false;
+    if actionType == 0 {
+        let toward_left = (target.0 > ix && this.nearestObjects.playerwrap) || (target.0 < ix && !this.nearestObjects.playerwrap);
+        let (left, right) = (keys.game_left().fDown, keys.game_right().fDown);
+        fleeing = (toward_left && right && !left) || (!toward_left && left && !right);
+    }
+    let nav = this.nav.as_ref().unwrap();
+    let Some(me) = nav.cell_of(ix, iy) else { return };
+    if g.player(pPlayer).inair {
+        if let Some((x, how)) = this.nav_step {
+            let right = heads_right(me.0, x);
+            keys.game_left_mut().fDown = me.0 != x && !right;
+            keys.game_right_mut().fDown = me.0 != x && right;
+            if how == Move::Jump && g.player(pPlayer).vely < 0.0 {
+                keys.game_jump_mut().fDown = true;
+            }
+        }
+        return;
+    }
+    this.nav_step = None;
+    let Some(to) = nav.cell_of(target.0, target.1) else { return };
+    if fleeing {
+        if let Some((x, _, how)) = nav.flee(me, to) {
+            let right = heads_right(me.0, x);
+            keys.game_left_mut().fDown = !right;
+            keys.game_right_mut().fDown = right;
+            if how == Move::Jump {
+                keys.game_jump_mut().fDown = true;
+            }
+            this.nav_step = Some((x, how));
+        } else {
+            // Cornered: jump over the chaser rather than wait against the wall.
+            let right = heads_right(me.0, to.0);
+            keys.game_left_mut().fDown = !right;
+            keys.game_right_mut().fDown = right;
+            keys.game_jump_mut().fDown = true;
+            this.nav_step = Some((to.0, Move::Jump));
+        }
+        return;
+    }
+    if (to.0 - me.0).abs() <= 1 && (to.1 - me.1).abs() <= 1 {
+        return;
+    }
+    // Chasing a player, or a goal a player carries, the straight line wins fights; the path only takes over when
+    // that line is blocked.
+    let carried = actionType == 1 && {
+        let goal = g.carried(this.nearestObjects.goal);
+        !goal.is_null() && !goal.owner.is_none()
+    };
+    if (actionType != 1 || carried) && this.wall_frames == 0 && (to.1 - me.1).abs() < 3 {
+        return;
+    }
+    match nav.route(me, to) {
+        Route::Here => {}
+        // The graph has no moving platforms or springs, so an unreachable target keeps the straight-line steering.
+        Route::Unreachable => {}
+        Route::Step { how: Move::Warp { dir, x }, .. } => {
+            let centre = ix + HALFPW;
+            let aligned = (centre - x).abs() <= 4;
+            let toward_right = x > centre;
+            keys.game_left_mut().fDown = false;
+            keys.game_right_mut().fDown = false;
+            keys.game_jump_mut().fDown = false;
+            keys.game_down_mut().fDown = false;
+            match dir {
+                WARP_LEFT => keys.game_left_mut().fDown = true,
+                WARP_RIGHT => keys.game_right_mut().fDown = true,
+                _ if !aligned => {
+                    keys.game_left_mut().fDown = !toward_right;
+                    keys.game_right_mut().fDown = toward_right;
+                }
+                WARP_DOWN => keys.game_down_mut().fDown = true,
+                _ => keys.game_jump_mut().fDown = true,
+            }
+            this.nav_step = Some((me.0, Move::Warp { dir, x }));
+        }
+        Route::Step { x, y, how } => {
+            let right = heads_right(me.0, x);
+            let chosen = if right { keys.game_right().fDown } else { keys.game_left().fDown };
+            if how == Move::Walk && y == me.1 && chosen {
+                return;
+            }
+            keys.game_left_mut().fDown = !right;
+            keys.game_right_mut().fDown = right;
+            match how {
+                Move::Jump => keys.game_jump_mut().fDown = true,
+                Move::Drop => {
+                    keys.game_left_mut().fDown = false;
+                    keys.game_right_mut().fDown = false;
+                    keys.game_jump_mut().fDown = false;
+                    keys.game_down_mut().fDown = true;
+                }
+                Move::Walk | Move::Fall | Move::Warp { .. } => {}
+            }
+            this.nav_step = Some((x, how));
+        }
+    }
+}
+
+/// How long the AI ignores a goal or an opponent behind a wall it cannot jump.
 const UNREACHABLE_FRAMES: i16 = 90;
+/// Jumping at a wall this long without getting past it means the wall cannot be jumped.
+const WALL_GIVE_UP_FRAMES: i16 = 45;
 
 fn solid_at(g: &mut Game, tx: i32, ty: i32) -> bool {
     g.g_map.map(tx, ty) & tile_flag_solid as i32 != 0 || !g.map_block(tx as i16, ty as i16).is_null()
@@ -1022,9 +1208,10 @@ fn wall_ahead(g: &mut Game, x: i32, y: i32, left: bool, right: bool) -> Option<i
 }
 
 /// Whether the wall in column `tx` rises four tiles above the head of a player whose top is at `y`, beyond a jump.
+/// A wall that reaches the top row counts as going on above the map.
 fn wall_too_tall(g: &mut Game, tx: i32, y: i32) -> bool {
-    let top = y / TILESIZE;
-    top >= 4 && (top - 4..top).all(|ty| solid_at(g, tx, ty))
+    let top = y.div_euclid(TILESIZE);
+    top <= 0 || ((top - 4).max(0)..top).all(|ty| solid_at(g, tx, ty))
 }
 
 //Setup AI so that it can ignore or pay attention to some objects
@@ -1121,6 +1308,10 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
             }
         } else {
             this.currentAttentionObject.iID = -1;
+        }
+
+        if this.ignored_player.1 > 0 {
+            this.ignored_player.1 -= 1;
         }
 
         //Expire attention objects
@@ -1372,18 +1563,28 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                 }
             } else if actionType == 2 {
                 //Evade Threat
-                let threat = ai_target(g, no.threat);
+                let mut threat = ai_target(g, no.threat);
+                let column_threat = threat.get_object_type() == object_thwomp
+                    || (threat.get_object_type() == object_moving && moving_object_type(threat) == movingobject_podobo);
 
                 //If threat, always use turbo
                 playerKeys.game_turbo_mut().fDown = true;
 
-                if (threat.x() > ix32 && no.threatwrap) || (threat.x() < ix32 && !no.threatwrap) {
+                let threat_x = if column_threat { threat.x() + threat.collision_rect_w() as i32 / 2 - HALFPW } else { threat.x() };
+                if (threat_x > ix32 && no.threatwrap) || (threat_x < ix32 && !no.threatwrap) {
                     playerKeys.game_right_mut().fDown = true;
                 } else {
                     playerKeys.game_left_mut().fDown = true;
                 }
 
-                if threat.y() <= iy32 && threat.x() - ix32 < 60 && threat.x() - ix32 > -60 {
+                if column_threat {
+                    // Ducking under a thwomp or jumping into a podobo only keeps the player in its column.
+                    if wall_ahead(g, ix32, iy32, playerKeys.game_left().fDown, playerKeys.game_right().fDown).is_some() {
+                        let right = playerKeys.game_right().fDown;
+                        playerKeys.game_left_mut().fDown = right;
+                        playerKeys.game_right_mut().fDown = !right;
+                    }
+                } else if threat.y() <= iy32 && threat.x() - ix32 < 60 && threat.x() - ix32 > -60 {
                     if !g.player(pPlayer).inair {
                         playerKeys.game_down_mut().fDown = true;
                     }
@@ -1539,12 +1740,22 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
             }
         }
 
+        follow_path(g, this, actionType, playerKeys);
+
         if let Some(column) = wall_ahead(g, ix32, iy32, playerKeys.game_left().fDown, playerKeys.game_right().fDown) {
             playerKeys.game_jump_mut().fDown = true;
-            if actionType == 1 && wall_too_tall(g, column, iy32) {
-                let id = ai_target(g, this.nearestObjects.goal).network_id();
-                this.attentionObjects.insert(id, Box::new(AttentionObject { iID: id, iType: 1, iTimer: UNREACHABLE_FRAMES }));
+            this.wall_frames += 1;
+            if this.wall_frames >= WALL_GIVE_UP_FRAMES || wall_too_tall(g, column, iy32) {
+                this.wall_frames = 0;
+                if actionType == 1 {
+                    let id = ai_target(g, this.nearestObjects.goal).network_id();
+                    this.attentionObjects.insert(id, Box::new(AttentionObject { iID: id, iType: 1, iTimer: UNREACHABLE_FRAMES }));
+                } else if actionType == 0 {
+                    this.ignored_player = (this.nearestObjects.player, UNREACHABLE_FRAMES);
+                }
             }
+        } else {
+            this.wall_frames = 0;
         }
 
         /***************************************************

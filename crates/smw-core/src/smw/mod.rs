@@ -1,4 +1,6 @@
 pub mod ai;
+pub mod ai_nav;
+pub mod auto_advance;
 pub mod fps_limiter;
 pub mod game_state;
 pub mod gs_gameplay;

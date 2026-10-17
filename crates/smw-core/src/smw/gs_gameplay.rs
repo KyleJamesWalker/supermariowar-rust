@@ -2075,6 +2075,8 @@ pub fn clean_up(g: &mut Game) {
 /// Returns true on exit.
 pub fn update_exit_pause_dialog(g: &mut Game, iCountDownState: i16) -> bool {
         let mut gp = g.ptr();
+    let waiting = g.mode().gameover && g.game_values.screenfade == 0 && !g.game_values.flags.exitinggame && !g.game_values.flags.pausegame;
+    crate::smw::auto_advance::tick(g, waiting);
     if g.game_values.screenfade == 0 && iCountDownState <= COUNTDOWN_START_INDEX {
         //If the cancel button is pressed
         if g.game_values.flags.forceexittimer > 0 {

@@ -344,6 +344,8 @@ pub struct MainLoopState {
     hotplug_pending: bool,
     /// `SMW_PERF` read on the first frame, then the frame-time log it turns on.
     perf: Option<Option<crate::smw::perf_log::PerfLog>>,
+    /// Frames the current screen has waited for an all-CPU game to continue (smw/auto_advance.rs).
+    pub(crate) auto_advance: u16,
 }
 
 impl MainLoopState {
@@ -357,6 +359,7 @@ impl MainLoopState {
             web_accumulated: 0.0,
             hotplug_pending: false,
             perf: None,
+            auto_advance: 0,
         }
     }
 }
