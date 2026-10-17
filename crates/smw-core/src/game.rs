@@ -10,7 +10,7 @@ use crate::common::file_list::{AnnouncerList, FiltersList, GraphicsList, MusicLi
 use crate::common::map::CMap;
 use crate::common::map_list::MapList;
 use crate::common::random_number_generator::RngState;
-use crate::common::sfx::SfxState;
+use crate::common::sfx::{sfxMusic, SfxState};
 use crate::common::score::CScore;
 use crate::common::resource_manager::CResourceManager;
 use crate::common::tileset_manager::CTilesetManager;
@@ -85,6 +85,7 @@ pub struct Game {
     pub currentgamemode: i16,
     pub rng: RngState,
     pub sfx: SfxState,
+    pub backgroundmusic: [sfxMusic; 6],
     pub networkHandler: Global<NetworkHandler>,
     pub netplay: Global<Networking>,
     pub backup_playercontrol: [i16; 4],
@@ -266,6 +267,7 @@ impl Game {
             currentgamemode: 0,
             rng: RngState::new(),
             sfx: SfxState::new(),
+            backgroundmusic: [const { sfxMusic::new() }; 6],
             networkHandler: Global::uninit(),
             netplay: Global::uninit(),
             backup_playercontrol: [0; 4],

@@ -140,7 +140,7 @@ impl CObjectTrait for MO_Boomerang {
 
     fn update(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        if !g.rm.sfx_boomerang.is_playing() {
+        if !g.rm.sfx_boomerang.is_playing(g) {
             if_sound_on_play(g, &mut gp.rm.sfx_boomerang);
         }
 

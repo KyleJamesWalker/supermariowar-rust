@@ -42,7 +42,7 @@ impl PlayerInvincibility {
             g.game_values.flags.playinvinciblesound = true;
 
             if g.game_values.music && g.game_values.sound {
-                gp.rm.backgroundmusic[0].stop(g);
+                gp.backgroundmusic[0].stop(g);
             }
         }
     }
