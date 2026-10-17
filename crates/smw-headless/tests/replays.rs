@@ -143,11 +143,11 @@ fn read_bmp(path: &Path) -> (u32, u32, Vec<[u8; 3]>) {
     (w as u32, h.unsigned_abs(), pixels)
 }
 
-/// Runs `tools/replays/<name>.txt` and compares it with its golden as `tools/parity.sh` does.
+/// Runs `tools/replays/<name>.txt` and compares it with its golden in `tools/golden`, or `tools/golden_rust` while that exists.
 fn check(name: &str) {
     let tools = repo().join("tools");
-    let rust_golden = tools.join("golden_rust").join(name);
-    let golden = if rust_golden.is_dir() { rust_golden } else { tools.join("golden").join(name) };
+    let golden = tools.join("golden").join(name);
+    let golden = if golden.is_dir() { golden } else { tools.join("golden_rust").join(name) };
     let out = std::env::temp_dir().join(format!("smw-headless-{}-{}", std::process::id(), name));
     let dump = run(&tools.join("replays").join(format!("{}.txt", name)), &out, None);
 
