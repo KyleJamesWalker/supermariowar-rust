@@ -37,7 +37,7 @@ impl CGM_Collection {
     }
 
     pub fn release_card(&mut self, g: &mut Game, mut player: PlayerId) {
-        if g.player(player).score().subscore[0] > 0 {
+        if g.player(player).score(g).subscore[0] > 0 {
             let pos = Vec2s::new((g.player(player).center_x() as i32 - 16) as i16, (g.player(player).center_y() as i32 - 16) as i16);
             if !net_random::event(g, Ev::ReleaseCard, &[g.player(player).globalID as i32, pos.x as i32, pos.y as i32]) {
                 self.drop_card(g, player, pos);
@@ -52,14 +52,14 @@ impl CGM_Collection {
             let angle: f32 = -(RANDOM_INT(gp.get(), 314) as f32) / 100.0f32;
             let vel = Vec2f::new(speed * cosf(angle), speed * sinf(angle));
 
-            g.player(player).score().subscore[0] -= 1;
+            g.player(player).score(g).subscore[0] -= 1;
 
-            let iCardMask: i16 = (3i32 << ((g.player(player).score().subscore[0] as i32) << 1)) as i16;
+            let iCardMask: i16 = (3i32 << ((g.player(player).score(g).subscore[0] as i32) << 1)) as i16;
             let iCardMaskInverted: i16 = !iCardMask;
 
-            let iValue: i16 = ((g.player(player).score().subscore[1] as i32 & iCardMask as i32) >> ((g.player(player).score().subscore[0] as i32) << 1)) as i16;
+            let iValue: i16 = ((g.player(player).score(g).subscore[1] as i32 & iCardMask as i32) >> ((g.player(player).score(g).subscore[0] as i32) << 1)) as i16;
 
-            g.player(player).score().subscore[1] &= iCardMaskInverted;
+            g.player(player).score(g).subscore[1] &= iCardMaskInverted;
 
             let obj = Ptr::new_box(MO_CollectionCard::new(g, gp.get().rm.spr_collectcards, 1, iValue, 30, vel, pos));
             gp.get().objectcontainer[1].add(g, obj);
@@ -86,8 +86,8 @@ pub fn net_spawn_card(g: &mut Game) {
 }
 
 pub fn net_release_card(g: &mut Game, mut player: PlayerId, x: i16, y: i16) {
-    if let Some(this) = g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Collection>() {
-        if !player.is_none() && g.player(player).score().subscore[0] > 0 {
+    if let Some(this) = g.mode().get().as_any().downcast_mut::<CGM_Collection>() {
+        if !player.is_none() && g.player(player).score(g).subscore[0] > 0 {
             this.drop_card(g, player, Vec2s::new(x, y));
         }
     }
@@ -187,15 +187,15 @@ impl CGameModeTrait for CGM_Collection {
 
     fn playerextraguy(&mut self, g: &mut Game, mut player: PlayerId, iType: i16) {
         if !self.gameover {
-            g.player(player).score().adjust_score(g, iType);
+            g.player(player).score(g).adjust_score(g, iType);
             self.check_winner(g, player);
         }
     }
 
     fn check_winner(&mut self, g: &mut Game, mut player: PlayerId) -> PlayerKillType {
         if self.goal > -1 {
-            if g.player(player).score().score >= self.goal {
-                g.player(player).score().set_score(g, self.goal);
+            if g.player(player).score(g).score >= self.goal {
+                g.player(player).score(g).set_score(g, self.goal);
                 self.winningteam = g.player(player).get_team_id();
                 self.gameover = true;
 
@@ -208,7 +208,7 @@ impl CGameModeTrait for CGM_Collection {
                     g.score[iScore].subscore[1] = 0;
                     g.score[iScore].subscore[2] = 0;
                 }
-            } else if g.player(player).score().score as f64 >= self.goal as f64 * 0.8 && !self.playedwarningsound {
+            } else if g.player(player).score(g).score as f64 >= self.goal as f64 * 0.8 && !self.playedwarningsound {
                 self.playwarningsound(g);
             }
         }

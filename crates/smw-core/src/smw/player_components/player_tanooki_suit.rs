@@ -33,9 +33,9 @@ impl PlayerTanookiSuit {
         self.statue_uses_left = 0;
     }
 
-    fn can_turn_into_statue(&mut self, player: &mut CPlayer) -> bool {
-        player.playerKeys.game_turbo().fPressed
-            && player.playerKeys.game_down().fDown
+    fn can_turn_into_statue(&mut self, g: &Game, player: &mut CPlayer) -> bool {
+        player.keys(g).game_turbo().fPressed
+            && player.keys(g).game_down().fDown
             && !self.statue_lock
             && player.powerupused.is_none()
             && !player.lockfire
@@ -58,12 +58,12 @@ impl PlayerTanookiSuit {
         }
 
         // If the down key is ever released, manually untransform by releasing the down key
-        if !player.playerKeys.game_down().fDown && self.statue_timer != 0 {
+        if !player.keys(g).game_down().fDown && self.statue_timer != 0 {
             // Untransform from statue
             self.statue_timer = 1;
         }
         // Become the tanooki
-        else if self.can_turn_into_statue(player) {
+        else if self.can_turn_into_statue(g, player) {
             // set the amount of time you get to remain in statue form
             self.statue_timer = 123;
 

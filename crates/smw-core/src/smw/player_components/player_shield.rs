@@ -26,7 +26,7 @@ impl PlayerShield {
     pub fn reset(&mut self, g: &mut Game) {
         self.abort();
 
-        if g.game_values.gamemode.getgamemode() == game_mode_survival {
+        if g.mode().getgamemode() == game_mode_survival {
             if g.game_values.gamemodesettings.survival.shield {
                 self.timer = g.game_values.shieldtime;
                 self.r#type = g.game_values.shieldstyle as PlayerShieldType;

@@ -149,7 +149,7 @@ fn spawn_special_powerup(g: &mut Game, r#type: i16, spawnPos: Vec2s) -> Spawned 
 
             let colorIdx = color as usize;
 
-            let value = if g.game_values.gamemode.gamemode == game_mode_greed { iGreedValue[colorIdx] } else { iCoinValue[colorIdx] };
+            let value = if g.mode().gamemode == game_mode_greed { iGreedValue[colorIdx] } else { iCoinValue[colorIdx] };
             new_powerup(PU_CoinPowerup::new(g, rm.spr_coin, spawnPos, color, value))
         }
         MINIGAME_COIN => Spawned::Coin(Ptr::new_box(MO_Coin::new(

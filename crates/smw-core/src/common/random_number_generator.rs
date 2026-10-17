@@ -54,29 +54,41 @@ pub struct RandomNumberGenerator;
 
 
 /// Not in the C++: netplay records the game host's draws and replays them on joiners (smw/net_random.rs).
+#[derive(Default)]
 enum Tape {
+    #[default]
     Off,
     Record(Vec<u32>),
     Play(Vec<u32>, usize),
 }
 
-/// The RNG's part of `Game`.
-pub struct RngState {
-    grng: Option<Well512RandomNumberGenerator>,
-    // Replay-harness counters (tools/cpp-harness.patch), reported in the dump's `R` line.
+/// Replay-harness counters (tools/cpp-harness.patch), reported in the dump's `R` line, and the netplay tape.
+#[derive(Default)]
+struct RngCounters {
     g_callCount: u64,
     g_lastValue: u32,
     g_tape: Tape,
 }
 
+/// The RNG's part of `Game`.
+pub struct RngState {
+    grng: Option<Well512RandomNumberGenerator>,
+    /// The counters until the generator exists; then the generator holds them.
+    idle: RngCounters,
+}
+
 impl RngState {
     pub const fn new() -> Self {
-        RngState { grng: None, g_callCount: 0, g_lastValue: 0, g_tape: Tape::Off }
+        RngState { grng: None, idle: RngCounters { g_callCount: 0, g_lastValue: 0, g_tape: Tape::Off } }
     }
 }
 
-fn rng(g: &mut Game) -> &mut RngState {
-    &mut g.rng
+fn rng(g: &mut Game) -> &mut RngCounters {
+    let st = &mut g.rng;
+    match st.grng.as_mut() {
+        Some(r) => r.counters.as_mut().expect("the game's generator counts"),
+        None => &mut st.idle,
+    }
 }
 
 impl RandomNumberGenerator {
@@ -121,9 +133,9 @@ impl RandomNumberGenerator {
     }
 
     pub fn generator(g: &mut Game) -> &mut Well512RandomNumberGenerator {
-        let st = rng(g);
+        let st = &mut g.rng;
         if st.grng.is_none() {
-            let counters = Ptr::from_mut(&mut *st);
+            let counters = std::mem::take(&mut st.idle);
             st.grng = Some(Well512RandomNumberGenerator::attached(counters));
         }
         st.grng.as_mut().unwrap()
@@ -144,20 +156,20 @@ impl RandomNumberGeneratorType for SystemRandomNumberGenerator {
 pub struct Well512RandomNumberGenerator {
     state: [u32; 16],
     index: u32,
-    /// The game's counters and tape; null for a generator made on its own.
-    counters: Ptr<RngState>,
+    /// The game's counters and tape; none for a generator made on its own.
+    counters: Option<RngCounters>,
     _alias: Aliased,
 }
 
 impl Well512RandomNumberGenerator {
     pub fn new() -> Self {
-        let mut r = Well512RandomNumberGenerator { _alias: Aliased::new(), state: [0; 16], index: 0, counters: Ptr::null() };
+        let mut r = Well512RandomNumberGenerator { _alias: Aliased::new(), state: [0; 16], index: 0, counters: None };
         r.initialize();
         r
     }
 
-    fn attached(counters: Ptr<RngState>) -> Self {
-        Well512RandomNumberGenerator { counters, ..Self::new() }
+    fn attached(counters: RngCounters) -> Self {
+        Well512RandomNumberGenerator { counters: Some(counters), ..Self::new() }
     }
 
     /// Not in the C++: the generator state a replay checkpoint (smw/checkpoint.rs) saves and restores.
@@ -166,8 +178,7 @@ impl Well512RandomNumberGenerator {
     }
 
     fn get_next(&mut self) -> u32 {
-        let mut counters = self.counters;
-        if !counters.is_null() {
+        if let Some(counters) = self.counters.as_mut() {
             if let Tape::Play(values, next) = &mut counters.g_tape {
                 if let Some(&v) = values.get(*next) {
                     *next += 1;
@@ -176,7 +187,7 @@ impl Well512RandomNumberGenerator {
             }
         }
         let value = self.draw();
-        if !counters.is_null() {
+        if let Some(counters) = self.counters.as_mut() {
             if let Tape::Record(values) = &mut counters.g_tape {
                 values.push(value);
             }
@@ -185,8 +196,7 @@ impl Well512RandomNumberGenerator {
     }
 
     fn draw(&mut self) -> u32 {
-        let mut counters = self.counters;
-        if !counters.is_null() {
+        if let Some(counters) = self.counters.as_mut() {
             counters.g_callCount += 1;
         }
         let state = &mut self.state;
@@ -203,10 +213,11 @@ impl Well512RandomNumberGenerator {
         self.index = index as u32;
         a = state[index];
         state[index] = a ^ b ^ d ^ (a << 2) ^ (b << 18) ^ (c << 28);
-        if !counters.is_null() {
-            counters.g_lastValue = state[index];
+        let value = state[index];
+        if let Some(counters) = self.counters.as_mut() {
+            counters.g_lastValue = value;
         }
-        state[index]
+        value
     }
 
     fn initialize(&mut self) {

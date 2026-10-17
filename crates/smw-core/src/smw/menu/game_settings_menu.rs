@@ -84,7 +84,7 @@ impl UI_GameSettingsMenu {
         g.ctl(this.miModeField).set_item_changed_code(MENU_CODE_MODE_CHANGED);
 
         for iGameMode in 0..GM_LAST {
-            let mut mode = g.gamemodes[iGameMode];
+            let mut mode = g.gamemodes[iGameMode].ptr();
             let mut field = Ctl::new(MI_SelectField::<i16>::new(spr_selectfield, 70, 125, mode.gm().get_goal_name(), 352, 120), g);
             this.miGoalField[iGameMode] = field;
             // miGoalField[iGameMode]->SetKey(gamemodes[iGameMode]->goal);

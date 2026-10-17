@@ -218,12 +218,12 @@ pub fn io_block_bounce_moving_object<T: IO_BlockTrait + ?Sized>(g: &mut Game, th
         enemy.die_and_drop_shell(g, true, true);
 
         let iBumpPlayerID = this.block().iBumpPlayerID;
-        if !g.game_values.gamemode.gameover && iBumpPlayerID >= 0 {
+        if !g.mode().gameover && iBumpPlayerID >= 0 {
             let mut player = get_player_from_global_id(g, iBumpPlayerID);
 
             if !player.is_none() {
                 g.player(player).add_killer_award(g, PlayerId::NONE, style);
-                g.player(player).score.adjust_score(g, 1);
+                g.player(player).score(g).adjust_score(g, 1);
             }
         }
     } else if r#type == movingobject_shell {

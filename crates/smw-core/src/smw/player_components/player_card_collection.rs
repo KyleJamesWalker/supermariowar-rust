@@ -24,7 +24,7 @@ impl PlayerCardCollection {
     }
 
     pub fn update(&mut self, g: &mut Game, player: &mut CPlayer, keymask: u8) {
-        if g.game_values.gamemode.gamemode == game_mode_collection {
+        if g.mode().gamemode == game_mode_collection {
             if self.index > 0 {
                 self.timer += 1;
                 if self.timer >= 32 {
@@ -44,7 +44,7 @@ impl PlayerCardCollection {
                 self.timer = 0;
                 self.index = 0;
 
-                g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Collection>().unwrap().release_card(g, player.id);
+                g.mode().get().as_any().downcast_mut::<CGM_Collection>().unwrap().release_card(g, player.id);
             }
         }
     }

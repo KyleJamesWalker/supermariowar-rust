@@ -85,7 +85,8 @@ pub struct MI_World {
     fUsingCloud: bool,
 
     iPressSelectTimer: i16,
-    pressSelectKeys: Ptr<COutputControl>,
+    /// The player whose select key the AI presses when the timer runs out.
+    pressSelectKeys: usize,
 }
 crate::impl_base!(MI_World => ui_control: UI_Control);
 
@@ -151,7 +152,7 @@ impl MI_World {
             iSleepTurns: 0,
             fUsingCloud: false,
             iPressSelectTimer: 0,
-            pressSelectKeys: Ptr::null(),
+            pressSelectKeys: 0,
         }
     }
 
@@ -211,7 +212,7 @@ impl MI_World {
         g.game_values.worldpointsbonus = -1;
 
         self.iPressSelectTimer = 0;
-        self.pressSelectKeys = Ptr::null();
+        self.pressSelectKeys = 0;
 
         self.iDrawWidth = if g.g_worldmap.iWidth < 20 { g.g_worldmap.iWidth << 5 } else { App::screenWidth as i16 };
         self.iDrawHeight = if g.g_worldmap.iHeight < 15 { g.g_worldmap.iHeight << 5 } else { App::screenHeight as i16 };
@@ -1003,7 +1004,8 @@ impl UI_ControlTrait for MI_World {
                         iTeamMember += 1;
                     }
 
-                    playerKeys = Ptr::from_mut(&mut gp.get().game_values.playerInput.outputControls[gp.get().game_values.teamids[ct][0] as usize]);
+                    let keysPlayer = g.game_values.teamids[ct][0] as usize;
+                    playerKeys = Ptr::from_mut(&mut gp.get().game_values.playerInput.outputControls[keysPlayer]);
 
                     //If there are no AI moves to make
                     if iNextMove == -1 {
@@ -1042,15 +1044,14 @@ impl UI_ControlTrait for MI_World {
                     } else if iNextMove == 3 {
                         playerKeys.menu_right_mut().fPressed = true;
                     } else if iNextMove == 4 {
-                        self.pressSelectKeys = playerKeys;
+                        self.pressSelectKeys = keysPlayer;
                         self.iPressSelectTimer = 60;
                     }
                 } else {
                     self.iPressSelectTimer -= 1;
                     if self.iPressSelectTimer <= 0 {
                         self.iPressSelectTimer = 0;
-                        let mut keys = self.pressSelectKeys;
-                        keys.menu_select_mut().fPressed = true;
+                        g.game_values.playerInput.outputControls[self.pressSelectKeys].menu_select_mut().fPressed = true;
                     }
                 }
             } else {
@@ -1235,7 +1236,7 @@ impl UI_ControlTrait for MI_World {
             if self.iState == -1 && (self.state_transition(iTeamId) == 0 || self.state_transition(iTeamId) == 3) {
                 let t = iTeamId as usize;
                 if playerKeys.menu_cancel().fPressed {
-                    if DEVICE_KEYBOARD != playerInput.inputControls[p].iDevice || iPlayer == 0 {
+                    if DEVICE_KEYBOARD != g.input_control(playerInput.inputControls[p]).iDevice || iPlayer == 0 {
                         self.fModifying = false;
                         return MENU_CODE_BACK_TEAM_SELECT_MENU;
                     }
@@ -1244,7 +1245,7 @@ impl UI_ControlTrait for MI_World {
                 if (g.game_values.playercontrol[p] == 1 || self.fNoInterestingMoves)
                     && (self.iPopupFlag[t]
                         || playerKeys.menu_random().fPressed
-                        || (iPlayer != 0 && playerInput.inputControls[p].iDevice == DEVICE_KEYBOARD && playerKeys.menu_cancel().fPressed))
+                        || (iPlayer != 0 && g.input_control(playerInput.inputControls[p]).iDevice == DEVICE_KEYBOARD && playerKeys.menu_cancel().fPressed))
                 {
                     self.iPopupFlag[t] = true;
 
