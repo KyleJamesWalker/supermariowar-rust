@@ -148,11 +148,10 @@ fn read_bmp(path: &Path) -> (u32, u32, Vec<[u8; 3]>) {
     (w as u32, h.unsigned_abs(), pixels)
 }
 
-/// Runs `tools/replays/<name>.txt` and compares it with its golden in `tools/golden`, or `tools/golden_rust` while that exists.
+/// Runs `tools/replays/<name>.txt` and compares it with its golden in `tools/golden`.
 fn check(name: &str) {
     let tools = repo().join("tools");
     let golden = tools.join("golden").join(name);
-    let golden = if golden.is_dir() { golden } else { tools.join("golden_rust").join(name) };
     let out = std::env::temp_dir().join(format!("smw-headless-{}-{}", std::process::id(), name));
     let dump = run(&tools.join("replays").join(format!("{}.txt", name)), &out, None);
 
@@ -263,7 +262,6 @@ fn clone_mid_match(name: &str, at: u32) {
     assert!(copied >= 300, "{}: the copy played {} frames", name, copied);
 
     let golden = tools.join("golden").join(name);
-    let golden = if golden.is_dir() { golden } else { tools.join("golden_rust").join(name) };
     let golden_dump = golden.join("dump.txt");
     let golden_dump = if golden_dump.exists() { golden_dump } else { golden.join("dump.txt.gz") };
     let expected = frames(&read_maybe_gzip(&golden_dump));
