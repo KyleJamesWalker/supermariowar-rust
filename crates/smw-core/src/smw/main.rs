@@ -29,7 +29,6 @@ use crate::smw::game_state::{GameState, GameStateManager};
 use crate::smw::gs_splash_screen::SplashScreenState;
 use crate::smw::harness;
 use crate::smw::net::{net_close, net_init};
-use sdl2::sys::{SDL_InitSubSystem, SDL_Joystick, SDL_JoystickEventState, SDL_JoystickOpen, SDL_NumJoysticks, SDL_ENABLE, SDL_INIT_JOYSTICK};
 use std::path::Path;
 use std::ptr::null_mut;
 
@@ -200,22 +199,22 @@ pub fn create_globals(g: &mut Game) {
 }
 
 pub fn init_joysticks(g: &mut Game) {
-    unsafe {
-        SDL_InitSubSystem(SDL_INIT_JOYSTICK);
-        // Not in upstream: a replay opens no pads, so a connected one cannot act in it.
-        g.devices = match harness::replay_joysticks(g) {
-            Some(count) => vec![Some(Device::Replay); count],
-            None => (0..SDL_NumJoysticks().max(0)).map(|i| Some(SDL_JoystickOpen(i)).filter(|js| !js.is_null()).map(Device::Pad)).collect(),
-        };
-        SDL_JoystickEventState(SDL_ENABLE as i32);
-        #[cfg(not(target_os = "emscripten"))]
-        {
-            let translate = !harness::replaying(g) && std::env::var_os("SMW_PAD_TRANSLATE").is_some();
-            crate::smw::pad::init(g, translate);
-        }
-        #[cfg(not(target_os = "emscripten"))]
-        crate::smw::touch::init(g);
-    }
+    // Not in upstream: a replay opens no pads, so a connected one cannot act in it.
+    let replay = harness::replay_joysticks(g);
+    #[cfg(not(target_os = "emscripten"))]
+    let pads = {
+        let translate = !harness::replaying(g) && std::env::var_os("SMW_PAD_TRANSLATE").is_some();
+        crate::smw::pad::init(g, replay.is_none(), translate)
+    };
+    #[cfg(target_os = "emscripten")]
+    let pads: Vec<Option<Device>> =
+        crate::services::services(g).pads.open_all(replay.is_none(), false).into_iter().map(|p| p.map(|p| Device::Pad { pad: p.pad, controller: p.controller })).collect();
+    g.devices = match replay {
+        Some(count) => vec![Some(Device::Replay); count],
+        None => pads,
+    };
+    #[cfg(not(target_os = "emscripten"))]
+    crate::smw::touch::init(g);
 }
 
 /// Not in upstream: every launch gives the players the connected joysticks first, then the right

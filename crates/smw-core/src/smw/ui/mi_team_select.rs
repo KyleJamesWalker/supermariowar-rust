@@ -12,7 +12,6 @@ use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_image::MI_Image;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
-use sdl2::sys::SDL_JoystickFromPlayerIndex;
 
 pub struct MI_TeamSelect {
     pub ui_control: UI_Control,
@@ -386,7 +385,7 @@ impl UI_ControlTrait for MI_TeamSelect {
 
     fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         let mut gp = g.ptr();
-        unsafe {
+        {
             for iPlayer in 0..4i16 {
                 let p = iPlayer as usize;
                 let playerKeys: Ptr<COutputControl> = Ptr::from_mut(&mut g.game_values.playerInput.outputControls[p]);
@@ -542,7 +541,7 @@ impl UI_ControlTrait for MI_TeamSelect {
                     let team = self.get_team(iPlayer);
                     gfx_setjoystickteamcolor(
                         g,
-                        SDL_JoystickFromPlayerIndex(playerInput.inputControls[p].iDevice as i32),
+                        playerInput.inputControls[p].iDevice as i32,
                         team,
                         if self.fReady[p] { 1.0f32 } else { 0.5f32 },
                     );

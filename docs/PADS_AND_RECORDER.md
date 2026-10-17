@@ -66,6 +66,8 @@ pub trait Pads {
 
 `PadInfo` carries the name, GUID and whether the pad is a translated controller. The mapping tables, `read_binds`, `translate_*` and the muOS mappings move to `smw-sdl2` unchanged. The backend applies translation before it hands out `Input`, so the core never sees untranslated controller events. The core keeps the policy: `player_pads`, `assign_inputs` and hotplug assignment.
 
+As built, `Pads` also has `open` (a hotplugged pad, at the device number the core picked), `name`, `family` and `log_input`, which replace the joystick names, controller types and `SMW_DEBUG_INPUT` logging the menus and `CPlayerInput` read from SDL. `open_all` takes an `open` flag so a replay still starts the joystick subsystem without opening pads. `set_led` takes SDL's player index, as `SDL_JoystickFromPlayerIndex` did. Translation stays an SDL event filter inside `smw-sdl2`, so events keep SDL's queue order.
+
 ### 4. smw-core drops `sdl2`
 
 With 1-3 done, `smw-core/Cargo.toml` loses `sdl2`. The SDL comparison tests in `soft_surface.rs`, `soft_image.rs` and `editor_event.rs` move to `smw-sdl2`, or keep `sdl2` as a dev-dependency.

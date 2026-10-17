@@ -1,6 +1,6 @@
 //! Not in upstream: the family of a connected pad, for Options > Controls (and later button prompts).
 
-use sdl2::sys::{SDL_GameControllerType as T, SDL_GameControllerTypeForIndex};
+use smw_platform::PadFamily;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ControllerType {
@@ -39,23 +39,20 @@ pub fn vendor_from_web_id(id: &str) -> Option<u16> {
     (vendor.len() == 4 && rest.split_once('-').is_some_and(|(p, _)| p.len() == 4)).then(|| u16::from_str_radix(vendor, 16).ok())?
 }
 
-/// The family of the joystick at SDL device index `device`, whose SDL name is `name`.
-pub fn controller_type(device: i32, name: &str) -> ControllerType {
-    let sdl = match unsafe { SDL_GameControllerTypeForIndex(device) } {
-        T::SDL_CONTROLLER_TYPE_XBOX360 | T::SDL_CONTROLLER_TYPE_XBOXONE => ControllerType::Xbox,
-        T::SDL_CONTROLLER_TYPE_PS3 | T::SDL_CONTROLLER_TYPE_PS4 | T::SDL_CONTROLLER_TYPE_PS5 => ControllerType::PlayStation,
-        T::SDL_CONTROLLER_TYPE_NINTENDO_SWITCH_PRO
-        | T::SDL_CONTROLLER_TYPE_NINTENDO_SWITCH_JOYCON_LEFT
-        | T::SDL_CONTROLLER_TYPE_NINTENDO_SWITCH_JOYCON_RIGHT
-        | T::SDL_CONTROLLER_TYPE_NINTENDO_SWITCH_JOYCON_PAIR => ControllerType::Nintendo,
-        _ => ControllerType::Generic,
+/// The family of backend device `index`, whose name is `name`.
+pub fn controller_type(g: &mut crate::game::Game, index: usize, name: &str) -> ControllerType {
+    let family = match crate::services::services(g).pads.family(index) {
+        PadFamily::Generic => ControllerType::Generic,
+        PadFamily::Xbox => ControllerType::Xbox,
+        PadFamily::PlayStation => ControllerType::PlayStation,
+        PadFamily::Nintendo => ControllerType::Nintendo,
     };
     #[cfg(target_os = "emscripten")]
     if let Some(vendor) = vendor_from_web_id(name) {
         return ControllerType::from_vendor(vendor);
     }
     let _ = name;
-    sdl
+    family
 }
 
 #[cfg(test)]
