@@ -87,11 +87,11 @@ pub const MAXCATEGORYTRACKS: i32 = 64;
 pub const MAXEYECANDY: i32 = 192;
 pub const CORPSESTAY: i32 = 200;
 pub const WAITTIME: i32 = 16;
-/// Not in the C++, whose frame rate was its game speed: the game advances this many ticks per second of wall time on
-/// every platform, whatever the display refreshes at. Netplay depends on it, so changing it changes the protocol version.
+/// Ticks of game logic per second of wall time on every platform, whatever the display refreshes at. Netplay
+/// depends on it, so changing it changes the protocol version.
 pub const TICKS_PER_SECOND: u32 = 60;
-/// The Graphics Options "Frame Rate" setting, kept in the options byte upstream used for its frame limiter (ms per
-/// frame, at most 100): presents at the display's refresh, or at most one of these rates. Any other value is Display.
+/// The Graphics Options "Frame Rate" setting: present at the display's refresh, or at most one of these rates. Older
+/// options files hold a frame time in ms (at most 100) in its byte, so any other value reads as Display.
 pub const FRAME_RATE_DISPLAY: i16 = 200;
 pub const FRAME_RATE_CAPS: [(i16, u32); 7] = [(201, 30), (202, 40), (203, 45), (204, 60), (205, 90), (206, 120), (207, 144)];
 

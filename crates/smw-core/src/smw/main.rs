@@ -99,10 +99,9 @@ pub fn step(g: &mut Game) {
     harness::frame_end(g);
 }
 
-/// Not in upstream, whose web build runs one game frame per requestAnimationFrame, i.e. at the
-/// display refresh rate. The game advances `TICKS_PER_SECOND` ticks per second of wall time instead,
-/// as the native loop paces it, and presents once per animation frame. Under SMW_NOLIMIT
-/// (replays) every callback runs exactly one frame, so the dumps stay deterministic.
+/// The browser calls this once per display refresh. The game advances `TICKS_PER_SECOND` ticks per second of wall
+/// time, as the native loop paces it, and presents once per animation frame. Under SMW_NOLIMIT (replays) every
+/// callback runs exactly one frame, so the dumps stay deterministic.
 #[cfg(target_os = "emscripten")]
 unsafe extern "C-unwind" fn gameloop_frame_web(arg: *mut std::ffi::c_void) {
     const MAX_CATCH_UP_FRAMES: u32 = 5;
@@ -226,10 +225,10 @@ unsafe fn gameloop_frame(g: &mut Game) {
     FPSLimiter::instance(gp.get()).after_flip(gp.get());
 }
 
-/// Not in upstream, whose frame rate was its game speed: runs the ticks that wall time calls for at
-/// `TICKS_PER_SECOND`, at most `MAX_CATCH_UP_TICKS` of them, and presents separately: every display refresh
-/// under vsync, or at most the Graphics Options frame rate (or `SMW_PRESENT_HZ`). Frames between ticks render from
-/// the last two gameplay draws. Without a present or tick due, it sleeps until the sooner of the two.
+/// Runs the ticks that wall time calls for at `TICKS_PER_SECOND`, at most `MAX_CATCH_UP_TICKS` of them, and presents
+/// separately: every display refresh under vsync, or at most the Graphics Options frame rate (or `SMW_PRESENT_HZ`).
+/// Frames between ticks render from the last two gameplay draws. Without a present or tick due, it sleeps until the
+/// sooner of the two.
 #[cfg(not(target_os = "emscripten"))]
 unsafe fn paced_frame(g: &mut Game) {
     const MAX_CATCH_UP_TICKS: u32 = 5;
