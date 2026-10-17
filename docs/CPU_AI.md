@@ -1,6 +1,6 @@
 # CPU AI overhaul
 
-Status: parked until the architecture v2 roadmap ([ARCHITECTURE_V2.md](ARCHITECTURE_V2.md)) is complete.
+Status: steps 1 to 3 and 7 are done, and step 4 has a first cut: objective modes prefer the goal (2026-10-17). Steps 5, 6, 8 and 9 remain.
 
 ## Summary
 
@@ -54,17 +54,18 @@ Every CPU targets the nearest player, so several can chase the same target while
 The steps run from most payoff per effort to least.
 
 1. **AI-vs-AI benchmark**.
-   A headless tool runs seeded matches per mode and map, and reports objective score, win spread, and frames spent pressed against a wall.
+   A headless tool runs seeded matches per mode and map, and reports objective score, win spread, and frames spent stuck before game over (`tools/ai_bench.py`).
    Every later step must improve its target metric without making another mode worse.
 2. **Wrap-aware distance**.
-   `distance_to_object` and its siblings consider the wrapped path only when the map allows wrap.
+   `distance_to_object` and its siblings consider the wrapped path only when the CPU's rows or the target's rows have no solid tile in either edge column.
 3. **Wall look-ahead**.
-   If a solid tile blocks the move direction, the AI jumps.
-   If the jump cannot clear the tile, the AI marks the target as unreachable for a short time.
+   If a solid tile blocks the move direction, the AI jumps (`wall_ahead`).
+   If the wall rises four tiles above the CPU's head, the AI ignores the goal it was heading for for 90 frames.
 4. **Mode-aware utility scoring**.
    Each candidate action (goal, stomp, flee, regroup) gets a score from mode weights, distance, height difference, and game state.
    The AI picks the highest score.
    Examples: a Capture the Flag carrier scores "go home" above any stomp, and a Star holder scores "flee" above everything.
+   First cut: in coins, eggs, Capture the Flag, domination, King of the Hill, race and collection, a stomp target beats the goal only within 60 px and the nearest player only within 45 px.
 5. **Height advantage**.
    The score rewards positions above an opponent and penalizes positions below a non-invincible one.
 6. **Per-mode behaviors**.
@@ -72,6 +73,7 @@ The steps run from most payoff per effort to least.
 7. **Target spreading**.
    A target that another CPU already chases scores lower.
    The current leader scores higher.
+   Done as a distance weight: each other CPU chasing an opponent adds its distance once more, and the score leader counts at three quarters.
 8. **Navigation graph and A\*.**
    Build a graph from the tile map: walkable tiles, jump and fall links, wrap edges, and warp pipes.
    Steer along the path, not straight at the target.
@@ -103,4 +105,4 @@ Each PR posts the benchmark before and after, and refreshes the replay goldens t
 - The handles refactor rewrites most of the `Ptr` access in `ai.rs`.
   Starting before it lands means large conflicts, so this work waits for it.
 - The navigation graph must handle moving platforms and breakable blocks. The design for these is open.
-- The benchmark needs a stuck metric that does not flag deliberate waiting, such as a CPU guarding a flag.
+- The benchmark needs a stuck metric that does not flag deliberate waiting, such as a CPU guarding a flag. It already stops at game over, so the winner idling on the results screen does not count.

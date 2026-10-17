@@ -831,6 +831,7 @@ impl CPlayerAI {
         }
 
         let gmChicken = dynamic_cast_gamemode::<CGM_Chicken>(g);
+        let mut best_weighted = i32::MAX;
 
         //Figure out where the other players are
         for iPlayer in 0..g.players.len() {
@@ -856,7 +857,17 @@ impl CPlayerAI {
                 }
             }
 
-            nearest!(self.distance_to_player(g, g.players[iPlayer], player, playerdistance, playerwrap));
+            let opponent = g.players[iPlayer];
+            let (mut target, mut distance, mut wrap) = (PlayerId::default(), i32::MAX, false);
+            self.distance_to_player(g, opponent, &mut target, &mut distance, &mut wrap);
+            let (num, den) = spread_weight(g, pPlayer, opponent);
+            let weighted = (distance as i64 * num / den).min(i32::MAX as i64) as i32;
+            if weighted < best_weighted {
+                best_weighted = weighted;
+                self.nearestObjects.player = opponent;
+                self.nearestObjects.playerdistance = distance;
+                self.nearestObjects.playerwrap = wrap;
+            }
         }
     }
 
@@ -869,12 +880,14 @@ impl CPlayerAI {
         let mut fScreenWrap = false;
 
         //See if it is a shorter distance wrapping around the screen
-        if tx as i32 > App::screenWidth / 2 {
-            tx = (App::screenWidth - tx as i32) as i16;
-            fScreenWrap = true;
-        } else if (tx as i32) < -App::screenWidth / 2 {
-            tx = (App::screenWidth + tx as i32) as i16;
-            fScreenWrap = true;
+        if wrap_open(g, g.player(pPlayer).iy as i32) || wrap_open(g, object.y()) {
+            if tx as i32 > App::screenWidth / 2 {
+                tx = (App::screenWidth - tx as i32) as i16;
+                fScreenWrap = true;
+            } else if (tx as i32) < -App::screenWidth / 2 {
+                tx = (App::screenWidth + tx as i32) as i16;
+                fScreenWrap = true;
+            }
         }
 
         let distance_player_pow2: i32 = tx as i32 * tx as i32 + ty as i32 * ty as i32; // a^2 = b^2 + c^2 :)
@@ -894,12 +907,14 @@ impl CPlayerAI {
         let ty: i16 = (object.y() + (object.collision_rect_h() as i32 / 2) - g.player(pPlayer).iy as i32 - HALFPH) as i16;
         let mut fScreenWrap = false;
 
-        if tx as i32 > App::screenWidth / 2 {
-            tx = (App::screenWidth - tx as i32) as i16;
-            fScreenWrap = true;
-        } else if (tx as i32) < -App::screenWidth / 2 {
-            tx = (App::screenWidth + tx as i32) as i16;
-            fScreenWrap = true;
+        if wrap_open(g, g.player(pPlayer).iy as i32) || wrap_open(g, object.y()) {
+            if tx as i32 > App::screenWidth / 2 {
+                tx = (App::screenWidth - tx as i32) as i16;
+                fScreenWrap = true;
+            } else if (tx as i32) < -App::screenWidth / 2 {
+                tx = (App::screenWidth + tx as i32) as i16;
+                fScreenWrap = true;
+            }
         }
 
         let distance_player_pow2: i32 = tx as i32 * tx as i32 + ty as i32 * ty as i32;
@@ -919,12 +934,14 @@ impl CPlayerAI {
         let ty: i16 = (g.player(player).iy as i32 - g.player(pPlayer).iy as i32) as i16;
         let mut fScreenWrap = false;
 
-        if tx as i32 > App::screenWidth / 2 {
-            tx = (App::screenWidth - tx as i32) as i16;
-            fScreenWrap = true;
-        } else if (tx as i32) < -App::screenWidth / 2 {
-            tx = (App::screenWidth + tx as i32) as i16;
-            fScreenWrap = true;
+        if wrap_open(g, g.player(pPlayer).iy as i32) || wrap_open(g, g.player(player).iy as i32) {
+            if tx as i32 > App::screenWidth / 2 {
+                tx = (App::screenWidth - tx as i32) as i16;
+                fScreenWrap = true;
+            } else if (tx as i32) < -App::screenWidth / 2 {
+                tx = (App::screenWidth + tx as i32) as i16;
+                fScreenWrap = true;
+            }
         }
 
         let distance_player_pow2: i32 = tx as i32 * tx as i32 + ty as i32 * ty as i32;
@@ -935,6 +952,77 @@ impl CPlayerAI {
             *wrap = fScreenWrap;
         }
     }
+}
+
+/// Whether a player whose top is at `y` can walk off one side of the screen: no edge column is solid in its rows.
+fn wrap_open(g: &Game, y: i32) -> bool {
+    let first = (y / TILESIZE).max(0);
+    let last = ((y + PH - 1) / TILESIZE).min(MAPHEIGHT - 1);
+    (first..=last).all(|row| (g.g_map.map(0, row) | g.g_map.map(MAPWIDTH - 1, row)) & tile_flag_solid as i32 == 0)
+}
+
+/// How much farther `opponent` counts when `me` picks whom to chase: each other CPU already chasing it doubles,
+/// triples and so on its distance, and the score leader counts at three quarters.
+fn spread_weight(g: &mut Game, me: PlayerId, opponent: PlayerId) -> (i64, i64) {
+    let mut chasers = 0;
+    let mut leader = true;
+    let score = g.player(opponent).score(g).score;
+    for i in 0..g.players.len() {
+        let other = g.players[i];
+        if other == opponent {
+            continue;
+        }
+        if g.player(other).score(g).score >= score {
+            leader = false;
+        }
+        if other == me {
+            continue;
+        }
+        if let Some(ai) = g.player(other).pPlayerAI.as_mut() {
+            if ai.ai().nearestObjects.player == opponent {
+                chasers += 1;
+            }
+        }
+    }
+    (if leader { 3 } else { 4 } * (1 + chasers), 4)
+}
+
+/// Modes won by collecting or holding a goal, where a nearby player should not pull the AI off it.
+fn objective_mode(mode: GameModeType) -> bool {
+    matches!(
+        mode,
+        game_mode_coins | game_mode_eggs | game_mode_ctf | game_mode_domination | game_mode_koth | game_mode_race | game_mode_collection
+    )
+}
+
+/// How long the AI ignores a goal behind a wall it cannot jump.
+const UNREACHABLE_FRAMES: i16 = 90;
+
+fn solid_at(g: &mut Game, tx: i32, ty: i32) -> bool {
+    g.g_map.map(tx, ty) & tile_flag_solid as i32 != 0 || !g.map_block(tx as i16, ty as i16).is_null()
+}
+
+/// The tile column of a solid tile or block touching the side of the player at (`x`, `y`) that it is walking toward.
+fn wall_ahead(g: &mut Game, x: i32, y: i32, left: bool, right: bool) -> Option<i32> {
+    if left == right {
+        return None;
+    }
+    let mut column = if right { x + PW } else { x - 1 };
+    if column < 0 || column >= App::screenWidth {
+        if !wrap_open(g, y) {
+            return None;
+        }
+        column = column.rem_euclid(App::screenWidth);
+    }
+    let tx = column / TILESIZE;
+    let mut rows = (y / TILESIZE).max(0)..=((y + PH - 1) / TILESIZE).min(MAPHEIGHT - 1);
+    rows.any(|ty| solid_at(g, tx, ty)).then_some(tx)
+}
+
+/// Whether the wall in column `tx` rises four tiles above the head of a player whose top is at `y`, beyond a jump.
+fn wall_too_tall(g: &mut Game, tx: i32, y: i32) -> bool {
+    let top = y / TILESIZE;
+    top >= 4 && (top - 4..top).all(|ty| solid_at(g, tx, ty))
 }
 
 //Setup AI so that it can ignore or pay attention to some objects
@@ -1065,9 +1153,11 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
 
         let actionType: i16;
         let no = &this.nearestObjects;
+        let objective = !no.goal.is_none() && objective_mode(g.mode().gamemode);
+        let (stomp_range, attack_range) = if objective { (3600, 2025) } else { (14400, 8100) };
         if !no.threat.is_none() && no.threatdistance < 14400 && !g.player(pPlayer).is_invincible() {
             actionType = 2;
-        } else if !no.stomp.is_none() && no.stompdistance < 14400 {
+        } else if !no.stomp.is_none() && no.stompdistance < stomp_range {
             actionType = 4;
         } else if !no.goal.is_none() && !no.teammate.is_none() {
             if no.goaldistance < no.teammatedistance {
@@ -1078,7 +1168,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
         } else if !no.teammate.is_none() {
             actionType = 3;
         } else if !no.goal.is_none() {
-            if no.playerdistance < 8100 {
+            if no.playerdistance < attack_range {
                 actionType = 0;
             } else {
                 actionType = 1;
@@ -1437,6 +1527,14 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
             } else if carriedobjecttype == movingobject_carried || carriedobjecttype == movingobject_throwbox {
                 //Drop springs,spikes,shoes
                 playerKeys.game_turbo_mut().fDown = false;
+            }
+        }
+
+        if let Some(column) = wall_ahead(g, ix32, iy32, playerKeys.game_left().fDown, playerKeys.game_right().fDown) {
+            playerKeys.game_jump_mut().fDown = true;
+            if actionType == 1 && wall_too_tall(g, column, iy32) {
+                let id = ai_target(g, this.nearestObjects.goal).network_id();
+                this.attentionObjects.insert(id, Box::new(AttentionObject { iID: id, iType: 1, iTimer: UNREACHABLE_FRAMES }));
             }
         }
 
