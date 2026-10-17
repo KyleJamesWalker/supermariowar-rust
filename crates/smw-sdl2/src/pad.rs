@@ -77,13 +77,15 @@ struct Pad {
 pub struct PadState {
     pads: Vec<Pad>,
     translate_on: bool,
+    /// A live session: pads connected or removed while it runs open and close.
+    hotplug_on: bool,
     debug_input: bool,
     logged: [u32; 3],
 }
 
 impl PadState {
     pub const fn new() -> Self {
-        PadState { pads: Vec::new(), translate_on: false, debug_input: false, logged: [0; 3] }
+        PadState { pads: Vec::new(), translate_on: false, hotplug_on: false, debug_input: false, logged: [0; 3] }
     }
 }
 
@@ -91,9 +93,10 @@ static HOTPLUG: AtomicBool = AtomicBool::new(false);
 
 /// Logs every open joystick (`joysticks[i]` is SDL device i, or null); with `translate`, reads the game controllers
 /// among them through their mapping. `st` must stay where it is: the event filter keeps a pointer to it.
-pub fn init(st: &mut PadState, translate: bool, joysticks: &[*mut SDL_Joystick]) -> Vec<Option<PadInfo>> {
+pub fn init(st: &mut PadState, live: bool, translate: bool, joysticks: &[*mut SDL_Joystick]) -> Vec<Option<PadInfo>> {
     unsafe {
         st.translate_on = translate;
+        st.hotplug_on = live;
         st.debug_input = std::env::var_os("SMW_DEBUG_INPUT").is_some();
         SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER);
         let count = SDL_NumJoysticks();
@@ -114,7 +117,7 @@ pub fn init(st: &mut PadState, translate: bool, joysticks: &[*mut SDL_Joystick])
 
         let mut current: SDL_EventFilter = None;
         let mut userdata = std::ptr::null_mut();
-        if (st.debug_input || translate || st.pads.iter().any(|p| p.controller)) && crate::events::get_filter(&mut current, &mut userdata) == SDL_bool::SDL_FALSE {
+        if (st.debug_input || translate || live || st.pads.iter().any(|p| p.controller)) && crate::events::get_filter(&mut current, &mut userdata) == SDL_bool::SDL_FALSE {
             crate::events::set_filter(Some(filter), st as *mut PadState as *mut std::ffi::c_void);
         }
         infos
@@ -169,11 +172,11 @@ unsafe fn open_pad(st: &mut PadState, device: i32, js: *mut SDL_Joystick, index:
     info
 }
 
-/// With `SMW_PAD_TRANSLATE`, closes the joysticks removed and lists the SDL devices connected since the last call.
+/// In a live session, closes the joysticks removed and lists the SDL devices connected since the last call.
 pub fn hotplug(st: &mut PadState) -> Vec<PadChange> {
     let mut changes = Vec::new();
     unsafe {
-        if !st.translate_on || !HOTPLUG.swap(false, Ordering::Relaxed) {
+        if !st.hotplug_on || !HOTPLUG.swap(false, Ordering::Relaxed) {
             return changes;
         }
         let mut open: Vec<(usize, i32)> = st.pads.iter().map(|p| (p.index, p.instance)).collect();

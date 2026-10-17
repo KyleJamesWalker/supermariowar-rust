@@ -172,7 +172,7 @@ pub trait Pads {
     /// fails to open. `translate` turns on mapping translation (`SMW_PAD_TRANSLATE`), which the backend applies
     /// before it hands out `Input`.
     fn open_all(&mut self, open: bool, translate: bool) -> Vec<Option<PadInfo>>;
-    /// With translation on, the pads removed and then the ones connected since the last call.
+    /// In a live session, the pads removed and then the ones connected since the last call.
     fn hotplug(&mut self) -> Vec<PadChange>;
     /// Opens a `PadChange::Connected` device as device number `index`.
     fn open(&mut self, device: i32, index: usize) -> Option<PadInfo>;

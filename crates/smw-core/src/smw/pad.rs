@@ -31,7 +31,7 @@ fn device(info: PadInfo) -> Device {
     Device::Pad { pad: info.pad, controller: info.controller }
 }
 
-/// With `SMW_PAD_TRANSLATE`, forgets removed pads and opens the ones connected since the last call. A new one
+/// In a live session, forgets removed pads and opens the ones connected since the last call. A new one
 /// takes the first free index, so a pad that reconnects gets its index back. True when one was opened.
 pub fn hotplug(g: &mut Game) -> bool {
     let mut added = false;

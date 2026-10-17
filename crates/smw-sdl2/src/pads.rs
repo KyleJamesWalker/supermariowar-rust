@@ -31,7 +31,7 @@ impl Pads for Sdl2Pads {
             let joysticks: Vec<*mut SDL_Joystick> = if open { (0..SDL_NumJoysticks().max(0)).map(|i| SDL_JoystickOpen(i)).collect() } else { Vec::new() };
             SDL_JoystickEventState(SDL_ENABLE as i32);
             #[cfg(not(target_os = "emscripten"))]
-            return crate::pad::init(&mut self.state, translate, &joysticks);
+            return crate::pad::init(&mut self.state, open, translate, &joysticks);
             #[cfg(target_os = "emscripten")]
             {
                 let _ = translate;
