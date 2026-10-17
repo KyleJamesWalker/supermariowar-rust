@@ -37,6 +37,7 @@ enum EventKind {
     Tap,
 }
 
+#[derive(Clone)]
 struct ReplayEvent {
     frame: u32,
     kind: EventKind,
@@ -96,6 +97,36 @@ struct Segment {
 }
 
 impl Harness {
+    /// The replay's input and counters for a copy of the match (`Game::clone_match`), without its outputs:
+    /// no dump, screenshots, recording or segment.
+    pub fn clone_inputs(&self) -> Self {
+        Harness {
+            seeded: self.seeded,
+            seed: self.seed,
+            noLimit: self.noLimit,
+            map: self.map.clone(),
+            maxFrames: self.maxFrames,
+            events: self.events.clone(),
+            joysticks: self.joysticks,
+            devices: self.devices.clone(),
+            nextDevice: self.nextDevice,
+            touch: self.touch,
+            replay: self.replay,
+            nextEvent: self.nextEvent,
+            frame: self.frame,
+            audible: false,
+            speed: self.speed,
+            spawn_events: self.spawn_events.clone(),
+            replay_keys: self.replay_keys,
+            watch_home: self.watch_home.clone(),
+            #[cfg(target_os = "emscripten")]
+            web_standard: self.web_standard,
+            #[cfg(target_os = "emscripten")]
+            web_hats: self.web_hats,
+            ..Harness::new()
+        }
+    }
+
     pub const fn new() -> Self {
         Harness {
             seeded: false,
@@ -478,6 +509,12 @@ pub fn init(g: &mut Game) {
             h(gp.get()).shotStream = Some(BufWriter::with_capacity(640 * 480 * 4, file));
         }
     }
+}
+
+/// Dumps to `path` from the next frame on, as SMW_DUMP does from the first.
+pub fn dump_to(g: &mut Game, path: &str) {
+    let file = File::create(path).unwrap_or_else(|_| fail(format!("cannot open dump {}", path)));
+    h(g).dump = Some(BufWriter::new(file));
 }
 
 pub fn libc_seed(g: &mut Game, fallback: u32) -> u32 {
