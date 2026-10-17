@@ -57,7 +57,7 @@ impl PlayerKuriboShoe {
 
     pub fn update(&mut self, g: &mut Game, player: &mut CPlayer, keymask: u8) {
         self.update_getting_out_of_the_shoe(g, player, keymask); //Free player from the kuribo shoe
-        self.update_super_stomp(player);
+        self.update_super_stomp(g, player);
         self.update_animation();
     }
 
@@ -108,8 +108,8 @@ impl PlayerKuriboShoe {
         }
     }
 
-    fn update_super_stomp(&mut self, player: &mut CPlayer) {
-        if self.is_on() && player.can_super_stomp() && player.wants_to_super_stomp() {
+    fn update_super_stomp(&mut self, g: &mut Game, player: &mut CPlayer) {
+        if self.is_on() && player.can_super_stomp() && player.wants_to_super_stomp(g) {
             if player.high_jumped() {
                 Ptr::from_mut(&mut player.superstomp).get().start_super_stomping(player);
             }

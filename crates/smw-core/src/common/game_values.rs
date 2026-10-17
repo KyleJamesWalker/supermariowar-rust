@@ -19,7 +19,7 @@ use Keycode;
 
 pub const TITLESTRING: &str = "Super Mario War";
 
-pub type TourStopVec = Vec<Ptr<crate::common::world_tour_stop::TourStop>>;
+pub type TourStopVec = Vec<Box<crate::common::world_tour_stop::TourStop>>;
 
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
@@ -298,7 +298,7 @@ pub struct CGameValues {
     pub appstate: AppState,
 
     pub flags: GameplayFlags,
-    pub gamemode: Ptr<dyn CGameModeTrait>,
+    pub gamemode: Option<crate::common::game_mode::ModeId>,
 
     pub screenfade: i16,
     pub screenfadespeed: i16,
@@ -449,6 +449,15 @@ impl CGameConfig {
 }
 
 impl CGameValues {
+    /// Tour stop `i`, for code that holds it while it also uses `g`.
+    pub fn tour_stop(&mut self, i: usize) -> Ptr<crate::common::world_tour_stop::TourStop> {
+        Ptr::from_mut(&mut *self.tourstops[i])
+    }
+
+    pub fn current_tour_stop(&mut self) -> Ptr<crate::common::world_tour_stop::TourStop> {
+        self.tour_stop(self.tourstopcurrent)
+    }
+
     /// Zero-initialized plus the in-class member initializers, like the C++ global.
     pub fn new() -> Self {
         CGameValues {
@@ -458,7 +467,7 @@ impl CGameValues {
             autokill: false,
             appstate: AppState::Splash,
             flags: GameplayFlags::default(),
-            gamemode: Ptr::null(),
+            gamemode: None,
             screenfade: 0,
             screenfadespeed: 0,
             matchtype: MatchType::default(),
@@ -620,7 +629,7 @@ impl CGameValues {
             }
 
             //Set the players input to the default configuration (will be overwritten by options.bin settings)
-            self.cgame_config.playerInput.inputControls[iPlayer] = Ptr::from_mut(&mut self.cgame_config.inputConfiguration[iPlayer][0]);
+            self.cgame_config.playerInput.inputControls[iPlayer] = Some(((iPlayer) as u8, (0) as u8));
         }
 
         //Set the default powerup weights for bonus wheel and [?] boxes
@@ -638,7 +647,7 @@ impl CGameValues {
         self.screenfadespeed = -8;
 
         //Initialize game mode
-        self.gamemode.get().init(g);
+        g.mode().get().init(g);
     }
 
     pub fn reset_secret_counters(&mut self) {
@@ -863,8 +872,7 @@ impl CGameConfig {
                 iDevice = DEVICE_KEYBOARD;
             }
 
-            self.playerInput.inputControls[iPlayer] =
-                Ptr::from_mut(&mut self.inputConfiguration[iPlayer][if iDevice == DEVICE_KEYBOARD { 0 } else { 1 }]);
+            self.playerInput.inputControls[iPlayer] = Some((iPlayer as u8, if iDevice == DEVICE_KEYBOARD { 0 } else { 1 }));
         }
     }
 
@@ -983,7 +991,8 @@ impl CGameConfig {
         controls.write_raw(&raw);
 
         for iPlayer in 0..4 {
-            controls.write_i16(self.playerInput.inputControls[iPlayer].iDevice);
+            let (set, kind) = self.playerInput.inputControls[iPlayer].expect("player input set");
+            controls.write_i16(self.inputConfiguration[set as usize][kind as usize].iDevice);
         }
     }
 

@@ -115,7 +115,7 @@ impl GameState for SplashScreenState {
 
                         MenuState::instance(g).init(g);
                         GameplayState::instance(g).init(g);
-                        GameStateManager::instance(g).change_state_to(gp.get(), Ptr::from_mut(MenuState::instance(gp.get()) as &mut dyn GameState));
+                        GameStateManager::instance(g).change_state_to(gp.get(), crate::smw::game_state::StateId::Menu);
                         return;
                     }
                 }

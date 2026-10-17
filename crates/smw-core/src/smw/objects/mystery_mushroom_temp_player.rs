@@ -91,8 +91,8 @@ impl MysteryMushroomTempPlayer {
         self.gamepowerup = iPowerup;
 
         let offset = scorepowerupoffsets[(g.game_values.teamcounts[g.player(player).teamID as usize] - 1) as usize][g.player(player).subTeamID as usize];
-        self.iOldPowerupX = (g.player(player).score().x as i32 + offset as i32) as i16;
-        self.iOldPowerupY = (g.player(player).score().y as i32 + 25) as i16;
+        self.iOldPowerupX = (g.player(player).score(g).x as i32 + offset as i32) as i16;
+        self.iOldPowerupY = (g.player(player).score(g).y as i32 + 25) as i16;
     }
 
     pub fn get_player(&mut self, g: &mut Game, mut player: PlayerId, iPowerup: &mut i16) {

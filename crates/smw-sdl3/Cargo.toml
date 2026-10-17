@@ -1,0 +1,20 @@
+[package]
+name = "smw-sdl3"
+version = "0.1.0"
+edition.workspace = true
+description = "Super Mario War - the SDL3 backend: smw-platform's traits over SDL3"
+publish.workspace = true
+
+[features]
+# Builds SDL3 from source and links it statically, where no SDL3 package is installed.
+build-from-source = ["sdl3-sys/build-from-source-static"]
+
+[dependencies]
+smw-platform = { path = "../smw-platform" }
+sdl3-sys = "=0.7.2"
+lewton = "=0.10.2"
+
+# SDL3's video runs on the main thread only.
+[[test]]
+name = "conformance"
+harness = false

@@ -100,7 +100,7 @@ fn spawn_card(g: &mut Game, this: &mut CGM_Frenzy) {
 }
 
 pub fn net_spawn_card(g: &mut Game) {
-    if let Some(this) = g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Frenzy>() {
+    if let Some(this) = g.mode().get().as_any().downcast_mut::<CGM_Frenzy>() {
         spawn_card(g, this);
     }
 }

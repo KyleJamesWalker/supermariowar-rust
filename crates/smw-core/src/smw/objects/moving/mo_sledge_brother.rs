@@ -225,8 +225,8 @@ impl MO_SledgeBrother {
             if self.hit_points <= 0 {
                 self.die(g);
 
-                if g.game_values.gamemode.gamemode == game_mode_boss_minigame {
-                    g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Boss_MiniGame>().unwrap().set_winner(g, killer);
+                if g.mode().gamemode == game_mode_boss_minigame {
+                    g.mode().get().as_any().downcast_mut::<CGM_Boss_MiniGame>().unwrap().set_winner(g, killer);
                 }
             } else {
                 self.hit_timer = 60;
@@ -624,8 +624,8 @@ impl CObjectTrait for MO_SledgeBrother {
             if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
             self.die(g);
 
-            if g.game_values.gamemode.gamemode == game_mode_boss_minigame {
-                g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Boss_MiniGame>().unwrap().set_winner(g, player);
+            if g.mode().gamemode == game_mode_boss_minigame {
+                g.mode().get().as_any().downcast_mut::<CGM_Boss_MiniGame>().unwrap().set_winner(g, player);
             }
         } else {
             return self.hit(g, player);

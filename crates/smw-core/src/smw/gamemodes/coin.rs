@@ -54,7 +54,7 @@ impl CGameModeTrait for CGM_Coins {
         }
 
         if g.game_values.gamemodesettings.coins.penalty {
-            g.player(other).score().adjust_score(g, -1);
+            g.player(other).score(g).adjust_score(g, -1);
         }
 
         PlayerKillType::Normal
@@ -66,7 +66,7 @@ impl CGameModeTrait for CGM_Coins {
         }
 
         if g.game_values.gamemodesettings.coins.penalty {
-            g.player(player).score().adjust_score(g, -1);
+            g.player(player).score(g).adjust_score(g, -1);
         }
 
         PlayerKillType::Normal
@@ -74,22 +74,22 @@ impl CGameModeTrait for CGM_Coins {
 
     fn playerextraguy(&mut self, g: &mut Game, mut player: PlayerId, iType: i16) {
         if !self.gameover {
-            g.player(player).score().adjust_score(g, ((iType as i32) << 1) as i16);
+            g.player(player).score(g).adjust_score(g, ((iType as i32) << 1) as i16);
             self.check_winner(g, player);
         }
     }
 
     fn check_winner(&mut self, g: &mut Game, mut player: PlayerId) -> PlayerKillType {
         if !self.gameover && self.goal > -1 {
-            if g.player(player).score().score >= self.goal {
-                g.player(player).score().set_score(g, self.goal);
+            if g.player(player).score(g).score >= self.goal {
+                g.player(player).score(g).set_score(g, self.goal);
                 self.winningteam = g.player(player).get_team_id();
                 self.gameover = true;
 
                 remove_players_but_team(g, self.winningteam);
                 setup_score_board(g, false);
                 show_score_board(g);
-            } else if g.player(player).score().score as i32 >= self.goal as i32 - 5 && !self.playedwarningsound {
+            } else if g.player(player).score(g).score as i32 >= self.goal as i32 - 5 && !self.playedwarningsound {
                 self.playwarningsound(g);
             }
         }

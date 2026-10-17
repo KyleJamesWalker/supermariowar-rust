@@ -143,9 +143,9 @@ impl CObjectTrait for MO_Yoshi {
             let mut egg: Ptr<CO_Egg> = Ptr::from_mut(g.carried_item(player).as_any().downcast_mut::<CO_Egg>().unwrap());
 
             if egg.color == self.color {
-                if !g.game_values.gamemode.gameover {
-                    g.player(player).score().adjust_score(g, 1);
-                    gp.game_values.gamemode.check_winner(g, player);
+                if !g.mode().gameover {
+                    g.player(player).score(g).adjust_score(g, 1);
+                    gp.mode().check_winner(g, player);
                 }
 
                 self.place_yoshi(g);
@@ -176,9 +176,9 @@ impl CObjectTrait for MO_Yoshi {
             if egg.color == self.color && !egg.owner_throw.is_none() {
                 let mut player: PlayerId = egg.owner_throw;
 
-                if !g.game_values.gamemode.gameover {
-                    g.player(player).score().adjust_score(g, 1);
-                    gp.game_values.gamemode.check_winner(g, player);
+                if !g.mode().gameover {
+                    g.player(player).score(g).adjust_score(g, 1);
+                    gp.mode().check_winner(g, player);
                 }
 
                 self.place_yoshi(g);

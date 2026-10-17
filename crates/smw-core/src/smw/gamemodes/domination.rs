@@ -97,22 +97,22 @@ pub fn cgm_domination_playerkilledself<T: CGameModeTrait + ?Sized>(g: &mut Game,
 
 pub fn cgm_domination_playerextraguy<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: PlayerId, iType: i16) {
     if !this.gm().gameover {
-        g.player(player).score().adjust_score(g, (10 * iType as i32) as i16);
+        g.player(player).score(g).adjust_score(g, (10 * iType as i32) as i16);
         this.check_winner(g, player);
     }
 }
 
 pub fn cgm_domination_check_winner<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: PlayerId) -> PlayerKillType {
     if this.gm().goal > -1 {
-        if g.player(player).score().score >= this.gm().goal {
-            g.player(player).score().set_score(g, this.gm().goal);
+        if g.player(player).score(g).score >= this.gm().goal {
+            g.player(player).score(g).set_score(g, this.gm().goal);
             this.gm_mut().winningteam = g.player(player).get_team_id();
             this.gm_mut().gameover = true;
 
             setup_score_board(g, false);
             show_score_board(g);
             remove_players_but_team(g, this.gm().winningteam);
-        } else if g.player(player).score().score as f64 >= this.gm().goal as f64 * 0.8 && !this.gm().playedwarningsound {
+        } else if g.player(player).score(g).score as f64 >= this.gm().goal as f64 * 0.8 && !this.gm().playedwarningsound {
             this.gm_mut().playwarningsound(g);
         }
     }

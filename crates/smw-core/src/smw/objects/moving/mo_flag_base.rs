@@ -121,9 +121,9 @@ impl MO_FlagBase {
             if_sound_on_play(g, &mut gp.rm.sfx_areatag);
         } else if !g.game_values.gamemodesettings.flag.homescore || !self.homeflag.is_none() || g.game_values.gamemodesettings.flag.centerflag {
             flag.place_flag(g);
-            if !g.game_values.gamemode.gameover {
-                g.player(player).score().adjust_score(g, 1);
-                gp.game_values.gamemode.check_winner(g, player);
+            if !g.mode().gameover {
+                g.player(player).score(g).adjust_score(g, 1);
+                gp.mode().check_winner(g, player);
             }
 
             if_sound_on_play(g, &mut gp.rm.sfx_racesound);

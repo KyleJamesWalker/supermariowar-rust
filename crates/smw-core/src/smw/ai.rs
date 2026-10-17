@@ -186,7 +186,7 @@ fn static_cast<T: Any>(obj: Ptr<dyn CObjectTrait>) -> Ptr<T> {
 
 /// `dynamic_cast<T*>(game_values.gamemode)`
 fn dynamic_cast_gamemode<T: Any>(g: &mut Game) -> Ptr<T> {
-    let gm = g.game_values.gamemode;
+    let gm = g.mode();
     if gm.is_null() {
         return Ptr::null();
     }
@@ -546,8 +546,8 @@ impl CPlayerAI {
                     } else if movingobject_coin == movingtype || movingobject_phantokey == movingtype {
                         nearest!(self.distance_to_object(g, obj, goal, goaldistance, goalwrap));
                     } else if movingobject_collectioncard == movingtype {
-                        let iNumHeldCards: i32 = g.player(pPlayer).score.subscore[0] as i32;
-                        let iHeldCards: i32 = g.player(pPlayer).score.subscore[1] as i32;
+                        let iNumHeldCards: i32 = g.player(pPlayer).score(g).subscore[0] as i32;
+                        let iHeldCards: i32 = g.player(pPlayer).score(g).subscore[1] as i32;
 
                         // C++ `break` out of the switch ends this object's iteration: `continue` here.
                         if iNumHeldCards == 3 {
@@ -791,7 +791,7 @@ impl CPlayerAI {
                     nearest!(self.distance_to_object_center(g, obj, threat, threatdistance, threatwrap));
                 }
                 object_race_goal => {
-                    if g.game_values.gamemode.gamemode != game_mode_race {
+                    if g.mode().gamemode != game_mode_race {
                         continue;
                     }
 
@@ -819,7 +819,7 @@ impl CPlayerAI {
             }
 
             //Find players in jail on own team to tag
-            if g.game_values.gamemode.gamemode == game_mode_jail {
+            if g.mode().gamemode == game_mode_jail {
                 if g.player(g.players[iPlayer]).jail.is_active() && g.player(g.players[iPlayer]).teamID == iTeamID {
                     nearest!(self.distance_to_player(g, g.players[iPlayer], teammate, teammatedistance, teammatewrap));
                 }
@@ -933,7 +933,7 @@ fn wrap_open(g: &Game, y: i32) -> bool {
 //Setup AI so that it can ignore or pay attention to some objects
 pub fn cplayer_ai_init(g: &mut Game, this: &mut CPlayerAI) {
     //Scan yoshi's egg mode objects to make sure that we ignore eggs without matching yoshis
-    if g.game_values.gamemode.gamemode == game_mode_eggs {
+    if g.mode().gamemode == game_mode_eggs {
         let mut fYoshi: [bool; 4] = [false, false, false, false];
 
         //Scan Yoshis to see which ones are present
@@ -1132,7 +1132,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                 let piy = g.player(player).iy as i32;
 
                 //Move player relative to opponent when we are playing star mode and we are holding a star
-                if g.game_values.gamemode.gamemode == game_mode_star {
+                if g.mode().gamemode == game_mode_star {
                     if !carriedItem.is_null() && carriedItem.get_moving_object_type() == movingobject_star {
                         if static_cast::<CO_Star>(carriedObj).get_type() == 1 {
                             *moveAway = true;
@@ -1373,7 +1373,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
 
         //"Star Mode" specific stuff
         //Drop the star if we're not it
-        if g.game_values.gamemode.gamemode == game_mode_star {
+        if g.mode().gamemode == game_mode_star {
             let mut starmode = static_cast_gamemode::<CGM_Star>(g);
 
             if !carriedItem.is_null()
@@ -1392,7 +1392,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
             let no = &this.nearestObjects;
 
             //"Phanto Mode" specific stuff
-            if g.game_values.gamemode.gamemode == game_mode_chase {
+            if g.mode().gamemode == game_mode_chase {
                 //Ignore the key if a phanto is really close
                 if !no.threat.is_none()
                     && ai_target(g, no.threat).get_object_type() == object_phanto

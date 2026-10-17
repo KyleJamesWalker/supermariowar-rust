@@ -440,13 +440,18 @@ fn rect(x: i32, y: i32, w: i32, h: i32) -> Rect {
 
 //main main main
 pub fn main() {
+    main_with(std::env::args().collect(), None);
+}
+
+/// `main` on the given backend instead of SDL2.
+pub fn main_with(argv: Vec<String>, services: Option<smw_platform::Services>) {
     let g = Game::create();
+    g.services = services;
     cmd::attach_parent_console();
     crate::globals::init_globals(g);
     ed(g).copiedtiles.init([[EditorMapTile::zeroed(); MH]; MW]);
     ed(g).g_Platforms.init((0..MAX_PLATFORMS).map(|_| MapPlatform::new()).collect());
 
-    let argv: Vec<String> = std::env::args().collect();
     let cmd = cmd::parse_args(&argv);
     if !cmd.success {
         std::process::exit(1);
@@ -506,7 +511,7 @@ pub fn inner_main(g: &mut Game) {
 
     g.rm = Ptr::new_box(CResourceManager::new());
     gp.g_tilesetmanager = Ptr::new_box(CTilesetManager::new(g, &convert_path(gp.get(), "gfx/Classic/tilesets")));
-    g.g_map = Ptr::from_box(CMap::new());
+    g.g_map.set(CMap::new());
     g.filterslist = Ptr::new_box(crate::common::file_list::FiltersList::new(g));
     g.maplist = Ptr::new_box(MapList::new(g, false));
     ed(gp.get()).backgroundlist = Ptr::new_box(BackgroundList::new(g));
