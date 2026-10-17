@@ -122,7 +122,7 @@ unsafe extern "C-unwind" fn gameloop_frame_web(arg: *mut std::ffi::c_void) {
     }
     ml.web_last_time = now;
 
-    ml.interpolate = std::env::var_os("SMW_INTERPOLATE").is_none_or(|v| v != "0");
+    ml.interpolate = crate::common::gfx::display_list::interpolation_allowed();
     let mut frames = 0;
     while ml.web_accumulated >= frame_ms && frames < MAX_CATCH_UP_FRAMES && gp.game_values.appstate != crate::common::game_values::AppState::Quit {
         ml.display_fresh = false;
@@ -213,7 +213,7 @@ unsafe fn paced_frame(g: &mut Game) {
     let now = crate::services::services(g).clock.now_us();
     let vsync = crate::services::services(g).video.vsync();
     let ml = &mut gp.get().main_loop;
-    ml.interpolate = (vsync || ml.present_hz.flatten().is_some()) && std::env::var_os("SMW_INTERPOLATE").is_none_or(|v| v != "0");
+    ml.interpolate = (vsync || ml.present_hz.flatten().is_some()) && crate::common::gfx::display_list::interpolation_allowed();
     match ml.last_us {
         Some(last) => ml.accumulated_us += now.saturating_sub(last) as f64,
         None => ml.accumulated_us = tick_us,

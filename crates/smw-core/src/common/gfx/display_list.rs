@@ -157,6 +157,18 @@ pub unsafe fn render(screen: *mut Surface, prev: &Draw, cur: &Draw, alpha: f32) 
 }
 
 
+/// `SMW_INTERPOLATE=0` turns interpolation off; read once.
+pub fn interpolation_allowed() -> bool {
+    static ALLOWED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ALLOWED.get_or_init(|| std::env::var_os("SMW_INTERPOLATE").is_none_or(|v| v != "0"))
+}
+
+/// `SMW_CHECK_DISPLAY_LIST`, read once.
+pub fn check_enabled() -> bool {
+    static CHECK: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *CHECK.get_or_init(|| std::env::var_os("SMW_CHECK_DISPLAY_LIST").is_some())
+}
+
 /// `SMW_CHECK_DISPLAY_LIST`: whether rendering `draw` alone reproduces `screen` exactly; otherwise the number of pixels
 /// that differ and their bounding box. A difference means a screen write the record missed.
 pub unsafe fn check(screen: &Surface, draw: &Draw) -> Result<(), (usize, Rect)> {

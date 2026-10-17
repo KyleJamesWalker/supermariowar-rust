@@ -2702,7 +2702,7 @@ impl GameState for GameplayState {
 
             //--------------- draw everything ----------------------
             let (state, offsets) = (self.iCountDownState, self.iScoreTextOffset);
-            let check = std::env::var_os("SMW_CHECK_DISPLAY_LIST").is_some();
+            let check = crate::common::gfx::display_list::check_enabled();
             let record = g.main_loop.interpolate || check;
             if record {
                 crate::common::gfx::display_list::begin(g.screen);
