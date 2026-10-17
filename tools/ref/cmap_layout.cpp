@@ -9,6 +9,7 @@
 #include <cstddef>
 int main() {
     printf("sizeof CMap %zu MapBlock %zu TilesetTile %zu Warp %zu\n", sizeof(CMap), sizeof(MapBlock), sizeof(TilesetTile), sizeof(Warp));
+    printf("sizeof SpawnArea %zu\n", sizeof(SpawnArea));
 #define OFF(f) printf("%s %zu\n", #f, offsetof(CMap, f));
-    OFF(mapdata) OFF(mapdatatop) OFF(objectdata) OFF(blockdata) OFF(nospawn) OFF(warpdata)
+    OFF(mapdata) OFF(mapdatatop) OFF(objectdata) OFF(blockdata) OFF(nospawn) OFF(spawnareas) OFF(numspawnareas) OFF(totalspawnsize) OFF(warpdata)
 }

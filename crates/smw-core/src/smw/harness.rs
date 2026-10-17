@@ -15,7 +15,7 @@ use crate::smw::gs_gameplay::GameplayState;
 use crate::smw::gs_menu::MenuState;
 use crate::smw::gs_splash_screen::SplashScreenState;
 use crate::smw::network::file_compressor::{deflate, inflate, read_maybe_gzip};
-use sdl2::sys::{SDL_Event, SDL_EventType, SDL_GetError, SDL_GetKeyFromName, SDL_GetKeyName, SDL_GetScancodeFromKey, SDL_InitSubSystem, SDL_JoystickAttachVirtual, SDL_JoystickInstanceID, SDL_JoystickType, SDL_SetHint, SDL_INIT_JOYSTICK};
+use sdl2::sys::{SDL_Event, SDL_EventType, SDL_GetError, SDL_GetKeyFromName, SDL_GetKeyName, SDL_GetScancodeFromKey};
 use smw_platform::{Input, InputEvent, Keycode, PadSlot, SCREEN_H, SCREEN_W};
 use std::ffi::CStr;
 use std::collections::BTreeSet;
@@ -856,16 +856,7 @@ fn to_replay_event(g: &mut Game, input: &Input, frame: u32) -> Option<ReplayEven
 
 /// The game addresses a joystick by its open index; SDL events carry the instance id.
 fn device_index(g: &mut Game, which: i32) -> Option<i32> {
-    let mut gp = g.ptr();
-    unsafe {
-        for i in 0..gp.devices.len() {
-            let j = gp.joystick(i);
-            if !j.is_null() && SDL_JoystickInstanceID(j) == which {
-                return Some(i as i32);
-            }
-        }
-        None
-    }
+    (0..g.devices.len()).find(|&i| g.pad(i) == Some(PadSlot(which))).map(|i| i as i32)
 }
 
 fn line_for(ev: &ReplayEvent) -> String {
@@ -901,16 +892,12 @@ fn push_live_script(g: &mut Game, r: &mut Recorder, frame: u32) {
 }
 
 fn sdl_instance(g: &mut Game, device: i32) -> i32 {
-    let mut gp = g.ptr();
-    unsafe {
-        if device >= 0 {
-            let j = gp.joystick(device as usize);
-            if !j.is_null() {
-                return SDL_JoystickInstanceID(j);
-            }
+    if device >= 0 {
+        if let Some(pad) = g.pad(device as usize) {
+            return pad.0;
         }
-        -1
     }
+    -1
 }
 
 fn record_event(g: &mut Game, r: &mut Recorder, ev: &ReplayEvent) {

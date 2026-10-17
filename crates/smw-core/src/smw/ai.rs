@@ -212,6 +212,9 @@ const CMAP_OFF_MAPDATATOP: i32 = 7238;
 const CMAP_OFF_OBJECTDATA: i32 = 7538;
 const CMAP_OFF_BLOCKDATA: i32 = 24344;
 const CMAP_OFF_NOSPAWN: i32 = 26744;
+const CMAP_OFF_SPAWNAREAS: i32 = 28664;
+const CMAP_OFF_NUMSPAWNAREAS: i32 = 36344;
+const CMAP_OFF_TOTALSPAWNSIZE: i32 = 36356;
 const CMAP_OFF_WARPDATA: i32 = 36368;
 const CMAP_OFF_NUMWARPEXITS: i32 = 38768;
 const CMAP_OFF_WARPEXITS: i32 = 38772;
@@ -220,6 +223,7 @@ const CMAP_OFF_WARPLOCKED: i32 = 39560;
 const CMAP_OFF_MAXCONNECTION: i32 = 39570;
 const CMAP_SIZEOF_MAPBLOCK: i32 = 56;
 const CMAP_SIZEOF_WARPEXIT: i32 = 24;
+const CMAP_SIZEOF_SPAWNAREA: i32 = 10;
 
 fn in_map(x: i32, y: i32) -> bool {
     (0..MAPWIDTH).contains(&x) && (0..MAPHEIGHT).contains(&y)
@@ -254,6 +258,21 @@ fn cmap_byte(g: &mut Game, off: i32) -> u8 {
     if (CMAP_OFF_NOSPAWN..CMAP_OFF_NOSPAWN + NUMSPAWNAREATYPES * cells).contains(&off) {
         let rel = off - CMAP_OFF_NOSPAWN;
         return g.g_map.nospawn[(rel / cells) as usize][((rel % cells) / MAPHEIGHT) as usize][(rel % MAPHEIGHT) as usize] as u8;
+    }
+    if (CMAP_OFF_SPAWNAREAS..CMAP_OFF_NUMSPAWNAREAS).contains(&off) {
+        let rel = off - CMAP_OFF_SPAWNAREAS;
+        let e = rel / CMAP_SIZEOF_SPAWNAREA;
+        let a = &g.g_map.spawnareas[(e / MAXSPAWNAREAS) as usize][(e % MAXSPAWNAREAS) as usize];
+        let r = (rel % CMAP_SIZEOF_SPAWNAREA) as usize;
+        return [a.left, a.top, a.width, a.height, a.size][r / 2].to_le_bytes()[r % 2];
+    }
+    if (CMAP_OFF_NUMSPAWNAREAS..CMAP_OFF_TOTALSPAWNSIZE).contains(&off) {
+        let rel = (off - CMAP_OFF_NUMSPAWNAREAS) as usize;
+        return g.g_map.numspawnareas[rel / 2].to_le_bytes()[rel % 2];
+    }
+    if (CMAP_OFF_TOTALSPAWNSIZE..CMAP_OFF_WARPDATA).contains(&off) {
+        let rel = (off - CMAP_OFF_TOTALSPAWNSIZE) as usize;
+        return g.g_map.totalspawnsize[rel / 2].to_le_bytes()[rel % 2];
     }
     if (CMAP_OFF_WARPDATA..CMAP_OFF_NUMWARPEXITS).contains(&off) {
         let rel = off - CMAP_OFF_WARPDATA;

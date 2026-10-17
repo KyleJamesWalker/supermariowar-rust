@@ -7,8 +7,12 @@ mod audio;
 pub mod durations;
 pub mod events;
 pub mod input;
+#[cfg(not(target_os = "emscripten"))]
+mod pad;
+mod pads;
 mod video;
 pub use audio::Sdl2Audio;
+pub use pads::Sdl2Pads;
 pub use video::{button_to_logical, Sdl2Video};
 
 pub struct Sdl2Clock;
@@ -93,5 +97,6 @@ pub fn services() -> Services {
         audio: Box::new(Sdl2Audio::new()),
         events: Box::new(events::Sdl2Events),
         keyboard: Box::new(events::Sdl2Keyboard),
+        pads: Box::new(Sdl2Pads::new()),
     }
 }

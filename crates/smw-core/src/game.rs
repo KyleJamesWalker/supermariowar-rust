@@ -45,7 +45,8 @@ pub const MAX_DEVICES: usize = 8;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Device {
-    Pad(*mut sdl2::sys::SDL_Joystick),
+    /// A backend pad, as its events name it.
+    Pad { pad: smw_platform::PadSlot, controller: bool },
     /// A replay's pad: nothing is open, and its events carry the device number.
     Replay,
 }
@@ -217,11 +218,11 @@ impl Game {
         Some(unsafe { &mut *typed })
     }
 
-    /// The backend joystick open as device `index`, or null.
-    pub fn joystick(&self, index: usize) -> *mut sdl2::sys::SDL_Joystick {
+    /// The backend pad open as device `index`.
+    pub fn pad(&self, index: usize) -> Option<smw_platform::PadSlot> {
         match self.devices.get(index) {
-            Some(Some(Device::Pad(js))) => *js,
-            _ => std::ptr::null_mut(),
+            Some(Some(Device::Pad { pad, .. })) => Some(*pad),
+            _ => None,
         }
     }
 
