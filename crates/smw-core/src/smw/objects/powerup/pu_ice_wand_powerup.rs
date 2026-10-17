@@ -17,6 +17,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class ice wand powerup
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct PU_IceWandPowerup {
     pub mo_powerup: MO_Powerup,
 

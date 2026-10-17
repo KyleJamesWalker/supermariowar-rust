@@ -17,6 +17,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class special heart powerup for health mode
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct PU_ExtraHeartPowerup {
     pub mo_powerup: MO_Powerup,
 }

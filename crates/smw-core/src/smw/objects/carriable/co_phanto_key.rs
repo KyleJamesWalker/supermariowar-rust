@@ -19,6 +19,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class phanto key (for chase mode)
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct CO_PhantoKey {
     pub mo_carried_object: MO_CarriedObject,
 

@@ -19,6 +19,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class mystery mushroom powerup
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct PU_MysteryMushroomPowerup {
     pub mo_powerup: MO_Powerup,
 }

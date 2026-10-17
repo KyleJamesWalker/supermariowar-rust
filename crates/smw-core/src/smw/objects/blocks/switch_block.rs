@@ -16,6 +16,8 @@ use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::objects::switch_color::SwitchColor;
 use crate::smw::player::CPlayer;
 
+#[derive(Clone)]
+
 pub struct B_SwitchBlock {
     pub io_block: IO_Block,
 

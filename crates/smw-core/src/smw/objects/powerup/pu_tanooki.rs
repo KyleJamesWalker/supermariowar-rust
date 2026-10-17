@@ -14,6 +14,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class tanooki suit
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct PU_Tanooki {
     pub mo_powerup: MO_Powerup,
 }

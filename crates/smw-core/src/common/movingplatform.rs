@@ -36,6 +36,8 @@ fn tile_of(f: f32) -> i16 {
     ((f as i16) as i32 / TILESIZE) as i16
 }
 
+#[derive(Clone)]
+
 pub struct MovingPlatform {
     pub iTileData: Vec<TilesetTile>,
     pub iTileType: Vec<TileType>,

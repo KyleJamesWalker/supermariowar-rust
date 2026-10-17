@@ -435,7 +435,7 @@ fn walk(g: &mut Game, s: &mut Snap, online: bool) {
             }
         }
 
-        let tracks: Vec<*mut sfxMusic> = g.rm.backgroundmusic.iter_mut().map(|t| t as *mut sfxMusic).collect();
+        let tracks: Vec<*mut sfxMusic> = g.backgroundmusic.iter_mut().map(|t| t as *mut sfxMusic).collect();
         for &t in tracks.iter() {
             let mut name = (*t).name().to_string();
             let mut paused = (*t).paused();
@@ -451,7 +451,7 @@ fn walk(g: &mut Game, s: &mut Snap, online: bool) {
         let sounds = g.rm.sounds();
         for &snd in sounds.iter() {
             let mut name = (*snd).name().to_string();
-            let (mut channels, mut last_start) = (*snd).state();
+            let (mut channels, mut last_start) = (*snd).state(gp.get());
             s.io(&mut name);
             s.io(&mut channels);
             s.io(&mut last_start);
@@ -459,7 +459,7 @@ fn walk(g: &mut Game, s: &mut Snap, online: bool) {
                 if (*snd).name() != name {
                     *snd = if name.is_empty() { sfxSound::new() } else { sfxSound::from_file(gp.get(), Path::new(&data_path(g, &name))).unwrap_or_else(|e| std::panic::panic_any(e)) };
                 }
-                (*snd).set_state(channels, last_start);
+                (*snd).set_state(gp.get(), channels, last_start);
             }
         }
 

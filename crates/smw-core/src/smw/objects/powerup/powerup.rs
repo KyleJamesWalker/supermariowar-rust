@@ -17,6 +17,7 @@ use std::ops::{Deref, DerefMut};
 //------------------------------------------------------------------------------
 // class powerup
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct MO_Powerup {
     pub io_moving_object: IO_MovingObject,
 

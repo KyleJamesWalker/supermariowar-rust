@@ -21,6 +21,7 @@ use crate::smw::player_components::player_kuribo_shoe::{NORMAL, STICKY};
 //------------------------------------------------------------------------------
 // class kuribo's shoe
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct CO_KuriboShoe {
     pub co_spring: CO_Spring,
 

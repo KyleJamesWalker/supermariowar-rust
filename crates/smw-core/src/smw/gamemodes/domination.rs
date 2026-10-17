@@ -38,6 +38,7 @@ fn adjust_player_areas(g: &mut Game, container: &CObjectContainer, player: Playe
 //Domination (capture the area blocks)
 //Touch all the dotted blocks to turn them your color
 //The more blocks you have, the faster you rack up points
+#[derive(Clone)]
 pub struct CGM_Domination {
     pub cgame_mode: CGameMode,
 }

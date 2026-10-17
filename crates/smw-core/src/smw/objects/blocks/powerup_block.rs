@@ -28,6 +28,7 @@ use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
 //------------------------------------------------------------------------------
 // class powerup block
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct B_PowerupBlock {
     pub io_block: IO_Block,
 

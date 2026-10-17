@@ -17,6 +17,7 @@ use std::ops::{Deref, DerefMut};
 //------------------------------------------------------------------------------
 // class CarriedObject - all objects players can carry inheirit from this class
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct MO_CarriedObject {
     pub io_moving_object: IO_MovingObject,
 

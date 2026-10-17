@@ -15,6 +15,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class bobomb powerup
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct PU_BobombPowerup {
     pub mo_powerup: MO_Powerup,
 }

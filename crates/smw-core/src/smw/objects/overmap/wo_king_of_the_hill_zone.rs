@@ -20,6 +20,7 @@ const iKingOfTheHillZoneLimits: [[i16; 4]; 4] = [[0, 0, 1, 2], [0, 1, 2, 4], [0,
 //------------------------------------------------------------------------------
 // class KingOfTheHillArea (for King of the Hill mode)
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct OMO_KingOfTheHillZone {
     pub io_over_map_object: IO_OverMapObject,
 

@@ -21,6 +21,7 @@ use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
 //------------------------------------------------------------------------------
 // class podobo (for survival mode)
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct MO_Podobo {
     pub io_moving_object: IO_MovingObject,
 

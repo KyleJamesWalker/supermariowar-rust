@@ -6,7 +6,7 @@ use crate::common::gfx::gfx_sprite::ClipEdge;
 use crate::globals::*;
 use crate::smw::player::CPlayer;
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct PlayerWings {
     pub iWingsTimer: u8,
     pub iWingsFrame: u16,

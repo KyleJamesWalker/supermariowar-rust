@@ -15,6 +15,7 @@ use crate::smw::gs_gameplay::count_alive_teams;
 use crate::smw::player::CPlayer;
 
 //Timelimit
+#[derive(Clone)]
 pub struct CGM_TimeLimit {
     pub cgame_mode: CGameMode,
     pub gameClock: GameTimerDisplay,

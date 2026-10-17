@@ -24,6 +24,7 @@ use crate::smw::player::CPlayer;
 //Star mode - shared timer ticks down and the players must pass around
 //a hot potato.  When the timer hits zero, the player with the star
 //loses a point.
+#[derive(Clone)]
 pub struct CGM_Star {
     pub cgm_time_limit: CGM_TimeLimit,
 

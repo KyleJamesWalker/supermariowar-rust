@@ -21,6 +21,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class star (for star mode)
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct CO_Star {
     pub mo_carried_object: MO_CarriedObject,
 

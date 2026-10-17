@@ -39,7 +39,7 @@ impl ColorSheet {
     }
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct gfxPalette {
     m_colorsheets: HashMap<RGB, ColorSheet>,
     pub _alias: Aliased,

@@ -20,6 +20,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // secret powerup
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct PU_SecretPowerup {
     pub mo_powerup: MO_Powerup,
 

@@ -24,6 +24,7 @@ use crate::smw::player::{get_player_from_global_id, player_killed_player, CPlaye
 //------------------------------------------------------------------------------
 // class boomerang
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct MO_Boomerang {
     pub io_moving_object: IO_MovingObject,
 
@@ -140,7 +141,7 @@ impl CObjectTrait for MO_Boomerang {
 
     fn update(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        if !g.rm.sfx_boomerang.is_playing() {
+        if !g.rm.sfx_boomerang.is_playing(g) {
             if_sound_on_play(g, &mut gp.rm.sfx_boomerang);
         }
 

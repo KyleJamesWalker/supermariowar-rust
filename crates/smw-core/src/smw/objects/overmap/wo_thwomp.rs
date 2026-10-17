@@ -17,6 +17,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class thwomp (for thwomp mode)
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct OMO_Thwomp {
     pub io_over_map_object: IO_OverMapObject,
 }

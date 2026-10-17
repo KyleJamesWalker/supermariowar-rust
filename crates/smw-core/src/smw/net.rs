@@ -370,6 +370,22 @@ pub struct NetClient {
     pub _alias: Aliased,
 }
 
+/// A copy (`Game::clone_match`) holds no connections.
+impl Clone for NetClient {
+    fn clone(&self) -> Self {
+        NetClient {
+            lastSentMessage: self.lastSentMessage.clone(),
+            lastReceivedMessage: self.lastReceivedMessage.clone(),
+            lastReply: self.lastReply.clone(),
+            local_gamehost: self.local_gamehost.clone(),
+            foreign_lobbyserver: Ptr::null(),
+            foreign_gamehost: Ptr::null(),
+            uiRoomList: self.uiRoomList,
+            _alias: Aliased::new(),
+        }
+    }
+}
+
 impl NetClient {
     pub fn new() -> Self {
         NetClient {
@@ -1213,6 +1229,26 @@ pub struct NetGameHost {
     pub _alias: Aliased,
 }
 
+/// A copy (`Game::clone_match`) holds no connections.
+impl Clone for NetGameHost {
+    fn clone(&self) -> Self {
+        NetGameHost {
+            lastSentMessage: self.lastSentMessage.clone(),
+            lastReceivedMessage: self.lastReceivedMessage.clone(),
+            active: self.active,
+            current_server_tick: self.current_server_tick,
+            clients: [Ptr::null(); 3],
+            foreign_lobbyserver: Ptr::null(),
+            expected_clients: self.expected_clients,
+            expected_client_count: self.expected_client_count,
+            next_free_client_slot: self.next_free_client_slot,
+            last_processed_input_id: self.last_processed_input_id,
+            preparedMapCollPkg: self.preparedMapCollPkg.clone(),
+            _alias: Aliased::new(),
+        }
+    }
+}
+
 impl NetGameHost {
     pub fn new() -> Self {
         NetGameHost {
@@ -1683,6 +1719,8 @@ pub const DISCONNECTED: NetworkState = 1;
 pub const CONNECTED: NetworkState = 2;
 pub const JOINED: NetworkState = 3;
 pub const PLAYING: NetworkState = 4;
+
+#[derive(Clone)]
 
 pub struct Networking {
     pub active: bool,

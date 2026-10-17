@@ -21,6 +21,7 @@ use crate::smw::player::{get_player_from_global_id, CPlayer};
 //------------------------------------------------------------------------------
 // class bomb
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct CO_Bomb {
     pub mo_carried_object: MO_CarriedObject,
 

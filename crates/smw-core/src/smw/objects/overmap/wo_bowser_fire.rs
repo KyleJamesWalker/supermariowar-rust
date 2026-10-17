@@ -19,6 +19,7 @@ use crate::smw::player::{get_player_from_global_id, player_killed_player, CPlaye
 //------------------------------------------------------------------------------
 // class Bowser Fire (for survival mode)
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct OMO_BowserFire {
     pub io_over_map_object: IO_OverMapObject,
 

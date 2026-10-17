@@ -18,6 +18,7 @@ use std::any::Any;
 
 //Pipe Bonus Mini Game (used in world mode)
 //Collect coins and powerups that come out of a pipe
+#[derive(Clone)]
 pub struct CGM_Pipe_MiniGame {
     pub cgame_mode: CGameMode,
 

@@ -121,6 +121,8 @@ pub struct CInputPlayerControl {
     pub inputGameControls: [CInputControl; 2], //0 == game controls, 1 == menu controls
 }
 
+#[derive(Clone)]
+
 pub struct CPlayerInput {
     /// Each player's `inputConfiguration[set][kind]` (kind 0 is the keyboard, 1 the joystick); `Game::input_control` reads it.
     pub inputControls: [Option<(u8, u8)>; 4],

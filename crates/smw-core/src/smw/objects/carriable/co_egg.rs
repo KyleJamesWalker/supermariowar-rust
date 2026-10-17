@@ -22,6 +22,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class egg (for egg mode)
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct CO_Egg {
     pub mo_carried_object: MO_CarriedObject,
 

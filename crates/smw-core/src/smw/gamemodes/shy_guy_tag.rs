@@ -22,6 +22,7 @@ use std::any::Any;
 //He can then tag other players to also become shy guys
 //Players that are not shy guys will be slowly scoring points
 //When all players become shyguys, then the mode is reset with no shyguys
+#[derive(Clone)]
 pub struct CGM_ShyGuyTag {
     pub cgame_mode: CGameMode,
 

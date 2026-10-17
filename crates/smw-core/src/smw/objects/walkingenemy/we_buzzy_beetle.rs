@@ -24,6 +24,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class buzzy beetle
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct MO_BuzzyBeetle {
     pub mo_walking_enemy: MO_WalkingEnemy,
 }

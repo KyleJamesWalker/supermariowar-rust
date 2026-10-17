@@ -21,6 +21,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class yoshi (for egg mode)
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct MO_Yoshi {
     pub io_moving_object: IO_MovingObject,
 

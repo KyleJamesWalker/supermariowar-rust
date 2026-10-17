@@ -14,6 +14,7 @@ use crate::smw::player::CPlayer;
 use std::any::Any;
 
 //King of the Hill (Control an area for a certain amount of time)
+#[derive(Clone)]
 pub struct CGM_KingOfTheHill {
     pub cgm_domination: CGM_Domination,
 }

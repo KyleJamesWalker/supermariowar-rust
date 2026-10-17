@@ -8,7 +8,7 @@ use crate::common::player_kill_styles::KillStyle;
 use crate::globals::*;
 use crate::smw::player::CPlayer;
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct PlayerBurnupTimer {
     pub timer: i16,
     pub starttimer: i16,

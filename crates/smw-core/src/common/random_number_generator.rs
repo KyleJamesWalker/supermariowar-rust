@@ -54,7 +54,7 @@ pub struct RandomNumberGenerator;
 
 
 /// Not in the C++: netplay records the game host's draws and replays them on joiners (smw/net_random.rs).
-#[derive(Default)]
+#[derive(Clone, Default)]
 enum Tape {
     #[default]
     Off,
@@ -63,7 +63,7 @@ enum Tape {
 }
 
 /// Replay-harness counters (tools/cpp-harness.patch), reported in the dump's `R` line, and the netplay tape.
-#[derive(Default)]
+#[derive(Clone, Default)]
 struct RngCounters {
     g_callCount: u64,
     g_lastValue: u32,
@@ -71,6 +71,7 @@ struct RngCounters {
 }
 
 /// The RNG's part of `Game`.
+#[derive(Clone)]
 pub struct RngState {
     grng: Option<Well512RandomNumberGenerator>,
     /// The counters until the generator exists; then the generator holds them.
@@ -152,6 +153,8 @@ impl RandomNumberGeneratorType for SystemRandomNumberGenerator {
         rVal
     }
 }
+
+#[derive(Clone)]
 
 pub struct Well512RandomNumberGenerator {
     state: [u32; 16],

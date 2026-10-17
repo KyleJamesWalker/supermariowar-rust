@@ -25,6 +25,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class koopa
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct MO_Koopa {
     pub mo_walking_enemy: MO_WalkingEnemy,
 

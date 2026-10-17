@@ -21,6 +21,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class frenzycard (for fire frenzy mode)
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct MO_FrenzyCard {
     pub io_moving_object: IO_MovingObject,
 

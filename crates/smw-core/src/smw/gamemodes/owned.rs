@@ -13,6 +13,7 @@ use std::any::Any;
 
 //Owned:
 //Players rack up points like domination for each player they have "owned"
+#[derive(Clone)]
 pub struct CGM_Owned {
     pub cgame_mode: CGameMode,
     /// Frames toward the next point; never reset between games, like the C++ function-local static.

@@ -19,6 +19,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class pipe coin (for coin pipe minigame)
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct OMO_PipeCoin {
     pub io_over_map_object: IO_OverMapObject,
 

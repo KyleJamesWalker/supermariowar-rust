@@ -176,7 +176,7 @@ pub fn show_score_board_now(g: &mut Game) {
         gp.rm.sfx_timewarning.stop(g);
         gp.rm.sfx_slowdownmusic.stop(g);
 
-        gp.rm.backgroundmusic[1].play(g, true, false);
+        gp.backgroundmusic[1].play(g, true, false);
     }
 }
 
@@ -267,7 +267,7 @@ impl CGameMode {
         gp.rm.sfx_invinciblemusic.stop(g);
 
         if g.game_values.music && g.game_values.sound {
-            gp.rm.backgroundmusic[0].stop(g);
+            gp.backgroundmusic[0].stop(g);
         }
 
         if_sound_on_play(g, &mut gp.rm.sfx_timewarning);

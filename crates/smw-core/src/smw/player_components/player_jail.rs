@@ -10,7 +10,7 @@ use crate::common::global_constants::{PHOFFSET, PWOFFSET};
 use crate::globals::*;
 use crate::smw::player::CPlayer;
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct PlayerJail {
     pub owner_teamID: i8,
     pub color: i8,

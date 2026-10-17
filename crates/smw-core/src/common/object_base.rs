@@ -53,6 +53,8 @@ pub fn cap_side_velocity(vel: f32) -> f32 {
     vel
 }
 
+#[derive(Clone)]
+
 pub struct CObject {
     pub objectType: ObjectType,
 
@@ -230,7 +232,18 @@ impl CObject {
 }
 
 /// Virtual interface of `CObject`. Overloads: `collide(CPlayer*)` is `collide_player`, `collide(IO_MovingObject*)` is `collide_object`.
-pub trait CObjectTrait: Any {
+/// A copy of an object, for `Game::clone_match`.
+pub trait CloneObject {
+    fn clone_object(&self) -> Ptr<dyn CObjectTrait>;
+}
+
+impl<T: CObjectTrait + Clone> CloneObject for T {
+    fn clone_object(&self) -> Ptr<dyn CObjectTrait> {
+        Ptr::from_box(Box::new(self.clone()))
+    }
+}
+
+pub trait CObjectTrait: Any + CloneObject {
     fn obj(&self) -> &CObject;
     fn obj_mut(&mut self) -> &mut CObject;
     fn as_any(&mut self) -> &mut dyn Any;
