@@ -1,0 +1,14 @@
+[package]
+name = "smw-headless"
+version = "0.1.0"
+edition.workspace = true
+description = "Super Mario War - the headless backend: smw-platform's traits in memory, for tests and the replay runner"
+publish.workspace = true
+
+[dependencies]
+smw-platform = { path = "../smw-platform" }
+
+[dev-dependencies]
+smw-core = { path = "../smw-core" }
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+png = "0.18.1"

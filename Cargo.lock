@@ -618,6 +618,16 @@ name = "smw-globals"
 version = "0.1.0"
 
 [[package]]
+name = "smw-headless"
+version = "0.1.0"
+dependencies = [
+ "flate2",
+ "png",
+ "smw-core",
+ "smw-platform",
+]
+
+[[package]]
 name = "smw-netplay"
 version = "0.1.0"
 dependencies = [
@@ -634,6 +644,7 @@ name = "smw-sdl2"
 version = "0.1.0"
 dependencies = [
  "sdl2",
+ "smw-headless",
  "smw-platform",
 ]
 
@@ -652,6 +663,15 @@ version = "0.1.0"
 dependencies = [
  "smw-netplay",
  "tungstenite",
+]
+
+[[package]]
+name = "smw_replay"
+version = "0.1.0"
+dependencies = [
+ "smw-core",
+ "smw-headless",
+ "smw-platform",
 ]
 
 [[package]]

@@ -124,11 +124,11 @@ impl Default for SimpleFileList {
 }
 
 impl SimpleFileList {
-    pub fn new(dirpath: impl AsRef<Path>, extension: &str, fAlphabetize: bool) -> Self {
+    pub fn new(g: &mut Game, dirpath: impl AsRef<Path>, extension: &str, fAlphabetize: bool) -> Self {
         let dirpath = dirpath.as_ref();
         let mut s = SimpleFileList::default();
 
-        let mut dir = FilesIterator::new(dirpath, vec![extension.to_string()]);
+        let mut dir = FilesIterator::new(g, dirpath, vec![extension.to_string()]);
         while let Some(path) = dir.next() {
             s.m_filelist.push(path);
         }
@@ -252,11 +252,11 @@ pub struct SimpleDirectoryList {
 impl_base!(SimpleDirectoryList => simple_file_list: SimpleFileList);
 
 impl SimpleDirectoryList {
-    pub fn new(path: impl AsRef<Path>) -> Self {
+    pub fn new(g: &mut Game, path: impl AsRef<Path>) -> Self {
         let path = path.as_ref();
         let mut s = SimpleFileList::default();
 
-        let mut dir = SubdirsIterator::new(path);
+        let mut dir = SubdirsIterator::new(g, path);
         while let Some(subdir) = dir.next() {
             s.m_filelist.push(subdir);
         }
@@ -284,18 +284,39 @@ macro_rules! file_list_subclass {
     };
 }
 
-file_list_subclass!(AnnouncerList, SimpleFileList, simple_file_list, |g| SimpleFileList::new(convert_path(g, "sfx/announcer/"), ".txt", false));
-file_list_subclass!(GraphicsList, SimpleDirectoryList, simple_directory_list, |g| SimpleDirectoryList::new(convert_path(g, "gfx/packs/")));
-file_list_subclass!(SoundsList, SimpleDirectoryList, simple_directory_list, |g| SimpleDirectoryList::new(convert_path(g, "sfx/packs/")));
-file_list_subclass!(TourList, SimpleFileList, simple_file_list, |g| SimpleFileList::new(convert_path(g, "tours/"), ".txt", false));
-file_list_subclass!(WorldList, SimpleFileList, simple_file_list, |g| SimpleFileList::new(convert_path(g, "worlds/"), ".txt", true));
+file_list_subclass!(AnnouncerList, SimpleFileList, simple_file_list, |g| {
+    let dir = convert_path(g, "sfx/announcer/");
+    SimpleFileList::new(g, dir, ".txt", false)
+});
+file_list_subclass!(GraphicsList, SimpleDirectoryList, simple_directory_list, |g| {
+    let dir = convert_path(g, "gfx/packs/");
+    SimpleDirectoryList::new(g, dir)
+});
+file_list_subclass!(SoundsList, SimpleDirectoryList, simple_directory_list, |g| {
+    let dir = convert_path(g, "sfx/packs/");
+    SimpleDirectoryList::new(g, dir)
+});
+file_list_subclass!(TourList, SimpleFileList, simple_file_list, |g| {
+    let dir = convert_path(g, "tours/");
+    SimpleFileList::new(g, dir, ".txt", false)
+});
+file_list_subclass!(WorldList, SimpleFileList, simple_file_list, |g| {
+    let dir = convert_path(g, "worlds/");
+    SimpleFileList::new(g, dir, ".txt", true)
+});
 file_list_subclass!(
     BackgroundList,
     SimpleFileList,
     simple_file_list,
-    |g| SimpleFileList::new(convert_path(g, "gfx/packs/Classic/backgrounds/"), ".png", false)
+    |g| {
+        let dir = convert_path(g, "gfx/packs/Classic/backgrounds/");
+        SimpleFileList::new(g, dir, ".png", false)
+    }
 );
-file_list_subclass!(FiltersList, SimpleFileList, simple_file_list, |g| SimpleFileList::new(convert_path(g, "filters/"), ".txt", false));
+file_list_subclass!(FiltersList, SimpleFileList, simple_file_list, |g| {
+    let dir = convert_path(g, "filters/");
+    SimpleFileList::new(g, dir, ".txt", false)
+});
 
 ///////////// SkinList ///////////////
 
@@ -314,7 +335,8 @@ pub struct SkinList {
 impl SkinList {
     pub fn new(g: &mut Game) -> Self {
         let mut m_skins = Vec::new();
-        let mut dir = FilesIterator::new(convert_path(g, "gfx/skins/"), vec![".bmp".to_string(), ".png".to_string()]);
+        let skins = convert_path(g, "gfx/skins/");
+        let mut dir = FilesIterator::new(g, skins, vec![".bmp".to_string(), ".png".to_string()]);
         while let Some(path) = dir.next() {
             m_skins.push(SkinListNode { name: strip_creator_and_ext(&filename_string(&path)), path });
         }
@@ -410,7 +432,7 @@ impl MusicPack {
         }
     }
 
-    pub fn load(musicdirectory: &Path) -> Option<MusicPack> {
+    pub fn load(g: &mut Game, musicdirectory: &Path) -> Option<MusicPack> {
         let mut this = MusicPack::new(filename_string(musicdirectory));
 
         let file_path = musicdirectory.join("Music.txt");
@@ -512,7 +534,7 @@ impl MusicPack {
                 continue;
             }
 
-            let mut iter = FilesIterator::new(&category_dir, vec![".ogg".to_string()]);
+            let mut iter = FilesIterator::new(g, &category_dir, vec![".ogg".to_string()]);
             while let Some(path) = iter.next() {
                 if this.m_category_songs.entry(category).or_default().len() < MAXCATEGORYTRACKS {
                     this.m_all_songs.push(path);
@@ -641,9 +663,10 @@ pub struct MusicList {
 impl MusicList {
     pub fn new(g: &mut Game) -> Self {
         let mut m_entries = Vec::new();
-        let mut dir = SubdirsIterator::new(convert_path(g, "music/game/"));
+        let music = convert_path(g, "music/game/");
+        let mut dir = SubdirsIterator::new(g, music);
         while let Some(path) = dir.next() {
-            if let Some(pack) = MusicPack::load(&path) {
+            if let Some(pack) = MusicPack::load(g, &path) {
                 m_entries.push(pack);
             }
         }
@@ -880,7 +903,8 @@ pub struct WorldMusicList {
 impl WorldMusicList {
     pub fn new(g: &mut Game) -> Self {
         let mut m_entries = Vec::new();
-        let mut dir = SubdirsIterator::new(convert_path(g, "music/world/"));
+        let music = convert_path(g, "music/world/");
+        let mut dir = SubdirsIterator::new(g, music);
         while let Some(path) = dir.next() {
             if let Some(pack) = WorldMusicPack::load(&path) {
                 m_entries.push(pack);
