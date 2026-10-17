@@ -37,6 +37,11 @@ fn decode_base64(text: &str) -> Vec<u8> {
 /// Runs `replay` as `tools/run_ref.sh` does, in a sandbox under `out`, and returns the dump's text. `segment`
 /// plays only that match (`SMW_SEGMENT`).
 fn run(replay: &Path, out: &Path, segment: Option<u32>) -> String {
+    sandboxed(replay, out, segment, |argv, services| smw::smw::main::run_with(argv, Some(services)))
+}
+
+/// Sets up `run`'s sandbox and environment, calls `game` with the arguments and services to run on, and returns the dump.
+fn sandboxed(replay: &Path, out: &Path, segment: Option<u32>, game: impl FnOnce(Vec<String>, smw_platform::Services)) -> String {
     let _game = GAME.lock().unwrap_or_else(|e| e.into_inner());
     let text = smw::smw::harness::read_recording(replay).unwrap();
     let _ = std::fs::remove_dir_all(out);
@@ -71,7 +76,7 @@ fn run(replay: &Path, out: &Path, segment: Option<u32>) -> String {
     }
     let dir = |p: &Path| PathBuf::from(format!("{}/", p.display()));
     let argv = vec!["smw".to_string(), "--datadir".to_string(), data.to_string_lossy().into_owned()];
-    smw::smw::main::run_with(argv, Some(smw_headless::services(dir(&settings), dir(out))));
+    game(argv, smw_headless::services(dir(&settings), dir(out)));
     for (key, _) in &vars {
         std::env::remove_var(key);
     }
@@ -215,4 +220,62 @@ fn segment_from_checkpoint() {
     assert_eq!(expected.len() as i64, end - first, "full dump covers the match");
     assert_same_frames("segment 1", &expected, &segment);
     let _ = std::fs::remove_dir_all(&base);
+}
+
+/// Handles step 6 (docs/HANDLES.md): a copy of the match made at frame `at` plays the rest of the replay alongside
+/// the original. Both dump what the golden holds, so the copy shares nothing the match changes.
+fn clone_mid_match(name: &str, at: u32) {
+    use smw::common::game_values::AppState;
+    use smw::smw::game_state::StateId;
+
+    let tools = repo().join("tools");
+    let out = std::env::temp_dir().join(format!("smw-headless-{}-clone-{}", std::process::id(), name));
+    let copy_dump = out.join("copy_dump.txt");
+    let copy_settings = PathBuf::from(format!("{}/", out.join("copy").display()));
+    let mut copied = 0;
+    let dump = sandboxed(&tools.join("replays").join(format!("{}.txt", name)), &out, None, |argv, services| {
+        let g = smw::game::Game::create();
+        g.services = Some(services);
+        smw::globals::init_globals(g);
+        g.RootDataDirectory = argv[2].clone();
+        smw::smw::main::startup(g);
+        smw::smw::main::gameloop_start(g);
+        let mut copy: Option<Box<smw::game::Game>> = None;
+        while g.game_values.appstate != AppState::Quit {
+            smw::smw::main::frame(g);
+            if let Some(c) = copy.as_mut().filter(|_| g.gsm.currentState == StateId::Gameplay) {
+                smw::smw::main::step(c);
+                copied += 1;
+            } else if smw::smw::harness::frame(g) == at {
+                assert_eq!(g.gsm.currentState, StateId::Gameplay, "{}: frame {} is not in a match", name, at);
+                let mut c = g.clone_match(smw_headless::services(copy_settings.clone(), copy_settings.clone()));
+                smw::smw::harness::dump_to(&mut c, &copy_dump.to_string_lossy());
+                copy = Some(c);
+            }
+        }
+        smw::smw::main::shutdown(g);
+    });
+    assert!(copied >= 300, "{}: the copy played {} frames", name, copied);
+
+    let golden = tools.join("golden").join(name);
+    let golden = if golden.is_dir() { golden } else { tools.join("golden_rust").join(name) };
+    let golden_dump = golden.join("dump.txt");
+    let golden_dump = if golden_dump.exists() { golden_dump } else { golden.join("dump.txt.gz") };
+    let expected = frames(&read_maybe_gzip(&golden_dump));
+    assert_same_frames(name, &expected, &frames(&dump));
+    let copy = frames(&std::fs::read_to_string(&copy_dump).unwrap());
+    assert_eq!(copy.len(), copied, "{}: the copy's dump", name);
+    let expected: Vec<(i64, String)> = expected.into_iter().filter(|f| f.0 >= at as i64).take(copied).collect();
+    assert_same_frames(&format!("{} copy", name), &expected, &copy);
+    let _ = std::fs::remove_dir_all(&out);
+}
+
+#[test]
+fn clone_capture_the_flag() {
+    clone_mid_match("cpu_ctf", 1500);
+}
+
+#[test]
+fn clone_frenzy() {
+    clone_mid_match("frenzy_cpu", 1200);
 }
