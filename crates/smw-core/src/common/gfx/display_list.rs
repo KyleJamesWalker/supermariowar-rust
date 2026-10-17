@@ -1,5 +1,4 @@
-//! Not in the C++: a record of the screen writes of one gameplay draw, so the main loop can show frames between two
-//! ticks. Recording never changes what a tick draws; only frames rendered from two records are new, and those are
+//! A record of the screen writes of one gameplay draw, so the main loop can show frames between two ticks. Recording never changes what a tick draws; only frames rendered from two records are new, and those are
 //! display-only.
 
 use crate::common::gfx::soft_surface::{self, BlitState, PixelsMut, Rect, Surface};
