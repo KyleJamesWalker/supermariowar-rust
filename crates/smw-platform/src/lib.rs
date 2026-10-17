@@ -136,6 +136,54 @@ pub struct Services {
     pub audio: Box<dyn AudioOut>,
     pub events: Box<dyn Events>,
     pub keyboard: Box<dyn Keyboard>,
+    pub pads: Box<dyn Pads>,
+}
+
+/// A pad the backend opened.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct PadInfo {
+    /// How its input events name it.
+    pub pad: PadSlot,
+    pub name: String,
+    pub guid: String,
+    /// A game controller whose events the backend translates (`SMW_PAD_TRANSLATE`).
+    pub controller: bool,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum PadChange {
+    /// A pad that was unplugged; the backend has closed it.
+    Removed(PadSlot),
+    /// A pad that was plugged in, by the backend's device index, for `Pads::open`.
+    Connected(i32),
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum PadFamily {
+    Generic,
+    Xbox,
+    PlayStation,
+    Nintendo,
+}
+
+/// Game pads. The core keeps the device table (which device number a pad has) and who plays with which pad.
+pub trait Pads {
+    /// Starts pad input and, with `open`, opens every connected pad: entry i is backend device i, `None` when it
+    /// fails to open. `translate` turns on mapping translation (`SMW_PAD_TRANSLATE`), which the backend applies
+    /// before it hands out `Input`.
+    fn open_all(&mut self, open: bool, translate: bool) -> Vec<Option<PadInfo>>;
+    /// With translation on, the pads removed and then the ones connected since the last call.
+    fn hotplug(&mut self) -> Vec<PadChange>;
+    /// Opens a `PadChange::Connected` device as device number `index`.
+    fn open(&mut self, device: i32, index: usize) -> Option<PadInfo>;
+    /// The open pad's name, or with `pad` `None` the name of backend device `index`.
+    fn name(&self, index: usize, pad: Option<PadSlot>) -> Option<String>;
+    /// The family of backend device `index`.
+    fn family(&self, index: usize) -> PadFamily;
+    /// Sets the LED of the pad with player index `player` (SDL's numbering), where it has one.
+    fn set_led(&mut self, player: i32, rgb: [u8; 3]);
+    /// `SMW_DEBUG_INPUT`: logs an input as the game reads it.
+    fn log_input(&mut self, input: &Input);
 }
 
 /// A pad as SDL's events name it (`which`): the device index for added events, the instance ID otherwise. The game
@@ -274,6 +322,26 @@ mod tests {
         }
     }
 
+    impl Pads for Null {
+        fn open_all(&mut self, _: bool, _: bool) -> Vec<Option<PadInfo>> {
+            Vec::new()
+        }
+        fn hotplug(&mut self) -> Vec<PadChange> {
+            Vec::new()
+        }
+        fn open(&mut self, _: i32, _: usize) -> Option<PadInfo> {
+            None
+        }
+        fn name(&self, _: usize, _: Option<PadSlot>) -> Option<String> {
+            None
+        }
+        fn family(&self, _: usize) -> PadFamily {
+            PadFamily::Generic
+        }
+        fn set_led(&mut self, _: i32, _: [u8; 3]) {}
+        fn log_input(&mut self, _: &Input) {}
+    }
+
     struct Log(Rc<RefCell<Vec<String>>>);
 
     impl AudioOut for Log {
@@ -321,7 +389,7 @@ mod tests {
     #[test]
     fn services_hold_trait_objects() {
         let log = Rc::new(RefCell::new(Vec::new()));
-        let mut services = Services { clock: Box::new(Null), storage: Box::new(Null), video: Box::new(Null), audio: Box::new(Log(log.clone())), events: Box::new(Null), keyboard: Box::new(Null) };
+        let mut services = Services { clock: Box::new(Null), storage: Box::new(Null), video: Box::new(Null), audio: Box::new(Log(log.clone())), events: Box::new(Null), keyboard: Box::new(Null), pads: Box::new(Null) };
         assert_eq!(services.clock.now_ms(), 1000);
         services.storage.persist();
         assert_eq!(services.storage.root_dir(), PathBuf::from("root"));
