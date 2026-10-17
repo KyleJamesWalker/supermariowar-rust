@@ -90,6 +90,14 @@ pub const WAITTIME: i32 = 16;
 /// Not in the C++, whose frame rate was its game speed: the game advances this many ticks per second of wall time on
 /// every platform, whatever the display refreshes at. Netplay depends on it, so changing it changes the protocol version.
 pub const TICKS_PER_SECOND: u32 = 60;
+/// The Graphics Options "Frame Rate" setting, kept in the options byte upstream used for its frame limiter (ms per
+/// frame, at most 100): presents at the display's refresh, or at most one of these rates. Any other value is Display.
+pub const FRAME_RATE_DISPLAY: i16 = 200;
+pub const FRAME_RATE_CAPS: [(i16, u32); 7] = [(201, 30), (202, 40), (203, 45), (204, 60), (205, 90), (206, 120), (207, 144)];
+
+pub fn frame_rate_cap(setting: i16) -> Option<u32> {
+    FRAME_RATE_CAPS.iter().find(|&&(code, _)| code == setting).map(|&(_, fps)| fps)
+}
 pub const MAXAWARDS: i32 = 10;
 pub const MINAWARDSNEEDED: i32 = 3;
 pub const MAXTOURNAMENTGAMES: i32 = 10;

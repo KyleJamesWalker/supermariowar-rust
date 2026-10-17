@@ -8,7 +8,7 @@ use crate::common::game::perror;
 use crate::common::game_mode::{CGameModeTrait, GAMEMODE_LAST};
 use crate::common::game_mode_settings::{GameModeSettings, GAMEMODESETTINGS_RAW_SIZE};
 use crate::common::gameplay_styles::{BoomerangStyle, ShieldStyle, TeamCollisionStyle, TournamentControlStyle, WarpLockStyle};
-use crate::common::global_constants::{MAXTOURNAMENTGAMES, MAX_PLAYERS, NUM_AUTO_FILTERS, NUM_POWERUPS, NUM_POWERUP_PRESETS, WAITTIME};
+use crate::common::global_constants::{MAXTOURNAMENTGAMES, MAX_PLAYERS, NUM_AUTO_FILTERS, NUM_POWERUPS, NUM_POWERUP_PRESETS, frame_rate_cap, FRAME_RATE_DISPLAY};
 use crate::common::input::*;
 use crate::common::match_types::{MatchType, Minigame};
 use crate::common::path::get_home_directory;
@@ -528,7 +528,7 @@ impl CGameValues {
         self.showfps = false;
         self.frameadvance = false;
         self.autokill = false;
-        self.framelimiter = WAITTIME as i16;
+        self.framelimiter = FRAME_RATE_DISPLAY;
         self.sound = true;
         self.music = true;
         self.appstate = AppState::Splash;
@@ -762,6 +762,9 @@ impl CGameConfig {
         self.outofboundstime = options.read_u8() as i16;
         self.cpudifficulty = options.read_u8() as i16;
         self.framelimiter = options.read_u8() as i16;
+        if frame_rate_cap(self.framelimiter).is_none() {
+            self.framelimiter = FRAME_RATE_DISPLAY;
+        }
         self.bonuswheel = options.read_u8() as i16;
         self.keeppowerup = options.read_u8() != 0;
         self.showwinningcrown = options.read_u8() != 0;

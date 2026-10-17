@@ -56,16 +56,21 @@ thread_local! {
     static RECORD: RefCell<Option<Draw>> = const { RefCell::new(None) };
     static SCREEN: Cell<*mut Surface> = const { Cell::new(std::ptr::null_mut()) };
     static OWNER: Cell<(Owner, u16)> = const { Cell::new((Owner::None, 0)) };
+    static RECORD_ONLY: Cell<bool> = const { Cell::new(false) };
 }
 
-pub fn begin(screen: *mut Surface) {
+/// Starts recording the writes to `screen`. With `record_only`, they are not drawn: the frames shown render from
+/// the record, so a tick that is never shown costs no pixels.
+pub fn begin(screen: *mut Surface, record_only: bool) {
     SCREEN.set(screen);
+    RECORD_ONLY.set(record_only);
     OWNER.set((Owner::None, 0));
     RECORD.with_borrow_mut(|r| *r = Some(Draw::new()));
 }
 
 pub fn end() -> Draw {
     SCREEN.set(std::ptr::null_mut());
+    RECORD_ONLY.set(false);
     RECORD.with_borrow_mut(|r| r.take().unwrap_or(Draw::new()))
 }
 
@@ -109,6 +114,11 @@ pub(crate) unsafe fn before_write(dst: *mut Surface) {
         }
         r.snapshots.push(copy);
     });
+}
+
+/// Whether a write to `dst` is recorded and not drawn.
+pub(crate) fn record_only(dst: *mut Surface) -> bool {
+    RECORD_ONLY.get() && !dst.is_null() && dst == SCREEN.get()
 }
 
 pub(crate) unsafe fn record_blit(src: *mut Surface, src_rect: Option<Rect>, dst: *mut Surface, at: Option<Rect>, scaled: bool) {

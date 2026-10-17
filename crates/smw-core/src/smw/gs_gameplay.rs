@@ -2703,9 +2703,13 @@ impl GameState for GameplayState {
             //--------------- draw everything ----------------------
             let (state, offsets) = (self.iCountDownState, self.iScoreTextOffset);
             let check = std::env::var_os("SMW_CHECK_DISPLAY_LIST").is_some();
-            let record = g.main_loop.interpolate || check;
+            // The exit dialog is drawn straight onto this frame, so a frame showing it is drawn, not recorded.
+            let dialog = g.game_values.flags.pausegame || g.game_values.flags.exitinggame;
+            let interpolate = g.main_loop.interpolate && !dialog;
+            let record = interpolate || check;
             if record {
-                crate::common::gfx::display_list::begin(g.screen);
+                let record_only = interpolate && !check && !crate::smw::harness::replaying(g);
+                crate::common::gfx::display_list::begin(g.screen, record_only);
             }
             self.draw_everything(g, state, offsets);
             if record {
