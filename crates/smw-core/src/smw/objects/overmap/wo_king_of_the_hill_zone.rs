@@ -267,14 +267,14 @@ impl CObjectTrait for OMO_KingOfTheHillZone {
             self.frame = 0;
         }
 
-        if self.iPlayerID != -1 && !g.game_values.gamemode.gameover {
+        if self.iPlayerID != -1 && !g.mode().gameover {
             // Speed of point accumulation is proportional to how many players are in zone
             self.scoretimer = (self.scoretimer as i32 + (((iMax as i32) << 1) - self.totalTouchingPlayers as i32)) as i16;
 
             if self.scoretimer >= g.game_values.pointspeed {
                 self.scoretimer = 0;
-                g.player(gp.players[self.iPlayerID as usize]).score().adjust_score(g, self.multiplier);
-                gp.get().game_values.gamemode.check_winner(g, gp.get().players[self.iPlayerID as usize]);
+                g.player(gp.players[self.iPlayerID as usize]).score(g).adjust_score(g, self.multiplier);
+                gp.get().mode().check_winner(g, gp.get().players[self.iPlayerID as usize]);
 
                 if g.game_values.gamemodesettings.kingofthehill.maxmultiplier > 1 && {
                     self.multipliertimer += 1;

@@ -385,7 +385,7 @@ impl PlayerCollisions {
                 fKillPotential = true;
             }
 
-            g.player(player).bouncejump();
+            g.player(player).bouncejump(g);
 
             if fKillPotential {
                 let mut style = KillStyle::Stomp;
@@ -401,11 +401,11 @@ impl PlayerCollisions {
 
                 g.player(player).killed_player(g, other, PlayerDeathStyle::Squish, style, false, false);
             } else {
-                if g.game_values.gamemode.gamemode == game_mode_tag {
+                if g.mode().gamemode == game_mode_tag {
                     g.player(player).transfer_tag(g, other);
                 }
 
-                if g.game_values.gamemode.gamemode == game_mode_shyguytag {
+                if g.mode().gamemode == game_mode_shyguytag {
                     g.player(player).transfer_shy_guy(g, other);
                 }
 
@@ -425,7 +425,7 @@ impl PlayerCollisions {
         //If teams tag each other
         if g.player(o1).teamID == g.player(o2).teamID {
             //Free teammates that are jailed
-            if g.game_values.gamemode.gamemode == game_mode_jail && g.game_values.gamemodesettings.jail.tagfree {
+            if g.mode().gamemode == game_mode_jail && g.game_values.gamemodesettings.jail.tagfree {
                 let p1 = o1;
                 g.player(o1).jail.free_by_teammate(g, g.player(p1));
                 let p2 = o2;
@@ -433,7 +433,7 @@ impl PlayerCollisions {
             }
 
             //Transfer tag if assist is on
-            if (g.game_values.gamemode.gamemode == game_mode_tag && g.game_values.teamcollision == TeamCollisionStyle::Assist)
+            if (g.mode().gamemode == game_mode_tag && g.game_values.teamcollision == TeamCollisionStyle::Assist)
                 || g.game_values.gamemodesettings.tag.tagontouch
             {
                 g.player(o1).transfer_tag(g, o2);
@@ -450,16 +450,16 @@ impl PlayerCollisions {
                 g.player(o2).bounce_assist_player(g, o1);
 
                 //Allow players on team to swap stored items
-                if g.player(o1).playerKeys.game_powerup().fPressed || g.player(o2).playerKeys.game_powerup().fPressed {
+                if g.player(o1).keys(g).game_powerup().fPressed || g.player(o2).keys(g).game_powerup().fPressed {
                     let (id1, id2) = (g.player(o1).globalID as usize, g.player(o2).globalID as usize);
                     g.game_values.gamepowerups.swap(id1, id2);
 
                     if_sound_on_play(g, &mut gp.rm.sfx_storepowerup);
 
-                    g.player(o1).playerKeys.game_powerup_mut().fPressed = false;
-                    g.player(o1).playerKeys.game_powerup_mut().fDown = false;
-                    g.player(o2).playerKeys.game_powerup_mut().fPressed = false;
-                    g.player(o2).playerKeys.game_powerup_mut().fDown = false;
+                    g.player(o1).keys(g).game_powerup_mut().fPressed = false;
+                    g.player(o1).keys(g).game_powerup_mut().fDown = false;
+                    g.player(o2).keys(g).game_powerup_mut().fPressed = false;
+                    g.player(o2).keys(g).game_powerup_mut().fDown = false;
                 }
 
                 return;
@@ -469,11 +469,11 @@ impl PlayerCollisions {
         //Quit checking collision if either player is soft shielded
         if g.player(o1).shield.get_type() == SOFT || g.player(o2).shield.get_type() == SOFT {
             //Do tag transfer if there is one to do
-            if g.game_values.gamemode.gamemode == game_mode_tag && g.game_values.gamemodesettings.tag.tagontouch {
+            if g.mode().gamemode == game_mode_tag && g.game_values.gamemodesettings.tag.tagontouch {
                 g.player(o1).transfer_tag(g, o2);
             }
 
-            if g.game_values.gamemode.gamemode == game_mode_shyguytag && g.game_values.gamemodesettings.shyguytag.tagtransfer != 1 {
+            if g.mode().gamemode == game_mode_shyguytag && g.game_values.gamemodesettings.shyguytag.tagtransfer != 1 {
                 g.player(o1).transfer_shy_guy(g, o2);
             }
 
@@ -523,11 +523,11 @@ impl PlayerCollisions {
         //Quit checking collision if either player is hard shielded
         if g.player(o1).shield.get_type() == SOFT_WITH_STOMP || g.player(o2).shield.get_type() == SOFT_WITH_STOMP {
             //Do tag transfer if there is one to do
-            if g.game_values.gamemode.gamemode == game_mode_tag && g.game_values.gamemodesettings.tag.tagontouch {
+            if g.mode().gamemode == game_mode_tag && g.game_values.gamemodesettings.tag.tagontouch {
                 g.player(o1).transfer_tag(g, o2);
             }
 
-            if g.game_values.gamemode.gamemode == game_mode_shyguytag && g.game_values.gamemodesettings.shyguytag.tagtransfer != 1 {
+            if g.mode().gamemode == game_mode_shyguytag && g.game_values.gamemodesettings.shyguytag.tagtransfer != 1 {
                 g.player(o1).transfer_shy_guy(g, o2);
             }
 
@@ -558,11 +558,11 @@ impl PlayerCollisions {
         let p2 = o2;
 
         //Transfer tag on touching other players
-        if g.game_values.gamemode.gamemode == game_mode_tag && g.game_values.gamemodesettings.tag.tagontouch {
+        if g.mode().gamemode == game_mode_tag && g.game_values.gamemodesettings.tag.tagontouch {
             g.player(o1).transfer_tag(g, o2);
         }
 
-        if g.game_values.gamemode.gamemode == game_mode_shyguytag && g.game_values.gamemodesettings.shyguytag.tagtransfer != 1 {
+        if g.mode().gamemode == game_mode_shyguytag && g.game_values.gamemodesettings.shyguytag.tagtransfer != 1 {
             g.player(o1).transfer_shy_guy(g, o2);
         }
 

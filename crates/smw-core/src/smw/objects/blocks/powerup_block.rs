@@ -219,7 +219,7 @@ pub fn b_powerup_block_update<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, thi
 
 fn b_powerup_block_release<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, pos: Vec2s, side: bool) {
     let mut gp = g.ptr();
-    let gm = g.game_values.gamemode.gamemode;
+    let gm = g.mode().gamemode;
     let gs = &g.game_values.gamemodesettings;
     let iType = if gm == game_mode_health && RANDOM_INT(gp.get(), 100) < gs.health.percentextralife as i32 {
         HEALTH_POWERUP as i16

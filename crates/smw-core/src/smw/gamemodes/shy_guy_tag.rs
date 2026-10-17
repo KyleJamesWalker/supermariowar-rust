@@ -176,7 +176,7 @@ impl CGameModeTrait for CGM_ShyGuyTag {
                         let iTeam: i16 = g.player(player).get_team_id();
                         if !fAlreadyScored[iTeam as usize] {
                             fAlreadyScored[iTeam as usize] = true;
-                            g.player(player).score().adjust_score(g, shyguycount);
+                            g.player(player).score(g).adjust_score(g, shyguycount);
 
                             pCheckWinner = player;
                         }
@@ -221,7 +221,7 @@ impl CGameModeTrait for CGM_ShyGuyTag {
 
     fn playerextraguy(&mut self, g: &mut Game, mut player: PlayerId, iType: i16) {
         if !self.gameover {
-            g.player(player).score().adjust_score(g, (10 * iType as i32) as i16);
+            g.player(player).score(g).adjust_score(g, (10 * iType as i32) as i16);
             self.check_winner(g, player);
         }
     }
@@ -231,8 +231,8 @@ impl CGameModeTrait for CGM_ShyGuyTag {
             return PlayerKillType::Normal;
         }
 
-        if g.player(player).score().score >= self.goal {
-            g.player(player).score().set_score(g, self.goal);
+        if g.player(player).score(g).score >= self.goal {
+            g.player(player).score(g).set_score(g, self.goal);
             setup_score_board(g, false);
             show_score_board(g);
 
@@ -240,7 +240,7 @@ impl CGameModeTrait for CGM_ShyGuyTag {
             self.gameover = true;
 
             count_alive_teams(g, Some(&mut self.cgame_mode.winningteam));
-        } else if !self.playedwarningsound && self.goal != -1 && g.player(player).score().score as f64 >= self.goal as f64 * 0.8 {
+        } else if !self.playedwarningsound && self.goal != -1 && g.player(player).score(g).score as f64 >= self.goal as f64 * 0.8 {
             self.playwarningsound(g);
         }
 

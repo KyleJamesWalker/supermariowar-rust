@@ -2860,7 +2860,7 @@ pub(crate) mod tests {
                 *g.rm.sprite(g.rm.spr_unknowntile[i]) = ImageLoader::new(convert_path_pack(g, &format!("gfx/packs/tilesets/unknown_tile{}.png", size), &pack)).create(g);
             }
             gp.g_tilesetmanager = Ptr::new_box(CTilesetManager::new(g, &convert_path(gp.get(), "gfx/packs/Classic")));
-            g.g_map = Ptr::from_box(CMap::new());
+            g.g_map.set(CMap::new());
             GAME.store(g, std::sync::atomic::Ordering::Release);
         });
         unsafe { &mut *GAME.load(std::sync::atomic::Ordering::Acquire) }
@@ -3014,7 +3014,7 @@ pub(crate) mod tests {
         for f in &maps {
             for rt in [read_type_summary, read_type_preview, read_type_full] {
                 gp.g_map.load_map(g, f, rt);
-                let mut map = g.g_map;
+                let mut map = g.g_map.ptr();
                 let _ = dump(g, &mut map, rt);
             }
         }
@@ -3139,9 +3139,9 @@ pub(crate) mod tests {
                 let text = String::from_utf8_lossy(&out.stdout);
                 let expected = text.split("\n---\n").nth(1).unwrap_or("").to_string();
 
-                g.g_map = Ptr::from_box(CMap::new());
+                g.g_map.set(CMap::new());
                 gp.g_map.load_map(g, &f, rt);
-                let mut map = g.g_map;
+                let mut map = g.g_map.ptr();
                 let actual = dump(g, &mut map, rt);
                 if actual != expected {
                     let line = actual.lines().zip(expected.lines()).position(|(a, b)| a != b);

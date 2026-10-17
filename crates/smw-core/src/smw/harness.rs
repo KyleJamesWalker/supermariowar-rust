@@ -332,17 +332,13 @@ fn input_of(g: &mut Game, ev: &ReplayEvent) -> Input {
 
 fn state_name(g: &mut Game) -> &'static str {
     let mut gp = g.ptr();
-    let current = GameStateManager::instance(gp.get()).currentState;
-    if current.addr() == SplashScreenState::instance(gp.get()) as *mut SplashScreenState as usize {
-        return "splash";
+    use crate::smw::game_state::StateId;
+    match GameStateManager::instance(gp.get()).currentState {
+        StateId::Splash => "splash",
+        StateId::Menu => "menu",
+        StateId::Gameplay => "gameplay",
+        StateId::Segment => "other",
     }
-    if current.addr() == MenuState::instance(gp.get()) as *mut MenuState as usize {
-        return "menu";
-    }
-    if current.addr() == GameplayState::instance(gp.get()) as *mut GameplayState as usize {
-        return "gameplay";
-    }
-    "other"
 }
 
 
@@ -1124,7 +1120,7 @@ fn marker_state(g: &mut Game) -> &'static str {
     let mut gp = g.ptr();
     match state_name(g) {
         "menu" if MenuState::instance(gp.get()).harness_menu_name() == "world" => "worldmap",
-        "gameplay" if gp.game_values.gamemode.gameover => "scoreboard",
+        "gameplay" if gp.mode().gameover => "scoreboard",
         name => name,
     }
 }

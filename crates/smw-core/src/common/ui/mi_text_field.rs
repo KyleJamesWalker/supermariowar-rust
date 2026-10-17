@@ -225,8 +225,8 @@ impl MI_TextField {
 
         for iPlayer in 0..4usize {
             if iPlayer != 0
-                && !g.game_values.playerInput.inputControls[iPlayer].is_null()
-                && g.game_values.playerInput.inputControls[iPlayer].iDevice == DEVICE_KEYBOARD
+                && !g.input_control(g.game_values.playerInput.inputControls[iPlayer]).is_null()
+                && g.input_control(g.game_values.playerInput.inputControls[iPlayer]).iDevice == DEVICE_KEYBOARD
             {
                 continue;
             }
@@ -386,8 +386,8 @@ impl UI_ControlTrait for MI_TextField {
             // NOTE: copied from UI_Menu::SendInput
             // Only let player 1 on the keyboard control the menu
             if iPlayer != 0
-                && !g.game_values.playerInput.inputControls[iPlayer].is_null()
-                && g.game_values.playerInput.inputControls[iPlayer].iDevice == DEVICE_KEYBOARD
+                && !g.input_control(g.game_values.playerInput.inputControls[iPlayer]).is_null()
+                && g.input_control(g.game_values.playerInput.inputControls[iPlayer]).iDevice == DEVICE_KEYBOARD
             {
                 continue;
             }

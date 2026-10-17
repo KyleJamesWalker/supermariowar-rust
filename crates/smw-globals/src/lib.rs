@@ -1,7 +1,7 @@
 //! `Ptr`, `Global` and `Aliased`, and the macros that model C++ inheritance (see docs/ARCHITECTURE.md).
 
 mod pointers;
-pub use pointers::{Aliased, Global, Ptr};
+pub use pointers::{Aliased, Global, Owned, Ptr};
 
 /// `impl_base!(Derived => field: Base)` makes `Derived` deref to its embedded C++ base class.
 #[macro_export]

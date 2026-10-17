@@ -828,7 +828,7 @@ impl WorldMap {
                 iReadType = if this.iNumStages == 0 { 12 } else { 11 };
             } else if iReadType == 11 {
                 //stage details
-                let ts = Ptr::new_box(parse_tour_stop_line(g, raw, &version, true));
+                let ts = Box::new(parse_tour_stop_line(g, raw, &version, true));
 
                 g.game_values.tourstops.push(ts);
 

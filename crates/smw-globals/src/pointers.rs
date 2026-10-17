@@ -93,6 +93,44 @@ impl<T> DerefMut for Global<T> {
     }
 }
 
+/// An owned value that startup creates, like a C++ member `unique_ptr` filled once. Derefs to `T`.
+pub struct Owned<T: ?Sized>(Option<Box<T>>);
+
+impl<T: ?Sized> Owned<T> {
+    pub const fn empty() -> Self {
+        Owned(None)
+    }
+
+    pub fn set(&mut self, value: Box<T>) {
+        self.0 = Some(value);
+    }
+
+    pub fn is_set(&self) -> bool {
+        self.0.is_some()
+    }
+
+    /// A pointer to the value, for code that still reaches it through `Ptr`.
+    pub fn ptr(&self) -> Ptr<T> {
+        match self.0.as_deref() {
+            Some(v) => Ptr::from_raw(v as *const T as *mut T),
+            None => Ptr::null(),
+        }
+    }
+}
+
+impl<T: ?Sized> Deref for Owned<T> {
+    type Target = T;
+    fn deref(&self) -> &T {
+        self.0.as_deref().expect("Owned used before set")
+    }
+}
+
+impl<T: ?Sized> DerefMut for Owned<T> {
+    fn deref_mut(&mut self) -> &mut T {
+        self.0.as_deref_mut().expect("Owned used before set")
+    }
+}
+
 /// A nullable, non-owning C++ pointer (`T*`). Copy, compares by address, derefs to `T`.
 pub struct Ptr<T: ?Sized>(Option<NonNull<T>>);
 
