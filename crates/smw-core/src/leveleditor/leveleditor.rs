@@ -31,7 +31,7 @@ use crate::globals::*;
 use crate::smw::fps_limiter::FPSLimiter;
 use crate::common::editor_event::EditorEvent;
 use crate::common::util::sdl_helpers::poll_event;
-use sdl2::sys::{SDL_EventType, SDL_GetError, SDL_GetScancodeFromKey, SDL_BUTTON_LEFT, SDL_BUTTON_MIDDLE, SDL_BUTTON_RIGHT};
+use crate::common::keys::{SDL_BUTTON_LEFT, SDL_BUTTON_MIDDLE, SDL_BUTTON_RIGHT, SDL_KEYDOWN, SDL_KEYUP, SDL_MOUSEBUTTONDOWN, SDL_MOUSEBUTTONUP, SDL_MOUSEMOTION, SDL_QUIT};
 use std::ffi::{CStr, CString};
 use std::io::Write;
 use std::path::Path;
@@ -69,12 +69,12 @@ const UI_PLATFORM_COLS: i32 = 8;
 const MW: usize = MAPWIDTH as usize;
 const MH: usize = MAPHEIGHT as usize;
 
-const SDL_QUIT_EV: u32 = SDL_EventType::SDL_QUIT as u32;
-const SDL_KEYDOWN_EV: u32 = SDL_EventType::SDL_KEYDOWN as u32;
-const SDL_KEYUP_EV: u32 = SDL_EventType::SDL_KEYUP as u32;
-const SDL_MOUSEBUTTONDOWN_EV: u32 = SDL_EventType::SDL_MOUSEBUTTONDOWN as u32;
-const SDL_MOUSEBUTTONUP_EV: u32 = SDL_EventType::SDL_MOUSEBUTTONUP as u32;
-const SDL_MOUSEMOTION_EV: u32 = SDL_EventType::SDL_MOUSEMOTION as u32;
+const SDL_QUIT_EV: u32 = SDL_QUIT;
+const SDL_KEYDOWN_EV: u32 = SDL_KEYDOWN;
+const SDL_KEYUP_EV: u32 = SDL_KEYUP;
+const SDL_MOUSEBUTTONDOWN_EV: u32 = SDL_MOUSEBUTTONDOWN;
+const SDL_MOUSEBUTTONUP_EV: u32 = SDL_MOUSEBUTTONUP;
+const SDL_MOUSEMOTION_EV: u32 = SDL_MOUSEMOTION;
 
 const BUTTON_LEFT: u8 = SDL_BUTTON_LEFT as u8;
 const BUTTON_MIDDLE: u8 = SDL_BUTTON_MIDDLE as u8;
@@ -428,10 +428,6 @@ pub fn set_tileset_tile(tile: &mut TilesetTile, iTileset: i16, iCol: i16, iRow: 
 
 pub fn clear_tileset_tile(tile: &mut TilesetTile) {
     set_tileset_tile(tile, TILESETNONE as i16, 0, 0);
-}
-
-fn sdl_error() -> String {
-    unsafe { CStr::from_ptr(SDL_GetError()).to_string_lossy().into_owned() }
 }
 
 fn rect(x: i32, y: i32, w: i32, h: i32) -> Rect {

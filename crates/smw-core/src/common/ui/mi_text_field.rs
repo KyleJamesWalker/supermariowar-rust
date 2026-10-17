@@ -10,7 +10,7 @@ use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_image::MI_Image;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
-use sdl2::sys::SDL_Scancode;
+use crate::common::keys::{SDL_SCANCODE_LSHIFT, SDL_SCANCODE_RSHIFT};
 
 const NUMBER_KEY_MAP: [i16; 10] = [41, 33, 64, 35, 36, 37, 94, 38, 42, 40];
 
@@ -415,7 +415,7 @@ impl UI_ControlTrait for MI_TextField {
             if self.iNumChars < self.iMaxChars - 1 {
                 //Take care of holding shift to shift the pressed key to another character
                 let shift = unsafe {
-                    *keystate.add(SDL_Scancode::SDL_SCANCODE_LSHIFT as usize) != 0 || *keystate.add(SDL_Scancode::SDL_SCANCODE_RSHIFT as usize) != 0
+                    *keystate.add(SDL_SCANCODE_LSHIFT) != 0 || *keystate.add(SDL_SCANCODE_RSHIFT) != 0
                 };
                 if shift {
                     if key >= SDLK_a && key <= SDLK_z {

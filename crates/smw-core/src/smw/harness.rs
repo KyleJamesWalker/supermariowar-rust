@@ -15,7 +15,6 @@ use crate::smw::gs_gameplay::GameplayState;
 use crate::smw::gs_menu::MenuState;
 use crate::smw::gs_splash_screen::SplashScreenState;
 use crate::smw::network::file_compressor::{deflate, inflate, read_maybe_gzip};
-use sdl2::sys::{SDL_Event, SDL_EventType, SDL_GetError, SDL_GetKeyFromName, SDL_GetKeyName, SDL_GetScancodeFromKey};
 use smw_platform::{Input, InputEvent, Keycode, PadSlot, SCREEN_H, SCREEN_W};
 use std::ffi::CStr;
 use std::collections::BTreeSet;
@@ -80,7 +79,7 @@ pub struct Harness {
     segment: Option<Segment>,
     spawn_events: Vec<String>,
     /// The keyboard as the replayed key events left it; pushed events do not update SDL's own state.
-    replay_keys: [u8; sdl2::sys::SDL_Scancode::SDL_NUM_SCANCODES as usize],
+    replay_keys: [u8; crate::common::keys::SDL_NUM_SCANCODES],
     watch_home: Option<std::path::PathBuf>,
     /// Bit d set: open joystick d is a standard-mapping pad. SDL opens the connected pads in page order.
     #[cfg(target_os = "emscripten")]
@@ -123,7 +122,7 @@ impl Harness {
             rec: None,
             segment: None,
             spawn_events: Vec::new(),
-            replay_keys: [0; sdl2::sys::SDL_Scancode::SDL_NUM_SCANCODES as usize],
+            replay_keys: [0; crate::common::keys::SDL_NUM_SCANCODES],
             watch_home: None,
             #[cfg(target_os = "emscripten")]
             web_standard: 0,
@@ -916,7 +915,7 @@ fn record_event(g: &mut Game, r: &mut Recorder, ev: &ReplayEvent) {
 mod web_dpad {
     use super::{EventKind, ReplayEvent};
     use crate::game::Game;
-    use sdl2::sys::{SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP};
+    use crate::common::keys::{SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP};
 
     extern "C" {
         fn emscripten_run_script_int(script: *const std::ffi::c_char) -> i32;
