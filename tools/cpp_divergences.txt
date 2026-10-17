@@ -1,0 +1,10 @@
+# Replays whose Rust output is expected to differ from the C++ reference build, with the change that made each differ.
+# The C++ comparison in CI is report-only; it warns about any divergence not listed here.
+# <replay> <PR or commit> <why>
+joy_menu 99519de connected gamepads go to the first players at every launch
+joy_game 99519de connected gamepads go to the first players at every launch
+pad_hotplug #20 a pad hot-plugged at team select
+text_shift #60 replays apply the replayed Shift to text fields
+osk_pad #71 the on-screen keyboard for text fields without a keyboard
+menu_tap #109 menu taps as InputEvent::Tap
+ai_spawnarea_read #162 Rust-only session directives; the C++ build cannot replay the recording

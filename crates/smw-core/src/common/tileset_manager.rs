@@ -250,7 +250,8 @@ impl CTilesetManager {
         let mut m_tilesets: Vec<Box<CTileset>> = Vec::new();
         let mut found_tileset_names: HashSet<String> = HashSet::new();
 
-        let mut dir = SubdirsIterator::new(convert_path_pack(g, "gfx/packs/tilesets", gfxPack) + "/");
+        let tilesets = convert_path_pack(g, "gfx/packs/tilesets", gfxPack) + "/";
+        let mut dir = SubdirsIterator::new(g, tilesets);
         while let Some(path) = dir.next() {
             let tileset = Box::new(CTileset::new(path));
             found_tileset_names.insert(tileset.name().to_string());
@@ -259,7 +260,8 @@ impl CTilesetManager {
 
         //Add tilesets from the Classic pack to fill the gaps
         if path_filename(gfxPack) != "Classic" {
-            dir = SubdirsIterator::new(convert_path(g, "gfx/packs/Classic/tilesets/"));
+            let classic = convert_path(g, "gfx/packs/Classic/tilesets/");
+            dir = SubdirsIterator::new(g, classic);
             while let Some(path) = dir.next() {
                 let name = path.file_name().map(|f| f.to_string_lossy().into_owned()).unwrap_or_default();
                 if !found_tileset_names.contains(&name) {
