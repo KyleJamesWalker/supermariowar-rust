@@ -322,13 +322,13 @@ impl MenuState {
         "unknown"
     }
 
-    /// Whether the current menu is `name`: a dump name, or `mode_settings` and `boss_settings`, which the dump calls
-    /// `unknown`.
-    pub fn harness_is(&self, name: &str) -> bool {
+    /// The names an `await` line can give the current menu: its dump name, and for `mode_settings` and
+    /// `boss_settings`, which the dump calls `unknown`, that name too.
+    pub fn harness_names(&self) -> Vec<&'static str> {
         match self.mCurrentMenu {
-            MenuId::ModeSettings(_) => name == "mode_settings" || name == "unknown",
-            MenuId::BossSettings => name == "boss_settings" || name == "unknown",
-            _ => self.harness_menu_name() == name,
+            MenuId::ModeSettings(_) => vec!["mode_settings", "unknown"],
+            MenuId::BossSettings => vec!["boss_settings", "unknown"],
+            _ => vec![self.harness_menu_name()],
         }
     }
 

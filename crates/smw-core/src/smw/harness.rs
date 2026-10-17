@@ -81,6 +81,8 @@ pub struct Harness {
     speed: f32,
     /// Frames the script's `await` lines have waited so far; later events and SMW_FRAMES move by it.
     shift: u32,
+    /// States and menus current since the last satisfied `await`, so one that has already passed still satisfies it.
+    seen: Vec<&'static str>,
     rec: Option<Recorder>,
     segment: Option<Segment>,
     spawn_events: Vec<String>,
@@ -126,6 +128,7 @@ impl Harness {
             audible: false,
             speed: 1.0,
             shift: 0,
+            seen: Vec::new(),
             rec: None,
             segment: None,
             spawn_events: Vec::new(),
@@ -581,6 +584,7 @@ pub fn frame_start(g: &mut Game) {
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::pad::phase(4);
 
+    note_seen(g);
     let frame = h(gp.get()).frame;
     while let Some(ev) = h(gp.get()).events.get(h(gp.get()).nextEvent).cloned() {
         match due(g, &ev, frame) {
@@ -613,6 +617,7 @@ fn due(g: &mut Game, ev: &ReplayEvent, frame: u32) -> Due {
     }
     if ev.kind == EventKind::Await {
         if awaited(g, &ev.keyName) {
+            h(g).seen.clear();
             return Due::Past;
         }
         h(g).shift = frame + 1 - ev.frame;
@@ -625,10 +630,24 @@ fn due(g: &mut Game, ev: &ReplayEvent, frame: u32) -> Due {
     }
 }
 
-/// Whether `name` is the current state (`state_name`) or, in the menu, the current menu (`MenuState::harness_is`).
+/// Whether `name`, a state (`state_name`) or a menu (`MenuState::harness_names`), has been current since the last
+/// satisfied `await`.
 fn awaited(g: &mut Game, name: &str) -> bool {
+    note_seen(g);
+    h(g).seen.contains(&name)
+}
+
+fn note_seen(g: &mut Game) {
     let state = state_name(g);
-    state == name || (state == "menu" && MenuState::instance(g).harness_is(name))
+    let mut names = vec![state];
+    if state == "menu" {
+        names.extend(MenuState::instance(g).harness_names());
+    }
+    for name in names {
+        if !h(g).seen.contains(&name) {
+            h(g).seen.push(name);
+        }
+    }
 }
 
 /// Blocking waits take the next replay event immediately instead of waiting for input.

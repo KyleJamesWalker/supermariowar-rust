@@ -229,8 +229,10 @@ const progress = (page) =>
     page.evaluate(`(() => {
         try {
             const dump = Module.FS.readFile('/dump.txt', { encoding: 'utf8' });
-            return { frames: (dump.match(/^F /gm) || []).length, gameplay: (dump.match(/^F \\d+ gameplay/gm) || []).length };
-        } catch { return { frames: 0, gameplay: 0 }; }
+            let done = false;
+            try { done = /^#@ frames=/m.test(Module.FS.readFile('/rec.txt', { encoding: 'utf8' })); } catch {}
+            return { frames: (dump.match(/^F /gm) || []).length, gameplay: (dump.match(/^F \\d+ gameplay/gm) || []).length, done };
+        } catch { return { frames: 0, gameplay: 0, done: false }; }
     })()`);
 
 const play = async (game) => {
@@ -251,7 +253,8 @@ const play = async (game) => {
             await Promise.all(pages.map((p) => p.screenshot(join(dir, `${p.role}.png`))));
             shot = true;
         }
-        if (states.every((s) => s.frames >= frames)) break;
+        // A script's await lines run a session past `frames`; it is over once its recording has `#@ frames=`.
+        if (states.every((s) => s.done)) break;
         if (Date.now() - started > SCENARIO_MS) {
             console.error(`${game}: no result after ${SCENARIO_MS / 1000} s: ` + pages.map((p, i) => `${p.role} ${states[i].frames}/${frames} frames`).join(', '));
             timedOut = true;
@@ -293,7 +296,7 @@ const play = async (game) => {
     if (!ok) {
         for (const page of pages) console.error(`  last ${page.role} console lines:\n    ` + page.consoleLines.slice(-8).join('\n    '));
     }
-    if (ok) ok = await replayOffline(game, dir, frames, roles, recordings);
+    if (ok) ok = await replayOffline(game, dir, roles, recordings);
     console.log(`${game}: ${ok ? 'PASS' : 'FAIL'} (${dir})`);
     return ok;
 };
@@ -317,12 +320,13 @@ const frameRange = (dump, start, end) => {
 
 // Each client's recording, replayed with no relay, and its first match's clip: their dumps must equal the live
 // client's, frame for frame.
-const replayOffline = async (game, dir, frames, roles, recordings) => {
+const replayOffline = async (game, dir, roles, recordings) => {
     const pages = [];
     const runs = [];
     for (const r of roles) {
-        runs.push({ role: r.role, what: 'offline replay', count: frames, range: (dump) => dump.split('\n') });
-        pages.push(await openPage({ ...r, role: `${r.role}.replay`, replay: recordings[r.role], frames, offline: true, env: { SMW_NOLIMIT: '1' } }));
+        const recorded = Number(recordings[r.role].match(/^#@ frames=(\d+)$/m)[1]);
+        runs.push({ role: r.role, what: 'offline replay', count: recorded, range: (dump) => dump.split('\n') });
+        pages.push(await openPage({ ...r, role: `${r.role}.replay`, replay: recordings[r.role], frames: recorded, offline: true, env: { SMW_NOLIMIT: '1' } }));
         let clip;
         try {
             clip = clipOf(dir, r.role);
@@ -331,7 +335,7 @@ const replayOffline = async (game, dir, frames, roles, recordings) => {
             return false;
         }
         runs.push({ role: r.role, what: `match 1 clip (frames ${clip.start}-${clip.end - 1})`, count: clip.end - clip.start, range: (dump) => frameRange(dump, clip.start, clip.end) });
-        pages.push(await openPage({ ...r, role: `${r.role}.clip`, replay: clip.text, frames, offline: true, env: { SMW_NOLIMIT: '1' } }));
+        pages.push(await openPage({ ...r, role: `${r.role}.clip`, replay: clip.text, frames: recorded, offline: true, env: { SMW_NOLIMIT: '1' } }));
     }
     const started = Date.now();
     for (;;) {
