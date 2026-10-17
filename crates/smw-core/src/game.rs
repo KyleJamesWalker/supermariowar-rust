@@ -18,7 +18,7 @@ use crate::common::editor_harness::EditorHarness;
 use crate::common::game_values::CGameValues;
 use crate::common::gfx::gfx_sdl::GraphicsSDL;
 use crate::common::gfx::gfx_palette::gfxPalette;
-use crate::globals::{Aliased, Global, Ptr};
+use crate::globals::{Aliased, Global, Owned, Ptr};
 use crate::leveleditor::leveleditor::LevelEditorState;
 use crate::smw::gamemodes::{bonus_house::CGM_Bonus, mini_boss::CGM_Boss_MiniGame, mini_boxes::CGM_Boxes_MiniGame, mini_pipe::CGM_Pipe_MiniGame};
 use crate::smw::fps_limiter::FPSLimiter;
@@ -68,20 +68,20 @@ pub struct Game {
     pub tourlist: Ptr<TourList>,
     pub worldlist: Ptr<WorldList>,
     pub rm: Ptr<CResourceManager>,
-    pub g_map: Ptr<CMap>,
+    pub g_map: Owned<CMap>,
     pub g_tilesetmanager: Ptr<CTilesetManager>,
     pub noncolcontainer: CObjectContainer,
     pub objectcontainer: [CObjectContainer; 3],
     pub controls: crate::common::uicontrol::Controls,
     pub eyecandy: [CEyecandyContainer; 3],
     pub players: crate::smw::players::Players,
-    pub score: [Ptr<CScore>; 4],
+    pub score: [Global<CScore>; 4],
     pub score_cnt: i16,
-    pub gamemodes: [Ptr<dyn CGameModeTrait>; GAMEMODE_LAST as usize],
-    pub bonushousemode: Ptr<CGM_Bonus>,
-    pub pipegamemode: Ptr<CGM_Pipe_MiniGame>,
-    pub bossgamemode: Ptr<CGM_Boss_MiniGame>,
-    pub boxesgamemode: Ptr<CGM_Boxes_MiniGame>,
+    pub gamemodes: [Owned<dyn CGameModeTrait>; GAMEMODE_LAST as usize],
+    pub bonushousemode: Owned<CGM_Bonus>,
+    pub pipegamemode: Owned<CGM_Pipe_MiniGame>,
+    pub bossgamemode: Owned<CGM_Boss_MiniGame>,
+    pub boxesgamemode: Owned<CGM_Boxes_MiniGame>,
     pub currentgamemode: i16,
     pub rng: RngState,
     pub sfx: SfxState,
@@ -172,12 +172,42 @@ impl Game {
         self.controls.get(id).unwrap_or_else(|| panic!("no control {:?}", id))
     }
 
+    pub fn player_keys(&self, keys: crate::smw::player::PlayerKeys) -> &'static mut crate::common::input::COutputControl {
+        let controls: *const crate::common::input::COutputControl = match keys {
+            crate::smw::player::PlayerKeys::Local(i) => &self.game_values.playerInput.outputControls[i as usize],
+            crate::smw::player::PlayerKeys::Net(i) => &self.netplay.netPlayerInput.outputControls[i as usize],
+        };
+        unsafe { &mut *(controls as *mut crate::common::input::COutputControl) }
+    }
+
+    /// The current game mode, or null before one is chosen.
+    pub fn mode(&self) -> Ptr<dyn CGameModeTrait> {
+        use crate::common::game_mode::ModeId;
+        let dyn_mode = |p: *mut dyn CGameModeTrait| Ptr::from_raw(p);
+        match self.game_values.gamemode {
+            None => Ptr::null(),
+            Some(ModeId::Standard(i)) => self.gamemodes[i as usize].ptr(),
+            Some(ModeId::BonusHouse) => dyn_mode(self.bonushousemode.ptr().as_ptr()),
+            Some(ModeId::Pipe) => dyn_mode(self.pipegamemode.ptr().as_ptr()),
+            Some(ModeId::Boss) => dyn_mode(self.bossgamemode.ptr().as_ptr()),
+            Some(ModeId::Boxes) => dyn_mode(self.boxesgamemode.ptr().as_ptr()),
+        }
+    }
+
+    /// The input configuration `slot` names, or null.
+    pub fn input_control(&self, slot: Option<(u8, u8)>) -> Ptr<crate::common::input::CInputPlayerControl> {
+        match slot {
+            Some((set, kind)) => Ptr::from_raw(&self.game_values.inputConfiguration[set as usize][kind as usize] as *const _ as *mut _),
+            None => Ptr::null(),
+        }
+    }
+
     pub fn map_block(&self, x: i16, y: i16) -> Ptr<dyn crate::common::io_block::IO_BlockTrait> {
         self.g_map.block(&self.noncolcontainer, x, y)
     }
 
     pub fn update_tile_gap(&mut self, i: i16, j: i16) {
-        let mut map = self.g_map;
+        let mut map = self.g_map.ptr();
         map.update_tile_gap(&self.noncolcontainer, i, j);
     }
 
@@ -219,20 +249,20 @@ impl Game {
             tourlist: Ptr::null(),
             worldlist: Ptr::null(),
             rm: Ptr::null(),
-            g_map: Ptr::null(),
+            g_map: Owned::empty(),
             g_tilesetmanager: Ptr::null(),
             noncolcontainer: CObjectContainer::new(3),
             objectcontainer: [CObjectContainer::new(0), CObjectContainer::new(1), CObjectContainer::new(2)],
             controls: crate::common::uicontrol::Controls::new(),
             eyecandy: [CEyecandyContainer::new(), CEyecandyContainer::new(), CEyecandyContainer::new()],
             players: crate::smw::players::Players::new(),
-            score: [Ptr::null(); 4],
+            score: [Global::uninit(), Global::uninit(), Global::uninit(), Global::uninit()],
             score_cnt: 0,
-            gamemodes: [Ptr::null(); GAMEMODE_LAST as usize],
-            bonushousemode: Ptr::null(),
-            pipegamemode: Ptr::null(),
-            bossgamemode: Ptr::null(),
-            boxesgamemode: Ptr::null(),
+            gamemodes: [const { Owned::empty() }; GAMEMODE_LAST as usize],
+            bonushousemode: Owned::empty(),
+            pipegamemode: Owned::empty(),
+            bossgamemode: Owned::empty(),
+            boxesgamemode: Owned::empty(),
             currentgamemode: 0,
             rng: RngState::new(),
             sfx: SfxState::new(),

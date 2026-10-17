@@ -127,7 +127,7 @@ impl MI_BonusWheel {
         if fTournament {
             self.iWinningTeam = g.game_values.tournamentwinner;
         } else {
-            self.iWinningTeam = g.game_values.gamemode.gm().winningteam;
+            self.iWinningTeam = g.mode().gm().winningteam;
         }
 
         //Randomly display the powerups around the ring

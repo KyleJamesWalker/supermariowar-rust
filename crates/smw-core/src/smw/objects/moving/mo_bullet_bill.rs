@@ -129,7 +129,7 @@ impl MO_BulletBill {
         let mut gp = g.ptr();
         let mut p = player;
         g.player(p).set_yi((self.iy as i32 - PH - 1) as i16);
-        g.player(p).bouncejump();
+        g.player(p).bouncejump(g);
         g.player(p).collisions.checktop(g, g.player(player));
         g.player(p).platform = PlatformId::NONE;
 

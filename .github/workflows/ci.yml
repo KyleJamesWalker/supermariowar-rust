@@ -307,7 +307,7 @@ jobs:
           tools/parity.sh > game.log || status=$?
           sed -n '/^=== summary/,$p' game.log > game-summary.txt
           {
-            echo "### Game parity vs the committed goldens (${{ matrix.os }})"
+            echo "### Game parity vs the committed Rust goldens (${{ matrix.os }})"
             echo "$(grep -c 'MATCH all' game-summary.txt) of $(($(wc -l < game-summary.txt) - 1)) dumps match"
             echo '```'
             grep -v -E 'MATCH all .* shots ([0-9]+)/\1$' game-summary.txt
@@ -347,7 +347,7 @@ jobs:
           tools/editor_parity.sh > editor.log || status=$?
           sed -n '/^=== summary/,$p' editor.log > summary.txt
           {
-            echo "### Editor parity vs the committed goldens (${{ matrix.os }})"
+            echo "### Editor parity vs the committed Rust goldens (${{ matrix.os }})"
             echo '```'
             grep -v -E 'dump MATCH, shots ([0-9]+)/\1, files ([0-9]+)/\2$' summary.txt
             echo '```'
@@ -409,18 +409,18 @@ jobs:
           tools/parity.sh > game-cpp.log || status=$?
           sed -n '/^=== summary/,$p' game-cpp.log > summary.txt
           {
-            echo "### Game parity vs the C++ built here (${{ matrix.os }})"
+            echo "### Game parity vs the C++ built here (${{ matrix.os }}, report-only)"
             echo "$(grep -c 'MATCH all' summary.txt) of $(($(wc -l < summary.txt) - 1)) dumps match"
             echo '```'
             grep -v -E 'MATCH all .* shots ([0-9]+)/\1$' summary.txt
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
           cat game-cpp.log
-          if [[ $RUNNER_OS == Linux && $status -ne 0 ]]; then
-            echo "::notice::The C++ reference built on Linux diverges from its macOS goldens; this comparison is report-only on Linux."
-            exit 0
-          fi
-          exit $status
+          expected="$(grep -v '^#' tools/cpp_divergences.txt | cut -d' ' -f1)"
+          for name in $(grep -E '^[^ ]+ +DIVERGE' summary.txt | awk '{print $1}'); do
+            grep -qx "$name" <<< "$expected" || echo "::warning::$name diverges from the C++ reference and is not in tools/cpp_divergences.txt"
+          done
+          echo "::notice::Report-only: the Rust goldens gate; this compares with the C++ reference built here (status $status)."
 
       - name: Editor parity vs the C++ built here
         if: ${{ !cancelled() && matrix.check == 'cpp' }}
@@ -432,17 +432,13 @@ jobs:
           status=0
           tools/editor_parity.sh > editor-cpp.log || status=$?
           {
-            echo "### Editor parity vs the C++ built here (${{ matrix.os }})"
+            echo "### Editor parity vs the C++ built here (${{ matrix.os }}, report-only)"
             echo '```'
             sed -n '/^=== summary/,$p' editor-cpp.log | grep -v -E 'dump MATCH, shots ([0-9]+)/\1, files ([0-9]+)/\2$'
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
           cat editor-cpp.log
-          if [[ $RUNNER_OS == Linux && $status -ne 0 ]]; then
-            echo "::notice::The C++ reference built on Linux diverges from its macOS goldens; this comparison is report-only on Linux."
-            exit 0
-          fi
-          exit $status
+          echo "::notice::Report-only: the Rust goldens gate; this compares with the C++ reference built here (status $status)."
 
       - name: Segment check
         if: matrix.check == 'segment'
@@ -466,7 +462,7 @@ jobs:
           tools/parity_sweep.sh > sweep.log || status=$?
           sed -n '/^=== summary/,$p' sweep.log > summary.txt
           {
-            echo "### Map sweep vs the committed goldens (${{ matrix.os }}, shard $SHARD)"
+            echo "### Map sweep vs the committed Rust goldens (${{ matrix.os }}, shard $SHARD)"
             echo "$(grep -c 'MATCH all' summary.txt) of $(($(wc -l < summary.txt) - 1)) dumps match"
             echo '```'
             grep -v -E 'MATCH all .* shots ([0-9]+)/\1$' summary.txt
@@ -738,7 +734,7 @@ jobs:
           retention-days: 7
 
   determinism:
-    name: determinism (report-only)
+    name: determinism
     needs: [parity, web, headless-aarch64]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
@@ -750,12 +746,14 @@ jobs:
           path: ${{ runner.temp }}/determinism
           merge-multiple: true
       - name: Compare the manifests
-        continue-on-error: true
         run: |
           shopt -s nullglob
-          python3 tools/determinism.py compare "$RUNNER_TEMP/determinism-summary.md" "$RUNNER_TEMP"/determinism/determinism-*.txt
+          status=0
+          python3 tools/determinism.py compare "$RUNNER_TEMP/determinism-summary.md" "$RUNNER_TEMP"/determinism/determinism-*.txt || status=$?
           cat "$RUNNER_TEMP/determinism-summary.md" >> "$GITHUB_STEP_SUMMARY"
+          exit $status
       - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
         with:
           name: determinism-summary
           path: |

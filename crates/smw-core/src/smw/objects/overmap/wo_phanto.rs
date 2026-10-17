@@ -111,12 +111,12 @@ impl CObjectTrait for OMO_Phanto {
         }
 
         // Chase player or move off screen if there is no player holding the key
-        if g.game_values.gamemode.gamemode == game_mode_chase {
-            let chasemode: &mut CGM_Chase = g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Chase>().unwrap();
+        if g.mode().gamemode == game_mode_chase {
+            let chasemode: &mut CGM_Chase = g.mode().get().as_any().downcast_mut::<CGM_Chase>().unwrap();
 
             let player: PlayerId = chasemode.get_key_holder(g, );
 
-            if !g.game_values.gamemode.gameover && !player.is_none() {
+            if !g.mode().gameover && !player.is_none() {
                 // Chase the player
                 let mut fWrap = false;
                 if (g.player(player).ix as i32 - self.ix as i32).abs() > 320 {
@@ -191,15 +191,15 @@ impl CObjectTrait for OMO_Phanto {
             if self.iType == 2 {
                 g.player(player).kill_player_map_hazard(g, false, KillStyle::Phanto, false, -1);
                 return true;
-            } else if g.game_values.gamemode.gamemode == game_mode_chase {
-                let chasemode: &mut CGM_Chase = g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Chase>().unwrap();
+            } else if g.mode().gamemode == game_mode_chase {
+                let chasemode: &mut CGM_Chase = g.mode().get().as_any().downcast_mut::<CGM_Chase>().unwrap();
                 let keyholder: PlayerId = chasemode.get_key_holder(g, );
 
                 if keyholder == player {
                     g.player(player).kill_player_map_hazard(g, false, KillStyle::Phanto, false, -1);
 
-                    if !g.game_values.gamemode.gameover && self.iType == 1 {
-                        g.player(player).score().adjust_score(g, -10);
+                    if !g.mode().gameover && self.iType == 1 {
+                        g.player(player).score(g).adjust_score(g, -10);
                         if_sound_on_play(g, &mut gp.rm.sfx_stun);
                     }
 

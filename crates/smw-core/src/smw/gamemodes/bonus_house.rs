@@ -22,13 +22,14 @@ use std::any::Any;
 pub struct CGM_Bonus {
     pub cgame_mode: CGameMode,
 
-    tsTourStop: Ptr<TourStop>,
+    /// Index into `game_values.tourstops`.
+    tsTourStop: usize,
 }
 impl_base!(CGM_Bonus => cgame_mode: CGameMode);
 
 impl CGM_Bonus {
     pub fn new() -> Self {
-        let mut this = CGM_Bonus { cgame_mode: CGameMode::new(), tsTourStop: Ptr::null() };
+        let mut this = CGM_Bonus { cgame_mode: CGameMode::new(), tsTourStop: 0 };
         this.gamemode = game_mode_bonus;
         this.setup_mode_strings("Bonus", "", 0);
         this
@@ -58,14 +59,14 @@ impl CGameModeTrait for CGM_Bonus {
         g.game_values.worldskipscoreboard = true;
 
         //Add number of treasure chests to the bonus house
-        self.tsTourStop = g.game_values.tourstops[g.game_values.tourstopcurrent];
-        let iNumBonuses: i16 = self.tsTourStop.iNumBonuses;
+        self.tsTourStop = g.game_values.tourstopcurrent;
+        let iNumBonuses: i16 = g.game_values.tourstops[self.tsTourStop].iNumBonuses;
 
         let mut fChestUsed: [bool; MAX_BONUS_CHESTS as usize] = [false; MAX_BONUS_CHESTS as usize];
         let mut iChestOrder: [i16; MAX_BONUS_CHESTS as usize] = [0; MAX_BONUS_CHESTS as usize];
         let mut iNumChests: i16 = 0;
 
-        if self.tsTourStop.iBonusType == 0 {
+        if g.game_values.tourstops[self.tsTourStop].iBonusType == 0 {
             for iChest in 0..iNumBonuses {
                 iChestOrder[iNumChests as usize] = iChest;
                 iNumChests += 1;
@@ -97,7 +98,7 @@ impl CGameModeTrait for CGM_Bonus {
 
         //float dx = 288.0f - (dSpacing * (float)(iNumBonuses - 1) / 2.0f);
         for iChest in 0..iNumBonuses {
-            let iBonus = self.tsTourStop.wsbBonuses[iChestOrder[iChest as usize] as usize].iBonus;
+            let iBonus = g.game_values.tourstops[self.tsTourStop].wsbBonuses[iChestOrder[iChest as usize] as usize].iBonus;
             let obj = Ptr::new_box(MO_BonusHouseChest::new(g, rm.spr_worldbonushouse, Vec2s::new(dx as i16, 384), iBonus));
             gp.objectcontainer[0].add(g, obj);
             dx += dSpacing + 64.0f32;
@@ -112,14 +113,14 @@ impl CGameModeTrait for CGM_Bonus {
         //Draw Bonus House Title
         gp.rm.sprite(gp.rm.menu_plain_field).draw_src(g, 0, 0, &Rect { x: 0, y: 0, w: App::screenWidth / 2, h: 32 });
         gp.rm.sprite(gp.rm.menu_plain_field).draw_src(g, App::screenWidth / 2, 0, &Rect { x: 192, y: 0, w: App::screenWidth / 2, h: 32 });
-        gp.rm.game_font_large.draw_centered(g, App::screenWidth / 2, 5, &self.tsTourStop.szName);
+        gp.rm.game_font_large.draw_centered(g, App::screenWidth / 2, 5, &g.game_values.tourstops[self.tsTourStop].szName.clone());
 
         //Draw Bonus House Text
-        if self.tsTourStop.iBonusTextLines > 0 {
+        if g.game_values.tourstops[self.tsTourStop].iBonusTextLines > 0 {
             gp.rm.sprite(gp.rm.spr_worldbonushouse).draw_src(g, 128, 128, &Rect { x: 0, y: 64, w: 384, h: 128 });
 
-            for iTextLine in 0..self.tsTourStop.iBonusTextLines {
-                gp.rm.game_font_large.draw_chop_centered(g, App::screenWidth / 2, 132 + 24 * iTextLine as i32, 372, &self.tsTourStop.szBonusText[iTextLine as usize]);
+            for iTextLine in 0..g.game_values.tourstops[self.tsTourStop].iBonusTextLines {
+                gp.rm.game_font_large.draw_chop_centered(g, App::screenWidth / 2, 132 + 24 * iTextLine as i32, 372, &g.game_values.tourstops[self.tsTourStop].szBonusText[iTextLine as usize].clone());
             }
         }
     }

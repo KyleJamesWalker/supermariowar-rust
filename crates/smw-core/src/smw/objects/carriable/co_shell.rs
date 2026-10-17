@@ -178,7 +178,7 @@ impl CO_Shell {
             self.stop(g);
 
             g.player(player).set_yi((self.iy as i32 - PH - 1) as i16);
-            g.player(player).bouncejump();
+            g.player(player).bouncejump(g);
             let p = g.player(player);
             g.player(player).collisions.checktop(g, p);
             g.player(player).platform = PlatformId::NONE;
@@ -193,7 +193,7 @@ impl CO_Shell {
                 self.fSmoking = false;
 
                 g.player(player).set_yi((self.iy as i32 - PH - 1) as i16);
-                g.player(player).bouncejump();
+                g.player(player).bouncejump(g);
                 let p = g.player(player);
                 g.player(player).collisions.checktop(g, p);
                 g.player(player).platform = PlatformId::NONE;

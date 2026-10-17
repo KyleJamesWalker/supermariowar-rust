@@ -512,7 +512,7 @@ impl UI_ControlTrait for MI_TeamSelect {
                 if playerInput.outputControls[p].menu_select().fPressed {
                     self.fReady[p] = true;
 
-                    if self.fAllReady && (DEVICE_KEYBOARD != playerInput.inputControls[p].iDevice || iPlayer == 0) {
+                    if self.fAllReady && (DEVICE_KEYBOARD != g.input_control(playerInput.inputControls[p]).iDevice || iPlayer == 0) {
                         self.fModifying = false;
                         println!("MI_TeamSelect::SendInput MENU_CODE_TO_GAME_SETUP_MENU");
                         return MENU_CODE_TO_GAME_SETUP_MENU;
@@ -531,17 +531,17 @@ impl UI_ControlTrait for MI_TeamSelect {
                     if g.game_values.playercontrol[p] > 0 && self.fReady[p] {
                         self.fReady[p] = false;
                         self.fAllReady = false;
-                    } else if DEVICE_KEYBOARD != playerInput.inputControls[p].iDevice || iPlayer == 0 {
+                    } else if DEVICE_KEYBOARD != g.input_control(playerInput.inputControls[p]).iDevice || iPlayer == 0 {
                         self.fModifying = false;
                         return MENU_CODE_BACK_TO_MATCH_SELECTION_MENU;
                     }
                 }
 
-                if DEVICE_KEYBOARD != playerInput.inputControls[p].iDevice {
+                if DEVICE_KEYBOARD != g.input_control(playerInput.inputControls[p]).iDevice {
                     let team = self.get_team(iPlayer);
                     gfx_setjoystickteamcolor(
                         g,
-                        playerInput.inputControls[p].iDevice as i32,
+                        g.input_control(playerInput.inputControls[p]).iDevice as i32,
                         team,
                         if self.fReady[p] { 1.0f32 } else { 0.5f32 },
                     );

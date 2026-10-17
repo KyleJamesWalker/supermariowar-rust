@@ -52,7 +52,7 @@ impl CObjectTrait for PU_ExtraGuyPowerup {
     fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut gp = g.ptr();
         if self.state > 0 {
-            gp.game_values.gamemode.playerextraguy(g, player, self.iType);
+            gp.mode().playerextraguy(g, player, self.iType);
             if_sound_on_play(g, &mut gp.rm.sfx_extraguysound);
 
             let iSrcY = ((if self.iType == 5 { 3 } else { self.iType as i32 - 1 }) * 16) as i16;

@@ -113,9 +113,9 @@ impl CGameModeTrait for CGM_Tag {
                     self.counter = 0;
 
                     if self.fReverseScoring {
-                        g.player(tagged).score().adjust_score(g, 1);
+                        g.player(tagged).score(g).adjust_score(g, 1);
                     } else {
-                        g.player(tagged).score().adjust_score(g, -1);
+                        g.player(tagged).score(g).adjust_score(g, -1);
                     }
                 }
             }
@@ -131,7 +131,7 @@ impl CGameModeTrait for CGM_Tag {
             }
 
             let mut tagged = self.m_tagged;
-            if g.player(tagged).score().score <= 0 {
+            if g.player(tagged).score(g).score <= 0 {
                 remove_team(g, g.player(tagged).get_team_id());
                 self.m_tagged = PlayerId::NONE;
             }
@@ -162,15 +162,15 @@ impl CGameModeTrait for CGM_Tag {
 
         if !self.gameover {
             if self.fReverseScoring {
-                g.player(other).score().adjust_score(g, 5);
+                g.player(other).score(g).adjust_score(g, 5);
                 return PlayerKillType::Normal;
             } else {
-                g.player(other).score().adjust_score(g, -5);
+                g.player(other).score(g).adjust_score(g, -5);
             }
 
             let mut countscore: i16 = 0;
             for k in 0..g.score_cnt {
-                if Ptr::from_mut(g.player(inflictor).score()) == g.score[k as usize] {
+                if g.player(inflictor).score_slot == (k as usize) as usize {
                     continue;
                 }
 
@@ -181,8 +181,8 @@ impl CGameModeTrait for CGM_Tag {
                 self.playwarningsound(g);
             }
 
-            if g.player(other).score().score <= 0 {
-                g.player(other).score().set_score(g, 0);
+            if g.player(other).score(g).score <= 0 {
+                g.player(other).score(g).set_score(g, 0);
 
                 remove_team(g, g.player(other).get_team_id());
                 return PlayerKillType::Removed;
@@ -197,10 +197,10 @@ impl CGameModeTrait for CGM_Tag {
 
         if !self.gameover {
             if self.fReverseScoring {
-                g.player(player).score().adjust_score(g, 5);
+                g.player(player).score(g).adjust_score(g, 5);
                 return PlayerKillType::Normal;
             } else {
-                g.player(player).score().adjust_score(g, -5);
+                g.player(player).score(g).adjust_score(g, -5);
             }
 
             let playwarning = tag_warning_needed(g, self.goal);
@@ -209,8 +209,8 @@ impl CGameModeTrait for CGM_Tag {
                 self.playwarningsound(g);
             }
 
-            if g.player(player).score().score <= 0 {
-                g.player(player).score().set_score(g, 0);
+            if g.player(player).score(g).score <= 0 {
+                g.player(player).score(g).set_score(g, 0);
                 remove_team(g, g.player(player).get_team_id());
                 return PlayerKillType::Removed;
             }
@@ -222,9 +222,9 @@ impl CGameModeTrait for CGM_Tag {
     fn playerextraguy(&mut self, g: &mut Game, mut player: PlayerId, iType: i16) {
         if !self.gameover {
             if self.fReverseScoring {
-                g.player(player).score().adjust_score(g, (-10 * iType as i32) as i16);
+                g.player(player).score(g).adjust_score(g, (-10 * iType as i32) as i16);
             } else {
-                g.player(player).score().adjust_score(g, (10 * iType as i32) as i16);
+                g.player(player).score(g).adjust_score(g, (10 * iType as i32) as i16);
             }
         }
     }
@@ -232,7 +232,7 @@ impl CGameModeTrait for CGM_Tag {
 
 fn tag_mode(g: &mut Game) -> Option<&'static mut CGM_Tag> {
     let mut gp = g.ptr();
-    gp.game_values.gamemode.get().as_any().downcast_mut::<CGM_Tag>()
+    gp.mode().get().as_any().downcast_mut::<CGM_Tag>()
 }
 
 pub fn net_reassign(g: &mut Game) {
