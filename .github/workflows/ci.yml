@@ -193,7 +193,7 @@ jobs:
       - name: Pack
         run: |
           exe="${{ runner.os == 'Windows' && '.exe' || '' }}"
-          tar -cf rust-bin.tar -C target/release "smw$exe" "leveleditor$exe" "worldeditor$exe"
+          tar -cf rust-bin.tar -C target/release "smw$exe" "smw_replay$exe" "leveleditor$exe" "worldeditor$exe"
           if [[ $RUNNER_OS != Windows ]]; then
             tar -cf cpp-ref.tar -C "$SMW_REF_DIR" build/smw build/smw-leveledit build/smw-worldedit
           fi
@@ -315,6 +315,26 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           cat game.log
           [[ -s game-summary.txt ]] || exit 1
+          exit $status
+
+      - name: Headless parity
+        if: matrix.check == 'goldens'
+        env:
+          SMW_NO_BUILD: '1'
+          PARITY_OUT: ${{ runner.temp }}/parity-headless/game
+        run: |
+          status=0
+          SMW_BIN="$PWD/target/release/smw_replay" tools/parity.sh > headless.log || status=$?
+          sed -n '/^=== summary/,$p' headless.log > headless-summary.txt
+          {
+            echo "### Headless parity vs the committed goldens (${{ matrix.os }})"
+            echo "$(grep -c 'MATCH all' headless-summary.txt) of $(($(wc -l < headless-summary.txt) - 1)) dumps match"
+            echo '```'
+            grep -v -E 'MATCH all .* shots ([0-9]+)/\1$' headless-summary.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat headless.log
+          [[ -s headless-summary.txt ]] || exit 1
           exit $status
 
       - name: Editor parity
@@ -449,6 +469,9 @@ jobs:
           args=()
           for suite in ${{ matrix.suites }}; do args+=("$suite" "$RUNNER_TEMP/parity/$suite"); done
           python3 tools/determinism.py manifest "$LABEL" "${args[@]}" > "$RUNNER_TEMP/determinism-$LABEL-${{ matrix.check }}.txt"
+          if [[ -d $RUNNER_TEMP/parity-headless ]]; then
+            python3 tools/determinism.py manifest "headless-${{ matrix.os }}" game "$RUNNER_TEMP/parity-headless/game" > "$RUNNER_TEMP/determinism-headless-${{ matrix.os }}.txt"
+          fi
 
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() && matrix.suites }}
@@ -459,11 +482,20 @@ jobs:
           retention-days: 7
 
       - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() && matrix.check == 'goldens' }}
+        with:
+          name: determinism-headless-${{ matrix.os }}
+          path: ${{ runner.temp }}/determinism-headless-${{ matrix.os }}.txt
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - uses: actions/upload-artifact@v7
         if: failure() && !matrix.shard
         with:
           name: parity-${{ matrix.os }}-${{ matrix.check }}
           path: |
             ${{ runner.temp }}/parity
+            ${{ runner.temp }}/parity-headless
             *.log
           retention-days: 7
 

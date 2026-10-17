@@ -615,6 +615,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "smw_replay"
+version = "0.1.0"
+dependencies = [
+ "smw-core",
+ "smw-headless",
+]
+
+[[package]]
 name = "smw_server"
 version = "0.1.0"
 dependencies = [
