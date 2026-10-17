@@ -41,7 +41,7 @@ fn main() {
         gfx_init(gp.get(), 640, 480, false);
         gp.blitdest = gp.screen;
         gp.rm = Ptr::new_box(CResourceManager::new());
-        gp.g_map = Ptr::from_box(CMap::new());
+        gp.g_map.set(CMap::new());
         gp.filterslist = Ptr::new_box(FiltersList::new(g));
         gp.skinlist = Ptr::new_box(SkinList::new(gp.get()));
         gp.menugraphicspacklist = Ptr::new_box(GraphicsList::new(g));

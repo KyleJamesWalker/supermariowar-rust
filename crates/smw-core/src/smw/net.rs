@@ -279,7 +279,7 @@ pub fn draw_match_preview(g: &mut Game) {
     gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, 144, 364, &Rect { x: 0, y: 464, w: 336, h: 16 });
     gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, 480, 364, &Rect { x: 496, y: 464, w: 16, h: 16 });
 
-    let gm = g.game_values.gamemode;
+    let gm = g.mode();
     let mut lines = vec![gm.szModeName.clone()];
     if !gm.szGoalName.is_empty() {
         lines.push(if gm.goal < 0 { format!("{}: Unlimited", gm.szGoalName) } else { format!("{}: {}", gm.szGoalName, gm.goal) });
@@ -499,8 +499,8 @@ impl NetClient {
     pub fn send_create_room_message(&mut self, g: &mut Game) {
         let mut msg = pkgs::NewRoom::with(&g.netplay.newroom_name, &g.netplay.newroom_password);
         msg.gamemodeID = g.currentgamemode as u8;
-        g.game_values.gamemode = g.gamemodes[g.currentgamemode as usize];
-        msg.gamemodeGoal = g.game_values.gamemode.goal as u16;
+        g.game_values.gamemode = Some(crate::common::game_mode::ModeId::Standard((g.currentgamemode as usize) as u8));
+        msg.gamemodeGoal = g.mode().goal as u16;
 
         self.send_message_to_lobby_server(g, msg.as_bytes());
         g.netplay.operationInProgress = true;
@@ -583,11 +583,11 @@ impl NetClient {
         }
 
         g.currentgamemode = pkg.gamemodeID as i16;
-        g.game_values.gamemode = g.gamemodes[g.currentgamemode as usize];
-        g.game_values.gamemode.goal = pkg.gamemodeGoal as i16;
+        g.game_values.gamemode = Some(crate::common::game_mode::ModeId::Standard((g.currentgamemode as usize) as u8));
+        g.mode().goal = pkg.gamemodeGoal as i16;
 
-        let gm = g.gamemodes[g.currentgamemode as usize];
-        println!("  Game mode #{}: {} with {}: {}", g.currentgamemode, gm.get_mode_name(), gm.get_goal_name(), g.game_values.gamemode.goal);
+        let gm = g.gamemodes[g.currentgamemode as usize].ptr();
+        println!("  Game mode #{}: {} with {}: {}", g.currentgamemode, gm.get_mode_name(), gm.get_goal_name(), g.mode().goal);
 
         g.netplay.theHostIsMe = false;
         g.netplay.currentRoom.hostPlayerNumber = pkg.hostPlayerNumber;

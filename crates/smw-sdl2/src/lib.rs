@@ -7,6 +7,7 @@ mod audio;
 pub mod durations;
 pub mod events;
 pub mod input;
+pub mod keymap;
 #[cfg(not(target_os = "emscripten"))]
 mod pad;
 mod pads;

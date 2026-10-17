@@ -93,10 +93,10 @@ impl CObjectTrait for PU_CoinPowerup {
         let mut gp = g.ptr();
         let mut player = player;
         if self.state > 0 {
-            if g.game_values.gamemode.gamemode == game_mode_coins || g.game_values.gamemode.gamemode == game_mode_greed {
-                if !g.game_values.gamemode.gameover {
-                    g.player(player).score().adjust_score(g, self.iValue);
-                    gp.game_values.gamemode.check_winner(g, player);
+            if g.mode().gamemode == game_mode_coins || g.mode().gamemode == game_mode_greed {
+                if !g.mode().gameover {
+                    g.player(player).score(g).adjust_score(g, self.iValue);
+                    gp.mode().check_winner(g, player);
                 }
             }
 

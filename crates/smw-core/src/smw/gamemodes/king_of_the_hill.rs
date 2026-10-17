@@ -58,7 +58,7 @@ impl CGameModeTrait for CGM_KingOfTheHill {
 
     fn playerextraguy(&mut self, g: &mut Game, mut player: PlayerId, iType: i16) {
         if !self.gameover {
-            g.player(player).score().adjust_score(g, (5 * iType as i32) as i16);
+            g.player(player).score(g).adjust_score(g, (5 * iType as i32) as i16);
             self.check_winner(g, player);
         }
     }

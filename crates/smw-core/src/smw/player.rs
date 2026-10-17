@@ -110,6 +110,19 @@ pub enum PlayerDeathStyle {
     Shatter,
 }
 
+/// Which `COutputControl` a player reads: a local player's own, or a net player's.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum PlayerKeys {
+    Local(u8),
+    Net(u8),
+}
+
+impl Default for PlayerKeys {
+    fn default() -> Self {
+        PlayerKeys::Local(0)
+    }
+}
+
 /// All C++ members are `pub` so friend classes and components reach them by their C++ names.
 #[derive(Default)]
 pub struct CPlayer {
@@ -122,12 +135,13 @@ pub struct CPlayer {
     pub collisions: PlayerCollisions,
     pub awardeffects: PlayerAwardEffects,
 
-    pub playerKeys: Ptr<COutputControl>,
+    pub playerKeys: PlayerKeys,
     pub playerDevice: i16,
 
     pub tanookisuit: PlayerTanookiSuit,
 
-    pub score: Ptr<CScore>,
+    /// Index into `Game::score`.
+    pub score_slot: usize,
     pub killsinrow: i16,
     pub killsinrowinair: i16,
 
@@ -220,7 +234,8 @@ pub struct CPlayer {
     pub spawntimer: i16,
 
     pub waittimer: i16,
-    pub respawncounter: Ptr<i16>,
+    /// Index into `GameplayState::respawnCount`.
+    pub respawn_slot: usize,
 
     pub warpstatus: PlayerWarpStatus,
 
@@ -265,7 +280,7 @@ fn b(v: i32) -> bool {
 
 impl CScore {
     pub fn adjust_score(&mut self, g: &mut Game, iValue: i16) {
-        if g.game_values.gamemode.gameover || crate::smw::net_outcomes::score_locked(g) {
+        if g.mode().gameover || crate::smw::net_outcomes::score_locked(g) {
             return;
         }
 
@@ -314,7 +329,7 @@ pub fn player_killed_player_now(g: &mut Game, iKiller: i16, mut killed: PlayerId
     } else {
         g.player(killed).death_awards(g);
 
-        let iKillType = g.game_values.gamemode.get().playerkilledself(g, killed, style);
+        let iKillType = g.mode().get().playerkilledself(g, killed, style);
 
         if PlayerKillType::Normal == iKillType || (fForce && PlayerKillType::NonKill == iKillType) {
             g.player(killed).die(g, PlayerDeathStyle::Jump, false, fKillCarriedItem);
@@ -334,7 +349,7 @@ pub fn player_killed_player_now(g: &mut Game, iKiller: i16, mut killed: PlayerId
 
 fn gamemode_as<T: 'static>(g: &mut Game) -> Option<&'static mut T> {
     let mut gp = g.ptr();
-    let gm = gp.game_values.gamemode;
+    let gm = gp.mode();
     if gm.is_null() {
         return None;
     }
@@ -351,8 +366,8 @@ impl CPlayer {
         iSubTeamID: i16,
         iColorID: i16,
         nsprites: StripIds,
-        nscore: Ptr<CScore>,
-        sRespawnCounter: Ptr<i16>,
+        nscore: usize,
+        sRespawnCounter: usize,
         ai: Option<Box<dyn CPlayerAITrait>>,
     ) -> PlayerId {
         let id = g.players.insert(Box::new(CPlayer {
@@ -360,7 +375,7 @@ impl CPlayer {
             shyguy: false,
             globalID: iGlobalID,
             teamID: iTeamID,
-            score: nscore,
+            score_slot: nscore,
             localID: iLocalID,
             subTeamID: iSubTeamID,
             colorID: iColorID,
@@ -372,7 +387,7 @@ impl CPlayer {
             projectiles: 0,
             spawnradius: 0.0,
             spawnangle: 0.0,
-            respawncounter: sRespawnCounter,
+            respawn_slot: sRespawnCounter,
             powerupradius: 0.0,
             powerupangle: 0.0,
             fAcceptingItem: false,
@@ -415,17 +430,17 @@ impl CPlayer {
 
         if g.netplay.active {
             if this.globalID == g.netplay.remotePlayerNumber as i16 {
-                this.playerKeys = Ptr::from_mut(&mut g.game_values.playerInput.outputControls[0]);
+                this.playerKeys = PlayerKeys::Local(0);
                 println!("[net] Player {} reads local input.", this.globalID);
             } else {
-                this.playerKeys = Ptr::from_mut(&mut g.netplay.netPlayerInput.outputControls[this.globalID as usize]);
+                this.playerKeys = PlayerKeys::Net(this.globalID as u8);
                 println!("[net] Player {} reads network input.", this.globalID);
             }
         } else {
-            this.playerKeys = Ptr::from_mut(&mut g.game_values.playerInput.outputControls[this.globalID as usize]);
+            this.playerKeys = PlayerKeys::Local(this.globalID as u8);
         }
 
-        this.playerDevice = g.game_values.playerInput.inputControls[this.globalID as usize].iDevice;
+        this.playerDevice = g.input_control(g.game_values.playerInput.inputControls[this.globalID as usize]).iDevice;
         this.sprites = nsprites;
 
         //Do this so we have a valid x,y to say the player is so other items that init with the player will get valid positions
@@ -433,7 +448,7 @@ impl CPlayer {
         this.find_spawn_point(g);
 
         this.setup_new_player(g);
-        *this.respawncounter.get() = 0;
+        *this.respawncounter(g) = 0;
 
         g.game_values.unlocksecret1part1[this.globalID as usize] = false;
 
@@ -570,8 +585,8 @@ impl CPlayer {
         self.id
     }
 
-    pub fn keys(&self) -> &mut COutputControl {
-        self.playerKeys.get()
+    pub fn keys(&self, g: &Game) -> &'static mut COutputControl {
+        g.player_keys(self.playerKeys)
     }
 
     pub fn clip_edge(&self) -> ClipEdge {
@@ -625,7 +640,7 @@ impl CPlayer {
 
             if (g.game_values.flags.slowdownon != -1 && g.game_values.flags.slowdownon != self.teamID) || self.jail.is_active() {
                 maxVel = VELSLOWMOVING;
-            } else if self.keys().game_turbo().fDown {
+            } else if self.keys(g).game_turbo().fDown {
                 maxVel = VELTURBOMOVING + if isTagged { TAGGEDBOOST } else { 0.0 };
             } else {
                 maxVel = VELMOVING + if isTagged { TAGGEDBOOST } else { 0.0 };
@@ -729,8 +744,8 @@ impl CPlayer {
         self.inair && self.isready() && !self.superstomp.is_in_super_stomp_state()
     }
 
-    pub fn wants_to_super_stomp(&self) -> bool {
-        (self.keys().game_down().fPressed && self.playerDevice == DEVICE_KEYBOARD) || (self.keys().game_jump().fPressed && self.keys().game_down().fDown)
+    pub fn wants_to_super_stomp(&self, g: &Game) -> bool {
+        (self.keys(g).game_down().fPressed && self.playerDevice == DEVICE_KEYBOARD) || (self.keys(g).game_jump().fPressed && self.keys(g).game_down().fDown)
     }
 
     pub fn high_jumped(&self) -> bool {
@@ -753,9 +768,12 @@ impl CPlayer {
         self.superstomp.is_stomping()
     }
 
-    pub fn score(&mut self) -> &mut CScore {
-        debug_assert!(!self.score.is_null());
-        self.score.get()
+    pub fn score(&self, g: &mut Game) -> &'static mut CScore {
+        g.score[self.score_slot].as_ptr().get()
+    }
+
+    pub fn respawncounter(&self, g: &mut Game) -> &'static mut i16 {
+        &mut crate::smw::gs_gameplay::GameplayState::instance(g).respawnCount[self.respawn_slot]
     }
 
     pub fn set_corpse_type(&mut self, r#type: i16) {
@@ -766,16 +784,16 @@ impl CPlayer {
         debug_assert!(self.state == PlayerState::Waiting);
 
         //use 31 frames to do 0.5 second increments
-        if *self.respawncounter.get() > 0 && {
+        if *self.respawncounter(g) > 0 && {
             self.waittimer += 1;
             self.waittimer >= 31
         } {
             self.waittimer = 0;
-            *self.respawncounter.get() -= 1;
+            *self.respawncounter(g) -= 1;
         }
 
-        if *self.respawncounter.get() <= 0 {
-            *self.respawncounter.get() = 0;
+        if *self.respawncounter(g) <= 0 {
+            *self.respawncounter(g) = 0;
 
             if !net_random::event(g, Ev::Respawn, &[self.globalID as i32]) {
                 self.net_respawn(g);
@@ -949,19 +967,19 @@ impl CPlayer {
         match self.powerupused.unwrap() {
             PowerupType::PoisonMushroom => {}
             PowerupType::ExtraLife1 => {
-                g.game_values.gamemode.get().playerextraguy(g, this, 1);
+                g.mode().get().playerextraguy(g, this, 1);
                 if_sound_on_play(g, &mut gp.rm.sfx_extraguysound);
             }
             PowerupType::ExtraLife2 => {
-                g.game_values.gamemode.get().playerextraguy(g, this, 2);
+                g.mode().get().playerextraguy(g, this, 2);
                 if_sound_on_play(g, &mut gp.rm.sfx_extraguysound);
             }
             PowerupType::ExtraLife3 => {
-                g.game_values.gamemode.get().playerextraguy(g, this, 3);
+                g.mode().get().playerextraguy(g, this, 3);
                 if_sound_on_play(g, &mut gp.rm.sfx_extraguysound);
             }
             PowerupType::ExtraLife5 => {
-                g.game_values.gamemode.get().playerextraguy(g, this, 5);
+                g.mode().get().playerextraguy(g, this, 5);
                 if_sound_on_play(g, &mut gp.rm.sfx_extraguysound);
             }
             PowerupType::Fire => {
@@ -1090,7 +1108,7 @@ impl CPlayer {
             return self.invincibility.get_player_palette();
         }
         let this = self.id;
-        if g.game_values.gamemode.gamemode == game_mode_star {
+        if g.mode().gamemode == game_mode_star {
             let starmode = gamemode_as::<CGM_Star>(g).unwrap();
             let starmodetype = starmode.getcurrentmodetype();
             if starmodetype != StarStyle::Multi && starmode.isplayerstar(g, this) {
@@ -1115,7 +1133,7 @@ impl CPlayer {
         let mut gp = g.ptr();
         //only if on the ground and the jump key was released somewhen after it was pressed the last time
         let mut fFellThrough = false;
-        if self.keys().game_down().fDown {
+        if self.keys(g).game_down().fDown {
             //Check to see what the player is standing on
             self.fPrecalculatedY = self.fy + self.vely;
             let under_tile_y = ((self.fPrecalculatedY as i16 as i32 + PH) / TILESIZE) as i16;
@@ -1246,7 +1264,7 @@ impl CPlayer {
 
     pub fn try_releasing_powerup(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        if self.tanookisuit.is_statue() || g.game_values.gamemode.gamemode == game_mode_bonus {
+        if self.tanookisuit.is_statue() || g.mode().gamemode == game_mode_bonus {
             return;
         }
 
@@ -1338,7 +1356,7 @@ impl CPlayer {
         let mut item = g.carried(self.carriedItem);
         if !item.is_null() {
             let item = item.get();
-            if self.keys().game_down().fDown {
+            if self.keys(g).game_down().fDown {
                 MO_CarriedObjectTrait::drop(item, g);
             } else {
                 //Make sure the owner of the object we are kicking is this player
@@ -1372,9 +1390,9 @@ impl CPlayer {
                 }
             } else {
                 //otherwise allow them to rise and swoop while flying
-                if self.keys().game_down().fDown && self.vely < 1.0 {
+                if self.keys(g).game_down().fDown && self.vely < 1.0 {
                     self.vely += 1.0;
-                } else if !self.keys().game_down().fDown && self.vely > -1.0 {
+                } else if !self.keys(g).game_down().fDown && self.vely > -1.0 {
                     self.vely -= 1.5;
                     self.inair = true;
                 }
@@ -1409,13 +1427,13 @@ impl CPlayer {
                 if gp.game_values.cputurn == self.globalID {
                     self.cpu_think(g);
 
-                    if self.keys().game_jump().fDown || self.keys().game_left().fDown || self.keys().game_right().fDown {
+                    if self.keys(g).game_jump().fDown || self.keys(g).game_left().fDown || self.keys(g).game_right().fDown {
                         self.suicidetimer.reset();
                     }
                 }
                 //Let go of the jump button so that we clear "lockjump" so we can jump again when we hit the ground if we want to
                 if self.inair && self.vely > 0.0 && (self.powerup != 3 || self.lockjump) {
-                    self.keys().game_jump_mut().fDown = false;
+                    self.keys(g).game_jump_mut().fDown = false;
                 }
             }
         }
@@ -1428,7 +1446,7 @@ impl CPlayer {
             gp.game_values.flags.playflyingsound = true;
         }
 
-        let k = self.keys();
+        let k = self.keys(g);
         let keymask: i32 = (if k.game_jump().fPressed { 1 } else { 0 })
             | (if k.game_down().fPressed { 2 } else { 0 })
             | (if k.game_left().fPressed { 4 } else { 0 })
@@ -1513,17 +1531,17 @@ impl CPlayer {
             if !self.frozen {
                 //Determine move direction pressed
                 if self.tanookisuit.not_statue() && !self.superstomp.is_stomping() {
-                    if self.keys().game_right().fDown {
+                    if self.keys(g).game_right().fDown {
                         movement_direction = 1;
                     }
 
-                    if self.keys().game_left().fDown {
+                    if self.keys(g).game_left().fDown {
                         movement_direction = -1;
                     }
                 }
 
                 //jump pressed?
-                if self.keys().game_jump().fDown {
+                if self.keys(g).game_jump().fDown {
                     if !self.lockjump && self.tanookisuit.not_statue() && !self.superstomp.is_stomping() {
                         if !self.inair && self.superjumptimer == 0 {
                             self.try_falling_through_platform(gp.get(), movement_direction);
@@ -1544,7 +1562,7 @@ impl CPlayer {
                     self.enable_free_fall(gp.get());
                 }
 
-                if self.keys().game_down().fDown {
+                if self.keys(g).game_down().fDown {
                     if !self.lockfall && !self.inair && (self.playerDevice == DEVICE_KEYBOARD || self.pPlayerAI.is_some()) {
                         self.lockfall = true;
                         self.fallthrough = true;
@@ -1554,14 +1572,14 @@ impl CPlayer {
                 }
 
                 //POWERUP RELEASE
-                if self.keys().game_powerup().fDown {
+                if self.keys(g).game_powerup().fDown {
                     self.try_releasing_powerup(gp.get());
                 }
 
-                self.fPressedAcceptItem = self.keys().game_turbo().fPressed;
+                self.fPressedAcceptItem = self.keys(g).game_turbo().fPressed;
 
                 //Projectiles
-                if self.keys().game_turbo().fDown {
+                if self.keys(g).game_turbo().fDown {
                     self.use_special_powerup(gp.get());
                 } else {
                     self.release_carried_item(gp.get());
@@ -1797,7 +1815,7 @@ impl CPlayer {
                     self.sprite_state = PGFX_JUMPING_L as u8;
                 }
             } else if self.velx > 0.0 {
-                if self.keys().game_left().fDown && !self.keys().game_right().fDown && self.state == PlayerState::Ready {
+                if self.keys(g).game_left().fDown && !self.keys(g).game_right().fDown && self.state == PlayerState::Ready {
                     self.sprite_state = (PGFX_STOPPING_R + iReverseSprite) as u8;
 
                     self.frictionslidetimer += 1;
@@ -1815,7 +1833,7 @@ impl CPlayer {
                             16,
                         ));
                     }
-                } else if self.onice && !self.keys().game_right().fDown && !self.keys().game_left().fDown {
+                } else if self.onice && !self.keys(g).game_right().fDown && !self.keys(g).game_left().fDown {
                     self.sprite_state = (PGFX_STANDING_R + iReverseSprite) as u8;
                 } else {
                     self.sprswitch -= 1;
@@ -1845,7 +1863,7 @@ impl CPlayer {
                     }
                 }
             } else if self.velx < 0.0 {
-                if self.keys().game_right().fDown && !self.keys().game_left().fDown && self.state == PlayerState::Ready {
+                if self.keys(g).game_right().fDown && !self.keys(g).game_left().fDown && self.state == PlayerState::Ready {
                     self.sprite_state = (PGFX_STOPPING_L - iReverseSprite) as u8;
 
                     self.frictionslidetimer += 1;
@@ -1863,7 +1881,7 @@ impl CPlayer {
                             16,
                         ));
                     }
-                } else if self.onice && !self.keys().game_right().fDown && !self.keys().game_left().fDown {
+                } else if self.onice && !self.keys(g).game_right().fDown && !self.keys(g).game_left().fDown {
                     self.sprite_state = (PGFX_STANDING_L - iReverseSprite) as u8;
                 } else {
                     self.sprswitch -= 1;
@@ -1894,9 +1912,9 @@ impl CPlayer {
                 }
             } else {
                 //standing
-                if self.keys().game_left().fDown {
+                if self.keys(g).game_left().fDown {
                     self.sprite_state = (PGFX_STANDING_L - iReverseSprite) as u8;
-                } else if self.keys().game_right().fDown {
+                } else if self.keys(g).game_right().fDown {
                     self.sprite_state = (PGFX_STANDING_R + iReverseSprite) as u8;
                 } else if self.sprite_state & 0x1 != 0 {
                     self.sprite_state = PGFX_STANDING_L as u8;
@@ -1929,7 +1947,7 @@ impl CPlayer {
             self.vely = -VELKURIBOBOUNCE;
         } else if (g.game_values.flags.slowdownon != -1 && g.game_values.flags.slowdownon != self.teamID) || self.jail.is_active() {
             self.vely = -VELSLOWJUMP * jumpModifier;
-        } else if self.velx.abs() > VELMOVING && iMove != 0 && self.keys().game_turbo().fDown {
+        } else if self.velx.abs() > VELMOVING && iMove != 0 && self.keys(g).game_turbo().fDown {
             self.vely = -VELTURBOJUMP * jumpModifier;
         } else {
             self.vely = -VELJUMP * jumpModifier;
@@ -1944,7 +1962,7 @@ impl CPlayer {
     }
 
     pub fn cpu_think(&mut self, g: &mut Game) {
-        let keys = self.playerKeys;
+        let keys = Ptr::from_mut(self.keys(g));
         self.pPlayerAI.as_mut().unwrap().think(g, keys);
     }
 
@@ -2103,7 +2121,7 @@ impl CPlayer {
 
         self.spawntimer = 0;
         self.waittimer = 0;
-        *self.respawncounter.get() = g.game_values.respawn;
+        *self.respawncounter(g) = g.game_values.respawn;
         self.state = PlayerState::Waiting;
 
         self.fallthrough = false;
@@ -2163,10 +2181,10 @@ impl CPlayer {
         }
     }
 
-    pub fn bouncejump(&mut self) -> bool {
+    pub fn bouncejump(&mut self, g: &Game) -> bool {
         self.superstomp.reset();
 
-        if self.keys().game_jump().fDown {
+        if self.keys(g).game_jump().fDown {
             self.lockjump = true;
             self.vely = -VELJUMP;
             true
@@ -2227,7 +2245,7 @@ impl CPlayer {
         }
 
         //now kill the player (don't call this function earlier because we need the old position, etc.
-        let iKillType = g.game_values.gamemode.get().playerkilledplayer(g, killer, killed, style);
+        let iKillType = g.mode().get().playerkilledplayer(g, killer, killed, style);
 
         if PlayerKillType::NonKill != iKillType || fForce {
             if g.player(killed).bobomb {
@@ -2299,7 +2317,7 @@ impl CPlayer {
         let o1 = self.this();
 
         //Don't shyguy tag if this isn't shyguy tag mode or if tag transfers is set to kills only
-        if g.game_values.gamemode.gamemode != game_mode_shyguytag || g.game_values.gamemodesettings.shyguytag.tagtransfer == 1 {
+        if g.mode().gamemode != game_mode_shyguytag || g.game_values.gamemodesettings.shyguytag.tagtransfer == 1 {
             return;
         }
 
@@ -2323,7 +2341,7 @@ impl CPlayer {
         if g.player(o1).state == PlayerState::Ready
             && g.player(o1).fOldY + PH as f32 <= g.player(o2).fOldY
             && g.player(o1).iy as i32 + PH >= g.player(o2).iy as i32
-            && g.player(o1).keys().game_jump().fDown
+            && g.player(o1).keys(g).game_jump().fDown
         {
             g.player(o1).set_yi((g.player(o2).iy as i32 - PH) as i16); //set new position to top of other player
             g.player(o1).collisions.checktop(g, g.player(o1));
@@ -2627,7 +2645,7 @@ impl CPlayer {
         let ty2 = ((self.fy as i16 as i32 + PH) / TILESIZE) as i16;
         let mut tx: i16;
 
-        let isMoveKeyDown = if direction == 1 { self.keys().game_left().fDown } else { self.keys().game_right().fDown };
+        let isMoveKeyDown = if direction == 1 { self.keys(g).game_left().fDown } else { self.keys(g).game_right().fDown };
 
         if direction == 1 {
             //moving left
@@ -2767,7 +2785,7 @@ impl CPlayer {
         let centerblock = g.map_block(txc, ty);
         let rightblock = g.map_block(txr, ty);
 
-        if self.keys().game_jump().fDown && !self.frozen && g.g_map.checkforwarp(alignedBlockX, unAlignedBlockX, ty, 2) {
+        if self.keys(g).game_jump().fDown && !self.frozen && g.g_map.checkforwarp(alignedBlockX, unAlignedBlockX, ty, 2) {
             self.set_yf((((ty as i32) << 5) + TILESIZE) as f32 + 0.2f32);
             let warp = Ptr::from_mut(g.g_map.warp(unAlignedBlockX, ty));
             self.warpstatus.enter_warp(g, g.player(this), warp);
@@ -2906,7 +2924,7 @@ impl CPlayer {
         // moving down / on ground
         let ty = ((self.fPrecalculatedY as i16 as i32 + PH) / TILESIZE) as i16;
 
-        if self.keys().game_down().fDown && !self.frozen && g.g_map.checkforwarp(txl, txr, ty, 0) {
+        if self.keys(g).game_down().fDown && !self.frozen && g.g_map.checkforwarp(txl, txr, ty, 0) {
             self.set_yf((((ty as i32) << 5) - PH) as f32 - 0.2f32);
             let warp = Ptr::from_mut(g.g_map.warp(txr, ty));
             self.warpstatus.enter_warp(g, g.player(this), warp);
@@ -3228,7 +3246,7 @@ impl CPlayer {
         } else {
             self.death_awards(g);
 
-            let iKillType = g.game_values.gamemode.get().playerkilledself(g, this, style);
+            let iKillType = g.mode().get().playerkilledself(g, this, style);
             if PlayerKillType::Normal == iKillType || (PlayerKillType::NonKill == iKillType && fForce) {
                 self.die(g, PlayerDeathStyle::Jump, false, fKillCarriedItem);
             }
@@ -3302,15 +3320,15 @@ impl CPlayer {
         }
 
         if self.state == PlayerState::Ready {
-            if self.keys().game_left().fDown && self.keys().game_right().fDown && self.velx != 0.0 {
+            if self.keys(g).game_left().fDown && self.keys(g).game_right().fDown && self.velx != 0.0 {
                 if self.velx > 0.0 {
                     return fRight;
                 } else {
                     return fLeft;
                 }
-            } else if self.keys().game_left().fDown {
+            } else if self.keys(g).game_left().fDown {
                 return fLeft;
-            } else if self.keys().game_right().fDown {
+            } else if self.keys(g).game_right().fDown {
                 return fRight;
             }
         }
@@ -3468,7 +3486,7 @@ impl CPlayer {
     pub fn set_stored_powerup(&mut self, g: &mut Game, iPowerup: i16) {
         let mut gp = g.ptr();
         //If the player as the poison mushroom or the game is over, don't store the powerup
-        if g.game_values.gamepowerups[self.globalID as usize] == PowerupType::PoisonMushroom as i16 || g.game_values.gamemode.gameover {
+        if g.game_values.gamepowerups[self.globalID as usize] == PowerupType::PoisonMushroom as i16 || g.mode().gameover {
             if_sound_on_play(g, &mut gp.rm.sfx_stun);
             return;
         }

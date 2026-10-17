@@ -97,7 +97,7 @@ impl CGM_Stomp {
 }
 
 pub fn net_spawn_enemy(g: &mut Game) {
-    if let Some(this) = g.game_values.gamemode.get().as_any().downcast_mut::<CGM_Stomp>() {
+    if let Some(this) = g.mode().get().as_any().downcast_mut::<CGM_Stomp>() {
         this.spawn_enemy(g);
     }
 }
@@ -147,7 +147,7 @@ impl CGameModeTrait for CGM_Stomp {
 
     fn playerextraguy(&mut self, g: &mut Game, mut player: PlayerId, iType: i16) {
         if !self.gameover {
-            g.player(player).score().adjust_score(g, iType);
+            g.player(player).score(g).adjust_score(g, iType);
             self.check_winner(g, player);
         }
     }
@@ -157,8 +157,8 @@ impl CGameModeTrait for CGM_Stomp {
             return PlayerKillType::Normal;
         }
 
-        if g.player(player).score().score >= self.goal {
-            g.player(player).score().set_score(g, self.goal);
+        if g.player(player).score(g).score >= self.goal {
+            g.player(player).score(g).set_score(g, self.goal);
             self.winningteam = g.player(player).get_team_id();
             self.gameover = true;
 
@@ -166,7 +166,7 @@ impl CGameModeTrait for CGM_Stomp {
             show_score_board(g);
             remove_players_but_team(g, self.winningteam);
             return PlayerKillType::Removed;
-        } else if g.player(player).score().score as i32 >= self.goal as i32 - 2 && !self.playedwarningsound {
+        } else if g.player(player).score(g).score as i32 >= self.goal as i32 - 2 && !self.playedwarningsound {
             self.playwarningsound(g);
         }
 

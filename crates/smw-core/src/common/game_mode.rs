@@ -82,6 +82,16 @@ impl CGameMode {
 }
 
 /// Virtual interface of `CGameMode`. Base-class bodies live in `smw::gamemodes::game_mode`.
+/// Which mode `CGameValues::gamemode` names: a standard mode by `Game::gamemodes` index, or a minigame.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ModeId {
+    Standard(u8),
+    BonusHouse,
+    Pipe,
+    Boss,
+    Boxes,
+}
+
 pub trait CGameModeTrait: Any {
     fn gm(&self) -> &CGameMode;
     fn gm_mut(&mut self) -> &mut CGameMode;

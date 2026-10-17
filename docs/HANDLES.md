@@ -52,6 +52,15 @@ When a category no longer has `Ptr` uses, its types drop `Aliased`. When the las
 - **Checkpoints.** `checkpoint.rs` saves and restores game state for segment replays. Handles are plain integers, so a checkpoint can store them directly. The checkpoint format version changes, and `tools/checkpoint_fixtures` needs regenerating once.
 - **Performance.** A table lookup replaces a pointer dereference. Generation checks are one compare. The frame time on the RG35XX is the number to watch.
 - **Open question:** whether player handles need a generation, or whether clearing the table at match end is enough. The `owner_throw` case says a generation is worth one byte.
+- **Open question: what a copy of `Game` shares.** Step 5 removes the pointers between parts of the game state, but `Game` also holds things a copy cannot sensibly duplicate. Each needs a decision before `Game` can implement `Clone`:
+  - **Platform services** (`services`: video, audio, events, storage, pads). Only one game can own the window and audio device. Options: the copy gets none and runs headless (`smw-headless`), or the copy shares the original's.
+  - **Loaded assets** (`rm` sprites and sounds, the file lists, `g_tilesetmanager`, fonts). Nothing in a match writes them, except that platforms paint their own sprites. Options: share them behind a reference count, or copy them.
+  - **Surfaces** (`screen`, `blitdest`, a platform's `sprites`). The copy needs its own, or must not draw.
+  - **Menus and editors** (`ms`, `controls`, `level_editor`, `world_editor`). A rollback copy only needs the match. Options: copy them too, or clone only the match state into a game that has no menus.
+
+  `checkpoint.rs` already saves and restores the match state for segment replays, so a checkpoint loaded into a fresh headless `Game` is a second way to copy a match, with no `Clone` at all.
+
+  A copy for rollback netplay or an in-process replay test needs the match state, a headless service set and the shared assets. The proposal for step 6 is to clone exactly that: `Game::clone_match`, which shares assets, gives the copy headless services, and leaves menus and editors out.
 
 ## Rollout
 
