@@ -67,7 +67,6 @@ for replay in "${replays[@]}"; do
     fi
 
     golden="$tools/golden/$name"
-    [[ -d "$tools/golden_rust/$name" ]] && golden="$tools/golden_rust/$name"
     golden_dump="$golden/dump.txt"
     [[ -f "$golden_dump" ]] || golden_dump="$golden/dump.txt.gz"
     "$tools/diffreplay.py" --context 1 "$golden_dump" "$out/$name/dump.txt" | head -n 40
