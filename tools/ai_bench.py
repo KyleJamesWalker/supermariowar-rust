@@ -22,6 +22,7 @@ TOOLS = Path(__file__).resolve().parent
 PORT = TOOLS.parent
 DEFAULT_MAPS = ['0smw', '2skyfight', 'Rubber Room', 'Wacky Woods', 'Bouncy Spikes', 'Block Piles']
 STUCK_FRAMES = 30
+TRAP_WINDOW = 300
 PLAYER = re.compile(r'^P id=(\d+) .*?ix=(-?\d+) iy=(-?\d+) .*?velx=(-?[\d.]+) .*?state=(\d+) score=(-?\d+) .*?inair=(\d)')
 GAME = re.compile(r'^G mode=(-?\d+) gameover=(\d) winner=(-?\d+)')
 
@@ -67,6 +68,8 @@ def summarize(mode, seed, map_name, text):
     last = {}
     still = {}
     stuck = {}
+    boxes = {}
+    trapped = 0
     frame = 0
     in_play = False
     for line in text.splitlines():
@@ -98,7 +101,13 @@ def summarize(mode, seed, map_name, text):
             else:
                 still[pid] = 0
             last[pid] = ix
-    return {'mode': mode, 'seed': seed, 'map': map_name, 'gameplay_frames': gameplay, 'gameover_frame': gameover_frame,
+            iy = int(m.group(3))
+            if state == 3:
+                key = (pid, gameplay // TRAP_WINDOW)
+                x0, x1, y0, y1, n = boxes.get(key, (ix, ix, iy, iy, 0))
+                boxes[key] = (min(x0, ix), max(x1, ix), min(y0, iy), max(y1, iy), n + 1)
+    trapped = sum(n for x0, x1, y0, y1, n in boxes.values() if n >= TRAP_WINDOW // 2 and x1 - x0 < 60 and y1 - y0 < 40)
+    return {'mode': mode, 'seed': seed, 'map': map_name, 'gameplay_frames': gameplay, 'gameover_frame': gameover_frame, 'trapped_frames': trapped,
             'stuck_until': gameover_frame or gameplay, 'winner': winner, 'scores': scores, 'score_change': sum(abs(scores[p] - first[p]) for p in scores), 'stuck_frames': stuck}
 
 
@@ -116,6 +125,7 @@ def report(results):
                 wins[r['winner']] += 1
         frames = sum(r['gameplay_frames'] for r in ok) or 1
         stuck = sum(sum(r['stuck_frames'].values()) for r in ok)
+        trapped = sum(r.get('trapped_frames', 0) for r in ok)
         live = sum(r.get('stuck_until', r['gameplay_frames']) for r in ok) or 1
         change = sum(r['score_change'] for r in ok)
         rows[mode] = {
@@ -126,12 +136,13 @@ def report(results):
             'win_spread': round(statistics.pstdev(wins), 2) if ended else None,
             'score_per_1000': round(1000 * change / frames, 2),
             'stuck_per_1000': round(1000 * stuck / (live * 4), 2),
+            'trapped_per_1000': round(1000 * trapped / (live * 4), 2),
         }
     return rows
 
 
 def print_table(rows, before=None):
-    cols = ['matches', 'errors', 'gameover_rate', 'frames_to_gameover', 'win_spread', 'score_per_1000', 'stuck_per_1000']
+    cols = ['matches', 'errors', 'gameover_rate', 'frames_to_gameover', 'win_spread', 'score_per_1000', 'stuck_per_1000', 'trapped_per_1000']
     print('mode'.ljust(14) + ''.join(c.rjust(20) for c in cols))
     for mode, row in rows.items():
         cells = []

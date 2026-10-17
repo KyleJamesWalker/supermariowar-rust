@@ -336,6 +336,8 @@ pub struct MainLoopState {
     #[cfg(target_os = "emscripten")]
     web_replay_touch_first: Option<bool>,
     hotplug_pending: bool,
+    /// Frames the current screen has waited for an all-CPU game to continue (smw/auto_advance.rs).
+    pub(crate) auto_advance: u16,
 }
 
 impl MainLoopState {
@@ -348,6 +350,7 @@ impl MainLoopState {
             #[cfg(target_os = "emscripten")]
             web_accumulated: 0.0,
             hotplug_pending: false,
+            auto_advance: 0,
         }
     }
 }
