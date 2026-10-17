@@ -9,6 +9,7 @@ members = [
     "crates/smw-headless",
     "crates/smw-sdl3",
     "apps/smw",
+    "apps/smw3",
     "apps/leveleditor",
     "apps/worldeditor",
     "apps/smw_server",

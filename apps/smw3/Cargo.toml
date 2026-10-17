@@ -1,0 +1,13 @@
+[package]
+name = "smw3"
+version.workspace = true
+edition.workspace = true
+description = "Super Mario War - the game on the SDL3 backend"
+publish.workspace = true
+
+[features]
+no_network = ["smw-core/no_network"]
+
+[dependencies]
+smw-core = { path = "../../crates/smw-core" }
+smw-sdl3 = { path = "../../crates/smw-sdl3" }
