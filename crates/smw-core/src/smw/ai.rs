@@ -849,12 +849,14 @@ impl CPlayerAI {
         let mut fScreenWrap = false;
 
         //See if it is a shorter distance wrapping around the screen
-        if tx as i32 > App::screenWidth / 2 {
-            tx = (App::screenWidth - tx as i32) as i16;
-            fScreenWrap = true;
-        } else if (tx as i32) < -App::screenWidth / 2 {
-            tx = (App::screenWidth + tx as i32) as i16;
-            fScreenWrap = true;
+        if wrap_open(g, g.player(pPlayer).iy as i32) || wrap_open(g, object.y()) {
+            if tx as i32 > App::screenWidth / 2 {
+                tx = (App::screenWidth - tx as i32) as i16;
+                fScreenWrap = true;
+            } else if (tx as i32) < -App::screenWidth / 2 {
+                tx = (App::screenWidth + tx as i32) as i16;
+                fScreenWrap = true;
+            }
         }
 
         let distance_player_pow2: i32 = tx as i32 * tx as i32 + ty as i32 * ty as i32; // a^2 = b^2 + c^2 :)
@@ -874,12 +876,14 @@ impl CPlayerAI {
         let ty: i16 = (object.y() + (object.collision_rect_h() as i32 / 2) - g.player(pPlayer).iy as i32 - HALFPH) as i16;
         let mut fScreenWrap = false;
 
-        if tx as i32 > App::screenWidth / 2 {
-            tx = (App::screenWidth - tx as i32) as i16;
-            fScreenWrap = true;
-        } else if (tx as i32) < -App::screenWidth / 2 {
-            tx = (App::screenWidth + tx as i32) as i16;
-            fScreenWrap = true;
+        if wrap_open(g, g.player(pPlayer).iy as i32) || wrap_open(g, object.y()) {
+            if tx as i32 > App::screenWidth / 2 {
+                tx = (App::screenWidth - tx as i32) as i16;
+                fScreenWrap = true;
+            } else if (tx as i32) < -App::screenWidth / 2 {
+                tx = (App::screenWidth + tx as i32) as i16;
+                fScreenWrap = true;
+            }
         }
 
         let distance_player_pow2: i32 = tx as i32 * tx as i32 + ty as i32 * ty as i32;
@@ -899,12 +903,14 @@ impl CPlayerAI {
         let ty: i16 = (g.player(player).iy as i32 - g.player(pPlayer).iy as i32) as i16;
         let mut fScreenWrap = false;
 
-        if tx as i32 > App::screenWidth / 2 {
-            tx = (App::screenWidth - tx as i32) as i16;
-            fScreenWrap = true;
-        } else if (tx as i32) < -App::screenWidth / 2 {
-            tx = (App::screenWidth + tx as i32) as i16;
-            fScreenWrap = true;
+        if wrap_open(g, g.player(pPlayer).iy as i32) || wrap_open(g, g.player(player).iy as i32) {
+            if tx as i32 > App::screenWidth / 2 {
+                tx = (App::screenWidth - tx as i32) as i16;
+                fScreenWrap = true;
+            } else if (tx as i32) < -App::screenWidth / 2 {
+                tx = (App::screenWidth + tx as i32) as i16;
+                fScreenWrap = true;
+            }
         }
 
         let distance_player_pow2: i32 = tx as i32 * tx as i32 + ty as i32 * ty as i32;
@@ -915,6 +921,13 @@ impl CPlayerAI {
             *wrap = fScreenWrap;
         }
     }
+}
+
+/// Whether a player whose top is at `y` can walk off one side of the screen: no edge column is solid in its rows.
+fn wrap_open(g: &Game, y: i32) -> bool {
+    let first = (y / TILESIZE).max(0);
+    let last = ((y + PH - 1) / TILESIZE).min(MAPHEIGHT - 1);
+    (first..=last).all(|row| (g.g_map.map(0, row) | g.g_map.map(MAPWIDTH - 1, row)) & tile_flag_solid as i32 == 0)
 }
 
 //Setup AI so that it can ignore or pay attention to some objects
