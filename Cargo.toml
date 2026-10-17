@@ -6,6 +6,7 @@ members = [
     "crates/smw-netplay",
     "crates/smw-platform",
     "crates/smw-sdl2",
+    "crates/smw-sdl3",
     "apps/smw",
     "apps/leveleditor",
     "apps/worldeditor",

@@ -90,7 +90,8 @@ jobs:
         with:
           key: ${{ matrix.profile }}
       - name: cargo test
-        run: cargo test --locked --workspace --exclude smw_relay ${{ matrix.profile == 'release' && '--release' || '' }}
+        # Only the macOS runners have SDL3 (Homebrew).
+        run: cargo test --locked --workspace --exclude smw_relay ${{ runner.os != 'macOS' && '--exclude smw-sdl3' || '' }} ${{ matrix.profile == 'release' && '--release' || '' }}
 
   net:
     runs-on: ubuntu-24.04

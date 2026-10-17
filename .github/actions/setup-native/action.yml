@@ -20,7 +20,7 @@ runs:
       env:
         HOMEBREW_NO_AUTO_UPDATE: '1'
         HOMEBREW_NO_INSTALL_CLEANUP: '1'
-      run: brew install sdl2 sdl2_image sdl2_mixer
+      run: brew install sdl2 sdl2_image sdl2_mixer sdl3
 
     - if: runner.os == 'Windows'
       id: windows
