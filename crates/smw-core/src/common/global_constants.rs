@@ -87,8 +87,8 @@ pub const MAXCATEGORYTRACKS: i32 = 64;
 pub const MAXEYECANDY: i32 = 192;
 pub const CORPSESTAY: i32 = 200;
 pub const WAITTIME: i32 = 16;
-/// Not in the C++, whose frame rate was its game speed: the game advances this many ticks per second of wall time on
-/// every platform, whatever the display refreshes at. Netplay depends on it, so changing it changes the protocol version.
+/// Ticks of game logic per second of wall time on every platform, whatever the display refreshes at. Netplay
+/// depends on it, so changing it changes the protocol version.
 pub const TICKS_PER_SECOND: u32 = 60;
 pub const MAXAWARDS: i32 = 10;
 pub const MINAWARDSNEEDED: i32 = 3;
