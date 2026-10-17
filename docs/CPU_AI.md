@@ -1,6 +1,6 @@
 # CPU AI overhaul
 
-Status: steps 1 to 3 are done, and step 4 has a first cut: objective modes prefer the goal (2026-10-17). Step 3's unreachable-target timer and steps 5 to 9 remain.
+Status: steps 1 to 3 and 7 are done, and step 4 has a first cut: objective modes prefer the goal (2026-10-17). Steps 5, 6, 8 and 9 remain.
 
 ## Summary
 
@@ -60,7 +60,7 @@ The steps run from most payoff per effort to least.
    `distance_to_object` and its siblings consider the wrapped path only when the CPU's rows or the target's rows have no solid tile in either edge column.
 3. **Wall look-ahead**.
    If a solid tile blocks the move direction, the AI jumps (`wall_ahead`).
-   Still to do: if the jump cannot clear the tile, the AI marks the target as unreachable for a short time.
+   If the wall rises four tiles above the CPU's head, the AI ignores the goal it was heading for for 90 frames.
 4. **Mode-aware utility scoring**.
    Each candidate action (goal, stomp, flee, regroup) gets a score from mode weights, distance, height difference, and game state.
    The AI picks the highest score.
@@ -73,6 +73,7 @@ The steps run from most payoff per effort to least.
 7. **Target spreading**.
    A target that another CPU already chases scores lower.
    The current leader scores higher.
+   Done as a distance weight: each other CPU chasing an opponent adds its distance once more, and the score leader counts at three quarters.
 8. **Navigation graph and A\*.**
    Build a graph from the tile map: walkable tiles, jump and fall links, wrap edges, and warp pipes.
    Steer along the path, not straight at the target.
