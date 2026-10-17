@@ -59,8 +59,8 @@ impl PlayerCollisions {
 
         let leftTile: i32 = g.g_map.map(tile_x_left as i32, tile_y as i32);
         let rightTile: i32 = g.g_map.map(tile_x_right as i32, tile_y as i32);
-        let leftBlock = g.g_map.block(tile_x_left, tile_y);
-        let rightBlock = g.g_map.block(tile_x_right, tile_y);
+        let leftBlock = g.map_block(tile_x_left, tile_y);
+        let rightBlock = g.map_block(tile_x_right, tile_y);
 
         if (leftTile & tile_flag_solid) != 0
             || (rightTile & tile_flag_solid) != 0
@@ -99,8 +99,8 @@ impl PlayerCollisions {
 
         let topTile: i32 = g.g_map.map(tile_x as i32, tile_y as i32);
         let bottomTile: i32 = g.g_map.map(tile_x as i32, tile_y2 as i32);
-        let topBlock = g.g_map.block(tile_x, tile_y);
-        let bottomBlock = g.g_map.block(tile_x, tile_y2);
+        let topBlock = g.map_block(tile_x, tile_y);
+        let bottomBlock = g.map_block(tile_x, tile_y2);
 
         if (topTile & tile_flag_solid) != 0
             || (bottomTile & tile_flag_solid) != 0
@@ -144,8 +144,8 @@ impl PlayerCollisions {
 
         let topTile: i32 = g.g_map.map(tile_x as i32, tile_y as i32);
         let bottomTile: i32 = g.g_map.map(tile_x as i32, tile_y2 as i32);
-        let topBlock = g.g_map.block(tile_x, tile_y);
-        let bottomBlock = g.g_map.block(tile_x, tile_y2);
+        let topBlock = g.map_block(tile_x, tile_y);
+        let bottomBlock = g.map_block(tile_x, tile_y2);
 
         if (topTile & tile_flag_solid) != 0
             || (bottomTile & tile_flag_solid) != 0
@@ -178,7 +178,7 @@ impl PlayerCollisions {
         if player.top_y() >= 0 {
             if (tile_y as i32) < MAPHEIGHT {
                 if tile_x_left >= 0 && (tile_x_left as i32) < MAPWIDTH {
-                    let block = g.g_map.block(tile_x_left, tile_y);
+                    let block = g.map_block(tile_x_left, tile_y);
 
                     if is_solid_block(block) || (g.g_map.map(tile_x_left as i32, tile_y as i32) & tile_flag_solid) != 0 {
                         iCase |= 0x01;
@@ -186,7 +186,7 @@ impl PlayerCollisions {
                 }
 
                 if tile_x_right >= 0 && (tile_x_right as i32) < MAPWIDTH {
-                    let block = g.g_map.block(tile_x_right, tile_y);
+                    let block = g.map_block(tile_x_right, tile_y);
 
                     if is_solid_block(block) || (g.g_map.map(tile_x_right as i32, tile_y as i32) & tile_flag_solid) != 0 {
                         iCase |= 0x02;
@@ -199,7 +199,7 @@ impl PlayerCollisions {
         if (player.top_y() as i32 + PW) as f32 >= 0.0f32 {
             if (tile_y2 as i32) < MAPHEIGHT {
                 if tile_x_left >= 0 && (tile_x_left as i32) < MAPWIDTH {
-                    let block = g.g_map.block(tile_x_left, tile_y2);
+                    let block = g.map_block(tile_x_left, tile_y2);
 
                     if is_solid_block(block) || (g.g_map.map(tile_x_left as i32, tile_y2 as i32) & tile_flag_solid) != 0 {
                         iCase |= 0x04;
@@ -207,7 +207,7 @@ impl PlayerCollisions {
                 }
 
                 if tile_x_right >= 0 && (tile_x_right as i32) < MAPWIDTH {
-                    let block = g.g_map.block(tile_x_right, tile_y2);
+                    let block = g.map_block(tile_x_right, tile_y2);
 
                     if is_solid_block(block) || (g.g_map.map(tile_x_right as i32, tile_y2 as i32) & tile_flag_solid) != 0 {
                         iCase |= 0x08;

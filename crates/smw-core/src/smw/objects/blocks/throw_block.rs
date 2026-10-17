@@ -61,8 +61,8 @@ impl B_ThrowBlock {
         let item: Ptr<dyn MO_CarriedObjectTrait> = Ptr::from_mut(block.get() as &mut dyn MO_CarriedObjectTrait);
         if g.player(player).accept_item(item) {
             self.dead = true;
-            g.g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
-            g.g_map.update_tile_gap(self.col, self.row);
+            g.g_map.blockdata[self.col as usize][self.row as usize] = crate::smw::object_container::ObjectId::NONE;
+            g.update_tile_gap(self.col, self.row);
 
             block.owner = player;
             block.iPlayerID = g.player(player).globalID;
@@ -176,8 +176,8 @@ impl IO_BlockTrait for B_ThrowBlock {
     fn trigger_behavior(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         self.dead = true;
-        g.g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
-        g.g_map.update_tile_gap(self.col, self.row);
+        g.g_map.blockdata[self.col as usize][self.row as usize] = crate::smw::object_container::ObjectId::NONE;
+        g.update_tile_gap(self.col, self.row);
 
         let srcY = (self.iType as i32 * 16) as i16;
         let spr = g.rm.spr_brokenblueblock;

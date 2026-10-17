@@ -81,8 +81,8 @@ impl CObjectTrait for B_BreakableBlock {
             } else if self.state == 2 {
                 self.iBumpPlayerID = -1;
                 self.dead = true;
-                g.g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
-                g.g_map.update_tile_gap(self.col, self.row);
+                g.g_map.blockdata[self.col as usize][self.row as usize] = crate::smw::object_container::ObjectId::NONE;
+                g.update_tile_gap(self.col, self.row);
             }
         }
 

@@ -160,6 +160,15 @@ impl Game {
         self.carried(self.player(player).carriedItem)
     }
 
+    pub fn map_block(&self, x: i16, y: i16) -> Ptr<dyn crate::common::io_block::IO_BlockTrait> {
+        self.g_map.block(&self.noncolcontainer, x, y)
+    }
+
+    pub fn update_tile_gap(&mut self, i: i16, j: i16) {
+        let mut map = self.g_map;
+        map.update_tile_gap(&self.noncolcontainer, i, j);
+    }
+
     /// The object `id` names, if it is still alive and a `T`.
     pub fn object_as<T: 'static>(&self, id: ObjectId) -> Option<&'static mut T> {
         let mut obj = self.object(id)?;

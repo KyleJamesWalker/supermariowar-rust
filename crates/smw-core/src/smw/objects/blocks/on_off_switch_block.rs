@@ -63,7 +63,7 @@ impl B_OnOffSwitchBlock {
             //Switch all the switch blocks and all the on/off blocks of the same color
             let mut i = 0;
             while i < g.g_map.switchBlocks[colorIdx].len() {
-                let mut block = g.g_map.switchBlocks[colorIdx][i];
+                let mut block = crate::common::map::block_ptr(&g.noncolcontainer, g.g_map.switchBlocks[colorIdx][i]);
                 block.as_any().downcast_mut::<B_OnOffSwitchBlock>().unwrap().flip_state();
                 i += 1;
             }
@@ -71,7 +71,7 @@ impl B_OnOffSwitchBlock {
             //Switch all the switch blocks
             let mut i = 0;
             while i < g.g_map.switchBlocks[colorIdx + 4].len() {
-                let mut block = g.g_map.switchBlocks[colorIdx + 4][i];
+                let mut block = crate::common::map::block_ptr(&g.noncolcontainer, g.g_map.switchBlocks[colorIdx + 4][i]);
                 block.as_any().downcast_mut::<B_SwitchBlock>().unwrap().flip_state(g, playerID);
                 i += 1;
             }

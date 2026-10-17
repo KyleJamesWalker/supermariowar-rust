@@ -336,8 +336,8 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
                 tx = (((o.fx as i16) as i32 + o.collisionWidth as i32) / TILESIZE) as i16;
             }
 
-            let topblock = g.g_map.block(tx, ty);
-            let bottomblock = g.g_map.block(tx, ty2);
+            let topblock = g.map_block(tx, ty);
+            let bottomblock = g.map_block(tx, ty2);
 
             let fTopBlockSolid = !topblock.is_null() && !topblock.get().is_transparent() && !topblock.get().is_hidden();
             let fBottomBlockSolid = !bottomblock.is_null() && !bottomblock.get().is_transparent() && !bottomblock.get().is_hidden();
@@ -402,8 +402,8 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
                 tx = 0;
             }
 
-            let topblock = g.g_map.block(tx, ty);
-            let bottomblock = g.g_map.block(tx, ty2);
+            let topblock = g.map_block(tx, ty);
+            let bottomblock = g.map_block(tx, ty2);
 
             let fTopBlockSolid = !topblock.is_null() && !topblock.get().is_transparent() && !topblock.get().is_hidden();
             let fBottomBlockSolid = !bottomblock.is_null() && !bottomblock.get().is_transparent() && !bottomblock.get().is_hidden();
@@ -479,8 +479,8 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
     if fMovingUp < -0.01 {
         ty = ((o.fPrecalculatedY as i16) as i32 / TILESIZE) as i16;
 
-        let leftblock = g.g_map.block(txl, ty);
-        let rightblock = g.g_map.block(txr, ty);
+        let leftblock = g.map_block(txl, ty);
+        let rightblock = g.map_block(txr, ty);
 
         if !leftblock.is_null() && !leftblock.get().is_transparent() && !leftblock.get().is_hidden() {
             // then left
@@ -528,8 +528,8 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
         // moving down / on ground
         ty = (((o.fPrecalculatedY as i16) as i32 + o.collisionHeight as i32) / TILESIZE) as i16;
 
-        let leftblock = g.g_map.block(txl, ty);
-        let rightblock = g.g_map.block(txr, ty);
+        let leftblock = g.map_block(txl, ty);
+        let rightblock = g.map_block(txr, ty);
 
         let fLeftBlockSolid = !leftblock.is_null() && !leftblock.get().is_transparent() && !leftblock.get().is_hidden();
         let fRightBlockSolid = !rightblock.is_null() && !rightblock.get().is_transparent() && !rightblock.get().is_hidden();
@@ -661,13 +661,13 @@ pub fn io_moving_object_collision_detection_checksides<T: IO_MovingObjectTrait +
     if o.iy >= 0 {
         if (ty as i32) < MAPHEIGHT {
             if txl >= 0 && (txl as i32) < MAPWIDTH {
-                if block_is_solid(g.g_map.block(txl, ty)) || (g.g_map.map(txl as i32, ty as i32) & tile_flag_solid) > 0 {
+                if block_is_solid(g.map_block(txl, ty)) || (g.g_map.map(txl as i32, ty as i32) & tile_flag_solid) > 0 {
                     iCase |= 0x01;
                 }
             }
 
             if txr >= 0 && (txr as i32) < MAPWIDTH {
-                if block_is_solid(g.g_map.block(txr, ty)) || (g.g_map.map(txr as i32, ty as i32) & tile_flag_solid) > 0 {
+                if block_is_solid(g.map_block(txr, ty)) || (g.g_map.map(txr as i32, ty as i32) & tile_flag_solid) > 0 {
                     iCase |= 0x02;
                 }
             }
@@ -677,13 +677,13 @@ pub fn io_moving_object_collision_detection_checksides<T: IO_MovingObjectTrait +
     if (o.iy as i32 + o.collisionHeight as i32) as f32 >= 0.0 {
         if (ty2 as i32) < MAPHEIGHT {
             if txl >= 0 && (txl as i32) < MAPWIDTH {
-                if block_is_solid(g.g_map.block(txl, ty2)) || (g.g_map.map(txl as i32, ty2 as i32) & tile_flag_solid) > 0 {
+                if block_is_solid(g.map_block(txl, ty2)) || (g.g_map.map(txl as i32, ty2 as i32) & tile_flag_solid) > 0 {
                     iCase |= 0x04;
                 }
             }
 
             if txr >= 0 && (txr as i32) < MAPWIDTH {
-                if block_is_solid(g.g_map.block(txr, ty2)) || (g.g_map.map(txr as i32, ty2 as i32) & tile_flag_solid) > 0 {
+                if block_is_solid(g.map_block(txr, ty2)) || (g.g_map.map(txr as i32, ty2 as i32) & tile_flag_solid) > 0 {
                     iCase |= 0x08;
                 }
             }

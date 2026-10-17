@@ -125,7 +125,7 @@ impl IO_BlockTrait for B_BounceBlock {
                 io_block_kill_players_and_objects_inside_block(g, self, iBumpPlayerID);
             }
 
-            g.g_map.update_tile_gap(self.col, self.row);
+            g.update_tile_gap(self.col, self.row);
         }
 
         false

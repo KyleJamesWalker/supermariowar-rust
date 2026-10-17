@@ -670,7 +670,7 @@ impl MovingPlatform {
 
         let iTestBackgroundY: i16 = (((g.player(player).fy as i16) as i32 + PH) / TILESIZE) as i16;
 
-        let mut topblock = g.g_map.block(iTestBackgroundX, iTestBackgroundY);
+        let mut topblock = g.map_block(iTestBackgroundX, iTestBackgroundY);
 
         if (!topblock.is_null() && !topblock.is_transparent() && !topblock.is_hidden())
             || (g.g_map.map(iTestBackgroundX as i32, iTestBackgroundY as i32) & tile_flag_solid) != 0
@@ -686,7 +686,7 @@ impl MovingPlatform {
 
         let iTestBackgroundY2: i16 = tile_of(g.player(player).fy);
 
-        let mut bottomblock = g.g_map.block(iTestBackgroundX, iTestBackgroundY2);
+        let mut bottomblock = g.map_block(iTestBackgroundX, iTestBackgroundY2);
 
         if (!bottomblock.is_null() && !bottomblock.is_transparent() && !bottomblock.is_hidden())
             || (g.g_map.map(iTestBackgroundX as i32, iTestBackgroundY2 as i32) & tile_flag_solid) != 0
@@ -704,7 +704,7 @@ impl MovingPlatform {
         let iTestBackgroundX: i16 = tile_of(g.player(player).fx);
         let iTestBackgroundY: i16 = (((g.player(player).fy as i16) as i32 + PH) / TILESIZE) as i16;
 
-        let mut topblock = g.g_map.block(iTestBackgroundX, iTestBackgroundY);
+        let mut topblock = g.map_block(iTestBackgroundX, iTestBackgroundY);
 
         if (!topblock.is_null() && !topblock.is_transparent() && !topblock.is_hidden())
             || (g.g_map.map(iTestBackgroundX as i32, iTestBackgroundY as i32) & tile_flag_solid) != 0
@@ -720,7 +720,7 @@ impl MovingPlatform {
 
         let iTestBackgroundY2: i16 = tile_of(g.player(player).fy);
 
-        let mut bottomblock = g.g_map.block(iTestBackgroundX, iTestBackgroundY2);
+        let mut bottomblock = g.map_block(iTestBackgroundX, iTestBackgroundY2);
 
         if (!bottomblock.is_null() && !bottomblock.is_transparent() && !bottomblock.is_hidden())
             || (g.g_map.map(iTestBackgroundX as i32, iTestBackgroundY2 as i32) & tile_flag_solid) != 0
@@ -1107,8 +1107,8 @@ impl MovingPlatform {
                             (((object.fx as i16) as i32 + object.collisionWidth as i32) / TILESIZE) as i16
                         };
 
-                        let mut topblock = g.g_map.block(iTestBackgroundX, iTestBackgroundY);
-                        let mut bottomblock = g.g_map.block(iTestBackgroundX, iTestBackgroundY2);
+                        let mut topblock = g.map_block(iTestBackgroundX, iTestBackgroundY);
+                        let mut bottomblock = g.map_block(iTestBackgroundX, iTestBackgroundY2);
 
                         if (!topblock.is_null() && !topblock.is_transparent() && !topblock.is_hidden())
                             || (!bottomblock.is_null() && !bottomblock.is_transparent() && !bottomblock.is_hidden())
@@ -1173,8 +1173,8 @@ impl MovingPlatform {
                         let iTestBackgroundY2: i16 = (((object.fy as i16) as i32 + object.collisionHeight as i32) / TILESIZE) as i16;
                         let iTestBackgroundX: i16 = tile_of(object.fx);
 
-                        let mut topblock = g.g_map.block(iTestBackgroundX, iTestBackgroundY);
-                        let mut bottomblock = g.g_map.block(iTestBackgroundX, iTestBackgroundY2);
+                        let mut topblock = g.map_block(iTestBackgroundX, iTestBackgroundY);
+                        let mut bottomblock = g.map_block(iTestBackgroundX, iTestBackgroundY2);
 
                         if (!topblock.is_null() && !topblock.is_transparent() && !topblock.is_hidden())
                             || (!bottomblock.is_null() && !bottomblock.is_transparent() && !bottomblock.is_hidden())

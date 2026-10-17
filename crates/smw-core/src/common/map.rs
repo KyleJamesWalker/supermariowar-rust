@@ -7,6 +7,7 @@ pub mod map_reader17xx;
 pub mod map_reader18xx;
 pub mod map_reader_constants;
 
+use crate::smw::object_container::{CObjectContainer, ObjectId};
 use crate::smw::players::PlayerId;
 use crate::common::gfx::soft_surface::Surface;
 use crate::common::gfx::soft_surface::Rect;
@@ -625,7 +626,7 @@ pub struct CMap {
     pub mapdata: [[[TilesetTile; ML]; MH]; MW],
     pub mapdatatop: [[TileType; MH]; MW],
     pub objectdata: [[MapBlock; MH]; MW],
-    pub blockdata: [[Ptr<dyn IO_BlockTrait>; MH]; MW],
+    pub blockdata: [[ObjectId; MH]; MW],
     pub nospawn: [[[bool; MH]; MW]; NSPAWN],
 
     pub animatedtiles: Vec<Box<AnimatedTile>>,
@@ -654,7 +655,7 @@ pub struct CMap {
     pub numdrawareas: i16,
 
     pub iSwitches: [i16; 4],
-    pub switchBlocks: [Vec<Ptr<dyn IO_BlockTrait>>; 8],
+    pub switchBlocks: [Vec<ObjectId>; 8],
 
     pub fAutoFilter: [bool; NUM_AUTO_FILTERS as usize],
 
@@ -678,6 +679,14 @@ pub struct CMap {
     pub _alias: Aliased,
 }
 
+/// The block `id` names, or null.
+pub fn block_ptr(blocks: &CObjectContainer, id: ObjectId) -> Ptr<dyn IO_BlockTrait> {
+    match blocks.get(id) {
+        Some(mut obj) => obj.get().as_io_block().map(Ptr::from_mut).unwrap_or_else(Ptr::null),
+        None => Ptr::null(),
+    }
+}
+
 impl CMap {
     /// C++ `new CMap`. Members the C++ leaves default-initialized start at zero.
     pub fn new() -> Box<CMap> {
@@ -691,7 +700,7 @@ impl CMap {
             mapdata: [[[TilesetTile::default(); ML]; MH]; MW],
             mapdatatop: [[TileType::NonSolid; MH]; MW],
             objectdata: [[MapBlock::default(); MH]; MW],
-            blockdata: [[Ptr::null(); MH]; MW],
+            blockdata: [[ObjectId::NONE; MH]; MW],
             nospawn: [[[false; MH]; MW]; NSPAWN],
             animatedtiles: Vec::new(),
             platforms: Vec::new(),
@@ -741,10 +750,11 @@ impl CMap {
         }
     }
 
-    pub fn block(&self, x: i16, y: i16) -> Ptr<dyn IO_BlockTrait> {
+    /// `blocks` is the container that owns the map's blocks (`Game::noncolcontainer`).
+    pub fn block(&self, blocks: &CObjectContainer, x: i16, y: i16) -> Ptr<dyn IO_BlockTrait> {
         let flat = x as i32 * MAPHEIGHT + y as i32;
         if (0..MAPWIDTH * MAPHEIGHT).contains(&flat) {
-            return self.blockdata[(flat / MAPHEIGHT) as usize][(flat % MAPHEIGHT) as usize];
+            return block_ptr(blocks, self.blockdata[(flat / MAPHEIGHT) as usize][(flat % MAPHEIGHT) as usize]);
         }
         let off = CPP_OFF_BLOCKDATA + flat * 8;
         if (0..8).all(|i| self.cpp_byte(off + i) == Some(0)) {
@@ -757,7 +767,7 @@ impl CMap {
     pub fn block_is_null(&self, x: i16, y: i16) -> bool {
         let flat = x as i32 * MAPHEIGHT + y as i32;
         if (0..MAPWIDTH * MAPHEIGHT).contains(&flat) {
-            return self.blockdata[(flat / MAPHEIGHT) as usize][(flat % MAPHEIGHT) as usize].is_null();
+            return self.blockdata[(flat / MAPHEIGHT) as usize][(flat % MAPHEIGHT) as usize].is_none();
         }
         let off = CPP_OFF_BLOCKDATA + flat * 8;
         (0..8).all(|i| self.cpp_byte(off + i) == Some(0))
@@ -798,7 +808,7 @@ impl CMap {
         }
         if (CPP_OFF_BLOCKDATA..CPP_OFF_NOSPAWN).contains(&off) {
             let (x, y) = cell((off - CPP_OFF_BLOCKDATA) / 8);
-            return if self.blockdata[x][y].is_null() { Some(0) } else { Option::None };
+            return if self.blockdata[x][y].is_none() { Some(0) } else { Option::None };
         }
         if (CPP_OFF_NOSPAWN..CPP_OFF_NOSPAWN + NUMSPAWNAREATYPES * cells).contains(&off) {
             let rel = off - CPP_OFF_NOSPAWN;
@@ -928,15 +938,15 @@ impl CMap {
         let _ = std::io::stdout().flush();
     }
 
-    pub fn update_all_tile_gaps(&mut self) {
+    pub fn update_all_tile_gaps(&mut self, blocks: &CObjectContainer) {
         for j in 0..MAPHEIGHT as i16 {
             for i in 0..MAPWIDTH as i16 {
-                self.set_tile_gap(i, j);
+                self.set_tile_gap(blocks, i, j);
             }
         }
     }
 
-    pub fn update_tile_gap(&mut self, i: i16, j: i16) {
+    pub fn update_tile_gap(&mut self, blocks: &CObjectContainer, i: i16, j: i16) {
         for iRow in j..=j + 1 {
             for iCol in i - 1..=i + 1 {
                 if iRow as i32 >= MAPHEIGHT {
@@ -950,12 +960,12 @@ impl CMap {
                     ix = 0;
                 }
 
-                self.set_tile_gap(ix, iRow);
+                self.set_tile_gap(blocks, ix, iRow);
             }
         }
     }
 
-    fn set_tile_gap(&mut self, i: i16, j: i16) {
+    fn set_tile_gap(&mut self, blocks: &CObjectContainer, i: i16, j: i16) {
         let mut iLeftTile = i - 1;
         if iLeftTile < 0 {
             iLeftTile = (MAPWIDTH - 1) as i16;
@@ -981,18 +991,18 @@ impl CMap {
             topCenterTile = tile_to_flags(self.mapdatatop[c][j - 1]) as i32;
             topRightTile = tile_to_flags(self.mapdatatop[rt][j - 1]) as i32;
 
-            topLeftBlock = self.blockdata[l][j - 1];
-            topCenterBlock = self.blockdata[c][j - 1];
-            topRightBlock = self.blockdata[rt][j - 1];
+            topLeftBlock = block_ptr(blocks, self.blockdata[l][j - 1]);
+            topCenterBlock = block_ptr(blocks, self.blockdata[c][j - 1]);
+            topRightBlock = block_ptr(blocks, self.blockdata[rt][j - 1]);
         }
 
         let leftTile = tile_to_flags(self.mapdatatop[l][j]) as i32;
         let centerTile = tile_to_flags(self.mapdatatop[c][j]) as i32;
         let rightTile = tile_to_flags(self.mapdatatop[rt][j]) as i32;
 
-        let leftBlock = self.blockdata[l][j];
-        let centerBlock = self.blockdata[c][j];
-        let rightBlock = self.blockdata[rt][j];
+        let leftBlock = block_ptr(blocks, self.blockdata[l][j]);
+        let centerBlock = block_ptr(blocks, self.blockdata[c][j]);
+        let rightBlock = block_ptr(blocks, self.blockdata[rt][j]);
 
         let opaque = |mut b: Ptr<dyn IO_BlockTrait>| !b.is_null() && !b.is_transparent() && !b.is_hidden();
 
@@ -2892,7 +2902,7 @@ pub(crate) mod tests {
         for f in 0..m.iNumFlagBases.max(0) as usize {
             let _ = writeln!(o, "flagbase {} {}", m.flagbaselocations[f].x, m.flagbaselocations[f].y);
         }
-        m.update_all_tile_gaps();
+        m.update_all_tile_gaps(&CObjectContainer::new(3));
         o += "gaps";
         for j in 0..MH {
             for i in 0..MW {

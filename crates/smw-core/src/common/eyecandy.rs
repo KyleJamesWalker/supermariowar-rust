@@ -676,8 +676,8 @@ impl EC_Corpse {
                     }
                 }
 
-                let mut leftblock = g.g_map.block(self.tx, ty);
-                let mut rightblock = g.g_map.block(self.tx2, ty);
+                let mut leftblock = g.map_block(self.tx, ty);
+                let mut rightblock = g.map_block(self.tx2, ty);
 
                 if (g.g_map.map(self.tx as i32, ty as i32) & 0x13) > 0
                     || (g.g_map.map(self.tx2 as i32, ty as i32) & 0x13) > 0

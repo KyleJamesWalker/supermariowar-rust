@@ -46,8 +46,8 @@ impl B_DonutBlock {
         g.g_map.add_temporary_platform(platform);
 
         self.dead = true;
-        g.g_map.blockdata[self.col as usize][self.row as usize] = Ptr::null();
-        g.g_map.update_tile_gap(self.col, self.row);
+        g.g_map.blockdata[self.col as usize][self.row as usize] = crate::smw::object_container::ObjectId::NONE;
+        g.update_tile_gap(self.col, self.row);
     }
 }
 

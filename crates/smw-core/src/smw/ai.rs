@@ -309,7 +309,7 @@ unsafe fn ai_map(g: &mut Game, x: i32, y: i32) -> i32 {
 /// `g_map->block(x, y) != NULL`, including the C++ out-of-bounds reads.
 unsafe fn ai_block_nonnull(g: &mut Game, x: i16, y: i16) -> bool {
     if in_map(x as i32, y as i32) {
-        return !g.g_map.block(x, y).is_null();
+        return !g.map_block(x, y).is_null();
     }
     let off = CMAP_OFF_BLOCKDATA + (x as i32 * MAPHEIGHT + y as i32) * 8;
     (0..8).any(|i| cmap_byte(g, off + i) != 0)

@@ -2648,8 +2648,8 @@ impl CPlayer {
             tx -= 20;
         }
 
-        let topblock = g.g_map.block(tx, ty);
-        let bottomblock = g.g_map.block(tx, ty2);
+        let topblock = g.map_block(tx, ty);
+        let bottomblock = g.map_block(tx, ty2);
 
         let toptile = g.g_map.map(tx as i32, ty as i32);
         let bottomtile = g.g_map.map(tx as i32, ty2 as i32);
@@ -2762,9 +2762,9 @@ impl CPlayer {
 
         let ty = (self.fPrecalculatedY as i16 as i32 / TILESIZE) as i16;
 
-        let leftblock = g.g_map.block(txl, ty);
-        let centerblock = g.g_map.block(txc, ty);
-        let rightblock = g.g_map.block(txr, ty);
+        let leftblock = g.map_block(txl, ty);
+        let centerblock = g.map_block(txc, ty);
+        let rightblock = g.map_block(txr, ty);
 
         if self.keys().game_jump().fDown && !self.frozen && g.g_map.checkforwarp(alignedBlockX, unAlignedBlockX, ty, 2) {
             self.set_yf((((ty as i32) << 5) + TILESIZE) as f32 + 0.2f32);
@@ -2922,8 +2922,8 @@ impl CPlayer {
             return;
         }
 
-        let leftblock = g.g_map.block(txl, ty);
-        let rightblock = g.g_map.block(txr, ty);
+        let leftblock = g.map_block(txl, ty);
+        let rightblock = g.map_block(txr, ty);
 
         let fLeftBlockSolid = !leftblock.is_null() && !leftblock.get().is_transparent() && !leftblock.get().is_hidden();
         let fRightBlockSolid = !rightblock.is_null() && !rightblock.get().is_transparent() && !rightblock.get().is_hidden();

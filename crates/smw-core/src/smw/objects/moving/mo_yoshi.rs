@@ -76,10 +76,10 @@ impl MO_Yoshi {
                 && (upperRight & tile_flag_solid) == 0
                 && (lowerLeft & tile_flag_solid) == 0
                 && (lowerRight & tile_flag_solid) == 0
-                && g.g_map.block(ixl, iyt).is_null()
-                && g.g_map.block(ixr, iyt).is_null()
-                && g.g_map.block(ixl, iyb).is_null()
-                && g.g_map.block(ixr, iyb).is_null()
+                && g.map_block(ixl, iyt).is_null()
+                && g.map_block(ixr, iyt).is_null()
+                && g.map_block(ixl, iyb).is_null()
+                && g.map_block(ixr, iyb).is_null()
             {
                 // spawn on ground, but not on spikes
                 let mut iDeathY: i16 = ((iy + ih) / TILESIZE) as i16;
@@ -92,8 +92,8 @@ impl MO_Yoshi {
 
                     if (((ttLeftTile & tile_flag_solid) != 0 || (ttLeftTile & tile_flag_solid_on_top) != 0) && (ttLeftTile & tile_flag_death_on_top) == 0)
                         || (((ttRightTile & tile_flag_solid) != 0 || (ttRightTile & tile_flag_solid_on_top) != 0) && (ttRightTile & tile_flag_death_on_top) == 0)
-                        || !g.g_map.block(iDeathX1, iDeathY).is_null()
-                        || !g.g_map.block(iDeathX2, iDeathY).is_null()
+                        || !g.map_block(iDeathX1, iDeathY).is_null()
+                        || !g.map_block(iDeathX2, iDeathY).is_null()
                     {
                         let top: i16 = ((((iDeathY as i32) << 5) - ih) / TILESIZE) as i16;
 
