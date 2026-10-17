@@ -13,6 +13,7 @@ use smw::globals::*;
 use std::path::Path;
 
 fn main() {
+    smw::services::set_backend(smw_sdl2::services);
     let g = smw::game::Game::create();
 
     let mut gp = g.ptr();    let data = std::env::args().nth(1).unwrap_or_else(|| concat!(env!("CARGO_MANIFEST_DIR"), "/../../data").to_string());

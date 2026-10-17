@@ -79,6 +79,7 @@ pub extern "C" fn Java_com_kylejameswalker_supermariowar_MainActivity_nativeSetC
 
 #[no_mangle]
 pub unsafe extern "C" fn SDL_main(argc: c_int, argv: *const *const c_char) -> c_int {
+    crate::services::set_backend(smw_sdl2::services);
     redirect_output();
     let args = (0..argc.max(0) as usize).map(|i| CStr::from_ptr(*argv.add(i)).to_string_lossy().into_owned()).collect();
     crate::smw::main::run(args);

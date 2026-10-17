@@ -46,7 +46,7 @@ use crate::smw::menu::mode_options_menu::UI_ModeOptionsMenu;
 use crate::smw::world::*;
 use crate::common::editor_event::EditorEvent;
 use crate::common::util::sdl_helpers::poll_event;
-use sdl2::sys::{SDL_EventType, SDL_GetKeyboardState, SDL_GetScancodeFromKey, SDL_BUTTON_LEFT, SDL_BUTTON_RIGHT};
+use crate::common::keys::{SDL_BUTTON_LEFT, SDL_BUTTON_RIGHT, SDL_KEYDOWN, SDL_KEYUP, SDL_MOUSEBUTTONDOWN, SDL_MOUSEBUTTONUP, SDL_MOUSEMOTION, SDL_QUIT};
 use std::ffi::CString;
 use std::io::Write;
 use std::path::Path;
@@ -354,12 +354,12 @@ fn event_type(g: &mut Game) -> u32 {
     ed(gp.get()).event.type_()
 }
 
-const T_QUIT: u32 = SDL_EventType::SDL_QUIT as u32;
-const T_KEYDOWN: u32 = SDL_EventType::SDL_KEYDOWN as u32;
-const T_KEYUP: u32 = SDL_EventType::SDL_KEYUP as u32;
-const T_MOUSEBUTTONDOWN: u32 = SDL_EventType::SDL_MOUSEBUTTONDOWN as u32;
-const T_MOUSEBUTTONUP: u32 = SDL_EventType::SDL_MOUSEBUTTONUP as u32;
-const T_MOUSEMOTION: u32 = SDL_EventType::SDL_MOUSEMOTION as u32;
+const T_QUIT: u32 = SDL_QUIT;
+const T_KEYDOWN: u32 = SDL_KEYDOWN;
+const T_KEYUP: u32 = SDL_KEYUP;
+const T_MOUSEBUTTONDOWN: u32 = SDL_MOUSEBUTTONDOWN;
+const T_MOUSEBUTTONUP: u32 = SDL_MOUSEBUTTONUP;
+const T_MOUSEMOTION: u32 = SDL_MOUSEMOTION;
 
 const BUTTON_LEFT: u8 = SDL_BUTTON_LEFT as u8;
 const BUTTON_RIGHT: u8 = SDL_BUTTON_RIGHT as u8;

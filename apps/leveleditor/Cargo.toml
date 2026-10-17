@@ -7,3 +7,4 @@ publish.workspace = true
 
 [dependencies]
 smw-core = { path = "../../crates/smw-core" }
+smw-sdl2 = { path = "../../crates/smw-sdl2" }

@@ -17,7 +17,7 @@ use crate::common::uicontrol::{TextAlign, UI_Control, UI_ControlTrait};
 use crate::common::uimenu::UI_Menu;
 use crate::globals::*;
 use crate::smw::harness;
-use sdl2::sys::{SDL_Event, SDL_GetKeyName, SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP};
+use crate::common::keys::{SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP};
 use std::ffi::CStr;
 
 const GameInputNames: [&str; NUM_KEYS] = ["Left", "Right", "Jump", "Down", "Turbo", "Use Item", "Pause", "Exit"];
@@ -199,13 +199,13 @@ impl UI_ControlTrait for MI_InputControlField {
                 let mut key: Keycode = KEY_NONE;
                 let value = jhat_value as u32;
 
-                if value & SDL_HAT_UP as u32 != 0 {
+                if value & SDL_HAT_UP != 0 {
                     key = JOY_HAT_UP;
-                } else if value & SDL_HAT_DOWN as u32 != 0 {
+                } else if value & SDL_HAT_DOWN != 0 {
                     key = JOY_HAT_DOWN;
-                } else if value & SDL_HAT_LEFT as u32 != 0 {
+                } else if value & SDL_HAT_LEFT != 0 {
                     key = JOY_HAT_LEFT;
-                } else if value & SDL_HAT_RIGHT as u32 != 0 {
+                } else if value & SDL_HAT_RIGHT != 0 {
                     key = JOY_HAT_RIGHT;
                 }
 
