@@ -1512,8 +1512,10 @@ impl GameplayState {
         if !g.game_values.flags.swapplayers {
             for i in 0..g.players.len() {
                 let mut player = g.players[i];
+                crate::common::gfx::display_list::set_owner(crate::common::gfx::display_list::owner_of(g.player(player)));
                 g.player(player).draw(g);
             }
+            crate::common::gfx::display_list::set_owner(crate::common::gfx::display_list::Owner::None);
         }
 
         gp.eyecandy[1].draw(g);
@@ -2700,7 +2702,21 @@ impl GameState for GameplayState {
 
             //--------------- draw everything ----------------------
             let (state, offsets) = (self.iCountDownState, self.iScoreTextOffset);
+            let check = std::env::var_os("SMW_CHECK_DISPLAY_LIST").is_some();
+            let record = g.main_loop.interpolate || check;
+            if record {
+                crate::common::gfx::display_list::begin(g.screen);
+            }
             self.draw_everything(g, state, offsets);
+            if record {
+                let draw = crate::common::gfx::display_list::end();
+                if check {
+                    if let Err((pixels, area)) = unsafe { crate::common::gfx::display_list::check(&*g.screen, &draw) } {
+                        println!("[display list] frame {}: {} pixels differ in {:?}", crate::smw::harness::frame(g), pixels, area);
+                    }
+                }
+                g.main_loop.store_display(draw);
+            }
         }
 
         if g.game_values.flags.pausegame || g.game_values.flags.exitinggame {

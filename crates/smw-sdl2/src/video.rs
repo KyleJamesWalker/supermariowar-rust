@@ -52,9 +52,13 @@ fn find_preferred_renderer_index() -> i32 {
     -1
 }
 
-unsafe fn create_renderer(window: *mut SDL_Window) -> *mut SDL_Renderer {
-    let rendering_flags =
+/// The renderer, and whether it presents on vsync (`smw_platform::want_vsync`).
+unsafe fn create_renderer(window: *mut SDL_Window) -> (*mut SDL_Renderer, bool) {
+    let mut rendering_flags =
         SDL_RendererFlags::SDL_RENDERER_ACCELERATED as u32 | SDL_RendererFlags::SDL_RENDERER_TARGETTEXTURE as u32;
+    if smw_platform::want_vsync() {
+        rendering_flags |= SDL_RendererFlags::SDL_RENDERER_PRESENTVSYNC as u32;
+    }
 
     static RAW_FINGER_WATCH: std::sync::Once = std::sync::Once::new();
     RAW_FINGER_WATCH.call_once(|| SDL_AddEventWatch(Some(crate::input::keep_raw_finger), std::ptr::null_mut()));
@@ -69,13 +73,15 @@ unsafe fn create_renderer(window: *mut SDL_Window) -> *mut SDL_Renderer {
 
     let mut renderer_info: SDL_RendererInfo = std::mem::zeroed();
     SDL_GetRendererInfo(renderer, &mut renderer_info);
+    let vsync = renderer_info.flags & SDL_RendererFlags::SDL_RENDERER_PRESENTVSYNC as u32 != 0;
     println!(
-        "[gfx] Renderer: {}, {}",
+        "[gfx] Renderer: {}, {}{}",
         CStr::from_ptr(renderer_info.name).to_string_lossy(),
-        if renderer_info.flags & SDL_RendererFlags::SDL_RENDERER_ACCELERATED as u32 != 0 { "accelerated" } else { "software" }
+        if renderer_info.flags & SDL_RendererFlags::SDL_RENDERER_ACCELERATED as u32 != 0 { "accelerated" } else { "software" },
+        if vsync { ", vsync" } else { "" }
     );
 
-    renderer
+    (renderer, vsync)
 }
 
 unsafe fn create_screen_texture(renderer: *mut SDL_Renderer) -> *mut SDL_Texture {
@@ -99,11 +105,12 @@ pub struct Sdl2Video {
     texture: *mut SDL_Texture,
     overlay_generation: Option<u64>,
     overlay_textures: Vec<*mut SDL_Texture>,
+    vsync: bool,
 }
 
 impl Sdl2Video {
     pub fn new() -> Self {
-        Sdl2Video { window: null_mut(), renderer: null_mut(), texture: null_mut(), overlay_generation: Option::None, overlay_textures: Vec::new() }
+        Sdl2Video { window: null_mut(), renderer: null_mut(), texture: null_mut(), overlay_generation: Option::None, overlay_textures: Vec::new(), vsync: false }
     }
 }
 
@@ -166,6 +173,10 @@ impl Sdl2Video {
 }
 
 impl Video for Sdl2Video {
+    fn vsync(&self) -> bool {
+        self.vsync
+    }
+
     fn show_cursor(&mut self, on: bool) {
         unsafe { SDL_ShowCursor(if on { SDL_ENABLE } else { SDL_DISABLE } as i32) };
     }
@@ -179,7 +190,7 @@ impl Video for Sdl2Video {
             SDL_GetVersion(&mut v);
             println!("[gfx] SDL {}.{}.{} loaded.", v.major, v.minor, v.patch);
             self.window = create_window(fullscreen);
-            self.renderer = create_renderer(self.window);
+            (self.renderer, self.vsync) = create_renderer(self.window);
             self.texture = create_screen_texture(self.renderer);
         }
     }

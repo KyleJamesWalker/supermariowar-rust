@@ -390,6 +390,12 @@ jobs:
           [[ -s sdl3-summary.txt ]] || exit 1
           exit $status
 
+      - name: Display lists re-render every gameplay frame exactly
+        if: matrix.check == 'goldens' && matrix.os == 'linux'
+        env:
+          SMW_NO_BUILD: '1'
+        run: python3 tools/display_list_check.py --jobs "$JOBS" tools/replays/*.txt
+
       - name: Headless editor parity
         if: ${{ !cancelled() && matrix.check == 'goldens' }}
         env:

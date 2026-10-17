@@ -123,8 +123,10 @@ unsafe extern "C-unwind" fn gameloop_frame_web(arg: *mut std::ffi::c_void) {
     }
     ml.web_last_time = now;
 
+    ml.interpolate = std::env::var_os("SMW_INTERPOLATE").is_none_or(|v| v != "0");
     let mut frames = 0;
     while ml.web_accumulated >= frame_ms && frames < MAX_CATCH_UP_FRAMES && gp.game_values.appstate != crate::common::game_values::AppState::Quit {
+        ml.display_fresh = false;
         step(gp.get());
 
         ml.web_accumulated -= frame_ms;
@@ -134,7 +136,12 @@ unsafe extern "C-unwind" fn gameloop_frame_web(arg: *mut std::ffi::c_void) {
         ml.web_accumulated = ml.web_accumulated.min(frame_ms);
     }
 
-    if frames > 0 {
+    // requestAnimationFrame runs at the display rate, so frames between ticks render from the last two draws.
+    if ml.interpolate && ml.display_fresh && !ml.display[0].is_empty() {
+        let alpha = (ml.web_accumulated / frame_ms).clamp(0.0, 1.0) as f32;
+        crate::common::gfx::display_list::render(gp.screen, &ml.display[0], &ml.display[1], alpha);
+        gfx_flipscreen(gp.get());
+    } else if frames > 0 {
         gfx_flipscreen(gp.get());
     }
     web_quit_if_done(gp.get());
@@ -160,6 +167,7 @@ fn phase(_: usize) {}
 /// One tick of game logic, which also draws the frame into the screen surface.
 unsafe fn tick(g: &mut Game) {
     let mut gp = g.ptr();
+    gp.main_loop.display_fresh = false;
     assign_hotplugged(gp.get());
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::touch::flush(g);
@@ -204,7 +212,9 @@ unsafe fn paced_frame(g: &mut Game) {
     let mut gp = g.ptr();
     let tick_us = 1_000_000.0 / (TICKS_PER_SECOND as f64 * harness::speed(g) as f64);
     let now = crate::services::services(g).clock.now_us();
+    let vsync = crate::services::services(g).video.vsync();
     let ml = &mut gp.get().main_loop;
+    ml.interpolate = (vsync || ml.present_hz.flatten().is_some()) && std::env::var_os("SMW_INTERPOLATE").is_none_or(|v| v != "0");
     match ml.last_us {
         Some(last) => ml.accumulated_us += now.saturating_sub(last) as f64,
         None => ml.accumulated_us = tick_us,
@@ -222,7 +232,21 @@ unsafe fn paced_frame(g: &mut Game) {
         ml.accumulated_us = ml.accumulated_us.min(tick_us);
     }
     let present_hz = *ml.present_hz.get_or_insert_with(|| std::env::var("SMW_PRESENT_HZ").ok().and_then(|v| v.parse::<f64>().ok()).filter(|&hz| hz > 0.0));
-    if let Some(hz) = present_hz {
+    if ml.interpolate {
+        if ml.display_fresh && !ml.display[0].is_empty() {
+            let alpha = (ml.accumulated_us / tick_us).clamp(0.0, 1.0) as f32;
+            crate::common::gfx::display_list::render(gp.screen, &ml.display[0], &ml.display[1], alpha);
+        }
+        let present_start = crate::services::services(gp.get()).clock.now_us();
+        present(gp.get(), frame_start, std::time::Instant::now());
+        let present_end = crate::services::services(gp.get()).clock.now_us();
+        if let Some(hz) = present_hz {
+            crate::services::delay(gp.get(), ((1_000_000.0 / hz - present_end.saturating_sub(now) as f64) / 1000.0).max(0.0) as u32);
+        } else if present_end.saturating_sub(present_start) < 1000 {
+            // A present that did not wait for the display (a hidden window): do not spin.
+            crate::services::delay(gp.get(), 1);
+        }
+    } else if let Some(hz) = present_hz {
         // A display at `hz`: present every refresh, ticks or not, and wait for the next one.
         present(gp.get(), frame_start, std::time::Instant::now());
         let elapsed_us = crate::services::services(gp.get()).clock.now_us().saturating_sub(now) as f64;
@@ -403,11 +427,21 @@ pub struct MainLoopState {
     accumulated_us: f64,
     /// `SMW_PRESENT_HZ`, read on the first paced frame: a test display rate the loop presents at instead of once per tick.
     present_hz: Option<Option<f64>>,
+    /// Whether gameplay records its draws for the frames between ticks (common/gfx/display_list.rs).
+    pub(crate) interpolate: bool,
+    /// The last two gameplay draws, older first, and whether the latest tick drew the second.
+    display: [crate::common::gfx::display_list::Draw; 2],
+    display_fresh: bool,
     /// Frames the current screen has waited for an all-CPU game to continue (smw/auto_advance.rs).
     pub(crate) auto_advance: u16,
 }
 
 impl MainLoopState {
+    pub(crate) fn store_display(&mut self, draw: crate::common::gfx::display_list::Draw) {
+        self.display[0] = std::mem::replace(&mut self.display[1], draw);
+        self.display_fresh = true;
+    }
+
     pub const fn new() -> Self {
         MainLoopState {
             #[cfg(target_os = "emscripten")]
@@ -421,6 +455,9 @@ impl MainLoopState {
             last_us: None,
             accumulated_us: 0.0,
             present_hz: None,
+            interpolate: false,
+            display: [crate::common::gfx::display_list::Draw::new(), crate::common::gfx::display_list::Draw::new()],
+            display_fresh: false,
             auto_advance: 0,
         }
     }
