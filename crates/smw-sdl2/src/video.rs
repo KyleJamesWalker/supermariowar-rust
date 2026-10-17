@@ -56,6 +56,8 @@ unsafe fn create_renderer(window: *mut SDL_Window) -> *mut SDL_Renderer {
     let rendering_flags =
         SDL_RendererFlags::SDL_RENDERER_ACCELERATED as u32 | SDL_RendererFlags::SDL_RENDERER_TARGETTEXTURE as u32;
 
+    static RAW_FINGER_WATCH: std::sync::Once = std::sync::Once::new();
+    RAW_FINGER_WATCH.call_once(|| SDL_AddEventWatch(Some(crate::input::keep_raw_finger), std::ptr::null_mut()));
     let renderer = SDL_CreateRenderer(window, find_preferred_renderer_index(), rendering_flags);
     if renderer.is_null() {
         throw_error(format!("Couldn't create renderer: {}\n", sdl_error()));

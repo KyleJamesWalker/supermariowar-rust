@@ -1,11 +1,12 @@
 //! Port of src/smw/menu/network/NetNewRoomMenu.cpp
+use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_button::MI_Button;
 use crate::common::ui::mi_image::MI_Image;
 use crate::common::ui::mi_text::{MI_HeaderText, MI_Text};
 use crate::common::ui::mi_text_field::MI_TextField;
-use crate::common::uicontrol::{ctl_ptr, TextAlign};
+use crate::common::uicontrol::{TextAlign};
 use crate::common::uimenu::UI_Menu;
 use crate::common_netplay::protocol_definitions::{NET_MAX_ROOM_NAME_LENGTH, NET_MAX_ROOM_PASSWORD_LENGTH};
 use crate::globals::Ptr;
@@ -15,17 +16,17 @@ use crate::smw::net::net_save_server_list;
 pub struct UI_NetNewRoomMenu {
     pub ui_menu: UI_Menu,
 
-    miNetNewRoomNameField: Ptr<MI_TextField>,
-    miNetNewRoomPasswordField: Ptr<MI_TextField>,
-    miNetNewRoomCreateButton: Ptr<MI_Button>,
-    miNetNewRoomBackButton: Ptr<MI_Button>,
+    miNetNewRoomNameField: Ctl<MI_TextField>,
+    miNetNewRoomPasswordField: Ctl<MI_TextField>,
+    miNetNewRoomCreateButton: Ctl<MI_Button>,
+    miNetNewRoomBackButton: Ctl<MI_Button>,
 
-    miNetNewRoomCreatingDialogImage: Ptr<MI_Image>,
-    miNetNewRoomCreatingDialogText: Ptr<MI_Text>,
+    miNetNewRoomCreatingDialogImage: Ctl<MI_Image>,
+    miNetNewRoomCreatingDialogText: Ctl<MI_Text>,
 
-    miNetNewRoomLeftHeaderBar: Ptr<MI_Image>,
-    miNetNewRoomRightHeaderBar: Ptr<MI_Image>,
-    miNetNewRoomHeaderText: Ptr<MI_Text>,
+    miNetNewRoomLeftHeaderBar: Ctl<MI_Image>,
+    miNetNewRoomRightHeaderBar: Ctl<MI_Image>,
+    miNetNewRoomHeaderText: Ctl<MI_Text>,
 }
 crate::impl_base!(UI_NetNewRoomMenu => ui_menu: UI_Menu);
 
@@ -36,45 +37,45 @@ impl UI_NetNewRoomMenu {
         let selectfield = g.rm.spr_selectfield;
         let plain = g.rm.menu_plain_field;
 
-        this.miNetNewRoomNameField = Ptr::new_box(MI_TextField::new(plain, 70, 160, "Room name", 640 - 2 * 70, 230));
-        this.miNetNewRoomNameField.set_data(g, &mut gp.netplay.newroom_name, NET_MAX_ROOM_NAME_LENGTH as i16);
+        this.miNetNewRoomNameField = Ctl::new(MI_TextField::new(plain, 70, 160, "Room name", 640 - 2 * 70, 230), g);
+        g.ctl(this.miNetNewRoomNameField).set_data(g, &mut gp.netplay.newroom_name, NET_MAX_ROOM_NAME_LENGTH as i16);
 
-        this.miNetNewRoomPasswordField = Ptr::new_box(MI_TextField::new(plain, 70, 200, "Password (optional)", 640 - 2 * 70, 230));
-        this.miNetNewRoomPasswordField.set_data(g, &mut gp.netplay.newroom_password, NET_MAX_ROOM_PASSWORD_LENGTH as i16);
+        this.miNetNewRoomPasswordField = Ctl::new(MI_TextField::new(plain, 70, 200, "Password (optional)", 640 - 2 * 70, 230), g);
+        g.ctl(this.miNetNewRoomPasswordField).set_data(g, &mut gp.netplay.newroom_password, NET_MAX_ROOM_PASSWORD_LENGTH as i16);
 
-        this.miNetNewRoomCreateButton = Ptr::new_box(MI_Button::new(g, selectfield, 70, 240, "Create!", 640 - 2 * 70, TextAlign::CENTER));
-        this.miNetNewRoomCreateButton.set_code(MENU_CODE_TO_NET_NEW_ROOM_CREATE_IN_PROGRESS);
+        this.miNetNewRoomCreateButton = Ctl::new(MI_Button::new(g, selectfield, 70, 240, "Create!", 640 - 2 * 70, TextAlign::CENTER), g);
+        g.ctl(this.miNetNewRoomCreateButton).set_code(MENU_CODE_TO_NET_NEW_ROOM_CREATE_IN_PROGRESS);
 
-        this.miNetNewRoomBackButton = Ptr::new_box(MI_Button::new(g, selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
-        this.miNetNewRoomBackButton.set_code(MENU_CODE_TO_NET_NEW_ROOM_LEVEL_SELECT_MENU);
+        this.miNetNewRoomBackButton = Ctl::new(MI_Button::new(g, selectfield, 544, 432, "Back", 80, TextAlign::CENTER), g);
+        g.ctl(this.miNetNewRoomBackButton).set_code(MENU_CODE_TO_NET_NEW_ROOM_LEVEL_SELECT_MENU);
 
-        let name = ctl_ptr(this.miNetNewRoomNameField);
-        let pass = ctl_ptr(this.miNetNewRoomPasswordField);
-        let create = ctl_ptr(this.miNetNewRoomCreateButton);
-        let back = ctl_ptr(this.miNetNewRoomBackButton);
-        let null = Ptr::null();
+        let name = this.miNetNewRoomNameField.id();
+        let pass = this.miNetNewRoomPasswordField.id();
+        let create = this.miNetNewRoomCreateButton.id();
+        let back = this.miNetNewRoomBackButton.id();
+        let null = ControlId::NONE;
 
-        this.add_control(name, back, pass, null, null);
-        this.add_control(pass, name, create, null, null);
-        this.add_control(create, pass, back, null, null);
-        this.add_control(back, create, name, null, null);
+        this.add_control(g, name, back, pass, null, null);
+        this.add_control(g, pass, name, create, null, null);
+        this.add_control(g, create, pass, back, null, null);
+        this.add_control(g, back, create, name, null, null);
 
-        this.miNetNewRoomCreatingDialogImage = Ptr::new_box(MI_Image::new(g.rm.spr_dialog, 224, 176, 0, 0, 192, 128, 1, 1, 0));
-        this.miNetNewRoomCreatingDialogText = Ptr::new_box(MI_HeaderText::new(g, "Creating...", 320, 240 - 12));
+        this.miNetNewRoomCreatingDialogImage = Ctl::new(MI_Image::new(g.rm.spr_dialog, 224, 176, 0, 0, 192, 128, 1, 1, 0), g);
+        this.miNetNewRoomCreatingDialogText = Ctl::new(MI_HeaderText::new(g, "Creating...", 320, 240 - 12), g);
 
-        this.miNetNewRoomCreatingDialogImage.set_visible(false);
-        this.miNetNewRoomCreatingDialogText.set_visible(false);
+        g.ctl(this.miNetNewRoomCreatingDialogImage).set_visible(false);
+        g.ctl(this.miNetNewRoomCreatingDialogText).set_visible(false);
 
-        let (di, dt) = (ctl_ptr(this.miNetNewRoomCreatingDialogImage), ctl_ptr(this.miNetNewRoomCreatingDialogText));
+        let (di, dt) = (this.miNetNewRoomCreatingDialogImage.id(), this.miNetNewRoomCreatingDialogText.id());
         this.add_non_control(di);
         this.add_non_control(dt);
 
         let plain = g.rm.menu_plain_field;
-        this.miNetNewRoomLeftHeaderBar = Ptr::new_box(MI_Image::new(plain, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-        this.miNetNewRoomRightHeaderBar = Ptr::new_box(MI_Image::new(plain, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-        this.miNetNewRoomHeaderText = Ptr::new_box(MI_HeaderText::new(g, "New Room Settings Menu", 320, 5));
+        this.miNetNewRoomLeftHeaderBar = Ctl::new(MI_Image::new(plain, 0, 0, 0, 0, 320, 32, 1, 1, 0), g);
+        this.miNetNewRoomRightHeaderBar = Ctl::new(MI_Image::new(plain, 320, 0, 192, 0, 320, 32, 1, 1, 0), g);
+        this.miNetNewRoomHeaderText = Ctl::new(MI_HeaderText::new(g, "New Room Settings Menu", 320, 5), g);
 
-        let (l, r, h) = (ctl_ptr(this.miNetNewRoomLeftHeaderBar), ctl_ptr(this.miNetNewRoomRightHeaderBar), ctl_ptr(this.miNetNewRoomHeaderText));
+        let (l, r, h) = (this.miNetNewRoomLeftHeaderBar.id(), this.miNetNewRoomRightHeaderBar.id(), this.miNetNewRoomHeaderText.id());
         this.add_non_control(l);
         this.add_non_control(r);
         this.add_non_control(h);
@@ -91,11 +92,11 @@ impl UI_NetNewRoomMenu {
             g.netplay.operationInProgress = true;
             net_save_server_list(g);
 
-            self.miNetNewRoomCreatingDialogImage.set_visible(true);
-            self.miNetNewRoomCreatingDialogText.set_visible(true);
+            g.ctl(self.miNetNewRoomCreatingDialogImage).set_visible(true);
+            g.ctl(self.miNetNewRoomCreatingDialogText).set_visible(true);
             self.remember_current();
 
-            let t = ctl_ptr(self.miNetNewRoomCreatingDialogText);
+            let t = self.miNetNewRoomCreatingDialogText.id();
             self.set_initial_focus(g, t);
             self.set_cancel_code(MENU_CODE_TO_NET_NEW_ROOM_CREATE_ABORT);
             self.reset_menu(g);
@@ -111,10 +112,10 @@ impl UI_NetNewRoomMenu {
 
     pub fn restore(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        self.miNetNewRoomCreatingDialogImage.set_visible(false);
-        self.miNetNewRoomCreatingDialogText.set_visible(false);
+        g.ctl(self.miNetNewRoomCreatingDialogImage).set_visible(false);
+        g.ctl(self.miNetNewRoomCreatingDialogText).set_visible(false);
 
-        let n = ctl_ptr(self.miNetNewRoomNameField);
+        let n = self.miNetNewRoomNameField.id();
         self.set_initial_focus(gp.get(), n);
         self.set_cancel_code(MENU_CODE_TO_NET_NEW_ROOM_LEVEL_SELECT_MENU);
     }

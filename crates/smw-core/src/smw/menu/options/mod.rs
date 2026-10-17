@@ -1,3 +1,4 @@
+use crate::game::Game;
 pub mod eye_candy_options_menu;
 pub mod gameplay_options_menu;
 pub mod graphics_options_menu;
@@ -8,6 +9,7 @@ pub mod projectile_options_menu;
 pub mod sound_options_menu;
 pub mod team_options_menu;
 
+use crate::common::uicontrol::{ControlId, Ctl};
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::ui::mi_select_field::MI_SelectField;
@@ -24,13 +26,14 @@ pub(crate) unsafe fn select_field<T: Copy + PartialEq + 'static>(
     indent: i16,
     items: &[(&str, T)],
     output: *mut T,
-) -> Ptr<MI_SelectField<T>> {
-    let mut f = Ptr::new_box(MI_SelectField::new(spr, x, y, name, width, indent));
+    g: &mut Game,
+) -> Ctl<MI_SelectField<T>> {
+    let mut f = Ctl::new(MI_SelectField::new(spr, x, y, name, width, indent), g);
     for &(item_name, value) in items {
-        f.add(item_name, value);
+        g.ctl(f).add(item_name, value);
     }
-    f.set_output_ptr(output);
-    f.set_current_value(*output);
+    g.ctl(f).set_output_ptr(output);
+    g.ctl(f).set_current_value(*output);
     f
 }
 

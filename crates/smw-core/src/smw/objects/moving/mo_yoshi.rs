@@ -76,10 +76,10 @@ impl MO_Yoshi {
                 && (upperRight & tile_flag_solid) == 0
                 && (lowerLeft & tile_flag_solid) == 0
                 && (lowerRight & tile_flag_solid) == 0
-                && g.g_map.block(ixl, iyt).is_null()
-                && g.g_map.block(ixr, iyt).is_null()
-                && g.g_map.block(ixl, iyb).is_null()
-                && g.g_map.block(ixr, iyb).is_null()
+                && g.map_block(ixl, iyt).is_null()
+                && g.map_block(ixr, iyt).is_null()
+                && g.map_block(ixl, iyb).is_null()
+                && g.map_block(ixr, iyb).is_null()
             {
                 // spawn on ground, but not on spikes
                 let mut iDeathY: i16 = ((iy + ih) / TILESIZE) as i16;
@@ -92,8 +92,8 @@ impl MO_Yoshi {
 
                     if (((ttLeftTile & tile_flag_solid) != 0 || (ttLeftTile & tile_flag_solid_on_top) != 0) && (ttLeftTile & tile_flag_death_on_top) == 0)
                         || (((ttRightTile & tile_flag_solid) != 0 || (ttRightTile & tile_flag_solid_on_top) != 0) && (ttRightTile & tile_flag_death_on_top) == 0)
-                        || !g.g_map.block(iDeathX1, iDeathY).is_null()
-                        || !g.g_map.block(iDeathX2, iDeathY).is_null()
+                        || !g.map_block(iDeathX1, iDeathY).is_null()
+                        || !g.map_block(iDeathX2, iDeathY).is_null()
                     {
                         let top: i16 = ((((iDeathY as i32) << 5) - ih) / TILESIZE) as i16;
 
@@ -139,8 +139,8 @@ impl CObjectTrait for MO_Yoshi {
 
     fn collide_player(&mut self, g: &mut Game, mut player: PlayerId) -> bool {
         let mut gp = g.ptr();
-        if !g.player(player).carriedItem.is_null() && g.player(player).carriedItem.get_moving_object_type() == movingobject_egg {
-            let mut egg: Ptr<CO_Egg> = Ptr::from_mut(g.player(player).carriedItem.as_any().downcast_mut::<CO_Egg>().unwrap());
+        if !g.carried_item(player).is_null() && g.carried_item(player).get_moving_object_type() == movingobject_egg {
+            let mut egg: Ptr<CO_Egg> = Ptr::from_mut(g.carried_item(player).as_any().downcast_mut::<CO_Egg>().unwrap());
 
             if egg.color == self.color {
                 if !g.game_values.gamemode.gameover {

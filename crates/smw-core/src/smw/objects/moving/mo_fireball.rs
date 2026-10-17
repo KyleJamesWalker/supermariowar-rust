@@ -4,7 +4,7 @@ use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
-use crate::common::eyecandy::Spotlight;
+use crate::common::eyecandy::SpotlightId;
 use crate::common::gameplay_styles::TeamCollisionStyle;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::global_constants::*;
@@ -27,7 +27,7 @@ pub struct MO_Fireball {
     pub colorOffset: i16,
 
     pub ttl: i16,
-    pub sSpotlight: Ptr<Spotlight>,
+    pub sSpotlight: SpotlightId,
 }
 impl_base!(MO_Fireball => io_moving_object: IO_MovingObject);
 
@@ -52,7 +52,7 @@ impl MO_Fireball {
             ),
             colorOffset: 0,
             ttl: 0,
-            sSpotlight: Ptr::null(),
+            sSpotlight: SpotlightId::NONE,
         };
 
         if moveToRight {
@@ -76,7 +76,7 @@ impl MO_Fireball {
 
         o.ttl = g.game_values.fireballttl;
 
-        o.sSpotlight = Ptr::null();
+        o.sSpotlight = SpotlightId::NONE;
         o
     }
 }
@@ -95,7 +95,7 @@ impl CObjectTrait for MO_Fireball {
         if self.ttl <= 0 {
             removeifprojectile(g, self.as_mo_ptr(), true, true);
         } else if g.game_values.spotlights {
-            if self.sSpotlight.is_null() {
+            if self.sSpotlight.is_none() {
                 self.sSpotlight = gp.spotlightManager.add_spotlight(
                     g,
                     (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16,
@@ -104,10 +104,10 @@ impl CObjectTrait for MO_Fireball {
                 );
             }
 
-            if !self.sSpotlight.is_null() {
+            if !self.sSpotlight.is_none() {
                 let x = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
                 let y = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
-                self.sSpotlight.update_position(x, y);
+                g.spotlightManager.update_position(self.sSpotlight, x, y);
             }
         }
     }

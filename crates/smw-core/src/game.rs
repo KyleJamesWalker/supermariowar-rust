@@ -1,7 +1,9 @@
 //! The game's state as one value (docs/ARCHITECTURE_V2.md, Step 2: globals into a `Game` struct).
 
+use crate::common::uicontrol::{ControlId, Ctl};
 use crate::common::gfx::soft_surface::Surface;
 use crate::smw::object_container::ObjectId;
+use crate::smw::players::PlayerId;
 use crate::common::eyecandy::{CEyecandyContainer, SpotlightManager};
 use crate::common::game_mode::{CGameModeTrait, GAMEMODE_LAST};
 use crate::common::file_list::{AnnouncerList, FiltersList, GraphicsList, MusicList, SkinList, SoundsList, TourList, WorldList, WorldMusicList};
@@ -70,6 +72,7 @@ pub struct Game {
     pub g_tilesetmanager: Ptr<CTilesetManager>,
     pub noncolcontainer: CObjectContainer,
     pub objectcontainer: [CObjectContainer; 3],
+    pub controls: crate::common::uicontrol::Controls,
     pub eyecandy: [CEyecandyContainer; 3],
     pub players: crate::smw::players::Players,
     pub score: [Ptr<CScore>; 4],
@@ -148,6 +151,36 @@ impl Game {
         }
     }
 
+    /// The item `id` names, or null: what the C++ `carriedItem` pointer held.
+    pub fn carried(&self, id: ObjectId) -> Ptr<dyn crate::smw::objects::moving::mo_carried_object::MO_CarriedObjectTrait> {
+        match self.object(id) {
+            Some(mut obj) => obj.get().as_io_moving_object().and_then(|m| m.as_carried_object()).map(Ptr::from_mut).unwrap_or_else(Ptr::null),
+            None => Ptr::null(),
+        }
+    }
+
+    pub fn carried_item(&self, player: PlayerId) -> Ptr<dyn crate::smw::objects::moving::mo_carried_object::MO_CarriedObjectTrait> {
+        self.carried(self.player(player).carriedItem)
+    }
+
+    pub fn ctl<T: 'static>(&self, ctl: crate::common::uicontrol::Ctl<T>) -> &'static mut T {
+        self.controls.typed(ctl)
+    }
+
+    /// Panics on `ControlId::NONE` or a removed control.
+    pub fn control(&self, id: crate::common::uicontrol::ControlId) -> &'static mut dyn crate::common::uicontrol::UI_ControlTrait {
+        self.controls.get(id).unwrap_or_else(|| panic!("no control {:?}", id))
+    }
+
+    pub fn map_block(&self, x: i16, y: i16) -> Ptr<dyn crate::common::io_block::IO_BlockTrait> {
+        self.g_map.block(&self.noncolcontainer, x, y)
+    }
+
+    pub fn update_tile_gap(&mut self, i: i16, j: i16) {
+        let mut map = self.g_map;
+        map.update_tile_gap(&self.noncolcontainer, i, j);
+    }
+
     /// The object `id` names, if it is still alive and a `T`.
     pub fn object_as<T: 'static>(&self, id: ObjectId) -> Option<&'static mut T> {
         let mut obj = self.object(id)?;
@@ -190,6 +223,7 @@ impl Game {
             g_tilesetmanager: Ptr::null(),
             noncolcontainer: CObjectContainer::new(3),
             objectcontainer: [CObjectContainer::new(0), CObjectContainer::new(1), CObjectContainer::new(2)],
+            controls: crate::common::uicontrol::Controls::new(),
             eyecandy: [CEyecandyContainer::new(), CEyecandyContainer::new(), CEyecandyContainer::new()],
             players: crate::smw::players::Players::new(),
             score: [Ptr::null(); 4],

@@ -4,7 +4,7 @@ use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
-use crate::common::eyecandy::Spotlight;
+use crate::common::eyecandy::SpotlightId;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gameplay_styles::{BoomerangStyle, TeamCollisionStyle};
@@ -34,7 +34,7 @@ pub struct MO_Boomerang {
     pub iStateTimer: i16,
 
     pub iStyle: BoomerangStyle,
-    pub sSpotlight: Ptr<Spotlight>,
+    pub sSpotlight: SpotlightId,
 }
 impl_base!(MO_Boomerang => io_moving_object: IO_MovingObject);
 
@@ -63,7 +63,7 @@ impl MO_Boomerang {
             fFlipped: false,
             iStateTimer: 0,
             iStyle: BoomerangStyle::Flat,
-            sSpotlight: Ptr::null(),
+            sSpotlight: SpotlightId::NONE,
         };
 
         // boomerangs sprites have both right and left sprites in them
@@ -107,7 +107,7 @@ impl MO_Boomerang {
 
         o.fObjectCollidesWithMap = false;
 
-        o.sSpotlight = Ptr::null();
+        o.sSpotlight = SpotlightId::NONE;
         o
     }
 
@@ -368,7 +368,7 @@ impl CObjectTrait for MO_Boomerang {
         }
 
         if g.game_values.spotlights {
-            if self.sSpotlight.is_null() {
+            if self.sSpotlight.is_none() {
                 self.sSpotlight = gp.spotlightManager.add_spotlight(
                     g,
                     (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16,
@@ -377,10 +377,10 @@ impl CObjectTrait for MO_Boomerang {
                 );
             }
 
-            if !self.sSpotlight.is_null() {
+            if !self.sSpotlight.is_none() {
                 let x = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
                 let y = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
-                self.sSpotlight.update_position(x, y);
+                g.spotlightManager.update_position(self.sSpotlight, x, y);
             }
         }
     }

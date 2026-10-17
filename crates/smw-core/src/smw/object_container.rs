@@ -115,14 +115,28 @@ impl CObjectContainer {
         if self.add_dyn(g, obj) { obj.id } else { ObjectId::NONE }
     }
 
+    /// Gives a `Ptr::new_box` object its handle before `add`, for an item a player carries first.
+    pub fn reserve<T: CObjectTrait>(&mut self, ptr: Ptr<T>) -> ObjectId {
+        let obj = Ptr::from_raw(ptr.as_ptr() as *mut dyn CObjectTrait);
+        self.assign(obj);
+        obj.id
+    }
+
+    /// Deletes a reserved object that was never added.
+    pub fn unreserve<T: CObjectTrait>(&mut self, ptr: Ptr<T>) {
+        self.release(Ptr::from_raw(ptr.as_ptr() as *mut dyn CObjectTrait));
+    }
+
     pub fn add_dyn(&mut self, g: &mut Game, ptr: Ptr<dyn CObjectTrait>) -> bool {
         if self.m_list.len() + 1 >= self.capacity() {
             //printf("eyecandy list full!\n");
-            ptr.delete(); // otherwise memory leak!
+            self.release(ptr); // otherwise memory leak!
             return false;
         }
         crate::smw::net_random::note_added(g, ptr);
-        self.assign(ptr);
+        if self.get(ptr.id).is_none() {
+            self.assign(ptr);
+        }
         self.m_list.push(ptr);
         true
     }

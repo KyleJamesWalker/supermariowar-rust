@@ -1901,11 +1901,14 @@ pub fn load_map_objects(g: &mut Game, fPreview: bool) {
             let objdata = g.g_map.objectdata[xu][yu];
             let switches = g.g_map.iSwitches;
             let mut block = spawn_map_block(g, typeId, Vec2s::new((x as i32 * 32) as i16, (y as i32 * 32) as i16), &objdata, &switches);
-            g.g_map.blockdata[xu][yu] = block;
-
+            let mut id = crate::smw::object_container::ObjectId::NONE;
             if !block.is_null() {
-                gp.noncolcontainer.add_dyn(g, block.as_object_ptr());
+                let obj = block.as_object_ptr();
+                if gp.noncolcontainer.add_dyn(g, obj) {
+                    id = obj.id;
+                }
             }
+            g.g_map.blockdata[xu][yu] = id;
 
             match typeId as i32 {
                 MapBlock_SwitchToggleRed
@@ -1916,7 +1919,7 @@ pub fn load_map_objects(g: &mut Game, fPreview: bool) {
                 | MapBlock_SwitchBlockGreen
                 | MapBlock_SwitchBlockYellow
                 | MapBlock_SwitchBlockBlue => {
-                    g.g_map.switchBlocks[(typeId as i32 - MapBlock_SwitchToggleRed) as usize].push(block);
+                    g.g_map.switchBlocks[(typeId as i32 - MapBlock_SwitchToggleRed) as usize].push(id);
                 }
                 _ => {}
             }
@@ -2033,7 +2036,8 @@ pub fn load_map_objects(g: &mut Game, fPreview: bool) {
     drop(fBoxHasCoin);
 
     //Set all the 1x1 gaps up so players can run across them
-    g.g_map.update_all_tile_gaps();
+    let mut map = g.g_map;
+    map.update_all_tile_gaps(&g.noncolcontainer);
 }
 
 pub fn clean_up(g: &mut Game) {
@@ -2856,8 +2860,8 @@ pub fn net_mystery_swap(g: &mut Game, iUsingPlayerID: i16) -> bool {
             g.player(player).set_xf(nx);
             g.player(player).set_yf(ny);
 
-            if !g.player(player).carriedItem.is_null() {
-                g.player(player).carriedItem.move_to_owner(g);
+            if !g.carried_item(player).is_null() {
+                g.carried_item(player).move_to_owner(g);
             }
         }
     }

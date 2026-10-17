@@ -4,6 +4,7 @@ use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
+use crate::common::map::PlatformId;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::{gfxSprite, ClipEdge};
 use crate::common::global_constants::*;
@@ -73,7 +74,7 @@ pub fn co_spring_hittop<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T, 
     g.player(player).set_yi((iy as i32 - PH - 1) as i16);
     let p = g.player(player);
     g.player(player).collisions.checktop(g, p);
-    g.player(player).platform = Ptr::null();
+    g.player(player).platform = PlatformId::NONE;
     g.player(player).inair = false;
     g.player(player).fallthrough = false;
     g.player(player).killsinrowinair = 0;

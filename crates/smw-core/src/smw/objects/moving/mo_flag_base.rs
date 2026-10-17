@@ -159,8 +159,8 @@ impl CObjectTrait for MO_FlagBase {
     }
 
     fn collide_player(&mut self, g: &mut Game, mut player: PlayerId) -> bool {
-        if self.teamID == g.player(player).teamID && !g.player(player).carriedItem.is_null() && g.player(player).carriedItem.get_moving_object_type() == movingobject_flag {
-            let flag: Ptr<CO_Flag> = Ptr::from_mut(g.player(player).carriedItem.as_any().downcast_mut::<CO_Flag>().unwrap());
+        if self.teamID == g.player(player).teamID && !g.carried_item(player).is_null() && g.carried_item(player).get_moving_object_type() == movingobject_flag {
+            let flag: Ptr<CO_Flag> = Ptr::from_mut(g.carried_item(player).as_any().downcast_mut::<CO_Flag>().unwrap());
             self.score_flag(g, flag, player);
             self.timer = 0;
         }

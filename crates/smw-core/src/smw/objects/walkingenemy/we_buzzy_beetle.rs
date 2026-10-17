@@ -3,6 +3,7 @@
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
+use crate::common::map::PlatformId;
 use crate::common::eyecandy::EC_FallingObject;
 use crate::common::game_mode::game_mode_stomp;
 use crate::common::game_values::if_sound_on_play;
@@ -97,7 +98,7 @@ impl MO_WalkingEnemyTrait for MO_BuzzyBeetle {
         g.player(player).bouncejump();
         let p = player;
         g.player(player).collisions.checktop(g, g.player(p));
-        g.player(player).platform = Ptr::null();
+        g.player(player).platform = PlatformId::NONE;
         self.dead = true;
 
         g.player(player).add_killer_award(g, PlayerId::NONE, KillStyle::BuzzyBeetle);

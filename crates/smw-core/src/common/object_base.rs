@@ -215,14 +215,14 @@ impl CObject {
 
         if iy >= 0 && iy < 480 {
             let yt = (iy / TILESIZE) as i16;
-            blocks[0] = g.g_map.block(xl, yt);
-            blocks[1] = g.g_map.block(xr, yt);
+            blocks[0] = g.map_block(xl, yt);
+            blocks[1] = g.map_block(xr, yt);
         }
 
         if iy + ih >= 0 && iy + ih < 480 {
             let yb = ((iy + ih) / TILESIZE) as i16;
-            blocks[2] = g.g_map.block(xl, yb);
-            blocks[3] = g.g_map.block(xr, yb);
+            blocks[2] = g.map_block(xl, yb);
+            blocks[3] = g.map_block(xr, yb);
         }
 
         blocks
