@@ -12,7 +12,7 @@ use crate::smw::player::CPlayer;
 
 const SSTOMP_STRENGTH_TIMER: u16 = 40;
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct PlayerSuperStomp {
     pub superstomp_lock: bool,
     pub floating_timer: i16,

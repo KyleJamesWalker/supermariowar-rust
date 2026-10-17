@@ -19,6 +19,7 @@ use crate::smw::objects::walkingenemy::we_spiny::MO_Spiny;
 use crate::smw::player::CPlayer;
 
 //Similar to coin mode but you have to smash the most goombas/cheeps/koopas
+#[derive(Clone)]
 pub struct CGM_Stomp {
     pub cgame_mode: CGameMode,
 

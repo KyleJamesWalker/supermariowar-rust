@@ -8,7 +8,7 @@ use crate::smw::player::CPlayer;
 const SECRET_CODE: [u8; 18] = [4, 8, 4, 8, 1, 1, 4, 8, 4, 8, 1, 1, 4, 8, 4, 8, 1, 1];
 const SECRET_CODE_TIME_MAX: u16 = 186;
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct PlayerSecretCode {
     pub timer: u16,
     pub index: u16,

@@ -19,6 +19,7 @@ use crate::smw::player::CPlayer;
 use std::any::Any;
 
 //Bonus Mode (not really a game mode, but involves using the map so we need a mode to play)
+#[derive(Clone)]
 pub struct CGM_Bonus {
     pub cgame_mode: CGameMode,
 

@@ -16,6 +16,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class area (for Domination mode)
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct OMO_Area {
     pub io_over_map_object: IO_OverMapObject,
 

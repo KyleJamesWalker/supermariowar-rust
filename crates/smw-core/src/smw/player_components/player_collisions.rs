@@ -16,7 +16,7 @@ use crate::globals::*;
 use crate::smw::player::{CPlayer, PlayerDeathStyle, PlayerState};
 use crate::smw::player_components::player_shield::{HARD, OFF, SOFT, SOFT_WITH_STOMP};
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct PlayerCollisions {
     pub _alias: Aliased,
 }

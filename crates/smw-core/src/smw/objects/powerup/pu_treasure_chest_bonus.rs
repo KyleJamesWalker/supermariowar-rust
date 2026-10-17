@@ -20,6 +20,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class treasure chest powerup
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct PU_TreasureChestBonus {
     pub mo_powerup: MO_Powerup,
 

@@ -6,7 +6,7 @@ use crate::common::eyecandy_styles::ScoreboardStyle;
 use crate::common::global_constants::WAITTIME;
 use crate::globals::*;
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct GameTimerDisplay {
     pub timeleft: i16,
     pub countdown: bool,

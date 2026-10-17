@@ -22,6 +22,7 @@ use crate::smw::player::{get_player_from_global_id, player_killed_player, CPlaye
 //------------------------------------------------------------------------------
 // attack zone(invisible area that kills objects and players)
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct MO_AttackZone {
     pub io_moving_object: IO_MovingObject,
 

@@ -124,7 +124,7 @@ impl Default for PlayerKeys {
 }
 
 /// All C++ members are `pub` so friend classes and components reach them by their C++ names.
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct CPlayer {
     pub id: PlayerId,
     pub shyguy: bool,

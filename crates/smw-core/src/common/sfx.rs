@@ -23,6 +23,8 @@ struct VirtualChannel {
     end: u32,
 }
 
+#[derive(Clone)]
+
 struct VirtualMusic {
     music: Option<TrackId>,
     forever: bool,
@@ -32,6 +34,7 @@ struct VirtualMusic {
 }
 
 /// The sound subsystem's part of `Game`.
+#[derive(Clone)]
 pub struct SfxState {
     pub fResumeMusic: bool,
     // Clock for the sfxSound::play() retrigger throttle; the replay harness swaps it (cpp-harness.patch).
@@ -188,10 +191,17 @@ impl Drop for MixChunkPtr {
     }
 }
 
+/// A copy in a cloned match (`Game::clone_match`) names the original's track and frees nothing.
+impl Clone for MixMusicPtr {
+    fn clone(&self) -> Self {
+        MixMusicPtr(self.0, Ptr::null())
+    }
+}
+
 impl Drop for MixMusicPtr {
     fn drop(&mut self) {
         let mut gp = self.1;
-        if let Some(id) = self.0 {
+        if let (Some(id), false) = (self.0, gp.is_null()) {
             let sfx = sfx_state(gp.get());
             if sfx.v_music.music == Some(id) {
                 sfx.v_music.music = None;
@@ -342,6 +352,7 @@ impl sfxSound {
     }
 }
 
+#[derive(Clone)]
 pub struct sfxMusic {
     m_music: MixMusicPtr,
     /// `Mix_MusicDuration`: seconds, negative when unknown.

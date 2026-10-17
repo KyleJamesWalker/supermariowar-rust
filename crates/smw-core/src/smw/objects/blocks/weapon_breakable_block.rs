@@ -43,6 +43,8 @@ pub enum WeaponDamageType {
 
 crate::enum_from_u8!(WeaponDamageType, 10);
 
+#[derive(Clone)]
+
 pub struct B_WeaponBreakableBlock {
     pub io_block: IO_Block,
 

@@ -39,6 +39,7 @@ pub enum ShellType {
 // state 1: Shell is moving
 // state 2: Shell is waiting to be picked up
 // state 3: Shell is being held
+#[derive(Clone)]
 pub struct CO_Shell {
     pub mo_carried_object: MO_CarriedObject,
 

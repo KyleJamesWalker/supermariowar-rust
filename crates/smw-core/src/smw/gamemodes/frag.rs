@@ -13,6 +13,7 @@ use crate::smw::gamemodes::game_mode::*;
 use crate::smw::player::CPlayer;
 
 //Fraglimit
+#[derive(Clone)]
 pub struct CGM_Frag {
     pub cgame_mode: CGameMode,
 }

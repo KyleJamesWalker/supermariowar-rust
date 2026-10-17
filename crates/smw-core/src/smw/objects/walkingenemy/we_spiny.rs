@@ -25,6 +25,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class spiny
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct MO_Spiny {
     pub mo_walking_enemy: MO_WalkingEnemy,
 }

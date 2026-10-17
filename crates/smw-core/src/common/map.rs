@@ -153,6 +153,8 @@ impl Default for PlatformId {
     }
 }
 
+#[derive(Clone)]
+
 pub struct AnimatedTile {
     pub id: i16,
     pub layers: [TilesetTile; 4],
@@ -637,6 +639,7 @@ const MH: usize = MAPHEIGHT as usize;
 const ML: usize = MAPLAYERS as usize;
 const NSPAWN: usize = NUMSPAWNAREATYPES as usize;
 
+#[derive(Clone)]
 pub struct CMap {
     pub szBackgroundFile: String,
     pub backgroundID: i16,
@@ -656,7 +659,7 @@ pub struct CMap {
 
     pub platforms: Vec<PlatformId>,
     pub tempPlatforms: Vec<PlatformId>,
-    platform_slots: Vec<Option<Box<UnsafeCell<MovingPlatform>>>>,
+    platform_slots: Vec<Option<Box<PlatformCell>>>,
     platform_generations: Vec<u16>,
 
     pub mapitems: Vec<MapItem>,
@@ -702,6 +705,14 @@ pub struct CMap {
     pub platformdrawlayer: [Vec<PlatformId>; 5],
 
     pub _alias: Aliased,
+}
+
+struct PlatformCell(UnsafeCell<MovingPlatform>);
+
+impl Clone for PlatformCell {
+    fn clone(&self) -> Self {
+        PlatformCell(UnsafeCell::new(unsafe { (*self.0.get()).clone() }))
+    }
 }
 
 /// The block `id` names, or null.
@@ -2711,7 +2722,7 @@ impl CMap {
         };
         let id = PlatformId { slot: slot as u16, generation: self.platform_generations[slot] };
         platform.id = id;
-        self.platform_slots[slot] = Some(Box::new(UnsafeCell::new(*platform)));
+        self.platform_slots[slot] = Some(Box::new(PlatformCell(UnsafeCell::new(*platform))));
         id
     }
 
@@ -2728,7 +2739,7 @@ impl CMap {
         if slot >= self.platform_slots.len() || self.platform_generations[slot] != id.generation {
             return None;
         }
-        let platform = self.platform_slots[slot].as_deref()?.get();
+        let platform = self.platform_slots[slot].as_deref()?.0.get();
         Some(unsafe { &mut *platform })
     }
 

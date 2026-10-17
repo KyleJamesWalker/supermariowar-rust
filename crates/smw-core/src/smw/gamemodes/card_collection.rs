@@ -19,6 +19,7 @@ use crate::smw::player::CPlayer;
 use std::any::Any;
 
 //Collection (collect cards for points)
+#[derive(Clone)]
 pub struct CGM_Collection {
     pub cgame_mode: CGameMode,
 

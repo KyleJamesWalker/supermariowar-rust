@@ -19,6 +19,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class special extra time powerup for timed or star mode
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct PU_ExtraTimePowerup {
     pub mo_powerup: MO_Powerup,
 }

@@ -16,6 +16,7 @@ use crate::smw::net_random::{self, Ev};
 use crate::smw::player::{get_player_from_global_id, player_killed_player_now, PlayerDeathStyle, PlayerState};
 
 /// The netplay outcome sync's part of `Game`.
+#[derive(Clone)]
 pub struct NetOutcomesState {
     g_lastScores: Vec<i16>,
     g_lastGameOver: bool,

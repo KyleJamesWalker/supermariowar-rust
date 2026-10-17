@@ -527,6 +527,8 @@ impl WorldWarp {
 * WorldMap
 **********************************/
 
+#[derive(Clone)]
+
 pub struct WorldMap {
     pub iWidth: i16,
     pub iHeight: i16,

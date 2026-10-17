@@ -12,6 +12,8 @@ use crate::smw::gamemodes::classic::{cgm_classic_init, cgm_classic_playerkilledp
 
 use crate::smw::player::CPlayer;
 
+#[derive(Clone)]
+
 pub struct CGM_Health {
     pub cgm_classic: CGM_Classic,
 }

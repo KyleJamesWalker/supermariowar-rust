@@ -15,6 +15,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class IO_BulletBillCannon - gets update calls and shoots bullet bills based on timer
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct IO_BulletBillCannon {
     pub cobject: CObject,
 

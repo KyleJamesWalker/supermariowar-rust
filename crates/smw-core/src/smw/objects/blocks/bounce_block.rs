@@ -18,6 +18,8 @@ use crate::smw::objects::blocks::io_block::*;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
 
+#[derive(Clone)]
+
 pub struct B_BounceBlock {
     pub io_block: IO_Block,
 }

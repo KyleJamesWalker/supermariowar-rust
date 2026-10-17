@@ -24,6 +24,7 @@ use crate::smw::player::{get_player_from_global_id, player_killed_player, CPlaye
 //------------------------------------------------------------------------------
 // class boomerang
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct MO_Boomerang {
     pub io_moving_object: IO_MovingObject,
 

@@ -28,6 +28,7 @@ use crate::smw::player::{CPlayer, PlayerState};
 //------------------------------------------------------------------------------
 // class IO_PirhanaPlant - pirhana plant that appears on a certain frequency
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct MO_PirhanaPlant {
     pub io_moving_object: IO_MovingObject,
 

@@ -47,6 +47,8 @@ pub struct SModeOption {
     pub iValue: i16,
 }
 
+#[derive(Clone)]
+
 pub struct CGameMode {
     pub winningteam: i16,
     pub gameover: bool,
@@ -92,7 +94,17 @@ pub enum ModeId {
     Boxes,
 }
 
-pub trait CGameModeTrait: Any {
+pub trait CloneGameMode {
+    fn clone_box(&self) -> Box<dyn CGameModeTrait>;
+}
+
+impl<T: CGameModeTrait + Clone> CloneGameMode for T {
+    fn clone_box(&self) -> Box<dyn CGameModeTrait> {
+        Box::new(self.clone())
+    }
+}
+
+pub trait CGameModeTrait: Any + CloneGameMode {
     fn gm(&self) -> &CGameMode;
     fn gm_mut(&mut self) -> &mut CGameMode;
     fn as_any(&mut self) -> &mut dyn Any;

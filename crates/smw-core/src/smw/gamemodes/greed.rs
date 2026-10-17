@@ -51,6 +51,7 @@ const fn kill_style_damage(style: KillStyle) -> i16 {
 }
 
 //Greed mode (players try to steal each other's coins)
+#[derive(Clone)]
 pub struct CGM_Greed {
     pub cgm_classic: CGM_Classic,
 }

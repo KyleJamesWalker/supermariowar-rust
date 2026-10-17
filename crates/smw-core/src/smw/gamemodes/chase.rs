@@ -19,6 +19,7 @@ use crate::smw::player::CPlayer;
 use std::any::Any;
 
 //Chase (hold a key for points while phantos chase you)
+#[derive(Clone)]
 pub struct CGM_Chase {
     pub cgame_mode: CGameMode,
 

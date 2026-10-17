@@ -15,6 +15,8 @@ use crate::smw::gamemodes::game_mode::*;
 use crate::smw::net_random::{self, Ev};
 use crate::smw::player::CPlayer;
 
+#[derive(Clone)]
+
 pub struct CGM_Tag {
     pub cgame_mode: CGameMode,
 

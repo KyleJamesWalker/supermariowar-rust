@@ -6,7 +6,7 @@ use crate::globals::*;
 use crate::smw::gamemodes::card_collection::CGM_Collection;
 use crate::smw::player::CPlayer;
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct PlayerCardCollection {
     pub timer: u16,
     pub index: u16,

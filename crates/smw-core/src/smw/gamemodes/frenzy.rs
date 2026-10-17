@@ -18,6 +18,7 @@ use crate::smw::objects::moving::mo_frenzy_card::MO_FrenzyCard;
 use crate::smw::player::CPlayer;
 
 //Just like frag limit, but firepower cards appear randomly
+#[derive(Clone)]
 pub struct CGM_Frenzy {
     pub cgm_frag: CGM_Frag,
 

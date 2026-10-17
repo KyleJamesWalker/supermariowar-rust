@@ -23,6 +23,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class flag base (for CTF mode)
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct MO_FlagBase {
     pub io_moving_object: IO_MovingObject,
 

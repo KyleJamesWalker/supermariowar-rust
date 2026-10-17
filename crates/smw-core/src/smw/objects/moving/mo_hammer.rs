@@ -23,6 +23,7 @@ use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
 //------------------------------------------------------------------------------
 // class hammer
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct MO_Hammer {
     pub io_moving_object: IO_MovingObject,
 

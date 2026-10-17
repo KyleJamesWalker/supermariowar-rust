@@ -23,6 +23,7 @@ use crate::smw::player::{get_player_from_global_id, CPlayer};
 //------------------------------------------------------------------------------
 // class spin death (spinning cape or tail)
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct MO_SpinAttack {
     pub mo_attack_zone: MO_AttackZone,
 

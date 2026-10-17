@@ -16,6 +16,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class BulletBill powerup
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct PU_BulletBillPowerup {
     pub mo_powerup: MO_Powerup,
 }

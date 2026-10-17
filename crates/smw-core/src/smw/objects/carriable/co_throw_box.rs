@@ -22,6 +22,7 @@ use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
 //------------------------------------------------------------------------------
 // class throwable box - can be used as a shield, thrown at a player, or holds items
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct CO_ThrowBox {
     pub mo_carried_object: MO_CarriedObject,
 

@@ -18,6 +18,8 @@ use crate::smw::objects::overmap::wo_bowser_fire::OMO_BowserFire;
 use crate::smw::objects::overmap::wo_thwomp::OMO_Thwomp;
 use crate::smw::player::CPlayer;
 
+#[derive(Clone)]
+
 pub struct CGM_Survival {
     pub cgm_classic: CGM_Classic,
 

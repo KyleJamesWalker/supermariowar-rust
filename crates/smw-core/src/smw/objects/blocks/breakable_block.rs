@@ -26,6 +26,7 @@ use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
 //------------------------------------------------------------------------------
 // class breakable block
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct B_BreakableBlock {
     pub io_block: IO_Block,
 

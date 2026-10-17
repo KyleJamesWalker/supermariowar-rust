@@ -28,6 +28,7 @@ pub enum CoinColor {
 //------------------------------------------------------------------------------
 // class special extra coin powerup for coin or greed mode
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct PU_CoinPowerup {
     pub mo_powerup: MO_Powerup,
 

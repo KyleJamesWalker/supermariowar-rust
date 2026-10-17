@@ -171,11 +171,15 @@ fn parse_value(line: &str) -> Option<(u32, String, String)> {
     Some((frame.parse().ok()?, key.to_string(), value.to_string()))
 }
 
+#[derive(Clone)]
+
 pub struct Replay {
     events: Vec<NetEvent>,
     next: usize,
     values: BTreeMap<String, VecDeque<String>>,
 }
+
+#[derive(Clone)]
 
 pub struct NetRecordState {
     replay: Option<Replay>,

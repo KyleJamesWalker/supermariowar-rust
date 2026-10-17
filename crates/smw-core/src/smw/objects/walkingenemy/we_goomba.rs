@@ -22,6 +22,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class goomba
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct MO_Goomba {
     pub mo_walking_enemy: MO_WalkingEnemy,
 }

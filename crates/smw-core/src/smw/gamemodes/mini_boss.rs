@@ -24,6 +24,7 @@ use std::any::Any;
 
 //Boss Mode
 //Person to score fatal hit to boss wins!
+#[derive(Clone)]
 pub struct CGM_Boss_MiniGame {
     pub cgame_mode: CGameMode,
 

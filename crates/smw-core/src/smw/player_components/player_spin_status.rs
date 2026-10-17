@@ -5,7 +5,7 @@ use crate::common::global_constants::*;
 use crate::globals::*;
 use crate::smw::player::CPlayer;
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct PlayerSpinStatus {
     pub timer: i8,
     pub state: u8,

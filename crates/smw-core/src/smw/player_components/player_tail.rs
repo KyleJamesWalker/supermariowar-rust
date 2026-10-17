@@ -14,7 +14,7 @@ pub const TAIL_NOT_IN_USE: PlayerTailState = 0;
 pub const TAIL_SHAKE: PlayerTailState = 1;
 pub const TAIL_SPIN_AND_SHAKE: PlayerTailState = 2;
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct PlayerTail {
     pub iTailTimer: i8,
     pub iTailFrame: u16,

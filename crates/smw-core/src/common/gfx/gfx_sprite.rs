@@ -66,7 +66,7 @@ unsafe fn blit_surface(src: *mut Surface, srcArea: *const Rect, dst: *mut Surfac
     }
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct gfxSprite {
     m_picture: SurfacePtr,
     m_wrap_x: Option<i32>,

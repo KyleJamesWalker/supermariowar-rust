@@ -14,6 +14,7 @@ use crate::smw::gamemodes::game_mode::*;
 use crate::smw::player::CPlayer;
 
 //mariowar classic
+#[derive(Clone)]
 pub struct CGM_Classic {
     pub cgame_mode: CGameMode,
 }

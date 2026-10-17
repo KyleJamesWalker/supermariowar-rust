@@ -15,6 +15,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class leaf powerup
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct PU_LeafPowerup {
     pub pu_feather_powerup: PU_FeatherPowerup,
 }

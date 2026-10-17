@@ -83,6 +83,8 @@ pub fn init_globals(g: &mut Game) {
     g.sfx.musicfinished = g.sfx.musicfinished;
 }
 
+#[derive(Clone)]
+
 pub struct GameplayState {
     iCountDownState: i16,
     iCountDownTimer: i16,

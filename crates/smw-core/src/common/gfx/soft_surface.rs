@@ -243,7 +243,7 @@ impl Surface {
 }
 
 /// An owned surface, or none: `std::unique_ptr<SDL_Surface, SdlDeleter>`.
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct SurfacePtr(Option<Box<Surface>>);
 
 impl SurfacePtr {

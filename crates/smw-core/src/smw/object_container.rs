@@ -46,6 +46,31 @@ pub struct CObjectContainer {
     pub _alias: Aliased,
 }
 
+impl Clone for CObjectContainer {
+    /// Copies every object, including reserved ones; handles into the original find the copies.
+    fn clone(&self) -> Self {
+        let slots: Vec<Option<Ptr<dyn CObjectTrait>>> = self.slots.iter().map(|s| s.map(|obj| obj.clone_object())).collect();
+        let copy_of = |obj: &Ptr<dyn CObjectTrait>| {
+            let slot = obj.id.slot as usize;
+            match self.slots.get(slot) {
+                Some(Some(listed)) if listed == obj => slots[slot].unwrap(),
+                _ => obj.clone_object(),
+            }
+        };
+        let m_list = self.m_list.iter().map(copy_of).collect();
+        CObjectContainer { m_list, index: self.index, slots, generations: self.generations.clone(), _alias: Aliased::new() }
+    }
+}
+
+impl Drop for CObjectContainer {
+    fn drop(&mut self) {
+        self.clean();
+        for obj in std::mem::take(&mut self.slots).into_iter().flatten() {
+            obj.delete();
+        }
+    }
+}
+
 impl CObjectContainer {
     pub const fn new(index: u8) -> Self {
         CObjectContainer { m_list: Vec::new(), index, slots: Vec::new(), generations: Vec::new(), _alias: Aliased::new() }

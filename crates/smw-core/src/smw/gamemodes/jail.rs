@@ -21,6 +21,7 @@ use crate::smw::player::CPlayer;
 //Jailed players can be freed by teammates
 //If all players on a team are jailed, bonus kill goes to other team
 //Similar to frag limit, but players get bonus frags for the number of players they have "owned"
+#[derive(Clone)]
 pub struct CGM_Jail {
     pub cgm_frag: CGM_Frag,
 }

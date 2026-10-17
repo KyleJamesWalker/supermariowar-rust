@@ -11,7 +11,7 @@ const INVINCIBILITY_HURRYUP_TIME: i16 = 100;
 const INVINCIBILITY_ANIMATION_DELAY: i16 = 4;
 const INVINCIBILITY_HURRYUP_ANIMATION_DELAY: i16 = 7;
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct PlayerInvincibility {
     pub invincible: bool,
     pub timer: i16,

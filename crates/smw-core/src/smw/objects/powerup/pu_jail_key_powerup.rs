@@ -16,6 +16,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class special jail key powerup for jail mode
 //------------------------------------------------------------------------------
+#[derive(Clone)]
 pub struct PU_JailKeyPowerup {
     pub mo_powerup: MO_Powerup,
 }
