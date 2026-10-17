@@ -479,7 +479,7 @@ pub fn inner_main(g: &mut Game) {
         g.rm = Ptr::new_box(CResourceManager::new());
         let mut rm = g.rm;
 
-        g.g_map = Ptr::from_box(CMap::new());
+        g.g_map.set(CMap::new());
         gp.g_tilesetmanager = Ptr::new_box(CTilesetManager::new(g, &convert_path(gp.get(), "gfx/Classic/tilesets")));
         g.filterslist = Ptr::new_box(FiltersList::new(g));
         g.maplist = Ptr::new_box(MapList::new(g, true));

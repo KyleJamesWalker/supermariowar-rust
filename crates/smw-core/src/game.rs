@@ -67,7 +67,7 @@ pub struct Game {
     pub tourlist: Ptr<TourList>,
     pub worldlist: Ptr<WorldList>,
     pub rm: Ptr<CResourceManager>,
-    pub g_map: Ptr<CMap>,
+    pub g_map: Owned<CMap>,
     pub g_tilesetmanager: Ptr<CTilesetManager>,
     pub noncolcontainer: CObjectContainer,
     pub objectcontainer: [CObjectContainer; 3],
@@ -206,7 +206,7 @@ impl Game {
     }
 
     pub fn update_tile_gap(&mut self, i: i16, j: i16) {
-        let mut map = self.g_map;
+        let mut map = self.g_map.ptr();
         map.update_tile_gap(&self.noncolcontainer, i, j);
     }
 
@@ -248,7 +248,7 @@ impl Game {
             tourlist: Ptr::null(),
             worldlist: Ptr::null(),
             rm: Ptr::null(),
-            g_map: Ptr::null(),
+            g_map: Owned::empty(),
             g_tilesetmanager: Ptr::null(),
             noncolcontainer: CObjectContainer::new(3),
             objectcontainer: [CObjectContainer::new(0), CObjectContainer::new(1), CObjectContainer::new(2)],

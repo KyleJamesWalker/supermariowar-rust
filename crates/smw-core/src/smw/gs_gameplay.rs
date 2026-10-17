@@ -2034,7 +2034,7 @@ pub fn load_map_objects(g: &mut Game, fPreview: bool) {
     drop(fBoxHasCoin);
 
     //Set all the 1x1 gaps up so players can run across them
-    let mut map = g.g_map;
+    let mut map = g.g_map.ptr();
     map.update_all_tile_gaps(&g.noncolcontainer);
 }
 
