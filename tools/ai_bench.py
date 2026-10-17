@@ -86,7 +86,7 @@ def summarize(mode, seed, map_name, text):
                 winner = int(m.group(3))
             continue
         m = PLAYER.match(line)
-        if m:
+        if m and gameover_frame is None:
             pid, ix, velx, state, score, inair = int(m.group(1)), int(m.group(2)), float(m.group(4)), int(m.group(5)), int(m.group(6)), m.group(7)
             scores[pid] = score
             first.setdefault(pid, score)
@@ -99,7 +99,7 @@ def summarize(mode, seed, map_name, text):
                 still[pid] = 0
             last[pid] = ix
     return {'mode': mode, 'seed': seed, 'map': map_name, 'gameplay_frames': gameplay, 'gameover_frame': gameover_frame,
-            'winner': winner, 'scores': scores, 'score_change': sum(abs(scores[p] - first[p]) for p in scores), 'stuck_frames': stuck}
+            'stuck_until': gameover_frame or gameplay, 'winner': winner, 'scores': scores, 'score_change': sum(abs(scores[p] - first[p]) for p in scores), 'stuck_frames': stuck}
 
 
 def report(results):
@@ -116,6 +116,7 @@ def report(results):
                 wins[r['winner']] += 1
         frames = sum(r['gameplay_frames'] for r in ok) or 1
         stuck = sum(sum(r['stuck_frames'].values()) for r in ok)
+        live = sum(r.get('stuck_until', r['gameplay_frames']) for r in ok) or 1
         change = sum(r['score_change'] for r in ok)
         rows[mode] = {
             'matches': len(rs),
@@ -124,7 +125,7 @@ def report(results):
             'frames_to_gameover': round(statistics.mean(r['gameover_frame'] for r in ended)) if ended else None,
             'win_spread': round(statistics.pstdev(wins), 2) if ended else None,
             'score_per_1000': round(1000 * change / frames, 2),
-            'stuck_per_1000': round(1000 * stuck / (frames * 4), 2),
+            'stuck_per_1000': round(1000 * stuck / (live * 4), 2),
         }
     return rows
 

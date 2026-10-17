@@ -930,6 +930,23 @@ fn wrap_open(g: &Game, y: i32) -> bool {
     (first..=last).all(|row| (g.g_map.map(0, row) | g.g_map.map(MAPWIDTH - 1, row)) & tile_flag_solid as i32 == 0)
 }
 
+/// Whether a solid tile or block touches the side of the player at (`x`, `y`) that it is walking toward.
+fn wall_ahead(g: &mut Game, x: i32, y: i32, left: bool, right: bool) -> bool {
+    if left == right {
+        return false;
+    }
+    let mut column = if right { x + PW } else { x - 1 };
+    if column < 0 || column >= App::screenWidth {
+        if !wrap_open(g, y) {
+            return false;
+        }
+        column = column.rem_euclid(App::screenWidth);
+    }
+    let tx = column / TILESIZE;
+    let rows = (y / TILESIZE).max(0)..=((y + PH - 1) / TILESIZE).min(MAPHEIGHT - 1);
+    rows.into_iter().any(|ty| g.g_map.map(tx, ty) & tile_flag_solid as i32 != 0 || !g.map_block(tx as i16, ty as i16).is_null())
+}
+
 //Setup AI so that it can ignore or pay attention to some objects
 pub fn cplayer_ai_init(g: &mut Game, this: &mut CPlayerAI) {
     //Scan yoshi's egg mode objects to make sure that we ignore eggs without matching yoshis
@@ -1431,6 +1448,10 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                 //Drop springs,spikes,shoes
                 playerKeys.game_turbo_mut().fDown = false;
             }
+        }
+
+        if wall_ahead(g, ix32, iy32, playerKeys.game_left().fDown, playerKeys.game_right().fDown) {
+            playerKeys.game_jump_mut().fDown = true;
         }
 
         /***************************************************
