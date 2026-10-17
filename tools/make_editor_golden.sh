@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Regenerate editor golden output from the C++ reference build:
+# Regenerate editor golden output from the Rust editors (CPP=1: the C++ reference build):
 # editor_replays/<editor>/<x>.txt -> editor_golden/<editor>/<x>/ (dump.txt.gz, frame_<n>.png, files/, home/).
 # Usage: make_editor_golden.sh [editor_replays/<editor>/<x>.txt ...]   (default: all); JOBS=n runs n at once.
 # GOLDEN_ROOT=<dir> writes <dir>/editor_golden/ instead.
 set -euo pipefail
 
 tools="$(cd "$(dirname "$0")" && pwd)"
+port="$(dirname "$tools")"
 scripts=("$@")
 if [[ ${#scripts[@]} -eq 0 ]]; then
     scripts=("$tools"/editor_replays/*/*.txt)
@@ -18,7 +19,12 @@ one() {
     name="$(basename "$script" .txt)"
     out="${GOLDEN_ROOT:-$tools}/editor_golden/$editor/$name"
     rm -rf "$out"
-    "$tools/run_editor.sh" "$editor" "$script" "$out" > /dev/null
+    if [[ -n "${CPP:-}" ]]; then
+        "$tools/run_editor.sh" "$editor" "$script" "$out" > /dev/null
+    else
+        SMW_BIN="$port/target/release/${editor%it}itor" SMW_DATA_DIR="$port/data" \
+            "$tools/run_editor.sh" "$editor" "$script" "$out" > /dev/null
+    fi
     for bmp in "$out"/frame_*.bmp; do
         [[ -e "$bmp" ]] || continue
         sips -s format png "$bmp" --out "${bmp%.bmp}.png" > /dev/null
@@ -29,6 +35,9 @@ one() {
     echo "$editor/$name: $(gzip -dc "$out/dump.txt.gz" | grep -c '^F ') frames"
 }
 export -f one
-export tools
+export tools port
+if [[ -z "${CPP:-}" && -z "${SMW_NO_BUILD:-}" ]]; then
+    cargo build --release --quiet --manifest-path "$port/Cargo.toml"
+fi
 
 printf '%s\0' "${scripts[@]}" | xargs -0 -n 1 -P "${JOBS:-1}" bash -c 'one "$0"'
