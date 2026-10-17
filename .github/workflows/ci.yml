@@ -693,9 +693,33 @@ jobs:
           cat headless.log
           [[ -s headless-summary.txt ]] || exit 1
           exit $status
+      - name: Headless editor parity under qemu-aarch64
+        if: ${{ !cancelled() }}
+        env:
+          SMW_NO_BUILD: '1'
+          SMW_EDITOR_BIN_SUFFIX: _replay
+          PARITY_OUT: ${{ github.workspace }}/headless-aarch64/editor
+        run: |
+          mkdir -p target/release
+          for b in leveleditor_replay worldeditor_replay; do
+            printf '#!/bin/sh\nexec qemu-aarch64-static "%s" "$@"\n' "$PWD/target/aarch64-unknown-linux-gnu/release/$b" > "target/release/$b"
+            chmod +x "target/release/$b"
+          done
+          status=0
+          tools/editor_parity.sh > headless-editor.log || status=$?
+          sed -n '/^=== summary/,$p' headless-editor.log > summary.txt
+          {
+            echo "### Headless editor parity, aarch64 under qemu-user"
+            echo '```'
+            grep -v -E 'dump MATCH, shots ([0-9]+)/\1, files ([0-9]+)/\2$' summary.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat headless-editor.log
+          [[ -s summary.txt ]] || exit 1
+          exit $status
       - name: Determinism manifest
         if: ${{ !cancelled() }}
-        run: python3 tools/determinism.py manifest headless-aarch64-qemu game headless-aarch64/game > determinism-headless-aarch64-qemu.txt
+        run: python3 tools/determinism.py manifest headless-aarch64-qemu game headless-aarch64/game editor headless-aarch64/editor > determinism-headless-aarch64-qemu.txt
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
@@ -710,6 +734,7 @@ jobs:
           path: |
             headless-aarch64
             headless.log
+            headless-editor.log
           retention-days: 7
 
   determinism:
