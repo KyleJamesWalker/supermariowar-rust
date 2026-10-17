@@ -1,7 +1,7 @@
 //! Port of src/common/uimenu.cpp
 //!
 //! `UI_Menu` has no virtuals besides its destructor, so menus embed it as their base (`impl_base!`) and
-//! `GSMenu` refers to the current one as `Ptr<UI_Menu>`. Its controls live in `Game::controls`.
+//! `MenuState` names the current one with a `MenuId`. Its controls live in `Game::controls`.
 
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;

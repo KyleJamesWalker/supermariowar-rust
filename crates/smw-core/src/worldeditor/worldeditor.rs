@@ -91,6 +91,30 @@ const szEditModes: [&str; 10] = [
 ];
 
 /// The editor's state, a part of `Game`.
+/// The menu the world editor shows.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum EditorMenu {
+    None,
+    StageSettings,
+    BonusItemPicker,
+    Vehicle,
+    ModeSettings(u8),
+    BossSettings,
+}
+
+fn current_menu(g: &mut Game) -> &'static mut UI_Menu {
+    let e: *mut WorldEditorState = ed(g);
+    let e = unsafe { &mut *e };
+    match e.mCurrentMenu {
+        EditorMenu::None => panic!("no current menu"),
+        EditorMenu::StageSettings => &mut e.mStageSettingsMenu,
+        EditorMenu::BonusItemPicker => &mut e.mBonusItemPicker,
+        EditorMenu::Vehicle => &mut e.mVehicleMenu,
+        EditorMenu::ModeSettings(mode) => &mut e.mModeOptionsMenu.as_mut().expect("mode options menu").mModeSettingsMenu[mode as usize],
+        EditorMenu::BossSettings => &mut e.mModeOptionsMenu.as_mut().expect("mode options menu").mBossSettingsMenu,
+    }
+}
+
 pub struct WorldEditorState {
     pub sMapSurface: *mut Surface,
     pub rectSrcSurface: Rect,
@@ -132,7 +156,7 @@ pub struct WorldEditorState {
     pub g_fFullScreen: bool,
     pub g_fShowStagePreviews: bool,
     //Stage Mode Menu
-    pub mCurrentMenu: Ptr<UI_Menu>,
+    pub mCurrentMenu: EditorMenu,
     pub mStageSettingsMenu: Global<UI_Menu>,
     pub mBonusItemPicker: Global<UI_Menu>,
     pub miModeField: Ctl<MI_ImageSelectField>,
@@ -163,7 +187,7 @@ pub struct WorldEditorState {
     pub miVehicleBoundaryField: Ctl<MI_SelectField<i16>>,
     pub miVehicleCreateButton: Ctl<MI_Button>,
     pub miTitleText: Ctl<MI_Text>,
-    pub mModeOptionsMenu: Ptr<UI_ModeOptionsMenu>,
+    pub mModeOptionsMenu: Option<Box<UI_ModeOptionsMenu>>,
     pub sMapThumbnail: gfxSprite,
     pub iOldStageId: i16,
     pub stagemodes: Vec<StageMode>,
@@ -210,7 +234,7 @@ impl WorldEditorState {
             warplist: Vec::new(),
             g_fFullScreen: false,
             g_fShowStagePreviews: true,
-            mCurrentMenu: Ptr::null(),
+            mCurrentMenu: EditorMenu::None,
             mStageSettingsMenu: Global::uninit(),
             mBonusItemPicker: Global::uninit(),
             miModeField: Ctl::NONE,
@@ -240,7 +264,7 @@ impl WorldEditorState {
             miVehicleBoundaryField: Ctl::NONE,
             miVehicleCreateButton: Ctl::NONE,
             miTitleText: Ctl::NONE,
-            mModeOptionsMenu: Ptr::null(),
+            mModeOptionsMenu: None,
             sMapThumbnail: gfxSprite::new(),
             iOldStageId: -1,
             stagemodes: Vec::new(),
@@ -624,7 +648,7 @@ pub fn inner_main(g: &mut Game) {
         ed(gp.get()).mVehicleMenu.init(UI_Menu::new());
 
         //Setup The Mode Menu
-        ed(gp.get()).mCurrentMenu = ed(gp.get()).mStageSettingsMenu.as_ptr();
+        ed(gp.get()).mCurrentMenu = EditorMenu::StageSettings;
 
         //Name
         ed(gp.get()).miNameField = Ctl::new(MI_TextField::new(g.rm.spr_selectfield, 70, 20, "Name", 500, 120), g);
@@ -809,7 +833,8 @@ pub fn inner_main(g: &mut Game) {
 
         ed(gp.get()).mBonusItemPicker.set_cancel_code(MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS);
 
-        ed(gp.get()).mModeOptionsMenu = Ptr::from_box(UI_ModeOptionsMenu::new(g));
+        let menu = UI_ModeOptionsMenu::new(g);
+        ed(gp.get()).mModeOptionsMenu = Some(menu);
 
         ed(gp.get()).g_wvVehicleStamp.init(WorldVehicle::new());
         ed(gp.get()).g_wvVehicleStamp.iDrawSprite = 0;
@@ -2956,8 +2981,8 @@ pub fn editor_vehicles(g: &mut Game) -> i32 {
         return EDITOR_EDIT;
     }
 
-    ed(gp.get()).mCurrentMenu = ed(gp.get()).mVehicleMenu.as_ptr();
-    ed(gp.get()).mCurrentMenu.reset_menu(g);
+    ed(gp.get()).mCurrentMenu = EditorMenu::Vehicle;
+    current_menu(gp.get()).reset_menu(g);
 
     let done = false;
 
@@ -2991,7 +3016,7 @@ pub fn editor_vehicles(g: &mut Game) -> i32 {
 
                 T_KEYDOWN => {
                     if key_sym(g) == SDLK_v {
-                        if !ed(gp.get()).mCurrentMenu.is_modifying() {
+                        if !current_menu(gp.get()).is_modifying() {
                             ed(gp.get()).edit_mode = 5;
                             g.game_values.playerInput.reset_keys();
                             return EDITOR_EDIT;
@@ -3004,7 +3029,7 @@ pub fn editor_vehicles(g: &mut Game) -> i32 {
                     let iButtonY: i16 = bound_to_window_h(ed(gp.get()).event.button_y()) as i16;
 
                     if ed(gp.get()).event.button_button() == BUTTON_LEFT {
-                        code = ed(gp.get()).mCurrentMenu.mouse_click(g, iButtonX, iButtonY);
+                        code = current_menu(gp.get()).mouse_click(g, iButtonX, iButtonY);
                     }
                 }
 
@@ -3015,7 +3040,7 @@ pub fn editor_vehicles(g: &mut Game) -> i32 {
         }
 
         if MENU_CODE_NONE == code {
-            code = ed(gp.get()).mCurrentMenu.send_input(g, Ptr::from_mut(&mut gp.game_values.playerInput));
+            code = current_menu(gp.get()).send_input(g, Ptr::from_mut(&mut gp.game_values.playerInput));
         }
 
         if MENU_CODE_EXIT_APPLICATION == code {
@@ -3042,8 +3067,8 @@ pub fn editor_vehicles(g: &mut Game) -> i32 {
         drawmap(g, false, TILESIZE as i16);
         ed(gp.get()).menu_shade.draw(g, 0, 0);
 
-        ed(gp.get()).mCurrentMenu.update(g);
-        ed(gp.get()).mCurrentMenu.draw(g);
+        current_menu(gp.get()).update(g);
+        current_menu(gp.get()).draw(g);
 
         gp.rm.menu_font_small.draw_right_justified(g, 640, 0, &gp.worldlist.current_path().to_string_lossy());
 
@@ -3514,8 +3539,8 @@ pub fn NewStage(g: &mut Game, iEditStage: &mut i16) {
 pub fn editor_stage(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
     unsafe {
-        ed(gp.get()).mCurrentMenu = ed(gp.get()).mStageSettingsMenu.as_ptr();
-        ed(gp.get()).mCurrentMenu.reset_menu(g);
+        ed(gp.get()).mCurrentMenu = EditorMenu::StageSettings;
+        current_menu(gp.get()).reset_menu(g);
 
         let mut done = false;
         let mut iStageDisplay: i16 = -1;
@@ -3585,7 +3610,7 @@ pub fn editor_stage(g: &mut Game) -> i32 {
                             }
 
                             return EDITOR_EDIT;
-                        } else if ed(gp.get()).mCurrentMenu == ed(gp.get()).mBonusItemPicker.as_ptr() && key_sym(g) >= SDLK_1 && key_sym(g) <= SDLK_4 {
+                        } else if ed(gp.get()).mCurrentMenu == EditorMenu::BonusItemPicker && key_sym(g) >= SDLK_1 && key_sym(g) <= SDLK_4 {
                             let ts = g.game_values.tourstops[iEditStage as usize];
                             if ts.iStageType == 0 {
                                 let iPlace: i16 = (key_sym(g) - SDLK_1 + 1) as i16;
@@ -3593,7 +3618,7 @@ pub fn editor_stage(g: &mut Game) -> i32 {
                                 TestAndSetBonusItem(g, ts, iPlace, ed(gp.get()).mouse_x as i16, ed(gp.get()).mouse_y as i16);
                             }
                         } else if (key_sym(g) == SDLK_PAGEUP && iEditStage > 0) || (key_sym(g) == SDLK_PAGEDOWN && iEditStage < g.g_worldmap.iNumStages - 1) {
-                            if iEditStage != -1 && ed(gp.get()).mCurrentMenu == ed(gp.get()).mStageSettingsMenu.as_ptr() {
+                            if iEditStage != -1 && ed(gp.get()).mCurrentMenu == EditorMenu::StageSettings {
                                 SaveStage(g, iEditStage);
 
                                 if key_sym(g) == SDLK_PAGEUP {
@@ -3603,11 +3628,11 @@ pub fn editor_stage(g: &mut Game) -> i32 {
                                 }
 
                                 EditStage(g, iEditStage);
-                                ed(gp.get()).mCurrentMenu.reset_menu(g);
+                                current_menu(gp.get()).reset_menu(g);
 
                                 code = MENU_CODE_MODE_CHANGED;
 
-                                ed(gp.get()).mModeOptionsMenu.refresh(g);
+                                ed(gp.get()).mModeOptionsMenu.as_mut().expect("mode options menu").refresh(g);
                             }
                         }
                     }
@@ -3635,7 +3660,7 @@ pub fn editor_stage(g: &mut Game) -> i32 {
                                 else if iButtonX >= 256 && iButtonX < 384 && iButtonY >= 420 && iButtonY < 452 {
                                     NewStage(g, &mut iEditStage);
                                 }
-                            } else if ed(gp.get()).mCurrentMenu == ed(gp.get()).mBonusItemPicker.as_ptr() {
+                            } else if ed(gp.get()).mCurrentMenu == EditorMenu::BonusItemPicker {
                                 let mut ts = g.game_values.tourstops[iEditStage as usize];
 
                                 //See if we clicked an item and add it if we did
@@ -3663,7 +3688,7 @@ pub fn editor_stage(g: &mut Game) -> i32 {
                                     iRemoveItem += 1;
                                 }
                             } else {
-                                code = ed(gp.get()).mCurrentMenu.mouse_click(g, iButtonX, iButtonY);
+                                code = current_menu(gp.get()).mouse_click(g, iButtonX, iButtonY);
                             }
                         } else if ed(gp.get()).event.button_button() == BUTTON_RIGHT {
                             if iEditStage == -1 {
@@ -3673,7 +3698,7 @@ pub fn editor_stage(g: &mut Game) -> i32 {
 
                                     code = MENU_CODE_MODE_CHANGED;
 
-                                    ed(gp.get()).mModeOptionsMenu.refresh(g);
+                                    ed(gp.get()).mModeOptionsMenu.as_mut().expect("mode options menu").refresh(g);
                                 }
                             }
                         }
@@ -3701,7 +3726,7 @@ pub fn editor_stage(g: &mut Game) -> i32 {
 
             if iEditStage >= 0 {
                 if MENU_CODE_NONE == code {
-                    code = ed(gp.get()).mCurrentMenu.send_input(g, Ptr::from_mut(&mut gp.game_values.playerInput));
+                    code = current_menu(gp.get()).send_input(g, Ptr::from_mut(&mut gp.game_values.playerInput));
                 }
 
                 if MENU_CODE_EXIT_APPLICATION == code {
@@ -3769,8 +3794,8 @@ pub fn editor_stage(g: &mut Game) -> i32 {
                     let mut fModeFound = false;
                     for iGameMode in 0..GAMEMODE_LAST as usize {
                         if g.ctl(ed(gp.get()).miGoalField[iGameMode]).is_visible() {
-                            ed(gp.get()).mCurrentMenu = ed(gp.get()).mModeOptionsMenu.get_options_menu(iGameMode as i16);
-                            ed(gp.get()).mCurrentMenu.reset_menu(g);
+                            ed(gp.get()).mCurrentMenu = EditorMenu::ModeSettings(iGameMode as u8);
+                            current_menu(gp.get()).reset_menu(g);
                             fModeFound = true;
                             break;
                         }
@@ -3779,24 +3804,24 @@ pub fn editor_stage(g: &mut Game) -> i32 {
                     //Look to see if this is the boss mode and go to boss settings
                     if !fModeFound {
                         if g.ctl(ed(gp.get()).miSpecialGoalField[1]).is_visible() {
-                            ed(gp.get()).mCurrentMenu = ed(gp.get()).mModeOptionsMenu.get_boss_options_menu();
-                            ed(gp.get()).mCurrentMenu.reset_menu(g);
+                            ed(gp.get()).mCurrentMenu = EditorMenu::BossSettings;
+                            current_menu(gp.get()).reset_menu(g);
                         }
                     }
                 } else if MENU_CODE_HEALTH_MODE_START_LIFE_CHANGED == code {
-                    ed(gp.get()).mModeOptionsMenu.health_mode_start_life_changed(g);
+                    ed(gp.get()).mModeOptionsMenu.as_mut().expect("mode options menu").health_mode_start_life_changed(g);
                 } else if MENU_CODE_HEALTH_MODE_MAX_LIFE_CHANGED == code {
-                    ed(gp.get()).mModeOptionsMenu.health_mode_max_life_changed(g);
+                    ed(gp.get()).mModeOptionsMenu.as_mut().expect("mode options menu").health_mode_max_life_changed(g);
                 } else if MENU_CODE_BACK_TO_GAME_SETUP_MENU_FROM_MODE_SETTINGS == code {
-                    ed(gp.get()).mCurrentMenu = ed(gp.get()).mStageSettingsMenu.as_ptr();
-                    ed(gp.get()).mCurrentMenu.reset_menu(g);
+                    ed(gp.get()).mCurrentMenu = EditorMenu::StageSettings;
+                    current_menu(gp.get()).reset_menu(g);
                 } else if MENU_CODE_MAP_CHANGED == code {
                     let mut ts = g.game_values.tourstops[iEditStage as usize];
                     ts.pszMapFile = g.maplist.current_shortmapname().to_string();
                     fForceStageDisplay = true;
                 } else if MENU_CODE_TO_BONUS_PICKER_MENU == code {
-                    ed(gp.get()).mCurrentMenu = ed(gp.get()).mBonusItemPicker.as_ptr();
-                    ed(gp.get()).mCurrentMenu.reset_menu(g);
+                    ed(gp.get()).mCurrentMenu = EditorMenu::BonusItemPicker;
+                    current_menu(gp.get()).reset_menu(g);
                 } else if MENU_CODE_DELETE_STAGE_BUTTON == code {
                     g.ctl(ed(gp.get()).miDeleteStageDialogImage).set_visible(true);
                     g.ctl(ed(gp.get()).miDeleteStageDialogAreYouText).set_visible(true);
@@ -3866,8 +3891,8 @@ pub fn editor_stage(g: &mut Game) -> i32 {
                         }
 
                         iEditStage = -1;
-                        ed(gp.get()).mCurrentMenu = ed(gp.get()).mStageSettingsMenu.as_ptr();
-                        ed(gp.get()).mCurrentMenu.reset_menu(g);
+                        ed(gp.get()).mCurrentMenu = EditorMenu::StageSettings;
+                        current_menu(gp.get()).reset_menu(g);
                     }
 
                     EnableStageMenu(g, true);
@@ -3903,10 +3928,10 @@ pub fn editor_stage(g: &mut Game) -> i32 {
 
                 gp.rm.menu_font_small.draw(g, 0, 480 - gp.rm.menu_font_small.get_height(), "[LMB] Select Stage, [RMB] Edit Stage, [n] New Stage");
             } else {
-                ed(gp.get()).mCurrentMenu.update(g);
-                ed(gp.get()).mCurrentMenu.draw(g);
+                current_menu(gp.get()).update(g);
+                current_menu(gp.get()).draw(g);
 
-                if ed(gp.get()).mCurrentMenu != ed(gp.get()).mBonusItemPicker.as_ptr() {
+                if ed(gp.get()).mCurrentMenu != EditorMenu::BonusItemPicker {
                     let ix: i16 = 20;
                     let iy: i16 = 20;
 
@@ -3917,7 +3942,7 @@ pub fn editor_stage(g: &mut Game) -> i32 {
                 }
             }
 
-            if ed(gp.get()).mCurrentMenu == ed(gp.get()).mBonusItemPicker.as_ptr() {
+            if ed(gp.get()).mCurrentMenu == EditorMenu::BonusItemPicker {
                 let ts = g.game_values.tourstops[iEditStage as usize];
 
                 //Game powerups
