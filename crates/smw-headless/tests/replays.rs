@@ -159,7 +159,12 @@ fn check(name: &str) {
     let golden_dump = golden.join("dump.txt");
     let golden_dump = if golden_dump.exists() { golden_dump } else { golden.join("dump.txt.gz") };
     assert_same_frames(name, &frames(&read_maybe_gzip(&golden_dump)), &frames(&dump));
+    assert_same_shots(name, &golden, &out);
+    let _ = std::fs::remove_dir_all(&out);
+}
 
+/// The screenshots under `out` equal the golden's.
+fn assert_same_shots(name: &str, golden: &Path, out: &Path) {
     let mut shots = 0;
     for entry in std::fs::read_dir(&golden).unwrap() {
         let path = entry.unwrap().path();
@@ -173,7 +178,6 @@ fn check(name: &str) {
         shots += 1;
     }
     assert!(shots > 0, "{}: no golden screenshots", name);
-    let _ = std::fs::remove_dir_all(&out);
 }
 
 #[test]
@@ -223,7 +227,8 @@ fn segment_from_checkpoint() {
 }
 
 /// Handles step 6 (docs/HANDLES.md): a copy of the match made at frame `at` plays the rest of the replay alongside
-/// the original. Both dump what the golden holds, so the copy shares nothing the match changes.
+/// the original. Both dump what the golden holds and the original's screenshots stay the golden's, so the copy shares
+/// nothing the match changes.
 fn clone_mid_match(name: &str, at: u32) {
     use smw::common::game_values::AppState;
     use smw::smw::game_state::StateId;
@@ -263,6 +268,7 @@ fn clone_mid_match(name: &str, at: u32) {
     let golden_dump = if golden_dump.exists() { golden_dump } else { golden.join("dump.txt.gz") };
     let expected = frames(&read_maybe_gzip(&golden_dump));
     assert_same_frames(name, &expected, &frames(&dump));
+    assert_same_shots(name, &golden, &out);
     let copy = frames(&std::fs::read_to_string(&copy_dump).unwrap());
     assert_eq!(copy.len(), copied, "{}: the copy's dump", name);
     let expected: Vec<(i64, String)> = expected.into_iter().filter(|f| f.0 >= at as i64).take(copied).collect();
