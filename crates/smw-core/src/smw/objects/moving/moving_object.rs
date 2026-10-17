@@ -935,7 +935,7 @@ pub fn io_moving_object_kill_object_map_hazard<T: IO_MovingObjectTrait + ?Sized>
             let mut player = get_player_from_global_id(g, playerID);
 
             if !player.is_none() {
-                g.player(player).score.adjust_score(g, 1);
+                g.player(player).score(g).adjust_score(g, 1);
             }
         }
 

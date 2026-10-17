@@ -84,7 +84,7 @@ impl CGameModeTrait for CGM_Chicken {
                 self.counter += 1;
                 if self.counter >= g.game_values.pointspeed {
                     self.counter = 0;
-                    g.player(chicken).score().adjust_score(g, 1);
+                    g.player(chicken).score(g).adjust_score(g, 1);
                     self.check_winner(g, chicken);
                 }
             }
@@ -137,7 +137,7 @@ impl CGameModeTrait for CGM_Chicken {
             }
         } else if inflictor == self.m_chicken {
             if !self.gameover {
-                g.player(inflictor).score().adjust_score(g, 5);
+                g.player(inflictor).score(g).adjust_score(g, 5);
                 return self.check_winner(g, inflictor);
             }
         }
@@ -161,7 +161,7 @@ impl CGameModeTrait for CGM_Chicken {
 
     fn playerextraguy(&mut self, g: &mut Game, mut player: PlayerId, iType: i16) {
         if !self.gameover {
-            g.player(player).score().adjust_score(g, (10 * iType as i32) as i16);
+            g.player(player).score(g).adjust_score(g, (10 * iType as i32) as i16);
             self.check_winner(g, player);
         }
     }
@@ -171,8 +171,8 @@ impl CGameModeTrait for CGM_Chicken {
             return PlayerKillType::Normal;
         }
 
-        if g.player(player).score().score >= self.goal {
-            g.player(player).score().set_score(g, self.goal);
+        if g.player(player).score(g).score >= self.goal {
+            g.player(player).score(g).set_score(g, self.goal);
             self.winningteam = g.player(player).get_team_id();
             self.gameover = true;
 
@@ -180,7 +180,7 @@ impl CGameModeTrait for CGM_Chicken {
             show_score_board(g);
             remove_players_but_team(g, self.winningteam);
             return PlayerKillType::Removed;
-        } else if g.player(player).score().score as f64 >= self.goal as f64 * 0.8 && !self.playedwarningsound {
+        } else if g.player(player).score(g).score as f64 >= self.goal as f64 * 0.8 && !self.playedwarningsound {
             self.playwarningsound(g);
         }
 

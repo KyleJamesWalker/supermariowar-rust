@@ -72,14 +72,14 @@ pub fn cgm_classic_playerkilledplayer(g: &mut Game, this: &mut CGM_Classic, mut 
     //If we are playing classic "sumo" mode, then only score hazard kills
     if g.game_values.gamemode.gamemode != game_mode_classic || g.game_values.gamemodesettings.classic.scoring == ScoringStyle::AllKills || style == KillStyle::Push {
         if this.fReverseScoring {
-            g.player(other).score().adjust_score(g, 1);
+            g.player(other).score(g).adjust_score(g, 1);
         } else {
-            g.player(other).score().adjust_score(g, -1);
+            g.player(other).score(g).adjust_score(g, -1);
 
             if !this.playedwarningsound {
                 let mut countscore: i16 = 0;
                 for k in 0..g.score_cnt {
-                    if Ptr::from_mut(g.player(inflictor).score()) == g.score[k as usize] {
+                    if Ptr::from_mut(g.player(inflictor).score(g)) == g.score[k as usize] {
                         continue;
                     }
 
@@ -91,7 +91,7 @@ pub fn cgm_classic_playerkilledplayer(g: &mut Game, this: &mut CGM_Classic, mut 
                 }
             }
 
-            if g.player(other).score().score <= 0 {
+            if g.player(other).score(g).score <= 0 {
                 remove_team(g, g.player(other).get_team_id());
                 return PlayerKillType::Removed;
             }
@@ -113,9 +113,9 @@ pub fn cgm_classic_playerkilledself(g: &mut Game, this: &mut CGM_Classic, mut pl
 
     if !this.gameover {
         if this.fReverseScoring {
-            g.player(player).score().adjust_score(g, 1);
+            g.player(player).score(g).adjust_score(g, 1);
         } else {
-            g.player(player).score().adjust_score(g, -1);
+            g.player(player).score(g).adjust_score(g, -1);
 
             if !this.playedwarningsound {
                 let mut countscore: i16 = 0;
@@ -142,7 +142,7 @@ pub fn cgm_classic_playerkilledself(g: &mut Game, this: &mut CGM_Classic, mut pl
                 }
             }
 
-            if g.player(player).score().score <= 0 {
+            if g.player(player).score(g).score <= 0 {
                 remove_team(g, g.player(player).get_team_id());
                 return PlayerKillType::Removed;
             }
@@ -161,9 +161,9 @@ pub fn cgm_classic_playerkilledself(g: &mut Game, this: &mut CGM_Classic, mut pl
 pub fn cgm_classic_playerextraguy(g: &mut Game, this: &mut CGM_Classic, mut player: PlayerId, iType: i16) {
     if !this.gameover {
         if this.fReverseScoring {
-            g.player(player).score().adjust_score(g, -iType);
+            g.player(player).score(g).adjust_score(g, -iType);
         } else {
-            g.player(player).score().adjust_score(g, iType);
+            g.player(player).score(g).adjust_score(g, iType);
         }
     }
 }

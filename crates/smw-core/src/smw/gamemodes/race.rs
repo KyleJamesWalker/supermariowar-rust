@@ -156,22 +156,22 @@ impl CGameModeTrait for CGM_Race {
 
     fn playerextraguy(&mut self, g: &mut Game, mut player: PlayerId, iType: i16) {
         if !self.gameover {
-            g.player(player).score().adjust_score(g, 1 + if iType == 5 { 1 } else { 0 });
+            g.player(player).score(g).adjust_score(g, 1 + if iType == 5 { 1 } else { 0 });
 
             //Don't end the game if the goal is infinite
             if self.goal == -1 {
                 return;
             }
 
-            if g.player(player).score().score >= self.goal {
-                g.player(player).score().set_score(g, self.goal);
+            if g.player(player).score(g).score >= self.goal {
+                g.player(player).score(g).set_score(g, self.goal);
                 self.winningteam = g.player(player).get_team_id();
                 self.gameover = true;
 
                 remove_players_but_team(g, self.winningteam);
                 setup_score_board(g, false);
                 show_score_board(g);
-            } else if g.player(player).score().score as i32 >= self.goal as i32 - 1 && !self.playedwarningsound {
+            } else if g.player(player).score(g).score as i32 >= self.goal as i32 - 1 && !self.playedwarningsound {
                 self.playwarningsound(g);
             }
         }

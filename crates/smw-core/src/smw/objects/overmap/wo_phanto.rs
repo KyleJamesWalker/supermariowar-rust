@@ -199,7 +199,7 @@ impl CObjectTrait for OMO_Phanto {
                     g.player(player).kill_player_map_hazard(g, false, KillStyle::Phanto, false, -1);
 
                     if !g.game_values.gamemode.gameover && self.iType == 1 {
-                        g.player(player).score().adjust_score(g, -10);
+                        g.player(player).score(g).adjust_score(g, -10);
                         if_sound_on_play(g, &mut gp.rm.sfx_stun);
                     }
 

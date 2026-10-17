@@ -90,11 +90,10 @@ pub struct GameplayState {
     dNextWind: f32,
     iScoreTextOffset: [i16; 4],
 
-    respawnCount: [i16; 4],
+    pub respawnCount: [i16; 4],
     respawnanimationtimer: [i16; 4],
     respawnanimationframe: [i16; 4],
 
-    current_playerKeys: Ptr<COutputControl>,
     previous_playerKeys: COutputControl,
 
     //Vars that keep track of spinning the screen
@@ -119,7 +118,6 @@ impl GameplayState {
             respawnCount: [0; 4],
             respawnanimationtimer: [0; 4],
             respawnanimationframe: [0; 4],
-            current_playerKeys: Ptr::null(),
             previous_playerKeys: COutputControl::default(),
             spinangle: 0.0,
             spinspeed: 0.0,
@@ -172,7 +170,7 @@ impl GameplayState {
 
         for player in g.players.iter() {
             let p = *player;
-            let s = if g.player(p).score.is_null() { 0 } else { g.player(p).score.score as i32 };
+            let s = g.player(p).score(g).score as i32;
             writeln!(
                 out,
                 "P id={} team={} ix={} iy={} fx={} fy={} velx={} vely={} state={} score={} powerup={} inair={}",
@@ -398,8 +396,8 @@ impl GameplayState {
                         subteamid,
                         g.game_values.colorids[p],
                         gp.get().rm.spr_player[p],
-                        g.score[teamid as usize],
-                        Ptr::from_mut(&mut self.respawnCount[p]),
+                        teamid as usize,
+                        p,
                         ai.map(|a| a as Box<dyn crate::smw::ai::CPlayerAITrait>),
                     ));
                 } else if !g.game_values.keeppowerup {
@@ -903,7 +901,7 @@ pub fn shake_screen(g: &mut Game) {
 
                 if !killer.is_none() {
                     if !g.game_values.gamemode.gameover {
-                        g.player(killer).score.adjust_score(g, 1);
+                        g.player(killer).score(g).adjust_score(g, 1);
                     }
 
                     if_sound_on_play(g, &mut gp.rm.sfx_kicksound);
@@ -2452,8 +2450,8 @@ impl GameplayState {
             g.netplay.frames_since_last_gamestate += 1;
         }
 
-        if self.previous_playerKeys != *self.current_playerKeys {
-            self.previous_playerKeys = *self.current_playerKeys;
+        if self.previous_playerKeys != g.game_values.playerInput.outputControls[0] {
+            self.previous_playerKeys = g.game_values.playerInput.outputControls[0];
         }
 
         // Consume the next input from the remote input buffer
@@ -2638,8 +2636,7 @@ impl GameState for GameplayState {
             self.iCountDownTimer = iCountDownTimes[0];
         }
 
-        self.current_playerKeys = Ptr::from_mut(&mut g.game_values.playerInput.outputControls[0]);
-        self.previous_playerKeys = *self.current_playerKeys;
+        self.previous_playerKeys = g.game_values.playerInput.outputControls[0];
 
         self.init_run_game(g);
     }
@@ -2780,8 +2777,8 @@ pub fn net_mystery_swap(g: &mut Game, iUsingPlayerID: i16) -> bool {
             g.player(player).fOldSwapY = g.player(player).top_y() as f32;
 
             let teamcount = g.game_values.teamcounts[g.player(player).teamID as usize];
-            g.player(player).iNewPowerupX = (g.player(player).score.x as i32 + scorepowerupoffsets[(teamcount - 1) as usize][g.player(player).subTeamID as usize] as i32) as i16;
-            g.player(player).iNewPowerupY = (g.player(player).score.y as i32 + 25) as i16;
+            g.player(player).iNewPowerupX = (g.player(player).score(g).x as i32 + scorepowerupoffsets[(teamcount - 1) as usize][g.player(player).subTeamID as usize] as i32) as i16;
+            g.player(player).iNewPowerupY = (g.player(player).score(g).y as i32 + 25) as i16;
         }
     }
 

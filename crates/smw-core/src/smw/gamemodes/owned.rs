@@ -56,14 +56,14 @@ impl CGameModeTrait for CGM_Owned {
                     let mut k = 0;
                     while k < g.players.len() {
                         if i != k && g.player(g.players[k]).ownerPlayerID == g.player(g.players[i]).get_global_id() {
-                            g.player(gp.players[i]).score().adjust_score(g, 1);
+                            g.player(gp.players[i]).score(g).adjust_score(g, 1);
                         }
                         k += 1;
                     }
 
                     if self.goal > -1 {
-                        if g.player(g.players[i]).score().score >= self.goal {
-                            g.player(gp.players[i]).score().set_score(g, self.goal);
+                        if g.player(g.players[i]).score(g).score >= self.goal {
+                            g.player(gp.players[i]).score(g).set_score(g, self.goal);
 
                             self.winningteam = g.player(g.players[i]).get_team_id();
                             self.gameover = true;
@@ -71,7 +71,7 @@ impl CGameModeTrait for CGM_Owned {
                             remove_players_but_team(g, self.winningteam);
                             setup_score_board(g, false);
                             show_score_board(g);
-                        } else if g.player(g.players[i]).score().score as f64 >= self.goal as f64 * 0.8 && !self.playedwarningsound {
+                        } else if g.player(g.players[i]).score(g).score as f64 >= self.goal as f64 * 0.8 && !self.playedwarningsound {
                             self.playwarningsound(g);
                         }
                     }
@@ -85,7 +85,7 @@ impl CGameModeTrait for CGM_Owned {
         if !self.gameover {
             //Give a bonus to the killer if he already owned this player
             if g.player(other).ownerPlayerID == g.player(inflictor).get_global_id() {
-                g.player(inflictor).score().adjust_score(g, 5);
+                g.player(inflictor).score(g).adjust_score(g, 5);
             }
 
             //Release all players owned by the killed player
@@ -123,7 +123,7 @@ impl CGameModeTrait for CGM_Owned {
 
     fn playerextraguy(&mut self, g: &mut Game, mut player: PlayerId, iType: i16) {
         if !self.gameover {
-            g.player(player).score().adjust_score(g, (10 * iType as i32) as i16);
+            g.player(player).score(g).adjust_score(g, (10 * iType as i32) as i16);
             self.check_winner(g, player);
         }
     }
@@ -133,8 +133,8 @@ impl CGameModeTrait for CGM_Owned {
             return PlayerKillType::Normal;
         }
 
-        if g.player(player).score().score >= self.goal {
-            g.player(player).score().set_score(g, self.goal);
+        if g.player(player).score(g).score >= self.goal {
+            g.player(player).score(g).set_score(g, self.goal);
             self.winningteam = g.player(player).get_team_id();
             self.gameover = true;
 
@@ -142,7 +142,7 @@ impl CGameModeTrait for CGM_Owned {
             show_score_board(g);
             remove_players_but_team(g, self.winningteam);
             return PlayerKillType::Removed;
-        } else if g.player(player).score().score as f64 >= self.goal as f64 * 0.8 && !self.playedwarningsound {
+        } else if g.player(player).score(g).score as f64 >= self.goal as f64 * 0.8 && !self.playedwarningsound {
             self.playwarningsound(g);
         }
 

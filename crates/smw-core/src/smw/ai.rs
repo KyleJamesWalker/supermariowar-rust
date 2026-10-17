@@ -527,8 +527,8 @@ impl CPlayerAI {
                     } else if movingobject_coin == movingtype || movingobject_phantokey == movingtype {
                         nearest!(self.distance_to_object(g, obj, goal, goaldistance, goalwrap));
                     } else if movingobject_collectioncard == movingtype {
-                        let iNumHeldCards: i32 = g.player(pPlayer).score.subscore[0] as i32;
-                        let iHeldCards: i32 = g.player(pPlayer).score.subscore[1] as i32;
+                        let iNumHeldCards: i32 = g.player(pPlayer).score(g).subscore[0] as i32;
+                        let iHeldCards: i32 = g.player(pPlayer).score(g).subscore[1] as i32;
 
                         // C++ `break` out of the switch ends this object's iteration: `continue` here.
                         if iNumHeldCards == 3 {

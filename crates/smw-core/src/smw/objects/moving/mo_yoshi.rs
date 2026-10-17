@@ -144,7 +144,7 @@ impl CObjectTrait for MO_Yoshi {
 
             if egg.color == self.color {
                 if !g.game_values.gamemode.gameover {
-                    g.player(player).score().adjust_score(g, 1);
+                    g.player(player).score(g).adjust_score(g, 1);
                     gp.game_values.gamemode.check_winner(g, player);
                 }
 
@@ -177,7 +177,7 @@ impl CObjectTrait for MO_Yoshi {
                 let mut player: PlayerId = egg.owner_throw;
 
                 if !g.game_values.gamemode.gameover {
-                    g.player(player).score().adjust_score(g, 1);
+                    g.player(player).score(g).adjust_score(g, 1);
                     gp.game_values.gamemode.check_winner(g, player);
                 }
 

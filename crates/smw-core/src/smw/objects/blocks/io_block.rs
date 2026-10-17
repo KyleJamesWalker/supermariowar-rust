@@ -223,7 +223,7 @@ pub fn io_block_bounce_moving_object<T: IO_BlockTrait + ?Sized>(g: &mut Game, th
 
             if !player.is_none() {
                 g.player(player).add_killer_award(g, PlayerId::NONE, style);
-                g.player(player).score.adjust_score(g, 1);
+                g.player(player).score(g).adjust_score(g, 1);
             }
         }
     } else if r#type == movingobject_shell {

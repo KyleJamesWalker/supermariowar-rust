@@ -311,7 +311,7 @@ pub fn mo_walking_enemy_collide_player<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut
         g.player(player).add_killer_award(g, PlayerId::NONE, killStyle);
 
         if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
-            g.player(player).score().adjust_score(g, 1);
+            g.player(player).score(g).adjust_score(g, 1);
         }
 
         if this.we().frozen {
@@ -382,7 +382,7 @@ pub fn mo_walking_enemy_collide_object<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut
                 if !killer.is_none() {
                     let killStyle = this.we().killStyle;
                     g.player(killer).add_killer_award(g, PlayerId::NONE, killStyle);
-                    g.player(killer).score().adjust_score(g, 1);
+                    g.player(killer).score(g).adjust_score(g, 1);
 
                     if r#type == movingobject_shell {
                         object.as_any().downcast_mut::<CO_Shell>().unwrap().add_moving_kill(g, killer);

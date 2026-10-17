@@ -273,7 +273,7 @@ impl CObjectTrait for OMO_KingOfTheHillZone {
 
             if self.scoretimer >= g.game_values.pointspeed {
                 self.scoretimer = 0;
-                g.player(gp.players[self.iPlayerID as usize]).score().adjust_score(g, self.multiplier);
+                g.player(gp.players[self.iPlayerID as usize]).score(g).adjust_score(g, self.multiplier);
                 gp.get().game_values.gamemode.check_winner(g, gp.get().players[self.iPlayerID as usize]);
 
                 if g.game_values.gamemodesettings.kingofthehill.maxmultiplier > 1 && {

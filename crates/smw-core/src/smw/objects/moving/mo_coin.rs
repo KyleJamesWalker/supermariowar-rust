@@ -114,9 +114,9 @@ impl CObjectTrait for MO_Coin {
 
         if !g.game_values.gamemode.gameover {
             if self.iType == 2 {
-                g.player(player).score().subscore[0] += 1;
+                g.player(player).score(g).subscore[0] += 1;
             } else {
-                g.player(player).score().adjust_score(g, 1);
+                g.player(player).score(g).adjust_score(g, 1);
             }
 
             gp.game_values.gamemode.check_winner(g, player);

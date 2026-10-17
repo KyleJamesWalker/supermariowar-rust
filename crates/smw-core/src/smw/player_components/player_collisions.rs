@@ -385,7 +385,7 @@ impl PlayerCollisions {
                 fKillPotential = true;
             }
 
-            g.player(player).bouncejump();
+            g.player(player).bouncejump(g);
 
             if fKillPotential {
                 let mut style = KillStyle::Stomp;
@@ -450,16 +450,16 @@ impl PlayerCollisions {
                 g.player(o2).bounce_assist_player(g, o1);
 
                 //Allow players on team to swap stored items
-                if g.player(o1).playerKeys.game_powerup().fPressed || g.player(o2).playerKeys.game_powerup().fPressed {
+                if g.player(o1).keys(g).game_powerup().fPressed || g.player(o2).keys(g).game_powerup().fPressed {
                     let (id1, id2) = (g.player(o1).globalID as usize, g.player(o2).globalID as usize);
                     g.game_values.gamepowerups.swap(id1, id2);
 
                     if_sound_on_play(g, &mut gp.rm.sfx_storepowerup);
 
-                    g.player(o1).playerKeys.game_powerup_mut().fPressed = false;
-                    g.player(o1).playerKeys.game_powerup_mut().fDown = false;
-                    g.player(o2).playerKeys.game_powerup_mut().fPressed = false;
-                    g.player(o2).playerKeys.game_powerup_mut().fDown = false;
+                    g.player(o1).keys(g).game_powerup_mut().fPressed = false;
+                    g.player(o1).keys(g).game_powerup_mut().fDown = false;
+                    g.player(o2).keys(g).game_powerup_mut().fPressed = false;
+                    g.player(o2).keys(g).game_powerup_mut().fDown = false;
                 }
 
                 return;

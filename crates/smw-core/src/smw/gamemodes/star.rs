@@ -202,7 +202,7 @@ impl CGameModeTrait for CGM_Star {
     fn playerextraguy(&mut self, g: &mut Game, mut player: PlayerId, iType: i16) {
         if !self.gameover {
             if iType == 5 {
-                g.player(player).score().adjust_score(g, if self.fReverseScoring { -1 } else { 1 });
+                g.player(player).score(g).adjust_score(g, if self.fReverseScoring { -1 } else { 1 });
             } else {
                 self.gameClock.add_time((iType as i32 * 10) as i16);
             }
@@ -288,11 +288,11 @@ fn time_out(g: &mut Game, this: &mut CGM_Star) {
         }
 
         if this.fReverseScoring {
-            g.player(this.starPlayer[0]).score().adjust_score(g, 1);
+            g.player(this.starPlayer[0]).score(g).adjust_score(g, 1);
         } else {
-            g.player(this.starPlayer[0]).score().adjust_score(g, -1);
+            g.player(this.starPlayer[0]).score(g).adjust_score(g, -1);
 
-            if g.player(this.starPlayer[0]).score().score <= 0 {
+            if g.player(this.starPlayer[0]).score(g).score <= 0 {
                 this.fDisplayTimer = !remove_team(g, g.player(this.starPlayer[0]).get_team_id());
                 this.starPlayer[0] = PlayerId::NONE;
             }
@@ -315,7 +315,7 @@ fn time_out(g: &mut Game, this: &mut CGM_Star) {
         }
 
         if this.fReverseScoring {
-            g.player(this.starPlayer[0]).score().adjust_score(g, 1);
+            g.player(this.starPlayer[0]).score(g).adjust_score(g, 1);
         } else {
             for iTeam in 0..g.score_cnt {
                 if g.player(this.starPlayer[0]).get_team_id() == iTeam {
@@ -356,11 +356,11 @@ fn time_out(g: &mut Game, this: &mut CGM_Star) {
             let mut fNeedRebalance = true;
             let mut p = g.players[iPlayer];
             if this.fReverseScoring {
-                g.player(p).score().adjust_score(g, 1);
+                g.player(p).score(g).adjust_score(g, 1);
             } else {
-                g.player(p).score().adjust_score(g, -1);
+                g.player(p).score(g).adjust_score(g, -1);
 
-                if g.player(p).score().score <= 0 {
+                if g.player(p).score(g).score <= 0 {
                     this.fDisplayTimer = !remove_team(g, g.player(p).get_team_id());
 
                     if g.game_values.gamemodesettings.star.shine != StarStyle::Random {

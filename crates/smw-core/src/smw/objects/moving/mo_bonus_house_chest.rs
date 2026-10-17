@@ -118,7 +118,7 @@ impl CObjectTrait for MO_BonusHouseChest {
 
     fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut gp = g.ptr();
-        if self.state == 1 && !g.game_values.gamemode.gameover && g.player(player).playerKeys.game_turbo().fPressed {
+        if self.state == 1 && !g.game_values.gamemode.gameover && g.player(player).keys(g).game_turbo().fPressed {
             let teamID = g.player(player).teamID as usize;
             if (self.bonusitem as i32) < NUM_POWERUPS + NUM_WORLD_POWERUPS {
                 if g.game_values.worldpowerupcount[teamID] < 32 {

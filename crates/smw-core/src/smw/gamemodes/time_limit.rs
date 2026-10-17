@@ -98,9 +98,9 @@ pub fn cgm_timelimit_playerkilledplayer(g: &mut Game, this: &mut CGM_TimeLimit, 
         if g.game_values.gamemode.gamemode != game_mode_timelimit || g.game_values.gamemodesettings.time.scoring == ScoringStyle::AllKills || style == KillStyle::Push {
             //Penalize killing your team mates
             if g.player(inflictor).get_team_id() == g.player(other).get_team_id() {
-                g.player(inflictor).score().adjust_score(g, -1);
+                g.player(inflictor).score(g).adjust_score(g, -1);
             } else {
-                g.player(inflictor).score().adjust_score(g, 1);
+                g.player(inflictor).score(g).adjust_score(g, 1);
             }
         }
 
@@ -117,8 +117,8 @@ pub fn cgm_timelimit_playerkilledplayer(g: &mut Game, this: &mut CGM_TimeLimit, 
 pub fn cgm_timelimit_playerkilledself(g: &mut Game, this: &mut CGM_TimeLimit, mut player: PlayerId, style: KillStyle) -> PlayerKillType {
     cgamemode_playerkilledself(g, this, player, style);
 
-    if g.player(player).score().score > 0 && !this.gameover {
-        g.player(player).score().adjust_score(g, -1);
+    if g.player(player).score(g).score > 0 && !this.gameover {
+        g.player(player).score(g).adjust_score(g, -1);
     }
 
     PlayerKillType::Normal

@@ -49,17 +49,17 @@ impl CGameModeTrait for CGM_Health {
         }
 
         if style == KillStyle::Bobomb || style == KillStyle::Bomb || style == KillStyle::IceBlast {
-            g.player(other).score().subscore[0] -= 2;
+            g.player(other).score(g).subscore[0] -= 2;
         } else {
-            g.player(other).score().subscore[0] -= 1;
+            g.player(other).score(g).subscore[0] -= 1;
         }
 
-        if g.player(other).score().subscore[0] <= 0 {
-            g.player(other).score().subscore[0] = 0;
+        if g.player(other).score(g).subscore[0] <= 0 {
+            g.player(other).score(g).subscore[0] = 0;
             let iRet = cgm_classic_playerkilledplayer(g, &mut self.cgm_classic, inflictor, other, style);
 
             if iRet == PlayerKillType::Normal {
-                g.player(other).score().subscore[0] = g.player(other).score().subscore[1];
+                g.player(other).score(g).subscore[0] = g.player(other).score(g).subscore[1];
             }
 
             return iRet;
@@ -78,17 +78,17 @@ impl CGameModeTrait for CGM_Health {
         }
 
         if style == KillStyle::Bobomb || style == KillStyle::Bomb || style == KillStyle::Environment {
-            g.player(player).score().subscore[0] -= 2;
+            g.player(player).score(g).subscore[0] -= 2;
         } else {
-            g.player(player).score().subscore[0] -= 1;
+            g.player(player).score(g).subscore[0] -= 1;
         }
 
-        if g.player(player).score().subscore[0] <= 0 {
-            g.player(player).score().subscore[0] = 0;
+        if g.player(player).score(g).subscore[0] <= 0 {
+            g.player(player).score(g).subscore[0] = 0;
             let iRet = cgm_classic_playerkilledself(g, &mut self.cgm_classic, player, style);
 
             if iRet == PlayerKillType::Normal {
-                g.player(player).score().subscore[0] = g.player(player).score().subscore[1];
+                g.player(player).score(g).subscore[0] = g.player(player).score(g).subscore[1];
             }
 
             return iRet;
@@ -102,10 +102,10 @@ impl CGameModeTrait for CGM_Health {
 
     fn playerextraguy(&mut self, g: &mut Game, mut player: PlayerId, iType: i16) {
         if !self.gameover {
-            g.player(player).score().subscore[0] += iType;
+            g.player(player).score(g).subscore[0] += iType;
 
-            if g.player(player).score().subscore[0] > g.player(player).score().subscore[1] {
-                g.player(player).score().subscore[0] = g.player(player).score().subscore[1];
+            if g.player(player).score(g).subscore[0] > g.player(player).score(g).subscore[1] {
+                g.player(player).score(g).subscore[0] = g.player(player).score(g).subscore[1];
             }
         }
     }

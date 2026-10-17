@@ -70,9 +70,9 @@ pub fn cgm_jail_playerkilledplayer(g: &mut Game, this: &mut CGM_Jail, mut inflic
     if !this.gameover {
         //Penalize killing your teammates
         if g.player(inflictor).get_team_id() == g.player(other).get_team_id() {
-            g.player(inflictor).score().adjust_score(g, -1);
+            g.player(inflictor).score(g).adjust_score(g, -1);
         } else {
-            g.player(inflictor).score().adjust_score(g, 1);
+            g.player(inflictor).score(g).adjust_score(g, 1);
             let inflictor2 = g.player(inflictor);
             g.player(inflictor).jail().escape(g, inflictor2);
 
@@ -227,7 +227,7 @@ pub fn cgm_jail_playerkilledplayer(g: &mut Game, this: &mut CGM_Jail, mut inflic
             return PlayerKillType::Normal;
         }
 
-        if g.player(inflictor).score().score >= this.goal {
+        if g.player(inflictor).score(g).score >= this.goal {
             this.winningteam = g.player(inflictor).get_team_id();
             this.gameover = true;
 
@@ -237,7 +237,7 @@ pub fn cgm_jail_playerkilledplayer(g: &mut Game, this: &mut CGM_Jail, mut inflic
             show_score_board(g);
 
             return PlayerKillType::Removed;
-        } else if g.player(inflictor).score().score as i32 >= this.goal as i32 - 3 && !this.playedwarningsound {
+        } else if g.player(inflictor).score(g).score as i32 >= this.goal as i32 - 3 && !this.playedwarningsound {
             this.playwarningsound(g);
         }
     }
@@ -247,7 +247,7 @@ pub fn cgm_jail_playerkilledplayer(g: &mut Game, this: &mut CGM_Jail, mut inflic
 
 pub fn cgm_jail_playerextraguy(g: &mut Game, this: &mut CGM_Jail, mut player: PlayerId, iType: i16) {
     if !this.gameover {
-        g.player(player).score().adjust_score(g, iType);
+        g.player(player).score(g).adjust_score(g, iType);
         g.player(player).jail().timer = 0;
 
         //Don't end the game if the goal is infinite
@@ -255,15 +255,15 @@ pub fn cgm_jail_playerextraguy(g: &mut Game, this: &mut CGM_Jail, mut player: Pl
             return;
         }
 
-        if g.player(player).score().score >= this.goal {
-            g.player(player).score().set_score(g, this.goal);
+        if g.player(player).score(g).score >= this.goal {
+            g.player(player).score(g).set_score(g, this.goal);
             this.winningteam = g.player(player).get_team_id();
             this.gameover = true;
 
             remove_players_but_team(g, this.winningteam);
             setup_score_board(g, false);
             show_score_board(g);
-        } else if g.player(player).score().score as i32 >= this.goal as i32 - 3 && !this.playedwarningsound {
+        } else if g.player(player).score(g).score as i32 >= this.goal as i32 - 3 && !this.playedwarningsound {
             this.playwarningsound(g);
         }
     }

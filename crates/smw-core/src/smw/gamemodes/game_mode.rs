@@ -65,7 +65,7 @@ pub fn remove_players_but_highest_scoring_now(g: &mut Game) {
     //Remove all players that don't have that max score
     for i in 0..g.players.len() {
         let mut player = g.players[i];
-        if g.player(player).score().score < iMaxScore {
+        if g.player(player).score(g).score < iMaxScore {
             g.player(player).state = PlayerState::Dead;
         }
     }
@@ -309,8 +309,8 @@ impl CGameMode {
         let mut i = j + 1;
         while i < g.players.len() {
             if !g.player(g.players[i]).isdead() {
-                let si = g.player(g.players[i]).score().score;
-                let s0 = g.player(g.players[tiedplayers[0] as usize]).score().score;
+                let si = g.player(g.players[i]).score(g).score;
+                let s0 = g.player(g.players[tiedplayers[0] as usize]).score(g).score;
                 if (!fGetHighest && si < s0) || (fGetHighest && si > s0) {
                     count = 1;
                     tiedplayers[0] = i as i16;
@@ -348,8 +348,8 @@ impl CGameMode {
             let mut iRandom: i16 = 0;
             let mut iIndex: i16 = 0;
             while (iIndex as i32) < iNumPlayersInList as i32 - 1 {
-                let a = g.player(outPlayers[iIndex as usize]).score().score;
-                let b = g.player(outPlayers[iIndex as usize + 1]).score().score;
+                let a = g.player(outPlayers[iIndex as usize]).score(g).score;
+                let b = g.player(outPlayers[iIndex as usize + 1]).score(g).score;
                 let swap = (fGetHighest && a < b) || (!fGetHighest && a > b) || (a == b && RANDOM_BOOL(gp.get()) && {
                     let r = iRandom < 5;
                     iRandom += 1;
@@ -424,9 +424,9 @@ pub fn cgamemode_playerkilledplayer<T: CGameModeTrait + ?Sized>(g: &mut Game, th
     //Penalize killing your team mates
     if !this.gm().gameover {
         if g.player(inflictor).get_team_id() == g.player(other).get_team_id() {
-            g.player(inflictor).score().adjust_score(g, -1);
+            g.player(inflictor).score(g).adjust_score(g, -1);
         } else {
-            g.player(inflictor).score().adjust_score(g, 1);
+            g.player(inflictor).score(g).adjust_score(g, 1);
         }
     }
 
@@ -443,6 +443,6 @@ pub fn cgamemode_playerkilledself<T: CGameModeTrait + ?Sized>(g: &mut Game, _thi
 
 pub fn cgamemode_playerextraguy<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: PlayerId, iType: i16) {
     if !this.gm().gameover {
-        g.player(player).score().adjust_score(g, iType);
+        g.player(player).score(g).adjust_score(g, iType);
     }
 }

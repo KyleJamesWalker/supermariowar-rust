@@ -95,7 +95,7 @@ impl CObjectTrait for PU_CoinPowerup {
         if self.state > 0 {
             if g.game_values.gamemode.gamemode == game_mode_coins || g.game_values.gamemode.gamemode == game_mode_greed {
                 if !g.game_values.gamemode.gameover {
-                    g.player(player).score().adjust_score(g, self.iValue);
+                    g.player(player).score(g).adjust_score(g, self.iValue);
                     gp.game_values.gamemode.check_winner(g, player);
                 }
             }

@@ -57,9 +57,9 @@ pub fn cgm_frag_playerkilledplayer<T: CGameModeTrait + ?Sized>(g: &mut Game, thi
     if g.game_values.gamemode.gamemode != game_mode_frag || g.game_values.gamemodesettings.frag.scoring == ScoringStyle::AllKills || style == KillStyle::Push {
         //Penalize killing your team mates
         if g.player(inflictor).get_team_id() == g.player(other).get_team_id() {
-            g.player(inflictor).score().adjust_score(g, -1);
+            g.player(inflictor).score(g).adjust_score(g, -1);
         } else {
-            g.player(inflictor).score().adjust_score(g, 1);
+            g.player(inflictor).score(g).adjust_score(g, 1);
         }
     }
 
@@ -79,7 +79,7 @@ pub fn cgm_frag_playerkilledself<T: CGameModeTrait + ?Sized>(g: &mut Game, this:
     cgamemode_playerkilledself(g, this, player, style);
 
     if !this.gm().gameover {
-        g.player(player).score().adjust_score(g, -1);
+        g.player(player).score(g).adjust_score(g, -1);
 
         if g.game_values.gamemode.gamemode == game_mode_frag && g.game_values.gamemodesettings.frag.style == DeathStyle::Shield {
             if_sound_on_play(g, &mut gp.rm.sfx_powerdown);
@@ -93,7 +93,7 @@ pub fn cgm_frag_playerkilledself<T: CGameModeTrait + ?Sized>(g: &mut Game, this:
 
 pub fn cgm_frag_playerextraguy<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: PlayerId, iType: i16) {
     if !this.gm().gameover {
-        g.player(player).score().adjust_score(g, iType);
+        g.player(player).score(g).adjust_score(g, iType);
         this.check_winner(g, player);
     }
 }
@@ -101,8 +101,8 @@ pub fn cgm_frag_playerextraguy<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &
 pub fn cgm_frag_check_winner<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: PlayerId) -> PlayerKillType {
     let this = this.gm_mut();
     if this.goal > -1 {
-        if g.player(player).score().score >= this.goal {
-            g.player(player).score().set_score(g, this.goal);
+        if g.player(player).score(g).score >= this.goal {
+            g.player(player).score(g).set_score(g, this.goal);
             this.winningteam = g.player(player).get_team_id();
             this.gameover = true;
 
@@ -111,7 +111,7 @@ pub fn cgm_frag_check_winner<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mu
             show_score_board(g);
 
             return PlayerKillType::Removed;
-        } else if g.player(player).score().score as i32 >= this.goal as i32 - 2 && !this.playedwarningsound {
+        } else if g.player(player).score(g).score as i32 >= this.goal as i32 - 2 && !this.playedwarningsound {
             this.playwarningsound(g);
         }
     }

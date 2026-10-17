@@ -171,6 +171,14 @@ impl Game {
         self.controls.get(id).unwrap_or_else(|| panic!("no control {:?}", id))
     }
 
+    pub fn player_keys(&self, keys: crate::smw::player::PlayerKeys) -> &'static mut crate::common::input::COutputControl {
+        let controls: *const crate::common::input::COutputControl = match keys {
+            crate::smw::player::PlayerKeys::Local(i) => &self.game_values.playerInput.outputControls[i as usize],
+            crate::smw::player::PlayerKeys::Net(i) => &self.netplay.netPlayerInput.outputControls[i as usize],
+        };
+        unsafe { &mut *(controls as *mut crate::common::input::COutputControl) }
+    }
+
     pub fn map_block(&self, x: i16, y: i16) -> Ptr<dyn crate::common::io_block::IO_BlockTrait> {
         self.g_map.block(&self.noncolcontainer, x, y)
     }

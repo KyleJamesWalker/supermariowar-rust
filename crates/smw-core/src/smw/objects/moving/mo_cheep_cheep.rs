@@ -74,14 +74,14 @@ impl MO_CheepCheep {
         let mut gp = g.ptr();
         let mut p = player;
         g.player(p).set_yi((self.iy as i32 - PH - 1) as i16);
-        g.player(p).bouncejump();
+        g.player(p).bouncejump(g);
         g.player(p).collisions.checktop(g, g.player(player));
         g.player(p).platform = PlatformId::NONE;
 
         g.player(p).add_killer_award(g, PlayerId::NONE, KillStyle::CheepCheep);
 
         if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
-            g.player(p).score().adjust_score(g, 1);
+            g.player(p).score(g).adjust_score(g, 1);
         }
 
         if_sound_on_play(g, &mut gp.rm.sfx_mip);
@@ -159,7 +159,7 @@ impl CObjectTrait for MO_CheepCheep {
             g.player(player).add_killer_award(g, PlayerId::NONE, KillStyle::CheepCheep);
 
             if g.game_values.gamemode.gamemode == game_mode_stomp && !g.game_values.gamemode.gameover {
-                g.player(player).score().adjust_score(g, 1);
+                g.player(player).score(g).adjust_score(g, 1);
             }
 
             if self.frozen {
@@ -213,7 +213,7 @@ impl CObjectTrait for MO_CheepCheep {
 
                     if !killer.is_none() {
                         g.player(killer).add_killer_award(g, PlayerId::NONE, KillStyle::CheepCheep);
-                        g.player(killer).score().adjust_score(g, 1);
+                        g.player(killer).score(g).adjust_score(g, 1);
 
                         if r#type == movingobject_shell {
                             object.as_any().downcast_mut::<CO_Shell>().unwrap().add_moving_kill(g, killer);

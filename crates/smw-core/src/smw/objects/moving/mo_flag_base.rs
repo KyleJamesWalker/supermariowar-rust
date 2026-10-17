@@ -122,7 +122,7 @@ impl MO_FlagBase {
         } else if !g.game_values.gamemodesettings.flag.homescore || !self.homeflag.is_none() || g.game_values.gamemodesettings.flag.centerflag {
             flag.place_flag(g);
             if !g.game_values.gamemode.gameover {
-                g.player(player).score().adjust_score(g, 1);
+                g.player(player).score(g).adjust_score(g, 1);
                 gp.game_values.gamemode.check_winner(g, player);
             }
 
