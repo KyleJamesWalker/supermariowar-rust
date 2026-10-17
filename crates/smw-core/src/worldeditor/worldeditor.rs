@@ -407,11 +407,16 @@ fn dump_editor_state(g: &mut Game, out: &mut dyn Write) {
 
 //main main main
 pub fn main() {
+    main_with(std::env::args().collect(), None);
+}
+
+/// `main` on the given backend instead of SDL2.
+pub fn main_with(argv: Vec<String>, services: Option<smw_platform::Services>) {
     let g = Game::create();
+    g.services = services;
     cmd::attach_parent_console();
     crate::globals::init_globals(g);
 
-    let argv: Vec<String> = std::env::args().collect();
     let cmd = cmd::parse_args(&argv);
     if !cmd.success {
         std::process::exit(1);

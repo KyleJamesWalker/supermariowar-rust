@@ -7,10 +7,12 @@ members = [
     "crates/smw-platform",
     "crates/smw-sdl2",
     "crates/smw-headless",
+    "crates/smw-sdl3",
     "apps/smw",
     "apps/leveleditor",
     "apps/worldeditor",
     "apps/smw_server",
+    "apps/smw_replay",
     "apps/smw_relay",
 ]
 # Commands without -p build the game, the editors and smw_server, as before; the relay builds on its own.
@@ -25,6 +27,7 @@ default-members = [
     "apps/leveleditor",
     "apps/worldeditor",
     "apps/smw_server",
+    "apps/smw_replay",
 ]
 
 [workspace.package]

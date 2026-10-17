@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Cross-platform determinism check (docs/ARCHITECTURE_V2.md, Parity policy timeline): report-only until phase 6.
+"""Cross-platform determinism check (docs/ARCHITECTURE_V2.md, Parity policy timeline), a CI gate.
 
   determinism.py manifest <job> <suite> <out_root> [<suite> <out_root> ...] > manifest.txt
       One line per artifact of every replay under each out_root (a parity.sh, parity_sweep.sh, editor_parity.sh or
@@ -7,7 +7,7 @@
       screenshots (.bmp, .png) hash their RGB pixels, since BMP headers and PNG encoders differ between SDL builds.
   determinism.py compare <summary.md> <manifest.txt> ...
       Compares the replays the manifests share and writes a Markdown summary naming each replay that differs and its
-      first differing artifact. Manifests with the same job name merge into one job. Always exits 0.
+      first differing artifact. Manifests with the same job name merge into one job. Exits 1 if any replay differs.
 """
 import hashlib
 import re
@@ -156,7 +156,7 @@ def compare(args):
             if missing:
                 differ.append((replay, "(artifact sets differ)", ", ".join(missing)))
 
-    lines = ["### Determinism across jobs (report-only until phase 6)", ""]
+    lines = ["### Determinism across jobs", ""]
     lines.append("| Job | Replays |")
     lines.append("|---|---|")
     for job, replays in jobs:
@@ -168,14 +168,17 @@ def compare(args):
         lines += [f"| {r} | {a} | {g} |" for r, a, g in differ]
     out.write_text("\n".join(lines) + "\n")
     print(out.read_text())
+    return 1 if differ else 0
 
 
 def main():
     if len(sys.argv) < 3 or sys.argv[1] not in ("manifest", "compare"):
         print(__doc__, file=sys.stderr)
         return 2
-    (manifest if sys.argv[1] == "manifest" else compare)(sys.argv[2:])
-    return 0
+    if sys.argv[1] == "manifest":
+        manifest(sys.argv[2:])
+        return 0
+    return compare(sys.argv[2:])
 
 
 if __name__ == "__main__":
