@@ -135,6 +135,9 @@ pub fn cgm_frenzy_think(g: &mut Game, this: &mut CGM_Frenzy) {
         }
     }
 
+    if !this.m_frenzyowner.is_none() && g.players.get(this.m_frenzyowner).is_none() {
+        this.m_frenzyowner = PlayerId::NONE;
+    }
     if !this.m_frenzyowner.is_none() {
         let owner = this.m_frenzyowner;
         if 0 == this.iSelectedPowerup {
