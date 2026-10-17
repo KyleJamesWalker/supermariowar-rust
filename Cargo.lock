@@ -303,6 +303,7 @@ name = "leveleditor"
 version = "0.1.0"
 dependencies = [
  "smw-core",
+ "smw-sdl2",
 ]
 
 [[package]]
@@ -554,6 +555,7 @@ name = "smw"
 version = "0.1.0"
 dependencies = [
  "smw-core",
+ "smw-sdl2",
 ]
 
 [[package]]
@@ -753,6 +755,7 @@ name = "worldeditor"
 version = "0.1.0"
 dependencies = [
  "smw-core",
+ "smw-sdl2",
 ]
 
 [[package]]
