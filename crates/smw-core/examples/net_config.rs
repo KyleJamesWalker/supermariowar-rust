@@ -6,6 +6,7 @@
 use smw::smw::network::net_config_manager::NetConfigManager;
 
 fn main() {
+    smw::services::set_backend(smw_sdl2::services);
     let g = smw::game::Game::create();
 
     let mut gp = g.ptr();    smw::globals::init_globals(gp.get());

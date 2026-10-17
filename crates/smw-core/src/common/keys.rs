@@ -1,5 +1,5 @@
-//! SDL2 key values: the replay format, `controls.sdl2.bin` and `options.bin` store them, so every backend uses
-//! them (docs/ARCHITECTURE_V2.md, Device events).
+//! SDL2 key, scancode, hat, mouse button and event type values: the replay format, `controls.sdl2.bin` and
+//! `options.bin` store them, so every backend uses them (docs/ARCHITECTURE_V2.md, Device events).
 
 #![allow(non_upper_case_globals)]
 
@@ -270,3 +270,45 @@ pub const KMOD_CTRL: Keymod = 192;
 pub const KMOD_SHIFT: Keymod = 3;
 pub const KMOD_ALT: Keymod = 768;
 pub const KMOD_GUI: Keymod = 3072;
+
+pub const SDL_SCANCODE_LSHIFT: usize = 225;
+pub const SDL_SCANCODE_RSHIFT: usize = 229;
+pub const SDL_NUM_SCANCODES: usize = 512;
+
+pub const SDL_HAT_UP: u32 = 1;
+pub const SDL_HAT_RIGHT: u32 = 2;
+pub const SDL_HAT_DOWN: u32 = 4;
+pub const SDL_HAT_LEFT: u32 = 8;
+
+pub const SDL_BUTTON_LEFT: u32 = 1;
+pub const SDL_BUTTON_MIDDLE: u32 = 2;
+pub const SDL_BUTTON_RIGHT: u32 = 3;
+
+pub const SDL_RELEASED: u32 = 0;
+pub const SDL_PRESSED: u32 = 1;
+
+/// `SDL_EventType` values.
+pub const SDL_QUIT: u32 = 0x100;
+pub const SDL_KEYDOWN: u32 = 0x300;
+pub const SDL_KEYUP: u32 = 0x301;
+pub const SDL_TEXTINPUT: u32 = 0x303;
+pub const SDL_MOUSEMOTION: u32 = 0x400;
+pub const SDL_MOUSEBUTTONDOWN: u32 = 0x401;
+pub const SDL_MOUSEBUTTONUP: u32 = 0x402;
+pub const SDL_MOUSEWHEEL: u32 = 0x403;
+pub const SDL_JOYAXISMOTION: u32 = 0x600;
+pub const SDL_JOYHATMOTION: u32 = 0x602;
+pub const SDL_JOYBUTTONDOWN: u32 = 0x603;
+pub const SDL_JOYBUTTONUP: u32 = 0x604;
+pub const SDL_JOYDEVICEADDED: u32 = 0x605;
+pub const SDL_JOYDEVICEREMOVED: u32 = 0x606;
+pub const SDL_CONTROLLERAXISMOTION: u32 = 0x650;
+pub const SDL_CONTROLLERBUTTONDOWN: u32 = 0x651;
+pub const SDL_CONTROLLERBUTTONUP: u32 = 0x652;
+pub const SDL_CONTROLLERDEVICEADDED: u32 = 0x653;
+pub const SDL_CONTROLLERDEVICEREMOVED: u32 = 0x654;
+pub const SDL_CONTROLLERDEVICEREMAPPED: u32 = 0x655;
+pub const SDL_FINGERDOWN: u32 = 0x700;
+pub const SDL_FINGERUP: u32 = 0x701;
+pub const SDL_FINGERMOTION: u32 = 0x702;
+pub const SDL_USEREVENT: u32 = 0x8000;

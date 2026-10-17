@@ -48,6 +48,7 @@ fn bits(c: &COutputControl) -> String {
 }
 
 fn main() {
+    smw::services::set_backend(smw_sdl2::services);
     let g = smw::game::Game::create();
     let mut gp = g.ptr();
     let args: Vec<String> = std::env::args().collect();

@@ -9,7 +9,7 @@ use crate::game::Game;
 use smw_platform::{Input, InputEvent, MouseEvent};
 use crate::common::random_number_generator::{RandomNumberGenerator, RandomNumberGeneratorType};
 use crate::globals::*;
-use sdl2::sys::{SDL_Event, SDL_EventType, SDL_GetKeyFromName, SDL_GetScancodeFromKey, SDL_BUTTON_LEFT, SDL_BUTTON_MIDDLE, SDL_BUTTON_RIGHT, SDL_PRESSED, SDL_RELEASED};
+use crate::common::keys::{SDL_BUTTON_LEFT, SDL_BUTTON_MIDDLE, SDL_BUTTON_RIGHT};
 use std::collections::BTreeSet;
 use std::ffi::{CStr, CString};
 use std::fs::File;
@@ -56,7 +56,7 @@ pub struct EditorHarness {
     mod_: u16,
     mouseX: i32,
     mouseY: i32,
-    keys: [u8; sdl2::sys::SDL_Scancode::SDL_NUM_SCANCODES as usize],
+    keys: [u8; crate::common::keys::SDL_NUM_SCANCODES],
 }
 
 impl EditorHarness {
@@ -76,7 +76,7 @@ impl EditorHarness {
             mod_: 0,
             mouseX: 0,
             mouseY: 0,
-            keys: [0; sdl2::sys::SDL_Scancode::SDL_NUM_SCANCODES as usize],
+            keys: [0; crate::common::keys::SDL_NUM_SCANCODES],
         }
     }
 }

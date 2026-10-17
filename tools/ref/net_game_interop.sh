@@ -78,7 +78,8 @@ for game in "${games[@]}"; do
   for role in host join; do
     data=$hdata name=Host; [ $role = join ] && data=$jdata name=Join
     rm -rf "${dir:?}/home-$role"
-    client $role "$dir" $name "$game" "$data" SMW_NOLIMIT=1 SMW_REPLAY="$dir/${game}_$role.rec.txt" SMW_DUMP="$dir/$role.replay.dump" > "$dir/$role.replay.log" 2>&1
+    client $role "$dir" $name "$game" "$data" SMW_NOLIMIT=1 SMW_REPLAY="$dir/${game}_$role.rec.txt" SMW_DUMP="$dir/$role.replay.dump" \
+      SMW_FRAMES="$(sed -n 's/^#@ frames=//p' "$dir/${game}_$role.rec.txt")" > "$dir/$role.replay.log" 2>&1
     if [ ! -s "$dir/$role.dump" ]; then
       echo "  $role: no dump to replay"
       fail=1
