@@ -116,6 +116,10 @@ pub trait AudioOut {
 pub trait Clock {
     /// Wall-clock milliseconds. Only the frame driver, the FPS overlay and netplay message timestamps read it.
     fn now_ms(&self) -> u64;
+    /// Wall-clock microseconds, for the tick pacing; only differences between two readings mean anything.
+    fn now_us(&self) -> u64 {
+        self.now_ms() * 1000
+    }
     fn sleep_ms(&self, ms: u32);
 }
 

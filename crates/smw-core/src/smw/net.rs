@@ -6,7 +6,7 @@ use crate::game::Game;
 use crate::common::game_mode::{GameModeType, *};
 use crate::common::game_mode_settings::GAMEMODESETTINGS_RAW_SIZE;
 
-use crate::common::global_constants::WAITTIME;
+use crate::common::global_constants::TICKS_PER_SECOND;
 use crate::common::input::{COutputControl, CPlayerInput};
 use crate::common::path::get_home_directory;
 use crate::common::random_number_generator::{RandomNumberGenerator, RandomNumberGeneratorType, RANDOM_INT};
@@ -869,7 +869,7 @@ impl NetClient {
         if !g.netplay.theHostIsMe {
             missed_frames = missed_frames.wrapping_add(net_record::value_u32(g, "rtt", || self.foreign_gamehost.average_rtt()) / 2);
         }
-        missed_frames /= WAITTIME as u32;
+        missed_frames = missed_frames * TICKS_PER_SECOND / 1000;
 
         g.player(player).powerupused = Some(PowerupType::from_u8(pkg.powerup_id));
         g.player(player).powerupradius = 100.0;

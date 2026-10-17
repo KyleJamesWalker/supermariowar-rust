@@ -18,7 +18,7 @@ use crate::common::tileset_manager::CTilesetManager;
 use crate::common::resource_manager::CResourceManager;
 use crate::smw::player::CPlayer;
 use crate::common::gfx::{gfx_close, gfx_init, gfx_flipscreen, gfx_loadpalette, gfx_settitle, gfx_show_catched_error};
-use crate::common::global_constants::{HALF_PI, MAX_PLAYERS, NUM_POWERUPS, PI, THREE_HALF_PI};
+use crate::common::global_constants::{HALF_PI, MAX_PLAYERS, NUM_POWERUPS, PI, THREE_HALF_PI, TICKS_PER_SECOND};
 use crate::common::math::trig::{cosf, sinf};
 use crate::common::path::{convert_path_pack, get_home_directory};
 use crate::common::score::CScore;
@@ -67,7 +67,11 @@ pub fn gameloop(g: &mut Game) {
 
         #[cfg(not(target_os = "emscripten"))]
         while g.game_values.appstate != crate::common::game_values::AppState::Quit {
-            gameloop_frame(g);
+            if harness::no_limit(g) {
+                gameloop_frame(g);
+            } else {
+                paced_frame(g);
+            }
         }
     }
 }
@@ -96,8 +100,8 @@ pub fn step(g: &mut Game) {
 }
 
 /// Not in upstream, whose web build runs one game frame per requestAnimationFrame, i.e. at the
-/// display refresh rate. The game advances in fixed steps of `framelimiter` ms of wall time instead,
-/// as the native frame limiter paces it, and presents once per animation frame. Under SMW_NOLIMIT
+/// display refresh rate. The game advances `TICKS_PER_SECOND` ticks per second of wall time instead,
+/// as the native loop paces it, and presents once per animation frame. Under SMW_NOLIMIT
 /// (replays) every callback runs exactly one frame, so the dumps stay deterministic.
 #[cfg(target_os = "emscripten")]
 unsafe extern "C-unwind" fn gameloop_frame_web(arg: *mut std::ffi::c_void) {
@@ -106,8 +110,8 @@ unsafe extern "C-unwind" fn gameloop_frame_web(arg: *mut std::ffi::c_void) {
     let mut gp = g.ptr();
     let ml = &mut gp.get().main_loop;
 
-    let frame_ms = gp.game_values.framelimiter as f64;
-    if harness::no_limit(g) || frame_ms <= 0.0 {
+    let frame_ms = 1000.0 / TICKS_PER_SECOND as f64;
+    if harness::no_limit(g) {
         gameloop_frame(gp.get());
         web_quit_if_done(gp.get());
         return;
@@ -148,17 +152,14 @@ unsafe fn web_quit_if_done(g: &mut Game) {
     emscripten_run_script(c"Module.onGameQuit && Module.onGameQuit()".as_ptr());
 }
 
-unsafe fn gameloop_frame(g: &mut Game) {
+#[cfg(not(target_os = "emscripten"))]
+use crate::smw::pad::phase;
+#[cfg(target_os = "emscripten")]
+fn phase(_: usize) {}
+
+/// One tick of game logic, which also draws the frame into the screen surface.
+unsafe fn tick(g: &mut Game) {
     let mut gp = g.ptr();
-    #[cfg(not(target_os = "emscripten"))]
-    use crate::smw::pad::phase;
-    #[cfg(target_os = "emscripten")]
-    fn phase(_: usize) {}
-
-    phase(1);
-    FPSLimiter::instance(gp.get()).frame_start(g);
-    let frame_start = std::time::Instant::now();
-
     assign_hotplugged(gp.get());
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::touch::flush(g);
@@ -167,8 +168,10 @@ unsafe fn gameloop_frame(g: &mut Game) {
     GameStateManager::instance(gp.get()).current(gp.get()).get().update(gp.get());
     phase(6);
     harness::frame_end(gp.get());
+}
 
-    let update_end = std::time::Instant::now();
+unsafe fn present(g: &mut Game, frame_start: std::time::Instant, update_end: std::time::Instant) {
+    let mut gp = g.ptr();
     phase(1);
     FPSLimiter::instance(gp.get()).before_flip(gp.get());
     phase(7);
@@ -177,8 +180,53 @@ unsafe fn gameloop_frame(g: &mut Game) {
     if let Some(perf) = gp.main_loop.perf.get_or_insert_with(crate::smw::perf_log::PerfLog::from_env) {
         perf.record(frame_start, update_end, flip_end);
     }
+}
+
+/// One tick and one present with no pacing: replays under SMW_NOLIMIT, the web build's replay path and
+/// `frame`, so each loop iteration is exactly one frame of a dump.
+unsafe fn gameloop_frame(g: &mut Game) {
+    let mut gp = g.ptr();
+    phase(1);
+    FPSLimiter::instance(gp.get()).frame_start(g);
+    let frame_start = std::time::Instant::now();
+    tick(g);
+    present(g, frame_start, std::time::Instant::now());
     phase(1);
     FPSLimiter::instance(gp.get()).after_flip(gp.get());
+}
+
+/// Not in upstream, whose frame rate was its game speed: runs the ticks that wall time calls for at
+/// `TICKS_PER_SECOND`, at most `MAX_CATCH_UP_TICKS` of them, and presents once after them. Without a tick
+/// due it sleeps until the next one. A display that blocks the present on vsync paces the loop instead.
+#[cfg(not(target_os = "emscripten"))]
+unsafe fn paced_frame(g: &mut Game) {
+    const MAX_CATCH_UP_TICKS: u32 = 5;
+    let mut gp = g.ptr();
+    let tick_us = 1_000_000.0 / (TICKS_PER_SECOND as f64 * harness::speed(g) as f64);
+    let now = crate::services::services(g).clock.now_us();
+    let ml = &mut gp.get().main_loop;
+    match ml.last_us {
+        Some(last) => ml.accumulated_us += now.saturating_sub(last) as f64,
+        None => ml.accumulated_us = tick_us,
+    }
+    ml.last_us = Some(now);
+
+    let frame_start = std::time::Instant::now();
+    let mut ticks = 0;
+    while ml.accumulated_us >= tick_us && ticks < MAX_CATCH_UP_TICKS && gp.game_values.appstate != crate::common::game_values::AppState::Quit {
+        tick(gp.get());
+        ml.accumulated_us -= tick_us;
+        ticks += 1;
+    }
+    if ticks == MAX_CATCH_UP_TICKS {
+        ml.accumulated_us = ml.accumulated_us.min(tick_us);
+    }
+    if ticks > 0 {
+        present(gp.get(), frame_start, std::time::Instant::now());
+    } else {
+        let wait_ms = ((tick_us - ml.accumulated_us) / 1000.0) as u32;
+        crate::services::delay(gp.get(), wait_ms.saturating_sub(1));
+    }
 }
 
 pub fn create_globals(g: &mut Game) {
@@ -344,6 +392,9 @@ pub struct MainLoopState {
     hotplug_pending: bool,
     /// `SMW_PERF` read on the first frame, then the frame-time log it turns on.
     perf: Option<Option<crate::smw::perf_log::PerfLog>>,
+    /// The tick pacing's last clock reading and the wall time not yet spent on ticks.
+    last_us: Option<u64>,
+    accumulated_us: f64,
     /// Frames the current screen has waited for an all-CPU game to continue (smw/auto_advance.rs).
     pub(crate) auto_advance: u16,
 }
@@ -359,6 +410,8 @@ impl MainLoopState {
             web_accumulated: 0.0,
             hotplug_pending: false,
             perf: None,
+            last_us: None,
+            accumulated_us: 0.0,
             auto_advance: 0,
         }
     }

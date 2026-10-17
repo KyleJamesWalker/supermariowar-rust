@@ -1,10 +1,11 @@
 //! Not in the C++: with `SMW_PERF=1`, the game logs how long each frame's work takes every five seconds, to measure
 //! the headroom on slow hardware. It reads the wall clock only for the log, so it never changes the game.
 
+use crate::common::global_constants::TICKS_PER_SECOND;
 use std::time::Instant;
 
-/// The frame limiter's frame time.
-const BUDGET_US: u64 = 16_000;
+/// One tick of wall time.
+const BUDGET_US: u64 = 1_000_000 / TICKS_PER_SECOND as u64;
 const REPORT_FRAMES: u32 = 300;
 
 #[derive(Clone)]
@@ -37,12 +38,13 @@ impl PerfLog {
             let n = self.frames as u64;
             let avg = (self.update_us + self.flip_us) / n;
             println!(
-                "[perf] {} frames: update+draw {:.2} ms, present {:.2} ms, total {:.2} ms ({}% of the 16 ms budget), worst {:.2} ms, {} over budget",
+                "[perf] {} frames: update+draw {:.2} ms, present {:.2} ms, total {:.2} ms ({}% of the {:.2} ms tick), worst {:.2} ms, {} over budget",
                 self.frames,
                 self.update_us as f64 / n as f64 / 1000.0,
                 self.flip_us as f64 / n as f64 / 1000.0,
                 avg as f64 / 1000.0,
                 avg * 100 / BUDGET_US,
+                BUDGET_US as f64 / 1000.0,
                 self.worst_us as f64 / 1000.0,
                 self.over_budget
             );
