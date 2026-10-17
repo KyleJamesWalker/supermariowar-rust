@@ -39,7 +39,7 @@ const scenario = (game) => {
     const script = (role) => readFileSync(join(dir, `${role}.txt`), 'utf8');
     const param = (key) => script('host').match(new RegExp(`^#@ ${key}=(.*)$`, 'm'))?.[1];
     const frames = Number(param('frames')) + SHIFT;
-    // From a script's `await gameplay` on, the await already absorbs the delay.
+    // An `await gameplay` before `from` already absorbs the delay for the lines after it.
     const shifted = (role, from) => {
         let awaited = false;
         return script(role)
@@ -47,7 +47,7 @@ const scenario = (game) => {
             .map((line) => {
                 if (line.startsWith('#@ frames=')) return `#@ frames=${frames}`;
                 const m = line.match(/^(\d+)( .*)$/);
-                awaited ||= / await gameplay$/.test(line);
+                if (m && Number(m[1]) < from && m[2] === ' await gameplay') awaited = true;
                 return m && !awaited && Number(m[1]) >= from ? `${Number(m[1]) + SHIFT}${m[2]}` : line;
             })
             .join('\n');
