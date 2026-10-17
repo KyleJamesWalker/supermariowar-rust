@@ -1,5 +1,6 @@
 //! Port of src/smw/menu/options/TeamOptionsMenu.cpp
 
+use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
 use crate::common::gameplay_styles::{TeamCollisionStyle, TournamentControlStyle};
 use crate::common::ui::menu_code::*;
@@ -7,7 +8,7 @@ use crate::common::ui::mi_button::MI_Button;
 use crate::common::ui::mi_image::MI_Image;
 use crate::common::ui::mi_select_field::MI_SelectField;
 use crate::common::ui::mi_text::{MI_HeaderText, MI_Text};
-use crate::common::uicontrol::{ctl_ptr, TextAlign};
+use crate::common::uicontrol::{TextAlign};
 use crate::common::uimenu::UI_Menu;
 use crate::globals::*;
 use crate::smw::menu::options::select_field;
@@ -20,14 +21,14 @@ use crate::smw::menu::options::select_field;
 pub struct UI_TeamOptionsMenu {
     pub ui_menu: UI_Menu,
 
-    pub miTeamKillsField: Ptr<MI_SelectField<TeamCollisionStyle>>,
-    pub miTeamColorsField: Ptr<MI_SelectField<bool>>,
-    pub miTournamentControlField: Ptr<MI_SelectField<TournamentControlStyle>>,
-    pub miTeamOptionsMenuBackButton: Ptr<MI_Button>,
+    pub miTeamKillsField: Ctl<MI_SelectField<TeamCollisionStyle>>,
+    pub miTeamColorsField: Ctl<MI_SelectField<bool>>,
+    pub miTournamentControlField: Ctl<MI_SelectField<TournamentControlStyle>>,
+    pub miTeamOptionsMenuBackButton: Ctl<MI_Button>,
 
-    pub miTeamOptionsMenuLeftHeaderBar: Ptr<MI_Image>,
-    pub miTeamOptionsMenuRightHeaderBar: Ptr<MI_Image>,
-    pub miTeamOptionsMenuHeaderText: Ptr<MI_Text>,
+    pub miTeamOptionsMenuLeftHeaderBar: Ctl<MI_Image>,
+    pub miTeamOptionsMenuRightHeaderBar: Ctl<MI_Image>,
+    pub miTeamOptionsMenuHeaderText: Ctl<MI_Text>,
 }
 crate::impl_base!(UI_TeamOptionsMenu => ui_menu: UI_Menu);
 
@@ -40,12 +41,12 @@ impl UI_TeamOptionsMenu {
 
             this.miTeamKillsField = select_field(spr, 70, 180, "Player Collision", 500, 220,
                 &[("Off", TeamCollisionStyle::Off), ("Assist", TeamCollisionStyle::Assist), ("On", TeamCollisionStyle::On)],
-                &mut g.game_values.teamcollision);
+                &mut g.game_values.teamcollision, g);
 
             this.miTeamColorsField = select_field(spr, 70, 220, "Colors", 500, 220,
                 &[("Individual", false), ("Team", true)],
-                &mut g.game_values.teamcolors);
-            this.miTeamColorsField.set_auto_advance(true);
+                &mut g.game_values.teamcolors, g);
+            g.ctl(this.miTeamColorsField).set_auto_advance(true);
 
             this.miTournamentControlField = select_field(spr, 70, 260, "Tournament Control", 500, 220,
                 &[
@@ -58,32 +59,32 @@ impl UI_TeamOptionsMenu {
                     ("Random Loser", TournamentControlStyle::RandomLoser),
                     ("Round Robin", TournamentControlStyle::RoundRobin),
                 ],
-                &mut g.game_values.tournamentcontrolstyle);
+                &mut g.game_values.tournamentcontrolstyle, g);
 
-            this.miTeamOptionsMenuBackButton = Ptr::new_box(MI_Button::new(g, spr, 544, 432, "Back", 80, TextAlign::CENTER));
-            this.miTeamOptionsMenuBackButton.set_code(MENU_CODE_BACK_TO_OPTIONS_MENU);
+            this.miTeamOptionsMenuBackButton = Ctl::new(MI_Button::new(g, spr, 544, 432, "Back", 80, TextAlign::CENTER), g);
+            g.ctl(this.miTeamOptionsMenuBackButton).set_code(MENU_CODE_BACK_TO_OPTIONS_MENU);
 
-            this.miTeamOptionsMenuLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-            this.miTeamOptionsMenuRightHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miTeamOptionsMenuHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Team Options Menu", 320, 5));
+            this.miTeamOptionsMenuLeftHeaderBar = Ctl::new(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0), g);
+            this.miTeamOptionsMenuRightHeaderBar = Ctl::new(MI_Image::new(menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0), g);
+            this.miTeamOptionsMenuHeaderText = Ctl::new(MI_HeaderText::new(g, "Team Options Menu", 320, 5), g);
         }
 
-        let kills = ctl_ptr(this.miTeamKillsField);
-        let colors = ctl_ptr(this.miTeamColorsField);
-        let control = ctl_ptr(this.miTournamentControlField);
-        let back = ctl_ptr(this.miTeamOptionsMenuBackButton);
-        let null = Ptr::null();
+        let kills = this.miTeamKillsField.id();
+        let colors = this.miTeamColorsField.id();
+        let control = this.miTournamentControlField.id();
+        let back = this.miTeamOptionsMenuBackButton.id();
+        let null = ControlId::NONE;
 
-        this.add_control(kills, back, colors, null, back);
-        this.add_control(colors, kills, control, null, back);
-        this.add_control(control, colors, back, null, back);
-        this.add_control(back, control, kills, control, null);
+        this.add_control(g, kills, back, colors, null, back);
+        this.add_control(g, colors, kills, control, null, back);
+        this.add_control(g, control, colors, back, null, back);
+        this.add_control(g, back, control, kills, control, null);
 
-        let c = ctl_ptr(this.miTeamOptionsMenuLeftHeaderBar);
+        let c = this.miTeamOptionsMenuLeftHeaderBar.id();
         this.add_non_control(c);
-        let c = ctl_ptr(this.miTeamOptionsMenuRightHeaderBar);
+        let c = this.miTeamOptionsMenuRightHeaderBar.id();
         this.add_non_control(c);
-        let c = ctl_ptr(this.miTeamOptionsMenuHeaderText);
+        let c = this.miTeamOptionsMenuHeaderText.id();
         this.add_non_control(c);
 
         this.set_initial_focus(g, kills);

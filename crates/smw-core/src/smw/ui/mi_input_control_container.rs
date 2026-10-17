@@ -1,5 +1,6 @@
 //! Port of src/smw/ui/MI_InputControlContainer.cpp
 
+use crate::common::uicontrol::{ControlId, Ctl};
 use crate::common::resource_manager::SpriteId;
 use crate::common::keys::*;
 use crate::common::gfx::soft_surface::Rect;
@@ -12,7 +13,7 @@ use crate::common::ui::mi_button::MI_Button;
 use crate::common::ui::mi_image::MI_Image;
 use crate::common::ui::mi_select_field::MI_SelectField;
 use crate::common::ui::mi_text::{MI_HeaderText, MI_Text};
-use crate::common::uicontrol::{ctl_ptr, TextAlign, UI_Control, UI_ControlTrait};
+use crate::common::uicontrol::{TextAlign, UI_Control, UI_ControlTrait};
 use crate::common::uimenu::UI_Menu;
 use crate::globals::*;
 use crate::smw::harness;
@@ -305,14 +306,14 @@ pub struct MI_InputControlContainer {
 
     pub mInputMenu: Box<UI_Menu>,
 
-    pub miImage: [Ptr<MI_Image>; 2],
-    pub miText: Ptr<MI_Text>,
-    pub miDeviceSelectField: Ptr<MI_SelectField<i16>>,
-    pub miInputTypeButton: Ptr<MI_Button>,
-    pub miGameInputControlFields: [Ptr<MI_InputControlField>; NUM_KEYS],
-    pub miMenuInputControlFields: [Ptr<MI_InputControlField>; NUM_KEYS],
+    pub miImage: [Ctl<MI_Image>; 2],
+    pub miText: Ctl<MI_Text>,
+    pub miDeviceSelectField: Ctl<MI_SelectField<i16>>,
+    pub miInputTypeButton: Ctl<MI_Button>,
+    pub miGameInputControlFields: [Ctl<MI_InputControlField>; NUM_KEYS],
+    pub miMenuInputControlFields: [Ctl<MI_InputControlField>; NUM_KEYS],
 
-    pub miBackButton: Ptr<MI_Button>,
+    pub miBackButton: Ctl<MI_Button>,
     /// `pad::generation()` when the device list was filled.
     devices: u32,
 }
@@ -352,52 +353,52 @@ impl MI_InputControlContainer {
             let iSelectedInputType: i16 = 0;
 
             let szTitle = format!("Player {} Controls", iPlayerID as i32 + 1);
-            let miText = Ptr::new_box(MI_HeaderText::new(g, szTitle, 320, 5));
+            let miText = Ctl::new(MI_HeaderText::new(g, szTitle, 320, 5), g);
 
             let miImage = [
-                Ptr::new_box(MI_Image::new(spr_button, 0, 0, 0, 0, 320, 32, 1, 1, 0)),
-                Ptr::new_box(MI_Image::new(spr_button, 320, 0, 192, 0, 320, 32, 1, 1, 0)),
+                Ctl::new(MI_Image::new(spr_button, 0, 0, 0, 0, 320, 32, 1, 1, 0), g),
+                Ctl::new(MI_Image::new(spr_button, 320, 0, 192, 0, 320, 32, 1, 1, 0), g),
             ];
 
-            let mut miDeviceSelectField = Ptr::new_box(MI_SelectField::<i16>::new(spr_button, x + 16, y + 38, "Device", 420, 150));
-            miDeviceSelectField.set_item_changed_code(MENU_CODE_INPUT_DEVICE_CHANGED);
-            miDeviceSelectField.add("Keyboard", -1);
+            let mut miDeviceSelectField = Ctl::new(MI_SelectField::<i16>::new(spr_button, x + 16, y + 38, "Device", 420, 150), g);
+            g.ctl(miDeviceSelectField).set_item_changed_code(MENU_CODE_INPUT_DEVICE_CHANGED);
+            g.ctl(miDeviceSelectField).add("Keyboard", -1);
 
-            add_joysticks(g, &mut miDeviceSelectField);
+            add_joysticks(g, g.ctl(miDeviceSelectField));
 
             //If the device is not found, default to the keyboard
-            if !miDeviceSelectField.set_current_value(iDevice) {
+            if !g.ctl(miDeviceSelectField).set_current_value(iDevice) {
                 iDevice = DEVICE_KEYBOARD;
-                miDeviceSelectField.set_current_value(iDevice);
+                g.ctl(miDeviceSelectField).set_current_value(iDevice);
             }
 
-            let mut miInputTypeButton = Ptr::new_box(MI_Button::new(g, spr_button, x + 336, y + 84, "Game", 100, TextAlign::CENTER));
-            miInputTypeButton.set_code(MENU_CODE_INPUT_TYPE_CHANGED);
+            let mut miInputTypeButton = Ctl::new(MI_Button::new(g, spr_button, x + 336, y + 84, "Game", 100, TextAlign::CENTER), g);
+            g.ctl(miInputTypeButton).set_code(MENU_CODE_INPUT_TYPE_CHANGED);
 
-            let mut miGameInputControlFields: [Ptr<MI_InputControlField>; NUM_KEYS] = [Ptr::null(); NUM_KEYS];
+            let mut miGameInputControlFields: [Ctl<MI_InputControlField>; NUM_KEYS] = [Default::default(); NUM_KEYS];
             for iKey in 0..NUM_KEYS {
-                let mut f = Ptr::new_box(MI_InputControlField::new(spr_button, x + 16, y + 118 + iKey as i16 * 34, GameInputNames[iKey], 420, 150));
-                f.set_device(iDevice);
-                f.set_type(0);
-                f.set_key_index(iKey as i16);
-                f.set_player_index(iPlayerID);
-                f.set_key(key_ptr(g, iPlayerID, 0, iKey));
+                let mut f = Ctl::new(MI_InputControlField::new(spr_button, x + 16, y + 118 + iKey as i16 * 34, GameInputNames[iKey], 420, 150), g);
+                g.ctl(f).set_device(iDevice);
+                g.ctl(f).set_type(0);
+                g.ctl(f).set_key_index(iKey as i16);
+                g.ctl(f).set_player_index(iPlayerID);
+                g.ctl(f).set_key(key_ptr(g, iPlayerID, 0, iKey));
                 miGameInputControlFields[iKey] = f;
             }
 
-            let mut miMenuInputControlFields: [Ptr<MI_InputControlField>; NUM_KEYS] = [Ptr::null(); NUM_KEYS];
+            let mut miMenuInputControlFields: [Ctl<MI_InputControlField>; NUM_KEYS] = [Default::default(); NUM_KEYS];
             for iKey in 0..NUM_KEYS {
-                let mut f = Ptr::new_box(MI_InputControlField::new(spr_button, x + 16, y + 118 + iKey as i16 * 34, MenuInputNames[iKey], 420, 150));
-                f.set_device(iDevice);
-                f.set_type(1);
-                f.set_key_index(iKey as i16);
-                f.set_player_index(iPlayerID);
-                f.set_key(key_ptr(g, iPlayerID, 1, iKey));
+                let mut f = Ctl::new(MI_InputControlField::new(spr_button, x + 16, y + 118 + iKey as i16 * 34, MenuInputNames[iKey], 420, 150), g);
+                g.ctl(f).set_device(iDevice);
+                g.ctl(f).set_type(1);
+                g.ctl(f).set_key_index(iKey as i16);
+                g.ctl(f).set_player_index(iPlayerID);
+                g.ctl(f).set_key(key_ptr(g, iPlayerID, 1, iKey));
                 miMenuInputControlFields[iKey] = f;
             }
 
-            let mut miBackButton = Ptr::new_box(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER));
-            miBackButton.set_code(MENU_CODE_BACK_TO_CONTROLS_MENU);
+            let mut miBackButton = Ctl::new(MI_Button::new(g, gp.rm.spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER), g);
+            g.ctl(miBackButton).set_code(MENU_CODE_BACK_TO_CONTROLS_MENU);
 
             let mut this = MI_InputControlContainer {
                 ui_control: UI_Control::new(x, y),
@@ -415,58 +416,58 @@ impl MI_InputControlContainer {
                 devices: 0,
             };
 
-            let g = |i: usize| ctl_ptr(miGameInputControlFields[i]);
-            let m = |i: usize| ctl_ptr(miMenuInputControlFields[i]);
-            let dev = ctl_ptr(miDeviceSelectField);
-            let typ = ctl_ptr(miInputTypeButton);
-            let back = ctl_ptr(miBackButton);
-            let null = Ptr::null();
+            let gc = |i: usize| miGameInputControlFields[i].id();
+            let m = |i: usize| miMenuInputControlFields[i].id();
+            let dev = miDeviceSelectField.id();
+            let typ = miInputTypeButton.id();
+            let back = miBackButton.id();
+            let null = ControlId::NONE;
 
             let menu = &mut this.mInputMenu;
             menu.set_cancel_code(MENU_CODE_BACK_TO_CONTROLS_MENU);
-            menu.add_non_control(ctl_ptr(miImage[0]));
-            menu.add_non_control(ctl_ptr(miImage[1]));
-            menu.add_non_control(ctl_ptr(miText));
+            menu.add_non_control(miImage[0].id());
+            menu.add_non_control(miImage[1].id());
+            menu.add_non_control(miText.id());
 
-            menu.add_control(dev, back, typ, null, back);
-            menu.add_control(typ, dev, g(0), null, back);
-            menu.add_control(g(0), typ, g(1), null, back);
-            menu.add_control(g(1), g(0), g(2), null, back);
-            menu.add_control(g(2), g(1), g(3), null, back);
-            menu.add_control(g(3), g(2), g(4), null, back);
-            menu.add_control(g(4), g(3), g(5), null, back);
-            menu.add_control(g(5), g(4), g(6), null, back);
-            menu.add_control(g(6), g(5), g(7), null, back);
-            menu.add_control(g(7), g(6), m(0), null, back);
-            menu.add_control(m(0), g(7), m(1), null, back);
-            menu.add_control(m(1), m(0), m(2), null, back);
-            menu.add_control(m(2), m(1), m(3), null, back);
-            menu.add_control(m(3), m(2), m(4), null, back);
-            menu.add_control(m(4), m(3), m(5), null, back);
-            menu.add_control(m(5), m(4), m(6), null, back);
-            menu.add_control(m(6), m(5), m(7), null, back);
-            menu.add_control(m(7), m(6), back, null, back);
+            menu.add_control(g, dev, back, typ, null, back);
+            menu.add_control(g, typ, dev, gc(0), null, back);
+            menu.add_control(g, gc(0), typ, gc(1), null, back);
+            menu.add_control(g, gc(1), gc(0), gc(2), null, back);
+            menu.add_control(g, gc(2), gc(1), gc(3), null, back);
+            menu.add_control(g, gc(3), gc(2), gc(4), null, back);
+            menu.add_control(g, gc(4), gc(3), gc(5), null, back);
+            menu.add_control(g, gc(5), gc(4), gc(6), null, back);
+            menu.add_control(g, gc(6), gc(5), gc(7), null, back);
+            menu.add_control(g, gc(7), gc(6), m(0), null, back);
+            menu.add_control(g, m(0), gc(7), m(1), null, back);
+            menu.add_control(g, m(1), m(0), m(2), null, back);
+            menu.add_control(g, m(2), m(1), m(3), null, back);
+            menu.add_control(g, m(3), m(2), m(4), null, back);
+            menu.add_control(g, m(4), m(3), m(5), null, back);
+            menu.add_control(g, m(5), m(4), m(6), null, back);
+            menu.add_control(g, m(6), m(5), m(7), null, back);
+            menu.add_control(g, m(7), m(6), back, null, back);
 
-            menu.add_control(back, m(7), dev, dev, null);
+            menu.add_control(g, back, m(7), dev, dev, null);
 
             menu.set_initial_focus(gp.get(), dev);
 
-            this.set_visible_input_fields();
+            this.set_visible_input_fields(g);
             this
         }
     }
 
-    fn set_visible_input_fields(&mut self) {
-        let selDevice = self.miDeviceSelectField.current_value() as i32;
+    fn set_visible_input_fields(&mut self, g: &mut Game) {
+        let selDevice = g.ctl(self.miDeviceSelectField).current_value() as i32;
 
         for iKey in 0..NUM_KEYS {
             let visible = 0 == self.iSelectedInputType && (iKey < 6 || DEVICE_KEYBOARD as i32 != selDevice || self.iPlayerID == 0);
-            self.miGameInputControlFields[iKey].set_visible(visible);
+            g.ctl(self.miGameInputControlFields[iKey]).set_visible(visible);
         }
 
         for iKey in 0..NUM_KEYS {
             let visible = 1 == self.iSelectedInputType && (iKey < 6 || DEVICE_KEYBOARD as i32 != selDevice || self.iPlayerID == 0);
-            self.miMenuInputControlFields[iKey].set_visible(visible);
+            g.ctl(self.miMenuInputControlFields[iKey]).set_visible(visible);
         }
     }
 
@@ -475,13 +476,13 @@ impl MI_InputControlContainer {
         #[cfg(not(target_os = "emscripten"))]
         if self.devices != crate::smw::pad::generation() {
             self.devices = crate::smw::pad::generation();
-            self.miDeviceSelectField.clear();
-            self.miDeviceSelectField.add("Keyboard", -1);
-            unsafe { add_joysticks(g, &mut self.miDeviceSelectField) };
+            g.ctl(self.miDeviceSelectField).clear();
+            g.ctl(self.miDeviceSelectField).add("Keyboard", -1);
+            unsafe { add_joysticks(g, g.ctl(self.miDeviceSelectField)) };
         }
 
         //Hide input options that other players are using
-        self.miDeviceSelectField.hide_all_items(false);
+        g.ctl(self.miDeviceSelectField).hide_all_items(false);
 
         for iPlayer in 0..4i16 {
             if iPlayer == playerID {
@@ -490,37 +491,37 @@ impl MI_InputControlContainer {
 
             let device = g.game_values.playerInput.inputControls[iPlayer as usize].iDevice;
             if device > -1 {
-                self.miDeviceSelectField.hide_item(device, true);
+                g.ctl(self.miDeviceSelectField).hide_item(device, true);
             }
         }
 
         self.iPlayerID = playerID;
         self.iDevice = g.game_values.playerInput.inputControls[self.iPlayerID as usize].iDevice;
         let iDevice = self.iDevice;
-        self.miDeviceSelectField.set_current_value(iDevice);
+        g.ctl(self.miDeviceSelectField).set_current_value(iDevice);
 
         for iKey in 0..NUM_KEYS {
             let mut f = self.miGameInputControlFields[iKey];
-            f.set_device(iDevice);
-            f.set_type(0);
-            f.set_key_index(iKey as i16);
-            f.set_player_index(self.iPlayerID);
-            f.set_key(key_ptr(g, self.iPlayerID, 0, iKey));
+            g.ctl(f).set_device(iDevice);
+            g.ctl(f).set_type(0);
+            g.ctl(f).set_key_index(iKey as i16);
+            g.ctl(f).set_player_index(self.iPlayerID);
+            g.ctl(f).set_key(key_ptr(g, self.iPlayerID, 0, iKey));
         }
 
         for iKey in 0..NUM_KEYS {
             let mut f = self.miMenuInputControlFields[iKey];
-            f.set_device(iDevice);
-            f.set_type(1);
-            f.set_key_index(iKey as i16);
-            f.set_player_index(self.iPlayerID);
-            f.set_key(key_ptr(g, self.iPlayerID, 1, iKey));
+            g.ctl(f).set_device(iDevice);
+            g.ctl(f).set_type(1);
+            g.ctl(f).set_key_index(iKey as i16);
+            g.ctl(f).set_player_index(self.iPlayerID);
+            g.ctl(f).set_key(key_ptr(g, self.iPlayerID, 1, iKey));
         }
 
-        self.set_visible_input_fields();
+        self.set_visible_input_fields(g);
 
         let szNewTitle = format!("Player {} Controls", self.iPlayerID as i32 + 1);
-        self.miText.set_text(szNewTitle);
+        g.ctl(self.miText).set_text(szNewTitle);
         self.mInputMenu.reset_menu(g);
     }
 
@@ -540,17 +541,17 @@ impl MI_InputControlContainer {
 
         for iKey in 0..NUM_KEYS {
             let mut f = self.miGameInputControlFields[iKey];
-            f.set_device(lDevice);
-            f.set_key(key_ptr(g, self.iPlayerID, 0, iKey));
+            g.ctl(f).set_device(lDevice);
+            g.ctl(f).set_key(key_ptr(g, self.iPlayerID, 0, iKey));
         }
 
         for iKey in 0..NUM_KEYS {
             let mut f = self.miMenuInputControlFields[iKey];
-            f.set_device(lDevice);
-            f.set_key(key_ptr(g, self.iPlayerID, 1, iKey));
+            g.ctl(f).set_device(lDevice);
+            g.ctl(f).set_key(key_ptr(g, self.iPlayerID, 1, iKey));
         }
 
-        self.set_visible_input_fields();
+        self.set_visible_input_fields(g);
     }
 }
 
@@ -578,13 +579,13 @@ impl UI_ControlTrait for MI_InputControlContainer {
         } else if MENU_CODE_INPUT_TYPE_CHANGED == ret {
             if 0 == self.iSelectedInputType {
                 self.iSelectedInputType = 1;
-                self.miInputTypeButton.set_name(g, "Menu");
+                g.ctl(self.miInputTypeButton).set_name(g, "Menu");
             } else {
                 self.iSelectedInputType = 0;
-                self.miInputTypeButton.set_name(g, "Game");
+                g.ctl(self.miInputTypeButton).set_name(g, "Game");
             }
 
-            self.set_visible_input_fields();
+            self.set_visible_input_fields(g);
 
             return MENU_CODE_NONE;
         } else if MENU_CODE_INPUT_DEVICE_CHANGED == ret {
@@ -592,7 +593,7 @@ impl UI_ControlTrait for MI_InputControlContainer {
             //Need to handle case where reading in and using a device that is no longer
             //an option will crash the system (joystick unplugged or something)
 
-            let v = self.miDeviceSelectField.current_value();
+            let v = g.ctl(self.miDeviceSelectField).current_value();
             self.update_device_keys(g, v);
             playerInput.reset_keys();
 

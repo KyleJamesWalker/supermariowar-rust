@@ -2,13 +2,14 @@
 //!
 //! `UI_Control` is the data of the C++ base class; `UI_ControlTrait` holds its virtuals. Every menu item
 //! embeds its base as the first field (`impl_base!`) and implements the trait, returning the embedded
-//! `UI_Control` from `ctl()`/`ctl_mut()`. Controls are referenced as `Ptr<dyn UI_ControlTrait>`.
+//! `UI_Control` from `ctl()`/`ctl_mut()`. `Game::controls` owns every control; menus hold `ControlId`s.
 
 use crate::game::Game;
 use crate::common::input::CPlayerInput;
 use crate::common::math::vec2::Vec2s;
 use crate::common::ui::menu_code::*;
-use crate::common::uimenu::UI_Menu;
+use std::cell::UnsafeCell;
+use std::marker::PhantomData;
 use crate::globals::*;
 
 #[repr(u8)]
@@ -20,7 +21,127 @@ pub enum TextAlign {
     RIGHT,
 }
 
-pub type ControlPtr = Ptr<dyn UI_ControlTrait>;
+/// A control in `Game::controls`. A handle to a removed control finds nothing.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub struct ControlId {
+    slot: u16,
+    generation: u16,
+}
+
+impl ControlId {
+    /// No control: what a null `UI_Control*` was in the C++.
+    pub const NONE: ControlId = ControlId { slot: u16::MAX, generation: 0 };
+
+    pub fn is_none(self) -> bool {
+        self == Self::NONE
+    }
+}
+
+impl Default for ControlId {
+    fn default() -> Self {
+        Self::NONE
+    }
+}
+
+/// A `ControlId` that `Controls::insert` made for a `T`.
+pub struct Ctl<T: ?Sized> {
+    id: ControlId,
+    _type: PhantomData<fn() -> *const T>,
+}
+
+impl<T: ?Sized> Ctl<T> {
+    pub const NONE: Self = Ctl { id: ControlId::NONE, _type: PhantomData };
+
+    pub fn id(self) -> ControlId {
+        self.id
+    }
+
+    pub fn is_none(self) -> bool {
+        self.id.is_none()
+    }
+}
+
+impl<T: UI_ControlTrait + 'static> Ctl<T> {
+    pub fn new(control: T, g: &mut Game) -> Self {
+        g.controls.insert(control)
+    }
+}
+
+impl<T: ?Sized> Clone for Ctl<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<T: ?Sized> Copy for Ctl<T> {}
+
+impl<T: ?Sized> PartialEq for Ctl<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl<T: ?Sized> Default for Ctl<T> {
+    fn default() -> Self {
+        Self::NONE
+    }
+}
+
+impl<T: ?Sized> std::fmt::Debug for Ctl<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.id.fmt(f)
+    }
+}
+
+/// Every menu's controls. Menus live for the whole run, so a dropped menu leaves its controls here.
+#[derive(Default)]
+pub struct Controls {
+    slots: Vec<Option<Box<UnsafeCell<dyn UI_ControlTrait>>>>,
+    generations: Vec<u16>,
+}
+
+impl Controls {
+    pub const fn new() -> Self {
+        Controls { slots: Vec::new(), generations: Vec::new() }
+    }
+
+    pub fn insert<T: UI_ControlTrait + 'static>(&mut self, control: T) -> Ctl<T> {
+        let slot = match self.slots.iter().position(Option::is_none) {
+            Some(slot) => slot,
+            None => {
+                self.slots.push(None);
+                self.generations.push(0);
+                self.slots.len() - 1
+            }
+        };
+        self.slots[slot] = Some(Box::new(UnsafeCell::new(control)));
+        Ctl { id: ControlId { slot: slot as u16, generation: self.generations[slot] }, _type: PhantomData }
+    }
+
+    pub fn remove(&mut self, id: ControlId) {
+        if self.get(id).is_some() {
+            self.slots[id.slot as usize] = None;
+            self.generations[id.slot as usize] = self.generations[id.slot as usize].wrapping_add(1);
+        }
+    }
+
+    #[allow(clippy::mut_from_ref)]
+    pub fn get(&self, id: ControlId) -> Option<&'static mut dyn UI_ControlTrait> {
+        let slot = id.slot as usize;
+        if slot >= self.slots.len() || self.generations[slot] != id.generation {
+            return None;
+        }
+        let control = self.slots[slot].as_deref()?.get();
+        Some(unsafe { &mut *control })
+    }
+
+    /// Panics on a removed control, where the C++ read freed memory.
+    #[allow(clippy::mut_from_ref)]
+    pub fn typed<T: 'static>(&self, ctl: Ctl<T>) -> &'static mut T {
+        let control = self.get(ctl.id).unwrap_or_else(|| panic!("no control {:?}", ctl.id));
+        unsafe { &mut *(control as *mut dyn UI_ControlTrait as *mut T) }
+    }
+}
 
 pub struct UI_Control {
     pub m_pos: Vec2s,
@@ -31,9 +152,8 @@ pub struct UI_Control {
     pub fDisable: bool,
     pub m_visible: bool,
 
-    pub m_neighbors: [ControlPtr; 4],
+    pub m_neighbors: [ControlId; 4],
 
-    pub m_parentMenu: Ptr<UI_Menu>,
     pub iControllingTeam: i16,
 
     pub _alias: Aliased,
@@ -48,8 +168,7 @@ impl UI_Control {
             fAutoModify: false,
             fDisable: false,
             m_visible: true,
-            m_neighbors: [Ptr::null(); 4],
-            m_parentMenu: Ptr::null(),
+            m_neighbors: [ControlId::NONE; 4],
             iControllingTeam: -1,
             _alias: Aliased::new(),
         }
@@ -64,8 +183,7 @@ impl UI_Control {
             fAutoModify: other.fAutoModify,
             fDisable: other.fDisable,
             m_visible: other.m_visible,
-            m_neighbors: [Ptr::null(); 4],
-            m_parentMenu: Ptr::null(),
+            m_neighbors: [ControlId::NONE; 4],
             iControllingTeam: other.iControllingTeam,
             _alias: Aliased::new(),
         }
@@ -82,11 +200,11 @@ impl UI_Control {
         self.m_pos = Vec2s::new(x, y);
     }
 
-    pub fn set_neighbor(&mut self, iNeighbor: MenuNavDirection, uiControl: ControlPtr) {
+    pub fn set_neighbor(&mut self, iNeighbor: MenuNavDirection, uiControl: ControlId) {
         self.m_neighbors[iNeighbor as usize] = uiControl;
     }
 
-    pub fn neighbor(&self, iNeighbor: MenuNavDirection) -> ControlPtr {
+    pub fn neighbor(&self, iNeighbor: MenuNavDirection) -> ControlId {
         self.m_neighbors[iNeighbor as usize]
     }
 
@@ -95,10 +213,6 @@ impl UI_Control {
     }
     pub fn is_visible(&self) -> bool {
         self.m_visible
-    }
-
-    pub fn set_parent(&mut self, menu: Ptr<UI_Menu>) {
-        self.m_parentMenu = menu;
     }
 
     pub fn is_modifying(&self) -> bool {
@@ -185,14 +299,5 @@ impl UI_ControlTrait for UI_Control {
     }
     fn ctl_mut(&mut self) -> &mut UI_Control {
         self
-    }
-}
-
-/// `UI_Control*` from a concrete control pointer.
-pub fn ctl_ptr<T: UI_ControlTrait + 'static>(p: Ptr<T>) -> ControlPtr {
-    if p.is_null() {
-        Ptr::null()
-    } else {
-        Ptr::from_raw(p.as_ptr() as *mut dyn UI_ControlTrait)
     }
 }

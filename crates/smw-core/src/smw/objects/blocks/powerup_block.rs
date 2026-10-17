@@ -245,7 +245,7 @@ pub fn net_release(g: &mut Game, col: i16, row: i16, pos: Vec2s, side: bool) {
     if col < 0 || row < 0 || col as i32 >= MAPWIDTH || row as i32 >= MAPHEIGHT {
         return;
     }
-    let mut block = g.g_map.blockdata[col as usize][row as usize];
+    let mut block = g.map_block(col, row);
     if block.is_null() {
         return;
     }
@@ -263,7 +263,7 @@ pub fn net_block_ready(g: &mut Game, col: i16, row: i16) -> bool {
     if col < 0 || row < 0 || col as i32 >= MAPWIDTH || row as i32 >= MAPHEIGHT {
         return true;
     }
-    let mut block = g.g_map.blockdata[col as usize][row as usize];
+    let mut block = g.map_block(col, row);
     if block.is_null() {
         return true;
     }
@@ -273,7 +273,7 @@ pub fn net_block_ready(g: &mut Game, col: i16, row: i16) -> bool {
         0 => {
             b.state = 3;
             b.hidden = false;
-            g.g_map.update_tile_gap(col, row);
+            g.update_tile_gap(col, row);
             true
         }
         _ => true,
@@ -347,7 +347,7 @@ pub fn b_powerup_block_hitbottom_player<T: B_PowerupBlockTrait + ?Sized>(g: &mut
         }
 
         let (col, row) = (this.pb().col, this.pb().row);
-        g.g_map.update_tile_gap(col, row);
+        g.update_tile_gap(col, row);
 
         if this.pb().state == 0 {
             if_sound_on_play(g, &mut gp.rm.sfx_bump);

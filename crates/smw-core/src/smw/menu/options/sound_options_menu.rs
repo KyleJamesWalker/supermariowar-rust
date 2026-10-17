@@ -1,5 +1,6 @@
 //! Port of src/smw/menu/options/SoundOptionsMenu.cpp
 
+use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_button::MI_Button;
@@ -7,7 +8,7 @@ use crate::common::ui::mi_image::MI_Image;
 use crate::common::ui::mi_select_field::MI_SelectField;
 use crate::common::ui::mi_slider_field::MI_SliderField;
 use crate::common::ui::mi_text::{MI_HeaderText, MI_Text};
-use crate::common::uicontrol::{ctl_ptr, TextAlign};
+use crate::common::uicontrol::{TextAlign};
 use crate::common::uimenu::UI_Menu;
 use crate::globals::*;
 use crate::smw::menu::options::{select_field, OFF_ON};
@@ -31,18 +32,18 @@ const VOLUMES: &[(&str, i16)] = &[
 pub struct UI_SoundOptionsMenu {
     pub ui_menu: UI_Menu,
 
-    pub miSoundVolumeField: Ptr<MI_SliderField>,
-    pub miMusicVolumeField: Ptr<MI_SliderField>,
-    pub miPlayNextMusicField: Ptr<MI_SelectField<bool>>,
-    pub miAnnouncerField: Ptr<MI_AnnouncerField>,
-    pub miPlaylistField: Ptr<MI_PlaylistField>,
-    pub miWorldMusicField: Ptr<MI_SelectField<i16>>,
-    pub miSoundPackField: Ptr<MI_PacksField>,
-    pub miSoundOptionsMenuBackButton: Ptr<MI_Button>,
+    pub miSoundVolumeField: Ctl<MI_SliderField>,
+    pub miMusicVolumeField: Ctl<MI_SliderField>,
+    pub miPlayNextMusicField: Ctl<MI_SelectField<bool>>,
+    pub miAnnouncerField: Ctl<MI_AnnouncerField>,
+    pub miPlaylistField: Ctl<MI_PlaylistField>,
+    pub miWorldMusicField: Ctl<MI_SelectField<i16>>,
+    pub miSoundPackField: Ctl<MI_PacksField>,
+    pub miSoundOptionsMenuBackButton: Ctl<MI_Button>,
 
-    pub miSoundOptionsMenuLeftHeaderBar: Ptr<MI_Image>,
-    pub miSoundOptionsMenuRightHeaderBar: Ptr<MI_Image>,
-    pub miSoundOptionsMenuHeaderText: Ptr<MI_Text>,
+    pub miSoundOptionsMenuLeftHeaderBar: Ctl<MI_Image>,
+    pub miSoundOptionsMenuRightHeaderBar: Ctl<MI_Image>,
+    pub miSoundOptionsMenuHeaderText: Ctl<MI_Text>,
 }
 crate::impl_base!(UI_SoundOptionsMenu => ui_menu: UI_Menu);
 
@@ -54,78 +55,78 @@ impl UI_SoundOptionsMenu {
             let menu_plain_field = g.rm.menu_plain_field;
             let menu_slider_bar = g.rm.menu_slider_bar;
 
-            let mut f = Ptr::new_box(MI_SliderField::new(spr, menu_slider_bar, 70, 100, "Sound Volume", 500, 220, 484));
+            let mut f = Ctl::new(MI_SliderField::new(spr, menu_slider_bar, 70, 100, "Sound Volume", 500, 220, 484), g);
             for &(name, value) in VOLUMES {
-                f.add(name, value);
+                g.ctl(f).add(name, value);
             }
-            f.set_output_ptr(&mut g.game_values.soundvolume);
-            f.set_current_value(g.game_values.soundvolume);
-            f.allow_wrap(false);
-            f.set_item_changed_code(MENU_CODE_SOUND_VOLUME_CHANGED);
+            g.ctl(f).set_output_ptr(&mut g.game_values.soundvolume);
+            g.ctl(f).set_current_value(g.game_values.soundvolume);
+            g.ctl(f).allow_wrap(false);
+            g.ctl(f).set_item_changed_code(MENU_CODE_SOUND_VOLUME_CHANGED);
             this.miSoundVolumeField = f;
 
-            let mut f = Ptr::new_box(MI_SliderField::new(spr, menu_slider_bar, 70, 140, "Music Volume", 500, 220, 484));
+            let mut f = Ctl::new(MI_SliderField::new(spr, menu_slider_bar, 70, 140, "Music Volume", 500, 220, 484), g);
             for &(name, value) in VOLUMES {
-                f.add(name, value);
+                g.ctl(f).add(name, value);
             }
-            f.set_output_ptr(&mut g.game_values.musicvolume);
-            f.set_current_value(g.game_values.musicvolume);
-            f.allow_wrap(false);
-            f.set_item_changed_code(MENU_CODE_MUSIC_VOLUME_CHANGED);
+            g.ctl(f).set_output_ptr(&mut g.game_values.musicvolume);
+            g.ctl(f).set_current_value(g.game_values.musicvolume);
+            g.ctl(f).allow_wrap(false);
+            g.ctl(f).set_item_changed_code(MENU_CODE_MUSIC_VOLUME_CHANGED);
             this.miMusicVolumeField = f;
 
-            this.miPlayNextMusicField = select_field(spr, 70, 180, "Next Music", 500, 220, OFF_ON, &mut g.game_values.playnextmusic);
-            this.miPlayNextMusicField.set_auto_advance(true);
+            this.miPlayNextMusicField = select_field(spr, 70, 180, "Next Music", 500, 220, OFF_ON, &mut g.game_values.playnextmusic, g);
+            g.ctl(this.miPlayNextMusicField).set_auto_advance(true);
 
-            this.miAnnouncerField = Ptr::new_box(MI_AnnouncerField::new(spr, 70, 220, "Announcer", 500, 220, Ptr::from_mut(&mut g.announcerlist.simple_file_list)));
-            this.miSoundPackField = Ptr::new_box(MI_PacksField::new(spr, 70, 260, "Sound Pack", 500, 220, Ptr::from_mut(&mut g.soundpacklist.simple_directory_list.simple_file_list), MENU_CODE_SOUND_PACK_CHANGED));
+            this.miAnnouncerField = Ctl::new(MI_AnnouncerField::new(spr, 70, 220, "Announcer", 500, 220, Ptr::from_mut(&mut g.announcerlist.simple_file_list)), g);
+            this.miSoundPackField = Ctl::new(MI_PacksField::new(spr, 70, 260, "Sound Pack", 500, 220, Ptr::from_mut(&mut g.soundpacklist.simple_directory_list.simple_file_list), MENU_CODE_SOUND_PACK_CHANGED), g);
 
-            this.miPlaylistField = Ptr::new_box(MI_PlaylistField::new(spr, 70, 300, "Game Music Pack", 500, 220));
-            this.miWorldMusicField = Ptr::new_box(MI_SelectField::new(spr, 70, 340, "World Music Pack", 500, 220));
+            this.miPlaylistField = Ctl::new(MI_PlaylistField::new(spr, 70, 300, "Game Music Pack", 500, 220), g);
+            this.miWorldMusicField = Ctl::new(MI_SelectField::new(spr, 70, 340, "World Music Pack", 500, 220), g);
 
             let iCurrentMusic = g.worldmusiclist.current_index() as i32;
             g.worldmusiclist.set_current(0);
             for iMusic in 0..g.worldmusiclist.count() {
                 let name = g.worldmusiclist.current_name().to_string();
-                this.miWorldMusicField.add(name, iMusic as i16);
+                g.ctl(this.miWorldMusicField).add(name, iMusic as i16);
                 g.worldmusiclist.next();
             }
-            this.miWorldMusicField.set_current_value(iCurrentMusic as i16);
+            g.ctl(this.miWorldMusicField).set_current_value(iCurrentMusic as i16);
             g.worldmusiclist.set_current(iCurrentMusic as usize);
-            this.miWorldMusicField.set_item_changed_code(MENU_CODE_WORLD_MUSIC_CHANGED);
+            g.ctl(this.miWorldMusicField).set_item_changed_code(MENU_CODE_WORLD_MUSIC_CHANGED);
 
-            this.miSoundOptionsMenuBackButton = Ptr::new_box(MI_Button::new(g, spr, 544, 432, "Back", 80, TextAlign::CENTER));
-            this.miSoundOptionsMenuBackButton.set_code(MENU_CODE_BACK_TO_OPTIONS_MENU);
+            this.miSoundOptionsMenuBackButton = Ctl::new(MI_Button::new(g, spr, 544, 432, "Back", 80, TextAlign::CENTER), g);
+            g.ctl(this.miSoundOptionsMenuBackButton).set_code(MENU_CODE_BACK_TO_OPTIONS_MENU);
 
-            this.miSoundOptionsMenuLeftHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0));
-            this.miSoundOptionsMenuRightHeaderBar = Ptr::new_box(MI_Image::new(menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0));
-            this.miSoundOptionsMenuHeaderText = Ptr::new_box(MI_HeaderText::new(g, "Sound Options Menu", 320, 5));
+            this.miSoundOptionsMenuLeftHeaderBar = Ctl::new(MI_Image::new(menu_plain_field, 0, 0, 0, 0, 320, 32, 1, 1, 0), g);
+            this.miSoundOptionsMenuRightHeaderBar = Ctl::new(MI_Image::new(menu_plain_field, 320, 0, 192, 0, 320, 32, 1, 1, 0), g);
+            this.miSoundOptionsMenuHeaderText = Ctl::new(MI_HeaderText::new(g, "Sound Options Menu", 320, 5), g);
         }
 
-        let soundvol = ctl_ptr(this.miSoundVolumeField);
-        let musicvol = ctl_ptr(this.miMusicVolumeField);
-        let nextmusic = ctl_ptr(this.miPlayNextMusicField);
-        let announcer = ctl_ptr(this.miAnnouncerField);
-        let soundpack = ctl_ptr(this.miSoundPackField);
-        let playlist = ctl_ptr(this.miPlaylistField);
-        let worldmusic = ctl_ptr(this.miWorldMusicField);
-        let back = ctl_ptr(this.miSoundOptionsMenuBackButton);
-        let null = Ptr::null();
+        let soundvol = this.miSoundVolumeField.id();
+        let musicvol = this.miMusicVolumeField.id();
+        let nextmusic = this.miPlayNextMusicField.id();
+        let announcer = this.miAnnouncerField.id();
+        let soundpack = this.miSoundPackField.id();
+        let playlist = this.miPlaylistField.id();
+        let worldmusic = this.miWorldMusicField.id();
+        let back = this.miSoundOptionsMenuBackButton.id();
+        let null = ControlId::NONE;
 
-        this.add_control(soundvol, back, musicvol, null, back);
-        this.add_control(musicvol, soundvol, nextmusic, null, back);
-        this.add_control(nextmusic, musicvol, announcer, null, back);
-        this.add_control(announcer, nextmusic, soundpack, null, back);
-        this.add_control(soundpack, announcer, playlist, null, back);
-        this.add_control(playlist, soundpack, worldmusic, null, back);
-        this.add_control(worldmusic, playlist, back, null, back);
-        this.add_control(back, worldmusic, soundvol, soundpack, null);
+        this.add_control(g, soundvol, back, musicvol, null, back);
+        this.add_control(g, musicvol, soundvol, nextmusic, null, back);
+        this.add_control(g, nextmusic, musicvol, announcer, null, back);
+        this.add_control(g, announcer, nextmusic, soundpack, null, back);
+        this.add_control(g, soundpack, announcer, playlist, null, back);
+        this.add_control(g, playlist, soundpack, worldmusic, null, back);
+        this.add_control(g, worldmusic, playlist, back, null, back);
+        this.add_control(g, back, worldmusic, soundvol, soundpack, null);
 
-        let c = ctl_ptr(this.miSoundOptionsMenuLeftHeaderBar);
+        let c = this.miSoundOptionsMenuLeftHeaderBar.id();
         this.add_non_control(c);
-        let c = ctl_ptr(this.miSoundOptionsMenuRightHeaderBar);
+        let c = this.miSoundOptionsMenuRightHeaderBar.id();
         this.add_non_control(c);
-        let c = ctl_ptr(this.miSoundOptionsMenuHeaderText);
+        let c = this.miSoundOptionsMenuHeaderText.id();
         this.add_non_control(c);
 
         this.set_initial_focus(g, soundvol);
@@ -133,7 +134,7 @@ impl UI_SoundOptionsMenu {
         this
     }
 
-    pub fn get_current_world_music_id(&self) -> i16 {
-        self.miWorldMusicField.current_value()
+    pub fn get_current_world_music_id(&self, g: &Game) -> i16 {
+        g.ctl(self.miWorldMusicField).current_value()
     }
 }

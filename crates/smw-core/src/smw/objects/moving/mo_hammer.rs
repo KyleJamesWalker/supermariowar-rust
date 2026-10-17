@@ -4,7 +4,7 @@ use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
-use crate::common::eyecandy::Spotlight;
+use crate::common::eyecandy::SpotlightId;
 use crate::common::game::App;
 use crate::common::gameplay_styles::TeamCollisionStyle;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -30,7 +30,7 @@ pub struct MO_Hammer {
 
     pub ttl: i16,
     pub fSuper: bool,
-    pub sSpotlight: Ptr<Spotlight>,
+    pub sSpotlight: SpotlightId,
 }
 impl_base!(MO_Hammer => io_moving_object: IO_MovingObject);
 
@@ -44,7 +44,7 @@ impl MO_Hammer {
             colorOffset: 0,
             ttl: 0,
             fSuper: false,
-            sSpotlight: Ptr::null(),
+            sSpotlight: SpotlightId::NONE,
         };
 
         o.ih >>= 2;
@@ -71,7 +71,7 @@ impl MO_Hammer {
 
         o.fObjectCollidesWithMap = false;
 
-        o.sSpotlight = Ptr::null();
+        o.sSpotlight = SpotlightId::NONE;
         o
     }
 }
@@ -129,12 +129,12 @@ impl CObjectTrait for MO_Hammer {
         } else if g.game_values.spotlights {
             let sx = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
             let sy = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
-            if self.sSpotlight.is_null() {
+            if self.sSpotlight.is_none() {
                 self.sSpotlight = gp.spotlightManager.add_spotlight(g, sx, sy, 3);
             }
 
-            if !self.sSpotlight.is_null() {
-                self.sSpotlight.update_position(sx, sy);
+            if !self.sSpotlight.is_none() {
+                g.spotlightManager.update_position(self.sSpotlight, sx, sy);
             }
         }
 

@@ -1,6 +1,7 @@
 //! Port of src/common/MovingPlatformPaths.cpp
 
 use crate::game::Game;
+use crate::common::map::PlatformId;
 use crate::common::eyecandy_styles::SpawnStyle;
 use crate::common::game::App;
 use crate::common::global_constants::*;
@@ -35,8 +36,6 @@ fn calc_velocity(speed: f32, angle: f32) -> Vec2f {
 }
 
 pub struct MovingPlatformPath {
-    pub m_platform: Ptr<MovingPlatform>,
-
     pub m_startPos: Vec2f,
     pub m_endPos: Vec2f,
     pub m_speed: f32,
@@ -48,7 +47,6 @@ pub struct MovingPlatformPath {
 impl MovingPlatformPath {
     pub fn new(speed: f32, startPos: Vec2f, endPos: Vec2f, preview: bool) -> Self {
         let mut p = MovingPlatformPath {
-            m_platform: Ptr::null(),
             m_startPos: startPos,
             m_endPos: endPos,
             m_speed: speed,
@@ -61,10 +59,6 @@ impl MovingPlatformPath {
             p.m_speed /= 2.0;
         }
         p
-    }
-
-    pub fn set_platform(&mut self, platform: Ptr<MovingPlatform>) {
-        self.m_platform = platform;
     }
 
     pub fn speed(&self) -> f32 {
@@ -89,9 +83,9 @@ pub trait MovingPlatformPathTrait: Any {
 
     /// C++ `typeId()`; renamed because `Any::type_id` takes the name.
     fn path_type_id(&self) -> PlatformPathType;
-    fn r#move(&mut self, g: &mut Game, r#type: i16) -> bool;
-    fn reset(&mut self, g: &mut Game) {
-        moving_platform_path_reset(g, self)
+    fn r#move(&mut self, g: &mut Game, r#type: i16, platform: Ptr<MovingPlatform>) -> bool;
+    fn reset(&mut self, g: &mut Game, platform: Ptr<MovingPlatform>) {
+        moving_platform_path_reset(g, self, platform)
     }
 }
 
@@ -108,14 +102,14 @@ impl std::ops::DerefMut for dyn MovingPlatformPathTrait {
     }
 }
 
-pub fn moving_platform_path_reset<T: MovingPlatformPathTrait + ?Sized>(g: &mut Game, this: &mut T) {
+pub fn moving_platform_path_reset<T: MovingPlatformPathTrait + ?Sized>(g: &mut Game, this: &mut T, platform: Ptr<MovingPlatform>) {
     if g.game_values.spawnstyle == SpawnStyle::Door {
         for _ in 0..36 {
-            this.r#move(g, 1);
+            this.r#move(g, 1, platform);
         }
     } else if g.game_values.spawnstyle == SpawnStyle::Swirl {
         for _ in 0..50 {
-            this.r#move(g, 1);
+            this.r#move(g, 1, platform);
         }
     }
 }
@@ -217,7 +211,7 @@ impl MovingPlatformPathTrait for StraightPath {
         PlatformPathType::Straight
     }
 
-    fn r#move(&mut self, g: &mut Game, r#type: i16) -> bool {
+    fn r#move(&mut self, g: &mut Game, r#type: i16, platform: Ptr<MovingPlatform>) -> bool {
         let t = r#type as usize;
         let v = self.base.m_velocity[t];
         self.base.m_currentPos[t] += v;
@@ -233,7 +227,7 @@ impl MovingPlatformPathTrait for StraightPath {
         false
     }
 
-    fn reset(&mut self, g: &mut Game) {
+    fn reset(&mut self, g: &mut Game, platform: Ptr<MovingPlatform>) {
         for t in 0..2 {
             self.m_currentStep[t] = 0;
             self.base.m_currentPos[t] = self.base.m_startPos;
@@ -241,7 +235,7 @@ impl MovingPlatformPathTrait for StraightPath {
             self.set_velocity(t);
         }
 
-        moving_platform_path_reset(g, self);
+        moving_platform_path_reset(g, self, platform);
     }
 }
 
@@ -318,12 +312,11 @@ impl MovingPlatformPathTrait for StraightPathContinuous {
         PlatformPathType::StraightContinuous
     }
 
-    fn r#move(&mut self, g: &mut Game, r#type: i16) -> bool {
+    fn r#move(&mut self, g: &mut Game, r#type: i16, platform: Ptr<MovingPlatform>) -> bool {
         let t = r#type as usize;
         let v = self.base.m_velocity[t];
         self.base.m_currentPos[t] += v;
 
-        let platform = self.base.m_platform;
         let pos = &mut self.base.m_currentPos[t];
 
         let dx = pos.x - platform.iHalfWidth as f32;
@@ -342,12 +335,12 @@ impl MovingPlatformPathTrait for StraightPathContinuous {
         false
     }
 
-    fn reset(&mut self, g: &mut Game) {
+    fn reset(&mut self, g: &mut Game, platform: Ptr<MovingPlatform>) {
         for t in 0..2 {
             self.base.m_currentPos[t] = self.base.m_startPos;
         }
 
-        moving_platform_path_reset(g, self);
+        moving_platform_path_reset(g, self, platform);
     }
 }
 
@@ -403,7 +396,7 @@ impl MovingPlatformPathTrait for EllipsePath {
         PlatformPathType::Ellipse
     }
 
-    fn r#move(&mut self, g: &mut Game, r#type: i16) -> bool {
+    fn r#move(&mut self, g: &mut Game, r#type: i16, platform: Ptr<MovingPlatform>) -> bool {
         let t = r#type as usize;
         let oldPos = self.base.m_currentPos[t];
 
@@ -426,13 +419,13 @@ impl MovingPlatformPathTrait for EllipsePath {
         false
     }
 
-    fn reset(&mut self, g: &mut Game) {
+    fn reset(&mut self, g: &mut Game, platform: Ptr<MovingPlatform>) {
         for t in 0..2 {
             self.m_angle[t] = self.m_startAngle;
             self.set_position(t as i16);
         }
 
-        moving_platform_path_reset(g, self);
+        moving_platform_path_reset(g, self, platform);
     }
 }
 
@@ -458,16 +451,16 @@ impl MovingPlatformPathTrait for FallingPath {
         PlatformPathType::Falling
     }
 
-    fn r#move(&mut self, g: &mut Game, r#type: i16) -> bool {
+    fn r#move(&mut self, g: &mut Game, r#type: i16, platform: Ptr<MovingPlatform>) -> bool {
         let mut gp = g.ptr();
         let t = r#type as usize;
         self.base.m_velocity[t].y = cap_falling_velocity(self.base.m_velocity[t].y + GRAVITATION);
 
-        let mut platform = self.base.m_platform;
+        let mut platform = platform;
         if platform.fy - platform.iHalfHeight as f32 >= App::screenHeight as f32 {
             for player in gp.players.iter_mut() {
-                if g.player(*player).platform == platform {
-                    g.player(*player).platform = Ptr::null();
+                if g.player(*player).platform == platform.id {
+                    g.player(*player).platform = PlatformId::NONE;
                     g.player(*player).vely = self.base.m_velocity[t].y;
                 }
             }
@@ -480,7 +473,7 @@ impl MovingPlatformPathTrait for FallingPath {
         false
     }
 
-    fn reset(&mut self, g: &mut Game) {
+    fn reset(&mut self, g: &mut Game, platform: Ptr<MovingPlatform>) {
         for t in 0..2 {
             self.base.m_currentPos[t] = self.base.m_startPos;
         }

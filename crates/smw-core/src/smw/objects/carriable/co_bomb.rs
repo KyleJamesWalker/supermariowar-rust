@@ -4,7 +4,7 @@ use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
-use crate::common::eyecandy::Spotlight;
+use crate::common::eyecandy::SpotlightId;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::{gfxSprite, ClipEdge};
 use crate::common::math::vec2::{Vec2f, Vec2s};
@@ -27,7 +27,7 @@ pub struct CO_Bomb {
     pub iColorOffsetY: i16,
     pub ttl: i16,
 
-    pub sSpotlight: Ptr<Spotlight>,
+    pub sSpotlight: SpotlightId,
 }
 impl_base!(CO_Bomb => mo_carried_object: MO_CarriedObject);
 
@@ -38,7 +38,7 @@ impl CO_Bomb {
             mo_carried_object: MO_CarriedObject::new(g, nspr, pos, 5, aniSpeed, 24, 24, 4, 13),
             iColorOffsetY: 0,
             ttl: 0,
-            sSpotlight: Ptr::null(),
+            sSpotlight: SpotlightId::NONE,
         };
 
         o.iw = 28;
@@ -60,7 +60,7 @@ impl CO_Bomb {
         o.iOwnerLeftOffset = -16;
         o.iOwnerUpOffset = 40;
 
-        o.sSpotlight = Ptr::null();
+        o.sSpotlight = SpotlightId::NONE;
         o
     }
 }
@@ -120,12 +120,12 @@ impl CObjectTrait for CO_Bomb {
         if g.game_values.spotlights {
             let x = (self.ix as i32 - self.collisionOffsetX as i32 + (self.iw as i32 >> 1)) as i16;
             let y = (self.iy as i32 - self.collisionOffsetY as i32 + (self.ih as i32 >> 1)) as i16;
-            if self.sSpotlight.is_null() {
+            if self.sSpotlight.is_none() {
                 self.sSpotlight = gp.spotlightManager.add_spotlight(g, x, y, 3);
             }
 
-            if !self.sSpotlight.is_null() {
-                self.sSpotlight.update_position(x, y);
+            if !self.sSpotlight.is_none() {
+                g.spotlightManager.update_position(self.sSpotlight, x, y);
             }
         }
     }
@@ -153,7 +153,7 @@ impl IO_MovingObjectTrait for CO_Bomb {
         let mut gp = g.ptr();
         let mut rm = g.rm;
         if !self.owner.is_none() {
-            g.player(self.owner).carriedItem = Ptr::null();
+            g.player(self.owner).carriedItem = crate::smw::object_container::ObjectId::NONE;
             self.owner = PlayerId::NONE;
         }
 

@@ -309,7 +309,7 @@ unsafe fn ai_map(g: &mut Game, x: i32, y: i32) -> i32 {
 /// `g_map->block(x, y) != NULL`, including the C++ out-of-bounds reads.
 unsafe fn ai_block_nonnull(g: &mut Game, x: i16, y: i16) -> bool {
     if in_map(x as i32, y as i32) {
-        return !g.g_map.block(x, y).is_null();
+        return !g.map_block(x, y).is_null();
     }
     let off = CMAP_OFF_BLOCKDATA + (x as i32 * MAPHEIGHT + y as i32) * 8;
     (0..8).any(|i| cmap_byte(g, off + i) != 0)
@@ -423,7 +423,7 @@ impl CPlayerAI {
         self.nearestObjects.reset();
 
         let pPlayer = self.pPlayer;
-        let carriedItem = g.player(pPlayer).carriedItem;
+        let carriedItem = g.carried_item(pPlayer);
         let carriedObj = carried_as_object(carriedItem);
         let fInvincible = g.player(pPlayer).is_invincible() || g.player(pPlayer).is_shielded() || g.player(pPlayer).shyguy;
         let iTeamID: i16 = g.player(pPlayer).teamID;
@@ -1011,7 +1011,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
         }
 
         let iStoredPowerup: i16 = g.game_values.gamepowerups[g.player(pPlayer).globalID as usize];
-        let mut carriedItem = g.player(pPlayer).carriedItem;
+        let mut carriedItem = g.carried_item(pPlayer);
         let carriedObj = carried_as_object(carriedItem);
         let ix: i16 = g.player(pPlayer).ix;
         let iy: i16 = g.player(pPlayer).iy;
@@ -1450,9 +1450,9 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
             //Look through all platforms and see if we are hitting solid or death tiles in them
             let mut iPlatform: i16 = 0;
             while (iPlatform as usize) < g.g_map.platforms.len() {
-                let lefttile: i32 = g.g_map.platforms[iPlatform as usize].get_tile_type_from_coord(ix, ((iDeathY as i32) << 5) as i16);
+                let lefttile: i32 = g.g_map.platform(g.g_map.platforms[iPlatform as usize]).get_tile_type_from_coord(ix, ((iDeathY as i32) << 5) as i16);
                 let righttile: i32 =
-                    g.g_map.platforms[iPlatform as usize].get_tile_type_from_coord((ix32 + PW) as i16, ((iDeathY as i32) << 5) as i16);
+                    g.g_map.platform(g.g_map.platforms[iPlatform as usize]).get_tile_type_from_coord((ix32 + PW) as i16, ((iDeathY as i32) << 5) as i16);
 
                 let fDeathTileUnderPlayer2 = ((lefttile & tile_flag_death_on_top) != 0 && (righttile & tile_flag_death_on_top) != 0)
                     || ((lefttile & tile_flag_death_on_top) != 0 && (righttile & tile_flag_solid) == 0)

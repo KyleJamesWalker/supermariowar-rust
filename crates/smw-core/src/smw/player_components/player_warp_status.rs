@@ -179,7 +179,7 @@ impl PlayerWarpStatus {
                 self.warpplane = ((exit.warpy as i32) << 5) as i16;
 
                 if iRow as i32 - 1 >= 0 {
-                    block = g.g_map.block(iCol, (iRow as i32 - 1) as i16);
+                    block = g.map_block(iCol, (iRow as i32 - 1) as i16);
 
                     if !block.is_null() && !block.is_transparent() && !block.is_hidden() {
                         block.trigger_behavior(g);
@@ -197,7 +197,7 @@ impl PlayerWarpStatus {
                     iCol = (iCol as i32 - 20) as i16;
                 }
 
-                block = g.g_map.block((iCol as i32 + 1) as i16, iRow);
+                block = g.map_block((iCol as i32 + 1) as i16, iRow);
 
                 if !block.is_null() && !block.is_transparent() && !block.is_hidden() {
                     block.trigger_behavior(g);
@@ -212,7 +212,7 @@ impl PlayerWarpStatus {
                 self.warpplane = (((exit.warpy as i32) << 5) + TILESIZE) as i16;
 
                 if (iRow as i32 + 1) < 15 {
-                    block = g.g_map.block(iCol, (iRow as i32 + 1) as i16);
+                    block = g.map_block(iCol, (iRow as i32 + 1) as i16);
 
                     if !block.is_null() && !block.is_transparent() && !block.is_hidden() {
                         block.trigger_behavior(g);
@@ -230,7 +230,7 @@ impl PlayerWarpStatus {
                     iCol = (iCol as i32 + 20) as i16;
                 }
 
-                block = g.g_map.block((iCol as i32 - 1) as i16, iRow);
+                block = g.map_block((iCol as i32 - 1) as i16, iRow);
 
                 if !block.is_null() && !block.is_transparent() && !block.is_hidden() {
                     block.trigger_behavior(g);

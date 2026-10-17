@@ -192,8 +192,7 @@ impl MapReader {
             };
 
             let platform = MovingPlatform::new(g, tiles, types, iWidth, iHeight, iDrawLayer, path, fPreview);
-            map.platforms.push(platform);
-            map.platformdrawlayer[iDrawLayer as usize].push(platform);
+            map.add_permanent_platform(platform);
         }
     }
 
