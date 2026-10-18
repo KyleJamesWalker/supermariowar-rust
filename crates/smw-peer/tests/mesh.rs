@@ -20,15 +20,20 @@ fn signaling_server() -> u16 {
     rx.recv().unwrap()
 }
 
-/// One room at a time: several meshes gathering ICE at once outrun the deadline on small CI runners.
-static ONE_ROOM: std::sync::Mutex<()> = std::sync::Mutex::new(());
-
 fn connect_all(n: usize, room: &str) -> Vec<PeerSocket> {
     let port = signaling_server();
-    let mut sockets: Vec<PeerSocket> = (0..n)
-        .map(|_| PeerSocket::connect(&format!("ws://127.0.0.1:{port}/{room}")))
-        .collect();
-    let deadline = Instant::now() + Duration::from_secs(60);
+    let deadline = Instant::now() + Duration::from_secs(30);
+    // matchbox_signaling's full-mesh builder loses NewPeer for two peers that join at once; matchbox_server does not.
+    let mut sockets: Vec<PeerSocket> = Vec::new();
+    for _ in 0..n {
+        let mut socket = PeerSocket::connect(&format!("ws://127.0.0.1:{port}/{room}"));
+        while socket.id().is_none() {
+            assert!(Instant::now() < deadline, "no peer id from the signaling server");
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        std::thread::sleep(Duration::from_millis(50));
+        sockets.push(socket);
+    }
     while sockets.iter().any(|s| s.connected_peers().len() < n - 1) {
         assert!(Instant::now() < deadline, "peers did not connect");
         for socket in &mut sockets {
@@ -41,7 +46,6 @@ fn connect_all(n: usize, room: &str) -> Vec<PeerSocket> {
 
 #[test]
 fn channels_reach_every_peer() {
-    let _room = ONE_ROOM.lock().unwrap_or_else(|e| e.into_inner());
     let mut sockets = connect_all(3, "channels");
     let ids: Vec<PeerId> = sockets.iter_mut().map(|s| s.id().unwrap()).collect();
     for (i, socket) in sockets.iter_mut().enumerate() {
@@ -123,7 +127,6 @@ fn step(state: u64, inputs: &[(Input, InputStatus)]) -> u64 {
 fn ggrs_sessions_agree() {
     const PLAYERS: usize = 3;
     const CHECK: i32 = 120;
-    let _room = ONE_ROOM.lock().unwrap_or_else(|e| e.into_inner());
     let mut sockets = connect_all(PLAYERS, "ggrs");
     let mut sessions: Vec<_> = sockets
         .iter_mut()
