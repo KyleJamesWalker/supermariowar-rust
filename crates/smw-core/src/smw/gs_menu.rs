@@ -283,8 +283,8 @@ impl MenuState {
         g.ptr().get().ms.get_or_insert_with(MenuState::new)
     }
 
-    /// Not in the C++: a pad plugged in after launch changed who plays (main.rs `assign_hotplugged`). Team select
-    /// takes the change, and the teams the game settings menu already has are rebuilt from it.
+    /// A pad plugged in after launch changed who plays (main.rs `assign_hotplugged`). Team select takes the change,
+    /// and the teams the game settings menu already has are rebuilt from it.
     pub fn players_changed(&mut self, g: &mut Game) {
         if self.mCurrentMenu == MenuId::None {
             return;

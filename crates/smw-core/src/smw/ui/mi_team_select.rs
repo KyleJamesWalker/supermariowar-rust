@@ -259,8 +259,8 @@ impl MI_TeamSelect {
         }
     }
 
-    /// Not in the C++: `reset` for players switched on or off while the menu is up (a hot-plugged pad). Players who
-    /// were already here keep their ready state.
+    /// `reset` for players switched on or off while the menu is up (a hot-plugged pad). Players who were already
+    /// here keep their ready state.
     pub fn players_changed(&mut self, g: &mut Game) {
         let present: Vec<bool> = (0..4i16).map(|p| self.get_team(p) >= 0).collect();
         let ready = self.fReady;
