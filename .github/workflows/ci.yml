@@ -671,18 +671,12 @@ jobs:
             native: true
             timeout: 30
             games: net_game net_game_frenzy net_game_stomp net_game_coins
-            run: |
-              target/release/examples/signal 35400 > "$RUNNER_TEMP/web-netplay-v2-signal.log" 2>&1 &
-              sleep 1
-              SMW_SIGNAL_URL=ws://127.0.0.1:35400 node tools/web_netplay_test.mjs "$RUNNER_TEMP/web-netplay-v2"
+            run: node tools/web_netplay_test.mjs "$RUNNER_TEMP/web-netplay-v2"
           - name: netplay v2 mixed
             native: true
             timeout: 30
             games: net_game net_game_blocks net_game_classic net_game_stompkill_powerup
-            run: |
-              target/release/examples/signal 35401 > "$RUNNER_TEMP/web-netplay-mixed-signal.log" 2>&1 &
-              sleep 1
-              MIXED=1 SMW_SIGNAL_URL=ws://127.0.0.1:35401 node tools/web_netplay_test.mjs "$RUNNER_TEMP/web-netplay-mixed"
+            run: MIXED=1 node tools/web_netplay_test.mjs "$RUNNER_TEMP/web-netplay-mixed"
           - name: replays 1
             timeout: 20
             replays: true
@@ -730,7 +724,6 @@ jobs:
         run: |
           cargo build --release --locked --bin smw
           cargo build --release --locked --package smw_relay
-          cargo build --release --locked --package smw-peer --example signal
 
       - name: Allow Chrome's sandbox
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
