@@ -28,6 +28,7 @@ pub struct UI_NetRoomMenu {
 
     miNetRoomMessages: Ctl<MI_ChatMessageBox>,
     miNetRoomMessageField: Ctl<MI_TextField>,
+    miNetRoomSettingsButton: Ctl<MI_Button>,
     miNetRoomMapPreview: Ctl<MI_MapPreview>,
 
     miNetRoomStartButton: Ctl<MI_Button>,
@@ -54,6 +55,10 @@ impl UI_NetRoomMenu {
 
         this.miNetRoomStartButton = Ctl::new(MI_Button::new(g, selectfield, 300, 310, "(waiting)", 331, TextAlign::CENTER), g);
         g.ctl(this.miNetRoomStartButton).set_code(MENU_CODE_TO_NET_ROOM_START_IN_PROGRESS);
+
+        this.miNetRoomSettingsButton = Ctl::new(MI_Button::new(g, selectfield, 300, 270, "Map & Mode", 331, TextAlign::CENTER), g);
+        g.ctl(this.miNetRoomSettingsButton).set_code(MENU_CODE_NET_ROOM_SETTINGS);
+        g.ctl(this.miNetRoomSettingsButton).set_visible(false);
 
         this.miNetRoomMessages = Ctl::new(MI_ChatMessageBox::new(20, 350, 640 - 2 * 26, 1), g);
         this.miNetRoomMapPreview = Ctl::new(MI_MapPreview::new(g, selectfield, 264, 2, 400, 120), g);
@@ -96,6 +101,8 @@ impl UI_NetRoomMenu {
         let send = this.miNetRoomSendButton.id();
         let back = this.miNetRoomBackButton.id();
         this.add_control(g, start, field, field, field, field);
+        let settings = this.miNetRoomSettingsButton.id();
+        this.add_control(g, settings, null, start, null, null);
         this.add_control(g, field, start, start, back, send);
         this.add_control(g, send, start, start, field, back);
         this.add_control(g, back, start, start, send, field);
@@ -136,7 +143,11 @@ impl UI_NetRoomMenu {
         g.ctl(self.miNetRoomHeaderText).set_text(name);
 
         let me = self.miSkinSelector[g.netplay.remotePlayerNumber as usize].id();
-        g.ctl(self.miNetRoomStartButton).set_neighbor(MenuNavDirection::Up, me);
+        let host = g.netplay.theHostIsMe;
+        g.ctl(self.miNetRoomSettingsButton).set_visible(host);
+        let above_start = if host { self.miNetRoomSettingsButton.id() } else { me };
+        g.ctl(self.miNetRoomStartButton).set_neighbor(MenuNavDirection::Up, above_start);
+        g.ctl(self.miNetRoomSettingsButton).set_neighbor(MenuNavDirection::Up, me);
         g.ctl(self.miNetRoomMessageField).set_neighbor(MenuNavDirection::Down, me);
 
         for p in 0..4i16 {

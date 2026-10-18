@@ -813,6 +813,33 @@ impl NetClient {
         self.local_gamehost.start(g, lobby);
     }
 
+    /// After a match the room stays together for the next one: the old match's game host connection goes, the host
+    /// reopens its game host and the room, and resends the map and mode it will play next.
+    pub fn back_in_room(&mut self, g: &mut Game) {
+        g.netplay.gameRunning = false;
+        g.netplay.start_waiting = false;
+        g.netplay.start_waited_since = 0;
+        g.netplay.operationInProgress = false;
+        if !self.foreign_gamehost.is_null() {
+            self.foreign_gamehost.disconnect();
+            self.foreign_gamehost = Ptr::null();
+        }
+        if g.netplay.theHostIsMe {
+            self.local_gamehost.stop(g);
+            let lobby = self.foreign_lobbyserver;
+            self.local_gamehost.start(g, lobby);
+            self.send_room_settings(g);
+            let reopen = MessageHeader::new(NET_G2L_GAME_RESULTS);
+            self.send_message_to_lobby_server(g, reopen.as_bytes());
+        }
+    }
+
+    /// The host's map and game mode settings, to the room.
+    pub fn send_room_settings(&mut self, g: &mut Game) {
+        self.send_map_change_message(g);
+        self.send_game_mode_settings_change_message(g);
+    }
+
     pub fn send_join_room_message(&mut self, g: &mut Game, password: &str) {
         let entry = g.netplay.currentRooms[g.netplay.selectedRoomIndex as usize].clone();
         println!(

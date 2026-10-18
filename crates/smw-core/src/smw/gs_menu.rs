@@ -180,6 +180,8 @@ pub struct MenuState {
     iDisplayErrorTimer: i16,
     net_error: &'static str,
     nearby_timer: u32,
+    /// The new-room settings menu is open from a room, to pick the next match's map and mode.
+    room_settings: bool,
     fNeedMenuMusicReset: bool,
 
 
@@ -233,6 +235,7 @@ impl MenuState {
             iDisplayErrorTimer: 0,
             net_error: "",
             nearby_timer: 0,
+            room_settings: false,
             fNeedMenuMusicReset: false,
             iUnlockMinigameOptionIndex: 0,
             iTournamentAIStep: 0,
@@ -1519,6 +1522,20 @@ impl MenuState {
             } else if MENU_CODE_TO_NET_NEW_ROOM_LEVEL_SELECT_MENU == code {
                 self.mCurrentMenu = MenuId::NetNewRoomSettings;
                 self.current().reset_menu(g);
+            } else if MENU_CODE_NET_ROOM_SETTINGS == code {
+                self.room_settings = true;
+                self.mCurrentMenu = MenuId::NetNewRoomSettings;
+                self.current().reset_menu(g);
+            } else if self.room_settings && self.mCurrentMenu == MenuId::NetNewRoomSettings
+                && (MENU_CODE_TO_NET_NEW_ROOM_SETTINGS_MENU == code || MENU_CODE_TO_NET_LOBBY_MENU == code)
+            {
+                self.room_settings = false;
+                g.netplay.mapfilepath = self.mNetNewRoomSettingsMenu.get_current_map_path(g);
+                gp.netplay.client.send_room_settings(g);
+                self.mCurrentMenu = MenuId::NetRoom;
+                self.mNetRoomMenu.restore(g);
+                self.current().reset_menu(g);
+                g.netplay.currentMenuChanged = true;
             } else if MENU_CODE_TO_NET_NEW_ROOM_SETTINGS_MENU == code {
                 self.mCurrentMenu = MenuId::NetNewRoom;
                 self.current().reset_menu(g);
@@ -1723,6 +1740,10 @@ impl GameState for MenuState {
             //Reset back to main menu after quick game
             self.mCurrentMenu = MenuId::Main;
             self.current().reset_menu(g);
+        } else if matchtype == MatchType::NetGame && g.netplay.currentRoom.roomID != 0 {
+            self.mCurrentMenu = MenuId::NetRoom;
+            self.mNetRoomMenu.restore(g);
+            self.current().reset_menu(g);
         } else if matchtype == MatchType::NetGame {
             self.mCurrentMenu = MenuId::NetLobby;
             self.current().reset_menu(g);
@@ -1809,14 +1830,11 @@ impl GameState for MenuState {
             }
         }
 
-        // On return from a game, refresh room list
-        if g.netplay.active {
-            if g.netplay.currentRoom.roomID != 0 {
-                gp.netplay.client.send_leave_room_message(g);
-                g.netplay.currentRoom.roomID = 0;
-                g.netplay.joinSuccessful = false;
-                g.netplay.gameRunning = false;
-            }
+        // On return from a game the players stay in their room for the next match.
+        if g.netplay.active && g.netplay.currentRoom.roomID != 0 {
+            gp.netplay.client.back_in_room(g);
+            g.netplay.currentMenuChanged = true;
+        } else if g.netplay.active {
             gp.netplay.client.request_room_list(g);
         }
     }
