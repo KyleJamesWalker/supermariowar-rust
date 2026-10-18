@@ -15,7 +15,6 @@ use crate::impl_base;
 use crate::smw::gamemodes::classic::CGM_Classic;
 use crate::smw::gamemodes::game_mode::*;
 
-use crate::smw::net_random::{self, Ev};
 use crate::smw::objects::moving::mo_coin::MO_Coin;
 use crate::smw::player::CPlayer;
 
@@ -71,12 +70,6 @@ fn drop_coins(g: &mut Game, player: PlayerId, iDamage: i16, pos: Vec2s) {
     }
 }
 
-pub fn net_drop_coins(g: &mut Game, player: PlayerId, iDamage: i16, x: i16, y: i16) {
-    if !player.is_none() {
-        drop_coins(g, player, iDamage, Vec2s::new(x, y));
-    }
-}
-
 impl CGM_Greed {
     pub fn new() -> Self {
         let mut this = CGM_Greed { cgm_classic: CGM_Classic::new() };
@@ -105,9 +98,7 @@ impl CGM_Greed {
 
         let pos: Vec2s = Vec2s::new((g.player(player).center_x() as i32 - 16) as i16, (g.player(player).center_y() as i32 - 16) as i16);
 
-        if !net_random::event(g, Ev::GreedCoins, &[g.player(player).globalID as i32, iDamage as i32, pos.x as i32, pos.y as i32]) {
-            drop_coins(g, player, iDamage, pos);
-        }
+        drop_coins(g, player, iDamage, pos);
 
         //Play warning sound if game is almost over
         if self.goal != -1 && !self.playedwarningsound {

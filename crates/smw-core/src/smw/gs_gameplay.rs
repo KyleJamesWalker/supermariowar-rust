@@ -40,9 +40,6 @@ use crate::smw::gamemodes::game_mode::{setup_score_board, show_score_board};
 use crate::smw::gamemodes::tag::CGM_Tag;
 use crate::smw::gs_menu::MenuState;
 
-use crate::common_netplay::protocol_definitions::NET_GAMESTATE_FRAMES_TO_SEND;
-use crate::smw::net::{Net_IndexedPlayerData};
-use crate::smw::net_random::{self, Ev};
 use crate::smw::object_container::CObjectContainer;
 use crate::smw::objects::blocks::bounce_block::B_BounceBlock;
 use crate::smw::objects::blocks::breakable_block::B_BreakableBlock;
@@ -96,8 +93,6 @@ pub struct GameplayState {
     respawnanimationtimer: [i16; 4],
     respawnanimationframe: [i16; 4],
 
-    previous_playerKeys: COutputControl,
-
     //Vars that keep track of spinning the screen
     spinangle: f32,
     spinspeed: f32,
@@ -120,7 +115,6 @@ impl GameplayState {
             respawnCount: [0; 4],
             respawnanimationtimer: [0; 4],
             respawnanimationframe: [0; 4],
-            previous_playerKeys: COutputControl::default(),
             spinangle: 0.0,
             spinspeed: 0.0,
             spindirection: 0,
@@ -712,7 +706,6 @@ impl GameplayState {
                 fCheckForGameOver = true;
 
                 let globalID = g.player(g.players[i]).globalID as usize;
-                crate::smw::net_outcomes::note_death(g, globalID as i16, PlayerDeathStyle::Jump as i32, true);
                 if self.respawnCount[globalID] <= 0 {
                     g.player(gp.players[i]).die(g, PlayerDeathStyle::Jump, true, false);
                 }
@@ -820,7 +813,7 @@ pub fn animate_during_countdown(g: &mut Game) {
     gp.g_map.update(g);
 }
 
-pub fn net_pow_kills(g: &mut Game, ids: &[i32]) {
+pub fn pow_kills(g: &mut Game, ids: &[i32]) {
     let mut gp = g.ptr();
     let pKillPlayers: Vec<PlayerId> = ids.iter().filter_map(|&id| g.players.iter().copied().find(|p| g.player(*p).globalID as i32 == id)).collect();
     let iNumKillPlayers = pKillPlayers.len() as i16;
@@ -906,9 +899,7 @@ pub fn shake_screen(g: &mut Game) {
     //Randomize the order in which the players are killed
     if iNumKillPlayers > 0 {
         let ids: Vec<i32> = pKillPlayers[..iNumKillPlayers as usize].iter().map(|p| g.player(*p).globalID as i32).collect();
-        if !net_random::event(g, Ev::Pow, &ids) {
-            net_pow_kills(g, &ids);
-        }
+        pow_kills(g, &ids);
     }
 
     //Kill goombas and koopas
@@ -1048,10 +1039,6 @@ pub fn handle_p2p_collisions(g: &mut Game) {
                 assert!(!player2.is_none());
                 if g.player(player2).state > PlayerState::Dead {
                     if coldec_player2player(g, player1, player2) {
-                        if g.netplay.v1() {
-                            gp.netplay.client.local_gamehost.send_p2p_collision_event(g, g.player(player1), g.player(player2));
-                        }
-
                         g.player(player1).collides_with_player(g, player2);
 
                         //if player was killed by another player, continue with next player for collision detection
@@ -2068,7 +2055,6 @@ pub fn load_map_objects(g: &mut Game, fPreview: bool) {
 
 pub fn clean_up(g: &mut Game) {
     let mut gp = g.ptr();
-    net_random::end_game(g);
     //delete object list
     for player in std::mem::take(&mut *g.players) {
         g.players.remove(player);
@@ -2203,14 +2189,14 @@ pub fn update_bullet_bill_powerup(g: &mut Game) {
             g.game_values.bulletbilltimer[p] -= 1;
 
             g.game_values.bulletbillspawntimer[p] -= 1;
-            if g.game_values.bulletbillspawntimer[p] <= 0 && !net_random::event(g, Ev::BulletBills, &[p as i32]) {
-                net_bullet_bill(g, p);
+            if g.game_values.bulletbillspawntimer[p] <= 0 {
+                spawn_bullet_bills(g, p);
             }
         }
     }
 }
 
-pub fn net_bullet_bill(g: &mut Game, p: usize) {
+pub fn spawn_bullet_bills(g: &mut Game, p: usize) {
         let mut gp = g.ptr();
     g.game_values.bulletbillspawntimer[p] = ticks(RANDOM_INT(gp.get(), 20) + 25) as i16;
     let speed: f32 = vel(((RANDOM_INT(gp.get(), 21) + 20) as f32) / 10.0f32);
@@ -2389,133 +2375,6 @@ pub fn should_update(g: &mut Game) -> bool {
     true
 }
 
-impl GameplayState {
-    fn read_network(&mut self, g: &mut Game) {
-        let mut gp = g.ptr();
-        if !g.netplay.active {
-            return;
-        }
-
-        // React to network events
-        // The host receives remote input
-        g.netplay.gamestate_changed = false;
-        gp.netplay.client.update(g);
-
-        let percent_new: f32 = 1.0f32.min(g.netplay.frames_since_last_gamestate as f32 / NET_GAMESTATE_FRAMES_TO_SEND as f32);
-        let percent_old: f32 = 1.0 - percent_new;
-        debug_assert!(0.0 <= percent_new && percent_new <= 1.0);
-        debug_assert!(0.0 <= percent_old && percent_old <= 1.0);
-        debug_assert!(0.99 < (percent_old + percent_new) as f64 && (percent_old + percent_new) as f64 <= 1.01);
-
-        if !g.netplay.theHostIsMe {
-            for p in 0..g.players.len() {
-                let mut player = g.players[p];
-
-                // if local player
-                if p == g.netplay.remotePlayerNumber as usize {
-                    // save the player data that was cause by the input of the previous frame
-                    let mut pdata = Net_IndexedPlayerData::new(g.netplay.current_input_counter);
-                    pdata.data.x = g.player(player).fx;
-                    pdata.data.y = g.player(player).fy;
-                    pdata.data.xvel = g.player(player).velx;
-                    pdata.data.yvel = g.player(player).vely;
-                    g.netplay.local_playerdata_buffer.push_back(pdata);
-                    g.netplay.local_playerdata_store_count = g.netplay.local_playerdata_store_count.wrapping_add(1);
-                    let (slot, count) = (g.netplay.current_input_counter as usize, g.netplay.local_playerdata_store_count);
-                    g.netplay.local_playerdata_store_time[slot] = count;
-                    g.netplay.current_input_counter = g.netplay.current_input_counter.wrapping_add(1);
-
-                    if g.netplay.gamestate_changed {
-                        // remove old, saved player data
-                        let confirmed_index: u8 = (g.netplay.last_confirmed_input as u8).wrapping_add(1);
-                        let confirmed_until = g.netplay.local_playerdata_store_time[confirmed_index as usize];
-                        let mut last_popped_local = Net_IndexedPlayerData::new(0xFF);
-                        while let Some(front) = g.netplay.local_playerdata_buffer.front() {
-                            let iid = front.input_id;
-                            if confirmed_until <= g.netplay.local_playerdata_store_time[iid as usize] {
-                                break;
-                            }
-
-                            last_popped_local = *front;
-                            g.netplay.local_playerdata_buffer.pop_front();
-                        }
-
-                        // check if we can use the local player data,
-                        // or the difference is so big we have to fall back
-                        // to the remote, confirmed positions
-                        let mut use_remote_pdata = false;
-                        if g.netplay.local_playerdata_buffer.is_empty() {
-                            use_remote_pdata = true;
-                        } else {
-                            let pd_remote = g.netplay.latest_playerdata.player[p];
-
-                            if (last_popped_local.data.x - pd_remote.x).abs() > 0.45f32
-                                || (last_popped_local.data.y - pd_remote.y).abs() > 0.45f32
-                            {
-                                use_remote_pdata = true;
-                            }
-                        }
-
-                        if use_remote_pdata {
-                            // the buffered data is now invalid
-                            g.netplay.local_playerdata_buffer.clear();
-
-                            // set confirmed data
-                            g.player(player).fx = g.netplay.latest_playerdata.player[p].x;
-                            g.player(player).fy = g.netplay.latest_playerdata.player[p].y;
-                            g.player(player).velx = g.netplay.latest_playerdata.player[p].xvel;
-                            g.player(player).vely = g.netplay.latest_playerdata.player[p].yvel;
-                        }
-                    }
-                }
-                // for remote players, interpolate
-                else if g.netplay.gamestate_received {
-                    g.player(player).fx = percent_old * g.netplay.previous_playerdata.player[p].x + percent_new * g.netplay.latest_playerdata.player[p].x;
-                    g.player(player).fy = percent_old * g.netplay.previous_playerdata.player[p].y + percent_new * g.netplay.latest_playerdata.player[p].y;
-                    g.player(player).velx = percent_old * g.netplay.previous_playerdata.player[p].xvel + percent_new * g.netplay.latest_playerdata.player[p].xvel;
-                    g.player(player).vely = percent_old * g.netplay.previous_playerdata.player[p].yvel + percent_new * g.netplay.latest_playerdata.player[p].yvel;
-                }
-            }
-
-            g.netplay.frames_since_last_gamestate += 1;
-        }
-
-        if self.previous_playerKeys != g.game_values.playerInput.outputControls[0] {
-            self.previous_playerKeys = g.game_values.playerInput.outputControls[0];
-        }
-
-        // Consume the next input from the remote input buffer
-        g.netplay.netPlayerInput.clear_game_action_keys();
-        if g.netplay.theHostIsMe {
-            gp.netplay.client.local_gamehost.confirm_current_inputs(g);
-        }
-        for p in 0..g.players.len() {
-            if let Some(front) = g.netplay.remote_input_buffer[p].pop_front() {
-                g.netplay.netPlayerInput.outputControls[p] = front.1;
-            }
-        }
-    }
-}
-
-pub fn network_send_local_input(g: &mut Game) {
-        let mut gp = g.ptr();
-    if !g.netplay.active {
-        return;
-    }
-
-    gp.netplay.client.store_local_input(g);
-    gp.netplay.client.send_local_input(g);
-}
-
-pub fn network_broadcast_game_state(g: &mut Game) {
-        let mut gp = g.ptr();
-    // The host sends the game state to clients
-    if g.netplay.active && g.netplay.theHostIsMe {
-        gp.netplay.client.local_gamehost.send_current_game_state_if_needed(g);
-        gp.netplay.client.local_gamehost.update(g);
-    }
-}
-
 pub fn start_gameplay(g: &mut Game) {
     let mut gp = g.ptr();
     clean_up(g);
@@ -2591,9 +2450,7 @@ impl GameplayState {
             g.game_values.cputurn = 0;
         }
 
-        if !g.netplay.v1() || g.netplay.theHostIsMe {
-            handle_p2p_collisions(g);
-        }
+        handle_p2p_collisions(g);
 
         //Move platforms
         gp.g_map.update_platforms(g);
@@ -2696,8 +2553,6 @@ impl GameplayState {
             }
         }
         update_playerswap(g);
-        crate::smw::net_outcomes::sample(g);
-        network_broadcast_game_state(g);
 
         if g.game_values.screenfade == 255 {
             if g.game_values.appstate == AppState::StartGame {
@@ -2757,20 +2612,11 @@ impl GameState for GameplayState {
             self.iCountDownTimer = iCountDownTimes[0];
         }
 
-        self.previous_playerKeys = g.game_values.playerInput.outputControls[0];
-
         self.init_run_game(g);
     }
 
     fn update(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        if crate::smw::net::waiting_to_start(g) {
-            crate::smw::net::draw_match_preview(g);
-            return;
-        }
-        net_random::gameplay_frame(g);
-        self.read_network(g);
-
         if !g.netplay.active {
             check_wind_event(g, &mut self.iWindTimer, &mut self.dNextWind);
         }
@@ -2780,7 +2626,6 @@ impl GameState for GameplayState {
         }
 
         self.handle_input(g);
-        network_send_local_input(g);
 
         if update_exit_pause_dialog(g, self.iCountDownState) {
             if g.netplay.active {
@@ -2853,14 +2698,6 @@ pub fn coldec_obj2obj(o1: Ptr<dyn CObjectTrait>, o2: Ptr<dyn CObjectTrait>) -> b
 }
 
 pub fn swap_players(g: &mut Game, iUsingPlayerID: i16) -> bool {
-    let ready = g.players.iter().filter(|p| g.player(**p).isready()).count();
-    if ready > 1 && net_random::event(g, Ev::MysterySwap, &[iUsingPlayerID as i32]) {
-        return true;
-    }
-    net_mystery_swap(g, iUsingPlayerID)
-}
-
-pub fn net_mystery_swap(g: &mut Game, iUsingPlayerID: i16) -> bool {
         let mut gp = g.ptr();
     //Count available players to switch with
     let mut iNumAvailablePlayers: i16 = 0;

@@ -1,7 +1,6 @@
 #@ seed=1
 #@ frames=1250
 #@ map=netplay_blocks
-#@ compare=--min-spawns 3 --min-close 0.6
 10 down Return
 12 await main
 12 up Return

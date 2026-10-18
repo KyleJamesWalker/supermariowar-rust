@@ -29,9 +29,7 @@ impl PlayerWarpStatus {
         self.warpcounter = self.warpcounter.wrapping_add(1);
         if self.warpcounter > iGoal {
             self.warpcounter = iGoal;
-            if !crate::smw::net_random::event(g, crate::smw::net_random::Ev::WarpExit, &[player.globalID as i32]) {
-                self.choose_warp_exit(g, player);
-            }
+            self.choose_warp_exit(g, player);
         }
     }
 

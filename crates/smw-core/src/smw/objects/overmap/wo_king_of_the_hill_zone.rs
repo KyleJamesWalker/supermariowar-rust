@@ -83,9 +83,6 @@ impl OMO_KingOfTheHillZone {
 
     pub fn place_area(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        if crate::smw::net_random::place_event(g, self.iNetworkID, 0) {
-            return;
-        }
 
         self.relocatetimer = 0;
         self.colorID = -1;

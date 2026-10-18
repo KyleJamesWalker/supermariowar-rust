@@ -80,9 +80,6 @@ impl CO_Flag {
 
     pub fn place_flag(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        if crate::smw::net_random::place_event(g, self.iNetworkID, 0) {
-            return;
-        }
 
         if self.centerflag {
             MO_CarriedObjectTrait::drop(self, g);

@@ -158,7 +158,6 @@ impl CObjectContainer {
             self.release(ptr); // otherwise memory leak!
             return false;
         }
-        crate::smw::net_random::note_added(g, ptr);
         if self.get(ptr.id).is_none() {
             self.assign(ptr);
         }

@@ -83,24 +83,6 @@ pub struct CObject {
     pub _alias: Aliased,
 }
 
-pub fn set_network_id_context(g: &mut Game, context: u32) {
-    g.g_networkIDContext = context;
-    g.g_networkIDCount = 0;
-}
-
-/// The ID context and the count of objects made in it, for checkpoints.
-pub fn network_id_state(g: &mut Game) -> (&mut u32, &mut u32) {
-    (&mut g.g_networkIDContext, &mut g.g_networkIDCount)
-}
-
-fn next_network_id(g: &mut Game) -> i32 {
-    if g.g_networkIDContext == 0 {
-        return 0;
-    }
-    g.g_networkIDCount += 1;
-    (g.g_networkIDContext << 16 | (g.g_networkIDCount & 0xFFFF)) as i32
-}
-
 impl CObject {
     pub fn new(g: &mut Game, nspr1: SpriteId, pos: Vec2s) -> Self {
         let mut o = CObject {
@@ -120,7 +102,7 @@ impl CObject {
             spr: nspr1,
             state: 0,
             dead: false,
-            iNetworkID: next_network_id(g),
+            iNetworkID: 0,
             id: ObjectId::NONE,
             _alias: Aliased::new(),
         };

@@ -11,7 +11,6 @@ use crate::common::player_kill_types::PlayerKillType;
 use crate::common::random_number_generator::{RANDOM_BOOL, RANDOM_INT};
 use crate::common::global_constants::ticks;
 use crate::globals::*;
-use crate::smw::net_random::{self, Ev};
 use crate::smw::objects::powerup::pu_treasure_chest_bonus::PU_TreasureChestBonus;
 use crate::smw::player::{CPlayer, PlayerState};
 
@@ -33,12 +32,6 @@ macro_rules! impl_cgamemode_plumbing {
 }
 
 pub fn remove_players_but_team(g: &mut Game, teamid: i16) {
-    if !net_random::event(g, Ev::RemoveButTeam, &[teamid as i32]) {
-        remove_players_but_team_now(g, teamid);
-    }
-}
-
-pub fn remove_players_but_team_now(g: &mut Game, teamid: i16) {
     for i in 0..g.players.len() {
         let mut player = g.players[i];
         if g.player(player).get_team_id() != teamid {
@@ -48,12 +41,6 @@ pub fn remove_players_but_team_now(g: &mut Game, teamid: i16) {
 }
 
 pub fn remove_players_but_highest_scoring(g: &mut Game) {
-    if !net_random::event(g, Ev::RemoveButHighest, &[]) {
-        remove_players_but_highest_scoring_now(g);
-    }
-}
-
-pub fn remove_players_but_highest_scoring_now(g: &mut Game) {
     let mut iMaxScore: i16 = -1;
 
     //Figure out what the maximum score is
@@ -73,12 +60,6 @@ pub fn remove_players_but_highest_scoring_now(g: &mut Game) {
 }
 
 pub fn setup_score_board(g: &mut Game, fOrderMatters: bool) {
-    if !net_random::event(g, Ev::ScoreBoard, &[fOrderMatters as i32]) {
-        setup_score_board_now(g, fOrderMatters);
-    }
-}
-
-pub fn setup_score_board_now(g: &mut Game, fOrderMatters: bool) {
         let mut gp = g.ptr();
     let mut doneWithScore: [bool; 4] = [false, false, false, false];
 
@@ -149,12 +130,6 @@ pub fn setup_score_board_now(g: &mut Game, fOrderMatters: bool) {
 }
 
 pub fn show_score_board(g: &mut Game) {
-    if !net_random::event(g, Ev::ShowScoreBoard, &[]) {
-        show_score_board_now(g);
-    }
-}
-
-pub fn show_score_board_now(g: &mut Game) {
     let mut gp = g.ptr();
     g.game_values.flags.showscoreboard = true;
 
@@ -181,15 +156,7 @@ pub fn show_score_board_now(g: &mut Game) {
     }
 }
 
-//Returns true if all but one team is dead
 pub fn remove_team(g: &mut Game, teamid: i16) -> bool {
-    match crate::smw::net_outcomes::remove_team_event(g, teamid) {
-        Some(result) => result,
-        None => remove_team_now(g, teamid),
-    }
-}
-
-pub fn remove_team_now(g: &mut Game, teamid: i16) -> bool {
     let mut gp = g.ptr();
     //If we have already removed this team then return
     if g.score[teamid as usize].order > -1 {
@@ -408,14 +375,6 @@ pub fn cgamemode_init<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T) {
 
 pub fn cgamemode_think<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T) {
         let mut gp = g.ptr();
-    if g.netplay.active {
-        for k in 0..g.players.len() {
-            if g.netplay.player_disconnected[k] {
-                g.player(gp.players[k]).spawn_text(g, "Disconnected!");
-            }
-        }
-    }
-
     if this.gm().gameover {
         this.gm_mut().displayplayertext(g);
     }

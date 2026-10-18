@@ -1,6 +1,5 @@
 //! Netplay v2 matches (docs/design/NETPLAY_V2.md, rollout step 4): every peer restores the host's match start, then
-//! the match runs under a GGRS P2P session over the room's WebRTC connections. `SMW_NETPLAY_V2=0` opts a client out, and
-//! a match whose lobby sends no WebRTC room runs over v1.
+//! the match runs under a GGRS P2P session over the room's WebRTC connections.
 
 use crate::common::input::COutputControl;
 use crate::game::Game;
@@ -24,10 +23,6 @@ const DESYNC_INTERVAL: u32 = 30;
 /// A peer is dropped for good after this much silence; GGRS's 2 s default is shorter than a Wi-Fi mesh's node hop.
 const DISCONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const INTERRUPTED_AFTER: Duration = Duration::from_secs(1);
-
-pub fn enabled() -> bool {
-    std::env::var("SMW_NETPLAY_V2").map_or(true, |v| v != "0")
-}
 
 enum Phase {
     Starting,
@@ -71,12 +66,13 @@ struct V2Perf {
 /// True when the caller must not start the match: a joiner starts it from the host's match start instead.
 pub fn match_starting(g: &mut Game) -> bool {
     let mut gp = g.ptr();
-    if !enabled() || !g.netplay.active || crate::smw::network::net_record::replaying(g) {
+    if !g.netplay.active || crate::smw::network::net_record::replaying(g) {
         return false;
     }
     let Some((socket, others)) = gp.netplay.client.take_peer_socket() else {
-        println!("[net] v2: the lobby sent no WebRTC room; this match runs over v1");
-        return false;
+        println!("[net] v2: the lobby sent no WebRTC room");
+        crate::smw::game_state::GameStateManager::instance(g).change_state_to(gp.get(), crate::smw::game_state::StateId::Menu);
+        return true;
     };
     let host = g.netplay.theHostIsMe;
     g.netplay.v2_match = true;
@@ -118,7 +114,7 @@ pub fn tick(g: &mut Game) {
     gp.netplay.client.update(g);
     let Some(m) = mp.netplay.client.v2.as_mut() else { return };
     let keep = match m.phase {
-        Phase::Starting => m.start_step(g),
+        Phase::Starting => m.start_step(g) || m.abandon(g),
         Phase::Running(_) => m.run_step(g),
     };
     if !keep {
@@ -288,6 +284,14 @@ impl V2Match {
         crate::smw::game_state::GameStateManager::instance(g).change_state_to(gp.get(), crate::smw::game_state::StateId::Menu);
     }
 
+    /// A match that could not start ends for this player, who goes back to the room. False, for `tick`.
+    fn abandon(&mut self, g: &mut Game) -> bool {
+        crate::smw::gs_gameplay::clean_up(g);
+        g.game_values.appstate = crate::common::game_values::AppState::Menu;
+        self.leave(g);
+        false
+    }
+
     /// One frame of the running match. False when it ended.
     fn run_step(&mut self, g: &mut Game) -> bool {
         let mut gp = g.ptr();
@@ -311,10 +315,7 @@ impl V2Match {
         let others_left = self.socket.receive(RELIABLE).iter().any(|(_, msg)| msg.first() == Some(&MSG_LEAVE));
         if others_left {
             println!("[net] v2: another player ended the match");
-            crate::smw::gs_gameplay::clean_up(g);
-            g.game_values.appstate = crate::common::game_values::AppState::Menu;
-            self.leave(g);
-            return false;
+            return self.abandon(g);
         }
 
         crate::smw::harness::frame_start_input(g);

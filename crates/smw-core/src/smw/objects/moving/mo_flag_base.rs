@@ -16,7 +16,6 @@ use crate::common::object_base::{object_moving, CObjectTrait};
 use crate::common::random_number_generator::RANDOM_INT;
 use crate::globals::*;
 use crate::impl_base;
-use crate::smw::net_random::{self, Ev};
 use crate::smw::objects::carriable::co_flag::CO_Flag;
 use crate::smw::objects::moving::moving_object::{IO_MovingObject, IO_MovingObjectTrait};
 use crate::smw::player::CPlayer;
@@ -88,9 +87,6 @@ impl MO_FlagBase {
 
     pub fn place_flag_base(&mut self, g: &mut Game, fInit: bool) {
         let mut gp = g.ptr();
-        if crate::smw::net_random::place_event(g, self.iNetworkID, fInit as i32) {
-            return;
-        }
 
         self.timer = 0;
         let mut x: i16 = 0;
@@ -182,7 +178,7 @@ impl CObjectTrait for MO_FlagBase {
     fn update(&mut self, g: &mut Game) {
         if g.game_values.gamemodesettings.flag.speed > 0 {
             self.anglechangetimer -= 1;
-            if self.anglechangetimer <= 0 && !net_random::object_event(g, Ev::Wander, &net_random::wander_args(self.iNetworkID, self.fx, self.fy, self.angle)) {
+            if self.anglechangetimer <= 0 {
                 self.change_angle(g);
             }
 

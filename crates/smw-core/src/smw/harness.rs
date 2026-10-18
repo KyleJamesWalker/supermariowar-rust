@@ -83,7 +83,6 @@ pub struct Harness {
     seen: Vec<&'static str>,
     rec: Option<Recorder>,
     segment: Option<Segment>,
-    spawn_events: Vec<String>,
     /// The keyboard as the replayed key events left it; pushed events do not update SDL's own state.
     replay_keys: [u8; crate::common::keys::SDL_NUM_SCANCODES],
     watch_home: Option<std::path::PathBuf>,
@@ -120,7 +119,6 @@ impl Harness {
             frame: self.frame,
             audible: false,
             speed: self.speed,
-            spawn_events: self.spawn_events.clone(),
             replay_keys: self.replay_keys,
             watch_home: self.watch_home.clone(),
             #[cfg(target_os = "emscripten")]
@@ -159,7 +157,6 @@ impl Harness {
             seen: Vec::new(),
             rec: None,
             segment: None,
-            spawn_events: Vec::new(),
             replay_keys: [0; crate::common::keys::SDL_NUM_SCANCODES],
             watch_home: None,
             #[cfg(target_os = "emscripten")]
@@ -404,18 +401,6 @@ pub fn keyboard_state(g: &mut Game) -> *const u8 {
     }
 }
 
-/// Net games only (not in the C++ harness): a `C` line, compared across clients.
-pub fn note_net(g: &mut Game, line: String) {
-    let mut gp = g.ptr();
-    if gp.netplay.active && h(gp.get()).dump.is_some() {
-        h(gp.get()).spawn_events.push(format!("C {}", line));
-    }
-}
-
-pub fn note_powerup_spawn(g: &mut Game, iType: i16, x: i16, y: i16) {
-    note_net(g, format!("powerup type={} x={} y={}", iType, x, y));
-}
-
 fn dump_frame(g: &mut Game, out: &mut impl Write) -> std::io::Result<()> {
     let mut gp = g.ptr();
     let state = state_name(g);
@@ -428,7 +413,7 @@ fn dump_frame(g: &mut Game, out: &mut impl Write) -> std::io::Result<()> {
         GameplayState::instance(g).harness_dump(g, out)?;
     }
 
-    for line in gp.sfx.sfx_events.iter().chain(h(gp.get()).spawn_events.iter()) {
+    for line in gp.sfx.sfx_events.iter() {
         writeln!(out, "{}", line)?;
     }
 
@@ -585,7 +570,6 @@ pub fn end_v2_frame(g: &mut Game) {
 /// The part of `frame_end` a rollback tick needs: no dump, recording or screenshots.
 pub fn end_rollback_tick(g: &mut Game) {
     g.sfx.sfx_events.clear();
-    h(g).spawn_events.clear();
     h(g).frame += 1;
 }
 
@@ -742,7 +726,6 @@ pub fn frame_end(g: &mut Game) {
         h(gp.get()).dump = Some(out);
     }
     g.sfx.sfx_events.clear();
-    h(gp.get()).spawn_events.clear();
     record_markers(g, h(gp.get()).frame);
 
     let f = h(gp.get()).frame;

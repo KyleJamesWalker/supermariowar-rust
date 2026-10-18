@@ -226,8 +226,6 @@ pub fn removeifprojectile(g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait
 pub fn createpowerup(g: &mut Game, iType: i16, pos: Vec2s, side: bool, spawn: bool) -> Ptr<dyn IO_MovingObjectTrait> {
         let mut gp = g.ptr();
     let mut rm = g.rm;
-    crate::smw::harness::note_powerup_spawn(g, iType, pos.x, pos.y);
-    crate::smw::net_random::note_powerup(g, iType);
     let specialPos = pos + Vec2s::new(1, -1);
 
     let mut spawned = Spawned::None;
@@ -311,15 +309,10 @@ fn check_secret_poof(g: &mut Game, object: Ptr<dyn IO_MovingObjectTrait>) {
 }
 
 pub fn check_secret(g: &mut Game, id: i16) {
-    if !g.game_values.secretsenabled || crate::smw::net_random::event(g, crate::smw::net_random::Ev::Secret, &[id as i32]) {
+    if !g.game_values.secretsenabled {
         return;
     }
-
-    net_check_secret(g, id);
-}
-
-pub fn net_check_secret(g: &mut Game, id: i16) {
-        let mut gp = g.ptr();
+    let mut gp = g.ptr();
     let rx = RANDOM_INT(gp.get(), App::screenWidth) as i16;
     let ry = RANDOM_INT(gp.get(), App::screenHeight) as i16;
     let randomPos = Vec2s::new(rx, ry);

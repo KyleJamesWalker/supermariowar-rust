@@ -1,7 +1,6 @@
 #@ seed=1
 #@ frames=1400
 #@ net_seed=7
-#@ compare=--require kill.args=1,1,0,1,0,.*out=r1.p0.s0 --forbid out=r3
 10 down Return
 12 await main
 12 up Return

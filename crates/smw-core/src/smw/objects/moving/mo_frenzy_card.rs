@@ -63,9 +63,6 @@ impl MO_FrenzyCard {
 
     pub fn place_card(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        if crate::smw::net_random::place_event(g, self.iNetworkID, 0) {
-            return;
-        }
 
         self.timer = 0;
 
@@ -78,9 +75,6 @@ impl MO_FrenzyCard {
             iAttempts -= 1;
             a > 0
         } {}
-        if let Some((hx, hy)) = crate::smw::net_random::spawn_position(g) {
-            (x, y) = (hx, hy);
-        }
 
         self.set_xi(x);
         self.set_yi(y);

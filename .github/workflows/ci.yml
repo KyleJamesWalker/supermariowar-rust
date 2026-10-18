@@ -108,7 +108,7 @@ jobs:
 
       - name: Build
         run: |
-          cargo build --release --locked --bin smw --bin smw_server --example net_interop
+          cargo build --release --locked --bin smw --bin smw_server --example lobby_connect
           cargo build --release --locked --package smw-peer --example signal
 
       - name: Lobby connect stress
@@ -116,12 +116,6 @@ jobs:
 
       - name: Live recording round trip
         run: SMW_NO_BUILD=1 tools/live_roundtrip.sh tools/replays/text_shift.txt tools/replays/menu_nav.txt tools/replays/start_classic.txt
-
-      - name: Net games, recorded and replayed offline
-        env:
-          SDL_RENDER_DRIVER: software
-          NET_GAME_WORK: ${{ runner.temp }}/net-games
-        run: timeout 20m tools/ref/net_game_interop.sh
 
       - name: Net games over netplay v2 (GGRS over WebRTC, 60 ms lag, 10% loss)
         env:
@@ -144,11 +138,10 @@ jobs:
       - name: Net games with clients presenting at different rates
         env:
           SDL_RENDER_DRIVER: software
-          NET_GAME_WORK: ${{ runner.temp }}/net-games-mixed-rate
           NET_GAMES: net_game net_game_coins net_game_stompkill
           HOST_PRESENT_HZ: '50'
           JOIN_PRESENT_HZ: '144'
-        run: timeout 10m tools/ref/net_game_interop.sh
+        run: timeout 10m tools/net_v2_test.py "$RUNNER_TEMP/net-games-mixed-rate"
 
       - name: Upload net game logs
         if: failure()
@@ -674,16 +667,6 @@ jobs:
             native: true
             timeout: 6
             run: node tools/web_text_entry_test.mjs "$RUNNER_TEMP/web-text-entry"
-          - name: netplay 1
-            native: true
-            timeout: 30
-            games: net_game net_game_blocks net_game_stomp net_game_coins
-            run: node tools/web_netplay_test.mjs "$RUNNER_TEMP/web-netplay"
-          - name: netplay 2
-            native: true
-            timeout: 30
-            games: net_game_classic net_game_frenzy net_game_stompkill net_game_stompkill_powerup
-            run: node tools/web_netplay_test.mjs "$RUNNER_TEMP/web-netplay"
           - name: netplay v2
             native: true
             timeout: 30
@@ -691,7 +674,7 @@ jobs:
             run: |
               target/release/examples/signal 35400 > "$RUNNER_TEMP/web-netplay-v2-signal.log" 2>&1 &
               sleep 1
-              WEB_NETPLAY_V2=1 SMW_SIGNAL_URL=ws://127.0.0.1:35400 NATIVE=0 node tools/web_netplay_test.mjs "$RUNNER_TEMP/web-netplay-v2"
+              SMW_SIGNAL_URL=ws://127.0.0.1:35400 node tools/web_netplay_test.mjs "$RUNNER_TEMP/web-netplay-v2"
           - name: netplay v2 mixed
             native: true
             timeout: 30
@@ -699,7 +682,7 @@ jobs:
             run: |
               target/release/examples/signal 35401 > "$RUNNER_TEMP/web-netplay-mixed-signal.log" 2>&1 &
               sleep 1
-              MIXED=1 WEB_NETPLAY_V2=1 SMW_SIGNAL_URL=ws://127.0.0.1:35401 NATIVE=0 node tools/web_netplay_test.mjs "$RUNNER_TEMP/web-netplay-mixed"
+              MIXED=1 SMW_SIGNAL_URL=ws://127.0.0.1:35401 node tools/web_netplay_test.mjs "$RUNNER_TEMP/web-netplay-mixed"
           - name: replays 1
             timeout: 20
             replays: true

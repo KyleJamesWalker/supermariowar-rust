@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Netplay v2 matches end to end: the scripted net games of tools/ref/net_game_interop.sh with a signaling server, so
+"""Netplay v2 matches end to end: the scripted net games of tools/ref/net_game_run.sh with a signaling server, so
 each match runs under GGRS over WebRTC, with lag and packet loss on the GGRS channel. Both clients log the state they
 checksum at every saved frame (SMW_V2_STATE_LOG); every frame both logged must be identical, every match must start
 its GGRS session, and neither client may report a desync.
@@ -29,7 +29,7 @@ signal = Path(os.environ.get("SIGNAL_BIN", REPO / "target" / "release" / "exampl
 states = work / "states"
 states.mkdir(exist_ok=True)
 
-# net_game_interop.sh runs each client with HOME=<work>/<game>/home-<role>; the wrapper names the state log after both.
+# net_game_run.sh runs each client with HOME=<work>/<game>/home-<role>; the wrapper names the state log after both.
 wrapper = work / "smw_v2.sh"
 wrapper.write_text(
     "#!/bin/bash\n"
@@ -67,7 +67,7 @@ else:
 
 try:
     # Its v1 dump comparison does not apply: v2 frames write no harness dump.
-    subprocess.run(["bash", str(REPO / "tools" / "ref" / "net_game_interop.sh")], cwd=REPO, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(["bash", str(REPO / "tools" / "ref" / "net_game_run.sh")], cwd=REPO, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 finally:
     if server:
         server.kill()

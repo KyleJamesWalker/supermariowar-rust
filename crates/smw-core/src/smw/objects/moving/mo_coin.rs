@@ -79,9 +79,6 @@ impl MO_Coin {
 
     pub fn place_coin(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        if crate::smw::net_random::place_event(g, self.iNetworkID, 0) {
-            return;
-        }
 
         self.timer = 0;
 

@@ -1,7 +1,6 @@
 #@ seed=1
 #@ frames=3600
 #@ map=netplay_hazards
-#@ compare=--min scores=4 --min gameover=1 --min-close 0.5 --forbid out=r3
 10 down Return
 12 await main
 12 up Return

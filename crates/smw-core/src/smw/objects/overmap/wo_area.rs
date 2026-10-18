@@ -60,9 +60,6 @@ impl OMO_Area {
 
     pub fn place_area(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        if crate::smw::net_random::place_event(g, self.iNetworkID, 0) {
-            return;
-        }
 
         let mut x: i16 = 0;
         let mut y: i16 = 0;

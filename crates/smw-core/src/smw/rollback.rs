@@ -13,28 +13,27 @@ use crate::game::Game;
 use crate::smw::gamemodes::{bonus_house::CGM_Bonus, mini_boss::CGM_Boss_MiniGame, mini_boxes::CGM_Boxes_MiniGame, mini_pipe::CGM_Pipe_MiniGame};
 use crate::smw::gs_gameplay::GameplayState;
 use crate::smw::harness;
-use crate::smw::network::protocol_game_packages::RawInput;
 use crate::smw::object_container::CObjectContainer;
 use crate::smw::players::Players;
 use serde::{Deserialize, Serialize};
 
-/// One player's keys for one tick: `down` at bit 2k and `pressed` at bit 2k+1 for key k, as in `RawInput`.
+/// One player's keys for one tick: `down` at bit 2k and `pressed` at bit 2k+1 for key k.
 #[derive(Clone, Copy, PartialEq, Eq, Default, Debug, Serialize, Deserialize)]
 pub struct Keys(pub u16);
 
 impl Keys {
     pub fn of(control: &COutputControl) -> Keys {
-        let mut raw = RawInput::default();
+        let mut bits = 0u16;
         for (k, key) in control.keys.iter().enumerate() {
-            raw.set_player_key(k as u8, key.fDown, key.fPressed);
+            bits |= (key.fDown as u16) << (2 * k) | (key.fPressed as u16) << (2 * k + 1);
         }
-        Keys(raw.flags)
+        Keys(bits)
     }
 
     pub fn apply(self, control: &mut COutputControl) {
-        let raw = RawInput { flags: self.0 };
         for (k, key) in control.keys.iter_mut().enumerate() {
-            raw.get_player_key(k as u8, &mut key.fDown, &mut key.fPressed);
+            key.fDown = self.0 & 1 << (2 * k) != 0;
+            key.fPressed = self.0 & 1 << (2 * k + 1) != 0;
         }
     }
 }
@@ -72,8 +71,6 @@ pub struct MatchState {
     spotlights: SpotlightManager,
     winning_player: i16,
     draw_index: i16,
-    network_id_context: u32,
-    network_id_count: u32,
     gps: Option<GameplayState>,
     frame: u32,
 }
@@ -109,8 +106,6 @@ pub fn save(g: &mut Game) -> MatchState {
         spotlights: (*g.spotlightManager).clone(),
         winning_player: g.g_iWinningPlayer,
         draw_index: g.g_iCurrentDrawIndex,
-        network_id_context: g.g_networkIDContext,
-        network_id_count: g.g_networkIDCount,
         gps: g.gps.clone(),
         frame: harness::frame(g),
     }
@@ -157,8 +152,6 @@ pub fn load(g: &mut Game, s: &MatchState) {
     *g.spotlightManager = s.spotlights.clone();
     g.g_iWinningPlayer = s.winning_player;
     g.g_iCurrentDrawIndex = s.draw_index;
-    g.g_networkIDContext = s.network_id_context;
-    g.g_networkIDCount = s.network_id_count;
     g.gps = s.gps.clone();
     harness::set_frame(g, s.frame);
 }
