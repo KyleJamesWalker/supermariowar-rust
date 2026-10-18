@@ -11,7 +11,7 @@ use crate::common::global_constants::*;
 use crate::common::input::COutputControl;
 use crate::common::moving_object_types::*;
 use crate::common::object_base::*;
-use crate::common::random_number_generator::{RandomNumberGenerator, RandomNumberGeneratorType, RANDOM_BOOL};
+use crate::common::random_number_generator::{RandomNumberGenerator, RandomNumberGeneratorType, RANDOM_BOOL, RANDOM_INT};
 use crate::common::tile_types::*;
 use crate::globals::*;
 use crate::smw::gamemodes::chicken::CGM_Chicken;
@@ -175,8 +175,40 @@ pub struct CPlayerAI {
     pub nav: Option<NavGraph>,
     /// The tile column and move the AI left the ground for, followed while in the air.
     pub nav_step: Option<(i32, Move)>,
+    pub style: Style,
 
     pub _alias: Aliased,
+}
+
+/// A CPU's play style (docs/CPU_AI.md, step 9), drawn at match start.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum Style {
+    #[default]
+    Balanced,
+    /// Leaves the objective for opponents farther away and backs off from fewer of them.
+    Aggressive,
+    /// Leaves the objective only for opponents right next to it.
+    Objective,
+    /// Keeps more distance from threats and from opponents above it.
+    Cautious,
+}
+
+/// Squared distances that pull a CPU of `style` off its goal: a stomp target and the nearest player in objective modes,
+/// the same in other modes, a threat to run from, and an opponent above it to back away from.
+struct StyleRanges {
+    objective: (i32, i32),
+    open: (i32, i32),
+    threat: i32,
+    back_off: i32,
+}
+
+fn style_ranges(style: Style) -> StyleRanges {
+    match style {
+        Style::Balanced => StyleRanges { objective: (3600, 2025), open: (14400, 8100), threat: 14400, back_off: 8100 },
+        Style::Aggressive => StyleRanges { objective: (8100, 4900), open: (22500, 14400), threat: 8100, back_off: 3600 },
+        Style::Objective => StyleRanges { objective: (1600, 900), open: (14400, 8100), threat: 14400, back_off: 8100 },
+        Style::Cautious => StyleRanges { objective: (3600, 2025), open: (10000, 4900), threat: 22500, back_off: 14400 },
+    }
 }
 
 impl Default for CPlayerAI {
@@ -466,6 +498,7 @@ impl CPlayerAI {
             ignored_player: (PlayerId::NONE, 0),
             nav: None,
             nav_step: None,
+            style: Style::Balanced,
             _alias: Aliased::new(),
         }
     }
@@ -1240,6 +1273,12 @@ fn wall_too_tall(g: &mut Game, tx: i32, y: i32) -> bool {
 
 //Setup AI so that it can ignore or pay attention to some objects
 pub fn cplayer_ai_init(g: &mut Game, this: &mut CPlayerAI) {
+    this.style = match RANDOM_INT(g, 4) {
+        1 => Style::Aggressive,
+        2 => Style::Objective,
+        3 => Style::Cautious,
+        _ => Style::Balanced,
+    };
     //Scan yoshi's egg mode objects to make sure that we ignore eggs without matching yoshis
     if g.mode().gamemode == game_mode_eggs {
         let mut fYoshi: [bool; 4] = [false, false, false, false];
@@ -1372,14 +1411,15 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
         let no = &this.nearestObjects;
         let objective = !no.goal.is_none() && objective_mode(g.mode().gamemode);
         let carrying_flag = !g.carried_item(pPlayer).is_null() && g.carried_item(pPlayer).get_moving_object_type() == movingobject_flag;
+        let ranges = style_ranges(this.style);
         let (stomp_range, attack_range) = if carrying_flag && !no.goal.is_none() {
             (0, 0)
         } else if objective {
-            (3600, 2025)
+            ranges.objective
         } else {
-            (14400, 8100)
+            ranges.open
         };
-        if !no.threat.is_none() && no.threatdistance < 14400 && !g.player(pPlayer).is_invincible() {
+        if !no.threat.is_none() && no.threatdistance < ranges.threat && !g.player(pPlayer).is_invincible() {
             actionType = 2;
         } else if !no.stomp.is_none() && no.stompdistance < stomp_range {
             actionType = 4;
@@ -1497,7 +1537,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                 } else if piy >= iy32 && !g.player(player).is_invincible() && !g.player(player).bobomb {
                     *moveToward = true;
                 } else {
-                    if no.playerdistance < 8100 {
+                    if no.playerdistance < ranges.back_off {
                         //else if player is near but higher, run away (left)
                         *moveAway = true;
                     } else {
@@ -1532,7 +1572,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                         }
                     }
                 }
-                if !playerKeys.game_jump().fDown && stomp_lead_jump(g, pPlayer, player, no.playerwrap) {
+                if g.game_values.cpudifficulty >= 2 && !playerKeys.game_jump().fDown && stomp_lead_jump(g, pPlayer, player, no.playerwrap) {
                     playerKeys.game_jump_mut().fDown = true;
                 }
             } else if actionType == 1 {
