@@ -51,7 +51,7 @@ The relay serves plain `ws://` and `GET /healthz`. Put a TLS proxy in front of i
 | `SMW_RELAY_ALLOWED_ORIGINS` | `https://www.kylejameswalker.com,http://localhost:8000`, or `*` |
 | `SMW_RELAY_MAX_CLIENTS` | `64` |
 
-The relay refuses a WebSocket whose `Origin` is not in the list. It also caps each browser at 8 virtual connections and each message at 64 KiB. It drops a client that is silent for 60 seconds or whose outgoing queue fills up. When a browser leaves, the relay closes its virtual connections and the lobby removes it from its room.
+The relay refuses a WebSocket whose `Origin` is not in the list. It accepts one without `Origin`: browsers always send it, so that is a native game. It also caps each browser at 8 virtual connections and each message at 64 KiB. It drops a client that is silent for 60 seconds or whose outgoing queue fills up. When a browser leaves, the relay closes its virtual connections and the lobby removes it from its room.
 
 The browser build connects to `wss://smw-relay.vps.pocketsquirrel.com` unless the page has a `?relay=` parameter. Set `SMW_RELAY_URL` when you run `tools/package_web.sh` to change that default. The relay URL is the first entry in the saved server list. A saved entry without a scheme means `wss://<entry>`.
 
@@ -80,5 +80,5 @@ When a room starts, the lobby (`smw_relay` or `smw_server`) sends each of its pl
 
 ## Limits
 
-- Browser and native clients cannot play together. A native client speaks ENet to `smw_server`, and its game host listens on UDP. `docs/design/NETPLAY_V2.md` plans one WebRTC transport for both.
+- A native client joins the relay's lobby when its server list holds the relay as a `ws://` or `wss://` URL, for example `wss://smw-relay.vps.pocketsquirrel.com`; a bare host name still means ENet and `smw_server`. Browser and native players then share rooms. Their match runs over the relay's game tunnel (v1) or, with `SMW_NETPLAY_V2=1`, over WebRTC (`docs/design/NETPLAY_V2.md`).
 - All game traffic passes through the relay, so its round trip adds to each player's latency.

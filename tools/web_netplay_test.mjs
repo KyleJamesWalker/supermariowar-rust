@@ -14,6 +14,8 @@
 //   RELAY_BIN  smw_relay binary (default: target/release/smw_relay)
 //   WEB_DIR    web build (default: dist/web)
 //   NET_GAMES  scenarios (default: every tools/ref/net_game*)
+//   MIXED=1    with WEB_NETPLAY_V2=1: the joiner is the native build (SMW_BIN, default target/release/smw), which
+//              reaches the same relay lobby through a ws:// server entry
 //   WEB_NETPLAY_V2=1  play each match over netplay v2 (GGRS over WebRTC; the relay needs SMW_SIGNAL_URL) and compare
 //              the pages' per-frame states instead of their dumps
 import { spawn, spawnSync } from 'node:child_process';
@@ -32,6 +34,12 @@ const out = resolve(process.argv[2] ?? join(tmpdir(), 'smw-web-netplay'));
 mkdirSync(out, { recursive: true });
 
 const V2 = process.env.WEB_NETPLAY_V2 === '1';
+const MIXED = process.env.MIXED === '1';
+if (MIXED && !V2) {
+    console.error('MIXED=1 needs WEB_NETPLAY_V2=1');
+    process.exit(2);
+}
+const nativeBin = resolve(process.env.SMW_BIN ?? join(repo, 'target', 'release', 'smw'));
 const games = (process.env.NET_GAMES ?? 'net_game net_game_blocks net_game_frenzy net_game_stomp net_game_coins net_game_classic net_game_stompkill net_game_stompkill_powerup').split(/\s+/).filter(Boolean);
 
 // The native scripts assume both clients start together. Pages load at different speeds, so the
@@ -249,7 +257,14 @@ const play = async (game) => {
     const logStart = relayLog.length;
     const pages = [];
     const v2 = V2 ? { SMW_NETPLAY_V2: '1', SMW_V2_STATE_LOG: '/v2state.log' } : {};
-    for (const r of roles) pages.push(await openPage({ ...r, frames, env: { SMW_RECORD_TO: '/rec.txt', ...(r.netSeed && { SMW_NET_SEED: r.netSeed }), ...v2 } }));
+    let native = null;
+    for (const r of roles) {
+        if (MIXED && r.role === 'join') {
+            native = startNative(r, frames, dir);
+            continue;
+        }
+        pages.push(await openPage({ ...r, frames, env: { SMW_RECORD_TO: '/rec.txt', ...(r.netSeed && { SMW_NET_SEED: r.netSeed }), ...v2 } }));
+    }
 
     let shot = false;
     let timedOut = false;
@@ -262,7 +277,7 @@ const play = async (game) => {
             shot = true;
         }
         // A script's await lines run a session past `frames`; it is over once its recording has `#@ frames=`.
-        if (states.every((s) => s.done)) break;
+        if (states.every((s) => s.done) && (!native || native.finished)) break;
         if (Date.now() - started > SCENARIO_MS) {
             console.error(`${game}: no result after ${SCENARIO_MS / 1000} s: ` + pages.map((p, i) => `${p.role} ${states[i].frames}/${frames} frames`).join(', '));
             timedOut = true;
@@ -301,7 +316,11 @@ const play = async (game) => {
         ok = false;
     }
     if (V2) {
-        ok &&= compareV2(dir, pages);
+        if (native) {
+            if (!native.finished) native.child.kill('SIGKILL');
+            writeFileSync(join(dir, 'join.log'), native.consoleLines.join('\n') + '\n');
+        }
+        ok &&= compareV2(dir, native ? [...pages, native] : pages);
         for (const page of pages) page.close();
         console.log(`${game}: ${ok ? 'PASS' : 'FAIL'} (${dir})`);
         return ok;
@@ -319,6 +338,32 @@ const play = async (game) => {
     if (ok) ok = await replayOffline(game, dir, roles, recordings);
     console.log(`${game}: ${ok ? 'PASS' : 'FAIL'} (${dir})`);
     return ok;
+};
+
+// The joiner as a native process for MIXED: the same script, its server list holding just the relay, as the page's does.
+const startNative = (r, frames, dir) => {
+    const home = join(dir, 'home-native');
+    const settings = join(home, 'Library', 'Preferences', '.smw');
+    mkdirSync(settings, { recursive: true });
+    writeFileSync(join(settings, 'servers.toml'), `player_name = "${r.name}"\nservers = ["ws://127.0.0.1:${relayPort}"]\n`);
+    writeFileSync(join(dir, `${r.role}.native.txt`), r.replay);
+    const data = nativeData();
+    const child = spawn(nativeBin, ['--datadir', data], {
+        cwd: dirname(data),
+        env: {
+            ...process.env, HOME: home, SDL_VIDEODRIVER: 'dummy', SDL_AUDIODRIVER: 'dummy', SMW_SEED: '1', SMW_FRAMES: String(frames),
+            SMW_REPLAY: join(dir, `${r.role}.native.txt`), SMW_NO_RECORD: '1', SMW_NETPLAY_V2: '1', SMW_V2_STATE_LOG: join(dir, `${r.role}.v2state.log`),
+        },
+        stdio: ['ignore', 'pipe', 'pipe'],
+        detached: true,
+    });
+    children.push(child);
+    const native = { role: r.role, consoleLines: [], finished: false, child };
+    const collect = (d) => native.consoleLines.push(...String(d).split('\n').filter(Boolean));
+    child.stdout.on('data', collect);
+    child.stderr.on('data', collect);
+    child.on('exit', () => (native.finished = true));
+    return native;
 };
 
 // Netplay v2: each page logs the state it checksums at every saved frame; both must match wherever both logged, both
