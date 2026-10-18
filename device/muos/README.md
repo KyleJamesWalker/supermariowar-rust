@@ -56,7 +56,6 @@ To quit, press **Menu** or choose **Exit** on the main menu. B on the main menu 
 | `SMW_PAD_TRANSLATE=1` | Reads every pad SDL has a controller mapping for (muOS provides one for the built-in controls) through that mapping, in the button layout above. Mapped pads get players first; Menu quits. |
 | `SMW_NO_KEYBOARD=1` | Leaves the keyboard out of the launch-time player assignment and turns the players without a pad that were human into bots. |
 | `SMW_PERF=1` | Logs to `log.txt` every 300 frames (about 5 s) how long a frame's update and drawing and its present take on average, the share of the 16 ms frame budget, the worst frame and how many went over budget. The first report includes loading. |
-| `SMW_ROLLBACK_BENCH=1` | Logs `[rollback]` lines during a match: the cost of a rollback snapshot every tick and of an 8-frame re-run (`docs/NETPLAY_V2.md`). The game runs slower while it is on. |
 
 Other builds set neither, so desktop pads keep their raw button numbering there.
 

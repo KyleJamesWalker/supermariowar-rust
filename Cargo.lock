@@ -625,7 +625,6 @@ dependencies = [
  "png",
  "sdl2",
  "smw-globals",
- "smw-headless",
  "smw-netplay",
  "smw-platform",
  "smw-sdl2",

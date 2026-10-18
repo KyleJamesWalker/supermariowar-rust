@@ -10,7 +10,6 @@ pub mod harness;
 pub mod input;
 pub mod main;
 pub mod perf_log;
-pub mod rollback_bench;
 pub mod net;
 pub mod net_outcomes;
 pub mod net_random;

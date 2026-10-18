@@ -15,7 +15,6 @@ no_network = []
 [dependencies]
 smw-globals = { path = "../smw-globals" }
 smw-netplay = { path = "../smw-netplay" }
-smw-headless = { path = "../smw-headless" }
 smw-platform = { path = "../smw-platform" }
 toml = "1.1"
 flate2 = { version = "1", default-features = false, features = ["rust_backend"] }

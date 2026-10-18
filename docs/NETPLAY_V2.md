@@ -54,7 +54,7 @@ Menus, the world map and the screens between games stay on reliable messages. Ro
 
 ## Rollout
 
-1. **Spike: measure the budget.** `SMW_ROLLBACK_BENCH=1` (or a frame count, default 8) logs `[rollback]` lines every 300 ticks of a match. Each line gives the tick time, the `clone_match` snapshot time every tick, and an 8-frame re-run every tenth tick. 4-CPU frenzy averages per tick, worst 300-tick window in parentheses:
+1. **Spike: measure the budget (done).** A throwaway benchmark, `SMW_ROLLBACK_BENCH` in commit `0373ed2`, timed a `clone_match` snapshot every tick and an 8-frame re-run every tenth tick. 4-CPU frenzy averages per tick, worst 300-tick window in parentheses:
 
    | Device | Tick | Snapshot | 8-frame re-run | Total |
    |---|---|---|---|---|

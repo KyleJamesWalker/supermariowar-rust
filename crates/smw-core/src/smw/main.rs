@@ -176,16 +176,9 @@ unsafe fn tick(g: &mut Game) {
     crate::smw::touch::flush(g);
     harness::frame_start(gp.get());
     phase(5);
-    let start = std::time::Instant::now();
     GameStateManager::instance(gp.get()).current(gp.get()).get().update(gp.get());
-    let update = start.elapsed();
     phase(6);
     harness::frame_end(gp.get());
-    let mut bench = gp.main_loop.rollback.take().unwrap_or_else(crate::smw::rollback_bench::RollbackBench::from_env);
-    if let Some(b) = bench.as_mut() {
-        b.after_tick(gp.get(), update);
-    }
-    gp.main_loop.rollback = Some(bench);
 }
 
 /// Counts a present and, with F1's `showfps`, draws the last second's ticks and presents in the bottom left corner.
@@ -461,8 +454,6 @@ pub struct MainLoopState {
     hotplug_pending: bool,
     /// `SMW_PERF` read on the first frame, then the frame-time log it turns on.
     perf: Option<Option<crate::smw::perf_log::PerfLog>>,
-    /// `SMW_ROLLBACK_BENCH` read on the first tick, then the bench it turns on.
-    rollback: Option<Option<crate::smw::rollback_bench::RollbackBench>>,
     /// The tick pacing's last clock reading and the wall time not yet spent on ticks.
     last_us: Option<u64>,
     accumulated_us: f64,
@@ -499,7 +490,6 @@ impl MainLoopState {
             web_accumulated: 0.0,
             hotplug_pending: false,
             perf: None,
-            rollback: None,
             last_us: None,
             accumulated_us: 0.0,
             present_hz: None,
