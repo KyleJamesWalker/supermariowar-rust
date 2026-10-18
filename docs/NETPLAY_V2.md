@@ -1,6 +1,6 @@
 # Netplay v2: rollback over WebRTC
 
-Status: proposed, on the backlog. A spike measures the deciding number first (Rollout, step 1).
+Status: proposed, on the backlog. Decision: rollback, because the RG35XX measurement fits the tick budget (Rollout, steps 1 and 2).
 
 ## Summary
 
@@ -46,7 +46,7 @@ Menus, the world map and the screens between games stay on reliable messages. Ro
 
 ## Risks and open questions
 
-- **RG35XX CPU budget.** In a 4-CPU frenzy the device spends about 6 ms of its 16.67 ms tick on update and drawing (`SMW_PERF`). A rollback client snapshots every tick and, after a misprediction, re-runs up to about 8 ticks. The spike measures whether that fits. If it does not, use lockstep.
+- **RG35XX CPU budget.** In a 4-CPU frenzy the device spends about 6 ms of its 16.67 ms tick on update and drawing (`SMW_PERF`). A rollback client snapshots every tick and, after a misprediction, re-runs up to about 8 ticks. The spike measured that this fits, with about 3 ms to spare in the worst window (Rollout, step 1). If a later feature breaks the budget, GGRS falls back to lockstep with a setting.
 - **Visual snaps.** A misprediction moves a remote player at once. Input delay of one or two ticks reduces how often this happens.
 - **Four players, full mesh.** Each peer talks to every other peer. Uploads stay small because only inputs travel.
 - **TURN hosting.** Players behind strict NATs relay through TURN, which needs a server and bandwidth.
@@ -54,8 +54,16 @@ Menus, the world map and the screens between games stay on reliable messages. Ro
 
 ## Rollout
 
-1. **Spike: measure the budget.** `SMW_ROLLBACK_BENCH=1` (or a frame count, default 8) logs `[rollback]` lines every 300 ticks of a match. Each line gives the tick time, the `clone_match` snapshot time every tick, and an 8-frame re-run every tenth tick. A 4-CPU frenzy on an Apple-silicon Mac: tick 0.25 ms, snapshot 0.05 ms, 8-frame re-run 2.0 ms, 2.3 ms in total. Next, run the same match on the RG35XX.
-2. **Decide.** If the RG35XX total stays under the tick budget with margin, use rollback. If not, use GGRS lockstep. Record the numbers here.
+1. **Spike: measure the budget.** `SMW_ROLLBACK_BENCH=1` (or a frame count, default 8) logs `[rollback]` lines every 300 ticks of a match. Each line gives the tick time, the `clone_match` snapshot time every tick, and an 8-frame re-run every tenth tick. 4-CPU frenzy averages per tick, worst 300-tick window in parentheses:
+
+   | Device | Tick | Snapshot | 8-frame re-run | Total |
+   |---|---|---|---|---|
+   | Apple-silicon Mac | 0.25 ms | 0.05 ms | 2.0 ms | 2.3 ms |
+   | RG35XX, Normal CPUs | 0.25-0.34 ms | 3.0-3.2 ms | 0.64-0.79 ms (worst frame 1.5 ms) | 3.9-4.3 ms |
+   | RG35XX, Very Hard CPUs | 0.32-0.45 ms | 3.0-3.2 ms | 0.84-1.40 ms (worst frame 5.5 ms) | 4.2-4.9 ms |
+
+   The tick column is simulation plus draw recording. Rasterizing a shown frame costs about 5 ms more on the RG35XX (`SMW_PERF`). The snapshot is the largest cost there: `clone_match` also copies the screen surface and the display lists, which a rollback snapshot does not need.
+2. **Decide.** Rollback. The RG35XX worst case is about 3 ms snapshot, 5.5 ms re-run and 5 ms drawing, which fits the 16.67 ms tick. A trimmed snapshot widens the margin.
 3. **Transport.** `matchbox` sockets in native and web builds, a signaling server in place of the relay's lobby, and a TURN server in `deploy/`.
 4. **GGRS session for matches.** Snapshot and re-run hooks, silent re-runs, and the desync check. A CI test plays a scripted mixed native and browser match under induced latency and packet loss.
 5. **Remove v1.** Delete ENet, the WebSocket game tunnel, NAT punching and the host-authoritative event code. Bump the protocol version.
