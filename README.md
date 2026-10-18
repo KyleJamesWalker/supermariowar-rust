@@ -1,6 +1,6 @@
 # Super Mario War, in Rust
 
-A faithful Rust + rust-sdl2 port of [Super Mario War](https://github.com/mmatyas/supermariowar) (upstream commit [`c7056790`](https://github.com/mmatyas/supermariowar/commit/c7056790ccb485b7309137251167b75fed1482e4)). It covers the game, menus, sound, netplay, the lobby server, and the level and world editors. Given the same scripted input, the Rust build produces the same per-frame game state, sound events and screenshots as the C++ original. `docs/archive/MORNING_REPORT.md` has the verification results.
+A faithful Rust + rust-sdl2 port of [Super Mario War](https://github.com/mmatyas/supermariowar) (upstream commit [`c7056790`](https://github.com/mmatyas/supermariowar/commit/c7056790ccb485b7309137251167b75fed1482e4)). It covers the game, menus, sound, netplay, the lobby server, and the level and world editors. Given the same scripted input, the Rust build produces the same per-frame game state, sound events and screenshots as the C++ original. `docs/README.md` indexes the docs, and `docs/BACKLOG.md` lists planned work.
 
 `docs/guides/GAME_MANUAL.md` is the player's manual: menus, controls, all 21 game modes, blocks and items.
 
