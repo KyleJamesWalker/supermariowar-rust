@@ -219,6 +219,10 @@ impl GameplayState {
                     )?;
                 }
             }
+            for (i, &id) in g.g_map.platforms.iter().enumerate() {
+                let p = g.g_map.platform(id);
+                writeln!(out, "Y i={} fx={:.4} fy={:.4} velx={:.4} vely={:.4}", i, p.fx as f64, p.fy as f64, p.fVelX as f64, p.fVelY as f64)?;
+            }
         }
         Ok(())
     }
