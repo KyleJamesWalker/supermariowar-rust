@@ -37,6 +37,8 @@ pub struct SMWServer {
     rooms: UnorderedMap<u32, Room>,
 
     pub v2: V2Settings,
+    /// At most this many rooms at a time; a game hosting on its own network allows one.
+    pub max_rooms: Option<usize>,
 }
 
 /// Where netplay v2 players meet, from `SMW_SIGNAL_URL`, `SMW_TURN_URL` and `SMW_TURN_SECRET`.
@@ -67,7 +69,13 @@ impl SMWServer {
             currentRoomCount: 0,
             rooms: UnorderedMap::new(),
             v2: V2Settings::from_env(),
+            max_rooms: None,
         }
+    }
+
+    pub fn set_max_players(&mut self, max: u32) {
+        self.maxPlayerCount = max;
+        self.serverInfo.maxPlayerCount = max;
     }
 
     pub fn init(&mut self, config_path: &str) -> bool {
@@ -274,6 +282,11 @@ impl SMWServer {
     fn player_creates_room(&mut self, playerID: u64, data: &[u8]) {
         let Some(mut player) = self.player(playerID) else { return };
         if player.currentRoomID != 0 || player.isPlaying {
+            return;
+        }
+
+        if self.max_rooms.is_some_and(|max| self.rooms.len() >= max) {
+            player.send_code(NET_RESPONSE_CREATE_ERROR);
             return;
         }
 
@@ -852,5 +865,16 @@ mod tests {
         send(&mut server, 2, &guest, JoinRoom::with(room, "").as_bytes());
         assert_eq!(skins_from(&guest), [0], "the guest gets the host's skin, from slot 0");
         assert_eq!(skins_from(&host), [1], "the host gets the guest's skin, from slot 1");
+    }
+
+    #[test]
+    fn a_lobby_with_one_room_refuses_a_second() {
+        let mut server = server();
+        server.max_rooms = Some(1);
+        room_with_password(&mut server, "");
+        let other = connect(&mut server, 2, "Other");
+        codes(&other);
+        send(&mut server, 2, &other, NewRoom::with("Second", "").as_bytes());
+        assert_eq!(codes(&other), [NET_RESPONSE_CREATE_ERROR]);
     }
 }

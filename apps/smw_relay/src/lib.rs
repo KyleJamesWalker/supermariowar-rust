@@ -43,6 +43,10 @@ pub fn run(config: &Config) -> Result<(), String> {
     if !started {
         return Err("Could not start the lobby".to_string());
     }
+    if let Some(max) = config.lobby_max_players {
+        lobby.set_max_players(max);
+    }
+    lobby.max_rooms = config.lobby_max_rooms;
     let mut switch = Switch::new(io, config.max_connections_per_client);
 
     println!("Ready! Port {}, allowed origins: {}", config.port, config.allowed_origins.join(", "));
@@ -64,8 +68,8 @@ pub fn run(config: &Config) -> Result<(), String> {
     }
 }
 
-/// A relay for a game hosting on its own network: any origin, no log file, signaling on this relay (`/signal`),
-/// on a thread of its own.
+/// A relay for a game hosting on its own network, on a thread of its own: any origin, no log file, signaling on
+/// this relay (`/signal`), and one room of up to four players.
 pub fn run_embedded(port: u16) {
     let config = Config::embedded(port);
     std::thread::Builder::new()

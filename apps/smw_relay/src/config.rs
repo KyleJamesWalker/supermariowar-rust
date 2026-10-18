@@ -24,6 +24,9 @@ pub struct Config {
     /// The lobby's `SMW_SIGNAL_URL` when set here; `/signal` means this relay's own signaling.
     pub signal_url: Option<String>,
     pub log_file: bool,
+    /// The lobby's player and room limits when set here instead of in its config file.
+    pub lobby_max_players: Option<u32>,
+    pub lobby_max_rooms: Option<usize>,
 }
 
 impl Config {
@@ -37,6 +40,8 @@ impl Config {
             max_connections_per_client: 8,
             signal_url: None,
             log_file: true,
+            lobby_max_players: None,
+            lobby_max_rooms: None,
         };
         if let Ok(port) = env::var("SMW_RELAY_PORT") {
             config.port = port.parse().map_err(|_| format!("SMW_RELAY_PORT: not a port: {port}"))?;
@@ -66,10 +71,12 @@ impl Config {
             lobby_config: String::new(),
             healthcheck: false,
             allowed_origins: vec!["*".to_string()],
-            max_clients: 16,
+            max_clients: 8,
             max_connections_per_client: 8,
             signal_url: Some("/signal".to_string()),
             log_file: false,
+            lobby_max_players: Some(4),
+            lobby_max_rooms: Some(1),
         }
     }
 
@@ -107,6 +114,8 @@ mod tests {
             max_connections_per_client: 1,
             signal_url: None,
             log_file: true,
+            lobby_max_players: None,
+            lobby_max_rooms: None,
         }
     }
 
