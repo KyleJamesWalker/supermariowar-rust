@@ -179,6 +179,7 @@ pub struct MenuState {
     iDisplayError: DisplayError,
     iDisplayErrorTimer: i16,
     net_error: &'static str,
+    nearby_timer: u32,
     fNeedMenuMusicReset: bool,
 
 
@@ -231,6 +232,7 @@ impl MenuState {
             iDisplayError: DISPLAY_ERROR_NONE,
             iDisplayErrorTimer: 0,
             net_error: "",
+            nearby_timer: 0,
             fNeedMenuMusicReset: false,
             iUnlockMinigameOptionIndex: 0,
             iTournamentAIStep: 0,
@@ -1563,6 +1565,12 @@ impl MenuState {
 
             if self.mCurrentMenu == MenuId::NetLobby {
                 gp.netplay.client.update_room_list(g);
+            }
+            if self.mCurrentMenu == MenuId::NetServers {
+                self.nearby_timer += 1;
+                if self.nearby_timer % TICKS_PER_SECOND as u32 == 1 && crate::smw::net::merge_nearby(g) {
+                    self.mNetServersMenu.refresh_scroll(g);
+                }
             }
 
             // on room change

@@ -136,7 +136,8 @@ impl UI_NetServersMenu {
         g.ctl(self.miNetServersScroll).clear();
         for iServer in 0..g.netplay.savedServers.len() {
             let host = g.netplay.savedServers[iServer].hostname.clone();
-            g.ctl(self.miNetServersScroll).add(&host, "");
+            let tag = if g.netplay.nearby.contains(&host) { "LAN" } else { "" };
+            g.ctl(self.miNetServersScroll).add(&host, tag);
         }
 
         if !g.netplay.savedServers.is_empty() {

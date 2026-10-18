@@ -2383,6 +2383,7 @@ dependencies = [
  "smw-platform",
  "smw-sdl2",
  "smw_relay",
+ "socket2 0.6.5",
  "toml",
  "tungstenite 0.30.0",
 ]

@@ -216,10 +216,38 @@ pub fn net_load_server_list(g: &mut Game) {
         g.netplay.savedServers.insert(0, ServerAddress { hostname: url });
     }
     #[cfg(not(target_os = "emscripten"))]
+    if !net_record::replaying(g) {
+        crate::smw::network::lan_beacon::listen();
+    }
+    #[cfg(not(target_os = "emscripten"))]
     if let Some(url) = lan_host() {
         g.netplay.savedServers.retain(|s| s.hostname != url);
         g.netplay.savedServers.insert(0, ServerAddress { hostname: url });
     }
+}
+
+/// Puts the LAN hosts heard from recently at the top of the server list and drops the ones gone quiet. Replays read
+/// the list from the recording. True when the list changed.
+pub fn merge_nearby(g: &mut Game) -> bool {
+    #[cfg(not(target_os = "emscripten"))]
+    let live = || Some(crate::smw::network::lan_beacon::nearby().join(" "));
+    #[cfg(target_os = "emscripten")]
+    let live = || None;
+    let heard = net_record::value_opt(g, "nearby", live).unwrap_or_default();
+    let mut heard: Vec<String> = heard.split(' ').filter(|s| !s.is_empty()).map(String::from).collect();
+    let n = &mut *g.netplay;
+    heard.retain(|url| n.nearby.contains(url) || !n.savedServers.iter().any(|s| &s.hostname == url));
+    if heard == n.nearby {
+        return false;
+    }
+    let selected = n.savedServers.get(n.selectedServerIndex as usize).map(|s| s.hostname.clone());
+    n.savedServers.retain(|s| !n.nearby.contains(&s.hostname));
+    for url in heard.iter().rev() {
+        n.savedServers.insert(0, ServerAddress { hostname: url.clone() });
+    }
+    n.nearby = heard;
+    n.selectedServerIndex = selected.and_then(|h| n.savedServers.iter().position(|s| s.hostname == h)).unwrap_or(0) as u16;
+    true
 }
 
 /// The relay port a game hosting on its own network listens on.
@@ -236,10 +264,8 @@ fn lan_host() -> Option<String> {
     }
     STARTED.call_once(|| {
         smw_relay::run_embedded(LAN_HOST_PORT);
-        let address = std::net::UdpSocket::bind("0.0.0.0:0")
-            .and_then(|s| s.connect("192.0.2.1:9").and_then(|_| s.local_addr()))
-            .map(|a| a.ip().to_string())
-            .unwrap_or_else(|_| "this device's address".to_string());
+        crate::smw::network::lan_beacon::broadcast(LAN_HOST_PORT);
+        let address = crate::smw::network::lan_beacon::local_address().map_or("this device's address".to_string(), |a| a.to_string());
         println!("[net] Hosting on this device: other players add ws://{address}:{LAN_HOST_PORT}");
     });
     Some(format!("ws://127.0.0.1:{LAN_HOST_PORT}"))
@@ -2016,6 +2042,8 @@ pub struct Networking {
 
     pub selectedServerIndex: u16,
     pub savedServers: Vec<ServerAddress>,
+    /// The entries of `savedServers` that LAN beacons added; they are not saved.
+    pub nearby: Vec<String>,
 
     pub roomFilter: String,
     pub selectedRoomIndex: u16,
@@ -2090,6 +2118,7 @@ impl Networking {
             lobby_name: String::new(),
             selectedServerIndex: 0,
             savedServers: Vec::new(),
+            nearby: Vec::new(),
             roomFilter: String::new(),
             selectedRoomIndex: 0,
             currentRooms: Vec::new(),

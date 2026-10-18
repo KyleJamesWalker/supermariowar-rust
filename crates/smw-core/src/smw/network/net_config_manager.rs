@@ -150,7 +150,8 @@ impl NetConfigManager {
             g.netplay.savedServers.clear();
         }
 
-        let servers: Vec<String> = g.netplay.savedServers.iter().map(|s| s.hostname.clone()).collect();
+        let nearby = &g.netplay.nearby;
+        let servers: Vec<String> = g.netplay.savedServers.iter().filter(|s| !nearby.contains(&s.hostname)).map(|s| s.hostname.clone()).collect();
         let content = format_config(&g.netplay.myPlayerName, &g.netplay.newroom_name, &servers);
 
         if std::fs::write(get_home_directory(g) + CONFIG_FILENAME, content).is_err() {
