@@ -1429,6 +1429,12 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
         playerKeys.game_left_mut().fDown = false;
         playerKeys.game_right_mut().fDown = false;
 
+        // A frozen player breaks out sooner for each press of left.
+        if g.player(pPlayer).frozen && g.game_values.cpudifficulty >= 1 {
+            playerKeys.game_left_mut().fPressed = true;
+            return;
+        }
+
         //A percentage of the time the cpu will do nothing based on the difficulty level
         if RandomNumberGenerator::generator(gp.get()).get_boolean_threshold(100, iDecisionPercentage[g.game_values.cpudifficulty as usize] as i32)
             && g.player(pPlayer).isready()
