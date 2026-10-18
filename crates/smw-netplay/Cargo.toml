@@ -12,3 +12,7 @@ enet = ["dep:enet-sys"]
 [dependencies]
 smw-globals = { path = "../smw-globals" }
 enet-sys = { version = "1.0.5", optional = true }
+getrandom = "0.3"
+hmac = "0.12"
+sha1 = "0.10"
+base64 = "0.22"

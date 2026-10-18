@@ -4,6 +4,7 @@
 pub mod blob;
 pub mod clock;
 pub mod log;
+pub mod match_room;
 #[cfg(feature = "enet")]
 pub mod main_server;
 pub mod network_layer;
