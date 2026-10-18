@@ -3,6 +3,7 @@
 use crate::common::game_mode::*;
 use crate::common::game_mode_settings::*;
 use crate::common::gameplay_styles::*;
+use crate::common::global_constants::{ticks_from_disk, ticks_to_disk};
 use crate::common::match_types::Boss;
 use crate::common::world_tour_stop::Strtok;
 
@@ -54,6 +55,15 @@ fn read<T: TourStopSetting>(st: &mut Strtok, output: &mut T, defaultVal: T) -> b
     }
 }
 
+/// `read` for a duration, which tour and world files store in frames of the original 62-frames-per-second game.
+fn read_ticks(st: &mut Strtok, output: &mut i16, defaultVal: i16) -> bool {
+    let read = read(st, output, defaultVal);
+    if read {
+        *output = ticks_from_disk(*output);
+    }
+    read
+}
+
 /// Turns the selected game mode settings into a list of integers
 pub fn serialize_gms(gamemodeId: i16, g: &GameModeSettings) -> Vec<i16> {
     let s = |v: &[i16]| v.to_vec();
@@ -61,7 +71,7 @@ pub fn serialize_gms(gamemodeId: i16, g: &GameModeSettings) -> Vec<i16> {
         game_mode_classic => s(&[g.classic.style.to_short(), g.classic.scoring.to_short()]),
         game_mode_frag => s(&[g.frag.style.to_short(), g.frag.scoring.to_short()]),
         game_mode_timelimit => s(&[g.time.style.to_short(), g.time.scoring.to_short(), g.time.percentextratime]),
-        game_mode_jail => s(&[g.jail.style.to_short(), g.jail.timetofree, g.jail.tagfree as i16, g.jail.percentkey]),
+        game_mode_jail => s(&[g.jail.style.to_short(), ticks_to_disk(g.jail.timetofree), g.jail.tagfree as i16, g.jail.percentkey]),
         game_mode_coins => s(&[g.coins.penalty as i16, g.coins.quantity, g.coins.percentextracoin]),
         game_mode_stomp => {
             let mut v = vec![g.stomp.rate];
@@ -78,7 +88,7 @@ pub fn serialize_gms(gamemodeId: i16, g: &GameModeSettings) -> Vec<i16> {
             g.flag.speed,
             g.flag.touchreturn as i16,
             g.flag.pointmove as i16,
-            g.flag.autoreturn,
+            ticks_to_disk(g.flag.autoreturn),
             g.flag.homescore as i16,
             g.flag.centerflag as i16,
         ]),
@@ -87,15 +97,15 @@ pub fn serialize_gms(gamemodeId: i16, g: &GameModeSettings) -> Vec<i16> {
         game_mode_star => s(&[g.star.time, g.star.shine.to_short(), g.star.percentextratime]),
         game_mode_domination => s(&[
             g.domination.quantity,
-            g.domination.relocationfrequency,
+            ticks_to_disk(g.domination.relocationfrequency),
             g.domination.loseondeath as i16,
             g.domination.relocateondeath as i16,
             g.domination.stealondeath as i16,
         ]),
-        game_mode_koth => s(&[g.kingofthehill.areasize, g.kingofthehill.relocationfrequency, g.kingofthehill.maxmultiplier]),
+        game_mode_koth => s(&[g.kingofthehill.areasize, ticks_to_disk(g.kingofthehill.relocationfrequency), g.kingofthehill.maxmultiplier]),
         game_mode_race => s(&[g.race.quantity, g.race.speed, g.race.penalty]),
         game_mode_frenzy => {
-            let mut v = vec![g.frenzy.quantity, g.frenzy.rate, g.frenzy.storedshells as i16];
+            let mut v = vec![g.frenzy.quantity, ticks_to_disk(g.frenzy.rate), g.frenzy.storedshells as i16];
             v.extend_from_slice(&g.frenzy.powerupweight);
             v
         }
@@ -106,9 +116,9 @@ pub fn serialize_gms(gamemodeId: i16, g: &GameModeSettings) -> Vec<i16> {
             v.push(g.survival.shield as i16);
             v
         }
-        game_mode_greed => s(&[g.greed.coinlife, g.greed.owncoins as i16, g.greed.multiplier, g.greed.percentextracoin]),
+        game_mode_greed => s(&[ticks_to_disk(g.greed.coinlife), g.greed.owncoins as i16, g.greed.multiplier, g.greed.percentextracoin]),
         game_mode_health => s(&[g.health.startlife, g.health.maxlife, g.health.percentextralife]),
-        game_mode_collection => s(&[g.collection.quantity, g.collection.rate, g.collection.banktime, g.collection.cardlife]),
+        game_mode_collection => s(&[g.collection.quantity, ticks_to_disk(g.collection.rate), ticks_to_disk(g.collection.banktime), ticks_to_disk(g.collection.cardlife)]),
         game_mode_chase => {
             let mut v = vec![g.chase.phantospeed];
             v.extend_from_slice(&g.chase.phantoquantity);
@@ -140,7 +150,7 @@ pub fn deserialize_gms(st: &mut Strtok, gamemodeId: i16, g: &mut GameModeSetting
         }
         game_mode_jail => {
             v.push(read(st, &mut g.jail.style, d.jail.style));
-            v.push(read(st, &mut g.jail.timetofree, d.jail.timetofree));
+            v.push(read_ticks(st, &mut g.jail.timetofree, d.jail.timetofree));
             v.push(read(st, &mut g.jail.tagfree, d.jail.tagfree));
             v.push(read(st, &mut g.jail.percentkey, d.jail.percentkey));
         }
@@ -168,7 +178,7 @@ pub fn deserialize_gms(st: &mut Strtok, gamemodeId: i16, g: &mut GameModeSetting
             v.push(read(st, &mut g.flag.speed, d.flag.speed));
             v.push(read(st, &mut g.flag.touchreturn, d.flag.touchreturn));
             v.push(read(st, &mut g.flag.pointmove, d.flag.pointmove));
-            v.push(read(st, &mut g.flag.autoreturn, d.flag.autoreturn));
+            v.push(read_ticks(st, &mut g.flag.autoreturn, d.flag.autoreturn));
             v.push(read(st, &mut g.flag.homescore, d.flag.homescore));
             v.push(read(st, &mut g.flag.centerflag, d.flag.centerflag));
         }
@@ -186,14 +196,14 @@ pub fn deserialize_gms(st: &mut Strtok, gamemodeId: i16, g: &mut GameModeSetting
         }
         game_mode_domination => {
             v.push(read(st, &mut g.domination.quantity, d.domination.quantity));
-            v.push(read(st, &mut g.domination.relocationfrequency, d.domination.relocationfrequency));
+            v.push(read_ticks(st, &mut g.domination.relocationfrequency, d.domination.relocationfrequency));
             v.push(read(st, &mut g.domination.loseondeath, d.domination.loseondeath));
             v.push(read(st, &mut g.domination.relocateondeath, d.domination.relocateondeath));
             v.push(read(st, &mut g.domination.stealondeath, d.domination.stealondeath));
         }
         game_mode_koth => {
             v.push(read(st, &mut g.kingofthehill.areasize, d.kingofthehill.areasize));
-            v.push(read(st, &mut g.kingofthehill.relocationfrequency, d.kingofthehill.relocationfrequency));
+            v.push(read_ticks(st, &mut g.kingofthehill.relocationfrequency, d.kingofthehill.relocationfrequency));
             v.push(read(st, &mut g.kingofthehill.maxmultiplier, d.kingofthehill.maxmultiplier));
         }
         game_mode_race => {
@@ -203,7 +213,7 @@ pub fn deserialize_gms(st: &mut Strtok, gamemodeId: i16, g: &mut GameModeSetting
         }
         game_mode_frenzy => {
             v.push(read(st, &mut g.frenzy.quantity, d.frenzy.quantity));
-            v.push(read(st, &mut g.frenzy.rate, d.frenzy.rate));
+            v.push(read_ticks(st, &mut g.frenzy.rate, d.frenzy.rate));
             v.push(read(st, &mut g.frenzy.storedshells, d.frenzy.storedshells));
             for i in 0..g.frenzy.powerupweight.len() {
                 v.push(read(st, &mut g.frenzy.powerupweight[i], d.frenzy.powerupweight[i]));
@@ -218,7 +228,7 @@ pub fn deserialize_gms(st: &mut Strtok, gamemodeId: i16, g: &mut GameModeSetting
             v.push(read(st, &mut g.survival.shield, d.survival.shield));
         }
         game_mode_greed => {
-            v.push(read(st, &mut g.greed.coinlife, d.greed.coinlife));
+            v.push(read_ticks(st, &mut g.greed.coinlife, d.greed.coinlife));
             v.push(read(st, &mut g.greed.owncoins, d.greed.owncoins));
             v.push(read(st, &mut g.greed.multiplier, d.greed.multiplier));
             v.push(read(st, &mut g.greed.percentextracoin, d.greed.percentextracoin));
@@ -230,9 +240,9 @@ pub fn deserialize_gms(st: &mut Strtok, gamemodeId: i16, g: &mut GameModeSetting
         }
         game_mode_collection => {
             v.push(read(st, &mut g.collection.quantity, d.collection.quantity));
-            v.push(read(st, &mut g.collection.rate, d.collection.rate));
-            v.push(read(st, &mut g.collection.banktime, d.collection.banktime));
-            v.push(read(st, &mut g.collection.cardlife, d.collection.cardlife));
+            v.push(read_ticks(st, &mut g.collection.rate, d.collection.rate));
+            v.push(read_ticks(st, &mut g.collection.banktime, d.collection.banktime));
+            v.push(read_ticks(st, &mut g.collection.cardlife, d.collection.cardlife));
         }
         game_mode_chase => {
             v.push(read(st, &mut g.chase.phantospeed, d.chase.phantospeed));

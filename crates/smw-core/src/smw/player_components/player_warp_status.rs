@@ -15,12 +15,14 @@ pub struct PlayerWarpStatus {
     pub warpconnection: i16,
     pub warpid: i16,
     pub warpplane: i16,
+    /// The fraction of a pixel of warp travel carried into the next tick.
+    pub step_remainder: f32,
     pub _alias: Aliased,
 }
 
 impl PlayerWarpStatus {
     pub fn new() -> Self {
-        PlayerWarpStatus { warpcounter: 0, warpconnection: 0, warpid: 0, warpplane: 0, _alias: Aliased::default() }
+        PlayerWarpStatus { warpcounter: 0, warpconnection: 0, warpid: 0, warpplane: 0, step_remainder: 0.0, _alias: Aliased::default() }
     }
 
     fn increasewarpcounter(&mut self, g: &mut Game, player: &mut CPlayer, iGoal: i16) {
@@ -53,6 +55,17 @@ impl PlayerWarpStatus {
 
         debug_assert!(self.warpcounter >= 0);
 
+        self.step_remainder += vel(1.0);
+        while self.step_remainder >= 1.0 && player.iswarping() {
+            self.step_remainder -= 1.0;
+            self.step(g, player);
+        }
+
+        debug_assert!(self.warpcounter >= 0);
+    }
+
+    /// One pixel of warp travel.
+    fn step(&mut self, g: &mut Game, player: &mut CPlayer) {
         match player.state {
             PlayerState::EnteringWarpLeft => {
                 player.set_xi((player.left_x() as i32 - 1) as i16);
@@ -90,8 +103,6 @@ impl PlayerWarpStatus {
                 debug_assert!(false);
             }
         }
-
-        debug_assert!(self.warpcounter >= 0);
     }
 
     pub fn enter_warp(&mut self, g: &mut Game, player: &mut CPlayer, warp: Ptr<Warp>) {
@@ -108,7 +119,7 @@ impl PlayerWarpStatus {
             WARP_LEFT => {
                 player.state = PlayerState::EnteringWarpLeft;
                 player.vely = 0.0f32;
-                player.velx = -1.0f32;
+                player.velx = vel(-1.0f32);
                 self.warpplane = player.left_x();
             }
             WARP_UP => {
@@ -120,7 +131,7 @@ impl PlayerWarpStatus {
             WARP_RIGHT => {
                 player.state = PlayerState::EnteringWarpRight;
                 player.vely = 0.0f32;
-                player.velx = 1.0f32;
+                player.velx = vel(1.0f32);
                 self.warpplane = (player.right_x() as i32 + 1) as i16;
             }
             _ => {
@@ -174,7 +185,7 @@ impl PlayerWarpStatus {
             WARP_EXIT_UP => {
                 player.state = PlayerState::LeavingWarpUp;
                 player.velx = 0.0f32;
-                player.vely = -4.0f32;
+                player.vely = vel(-4.0f32);
                 self.warpcounter = (PH + PHOFFSET) as i16;
                 self.warpplane = ((exit.warpy as i32) << 5) as i16;
 
@@ -188,8 +199,8 @@ impl PlayerWarpStatus {
             }
             WARP_EXIT_RIGHT => {
                 player.state = PlayerState::LeavingWarpRight;
-                player.velx = 1.0f32;
-                player.vely = 1.0f32;
+                player.velx = vel(1.0f32);
+                player.vely = vel(1.0f32);
                 self.warpcounter = (PW + PWOFFSET) as i16;
                 self.warpplane = (((exit.warpx as i32) << 5) + TILESIZE) as i16;
 
@@ -206,7 +217,7 @@ impl PlayerWarpStatus {
             WARP_EXIT_DOWN => {
                 player.state = PlayerState::LeavingWarpDown;
                 player.velx = 0.0f32;
-                player.vely = 1.1f32;
+                player.vely = vel(1.1f32);
                 player.inair = true;
                 self.warpcounter = (TILESIZE - PHOFFSET) as i16;
                 self.warpplane = (((exit.warpy as i32) << 5) + TILESIZE) as i16;
@@ -221,8 +232,8 @@ impl PlayerWarpStatus {
             }
             WARP_EXIT_LEFT => {
                 player.state = PlayerState::LeavingWarpLeft;
-                player.velx = -1.0f32;
-                player.vely = 1.0f32;
+                player.velx = vel(-1.0f32);
+                player.vely = vel(1.0f32);
                 self.warpcounter = (PW + PWOFFSET) as i16;
                 self.warpplane = ((exit.warpx as i32) << 5) as i16;
 

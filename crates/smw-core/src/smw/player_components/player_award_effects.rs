@@ -47,7 +47,7 @@ impl PlayerAwardEffects {
     pub fn draw_ring_award(&mut self, g: &mut Game, player: &mut CPlayer) {
         let mut gp = g.ptr();
         unsafe {
-            self.awardangle += 0.02f32;
+            self.awardangle += vel(0.02f32);
 
             if self.awardangle > TWO_PI {
                 self.awardangle -= TWO_PI;
@@ -94,8 +94,8 @@ impl PlayerAwardEffects {
             let awardx: i16 = (player.center_x() as i32 - 8 + (30.0f32 * cosangle) as i16 as i32) as i16;
             let awardy: i16 = (player.center_y() as i32 - 8 + (30.0f32 * sinangle) as i16 as i32) as i16;
 
-            let awardvelx: f32 = 7.0f32 * cosangle;
-            let awardvely: f32 = 7.0f32 * sinangle;
+            let awardvelx: f32 = vel(7.0f32) * cosangle;
+            let awardvely: f32 = vel(7.0f32) * sinangle;
 
             g.eyecandy[2].emplace(EC_ExplodingAward::new(
                 g.rm.spr_awardsolid,
@@ -103,7 +103,7 @@ impl PlayerAwardEffects {
                 awardy,
                 awardvelx,
                 awardvely,
-                30,
+                ticks(30) as i16,
                 self.awards[k as usize],
             ));
         }
@@ -130,8 +130,8 @@ impl PlayerAwardEffects {
                     (player.center_y() as i32 - 8) as i16,
                     angle,
                     30.0f32,
-                    0.05f32,
-                    60,
+                    vel(0.05f32),
+                    ticks(60) as i16,
                     10,
                     player.get_color_id(),
                     16,
@@ -146,8 +146,8 @@ impl PlayerAwardEffects {
                     (player.center_y() as i32 - 8) as i16,
                     angle,
                     30.0f32,
-                    0.05f32,
-                    60,
+                    vel(0.05f32),
+                    ticks(60) as i16,
                     (numawards as i32 - 1) as i16,
                     player.get_color_id(),
                     16,
@@ -174,8 +174,8 @@ impl PlayerAwardEffects {
 
         for k in 0..numawards {
             let angle: f32 = k as f32 * addangle + startangle;
-            let awardvelx: f32 = 9.0f32 * cosf(angle);
-            let awardvely: f32 = 9.0f32 * sinf(angle);
+            let awardvelx: f32 = vel(9.0f32) * cosf(angle);
+            let awardvely: f32 = vel(9.0f32) * sinf(angle);
 
             if numawards as i32 == MAXAWARDS {
                 g.eyecandy[2].emplace(EC_RocketAward::new(
@@ -184,7 +184,7 @@ impl PlayerAwardEffects {
                     (player.center_y() as i32 - 8) as i16,
                     awardvelx,
                     awardvely,
-                    80,
+                    ticks(80) as i16,
                     10,
                     player.get_color_id(),
                     16,
@@ -199,7 +199,7 @@ impl PlayerAwardEffects {
                     (player.center_y() as i32 - 8) as i16,
                     awardvelx,
                     awardvely,
-                    80,
+                    ticks(80) as i16,
                     (numawards as i32 - 1) as i16,
                     player.get_color_id(),
                     16,
@@ -220,7 +220,7 @@ impl PlayerAwardEffects {
                 g.rm.spr_awardsoulspawn,
                 player.center_x(),
                 player.center_y(),
-                60,
+                ticks(60) as i16,
                 9.0f32,
                 player.killsinrow,
                 &self.awards,
@@ -346,7 +346,7 @@ impl PlayerAwardEffects {
     pub fn add_kills_in_row_in_air_award(&mut self, g: &mut Game, player: &mut CPlayer) {
         let mut angle: f32 = 0.0f32;
         for k in 0..15i16 {
-            let vel: f32 = 7.0f32 + ((k % 2) as f32 * 5.0f32);
+            let vel: f32 = vel(7.0f32 + ((k % 2) as f32 * 5.0f32));
             let awardvelx: f32 = vel * cosf(angle);
             let awardvely: f32 = vel * sinf(angle);
 

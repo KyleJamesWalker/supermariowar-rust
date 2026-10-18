@@ -51,8 +51,8 @@ fn push_bombs(g: &mut Game, container: &CObjectContainer, x: i16, y: i16) {
 
         if dist < 10000 {
             let signX: f32 = if bombx > 0 { 1.0f32 } else { -1.0f32 };
-            bomb.velx += signX * (RANDOM_INT(gp.get(), 30) as f32 / 10.0f32 + 4.0f32);
-            bomb.vely -= RANDOM_INT(gp.get(), 30) as f32 / 10.0f32 + 6.0f32;
+            bomb.velx += signX * vel(RANDOM_INT(gp.get(), 30) as f32 / 10.0f32 + 4.0f32);
+            bomb.vely -= vel(RANDOM_INT(gp.get(), 30) as f32 / 10.0f32 + 6.0f32);
         }
     }
 }
@@ -231,7 +231,7 @@ impl MO_SledgeBrother {
                     g.mode().get().as_any().downcast_mut::<CGM_Boss_MiniGame>().unwrap().set_winner(g, killer);
                 }
             } else {
-                self.hit_timer = 60;
+                self.hit_timer = ticks(60) as i16;
                 if_sound_on_play(g, &mut gp.rm.sfx_stun);
             }
         }
@@ -322,13 +322,13 @@ impl MO_SledgeBrother {
         let mut rm = g.rm;
         self.set_last_action(1);
 
-        self.throwing_timer = 20;
+        self.throwing_timer = ticks(20) as i16;
         self.iActionState = 3;
         self.arm_offset_x = 96;
 
         let (ix, iy, iw) = (self.ix as i32, self.iy as i32, self.iw as i32);
         if self.iType == 0 {
-            let fHammerVelX: f32 = (RANDOM_INT(gp.get(), 9) + 2) as f32 / 2.0f32 - if self.face_right { 0.0f32 } else { 6.0f32 };
+            let fHammerVelX: f32 = vel((RANDOM_INT(gp.get(), 9) + 2) as f32 / 2.0f32 - if self.face_right { 0.0f32 } else { 6.0f32 });
             let pos = Vec2s::new(((if self.face_right { ix + 32 } else { ix }) - self.collisionOffsetX as i32) as i16, self.iy);
             let obj = Ptr::new_box(MO_SledgeHammer::new(
                 g,
@@ -344,10 +344,10 @@ impl MO_SledgeBrother {
             ));
             gp.objectcontainer[2].add(g, obj);
         } else if self.iType == 1 {
-            let fBombVelX: f32 = (RANDOM_INT(gp.get(), 5) + 12) as f32 / 2.0f32 - if self.face_right { 0.0f32 } else { 14.0f32 };
-            let fBombVelY: f32 = -(RANDOM_INT(gp.get(), 13) as f32) / 2.0f32 - 6.0f32;
+            let fBombVelX: f32 = vel((RANDOM_INT(gp.get(), 5) + 12) as f32 / 2.0f32 - if self.face_right { 0.0f32 } else { 14.0f32 });
+            let fBombVelY: f32 = vel(-(RANDOM_INT(gp.get(), 13) as f32) / 2.0f32 - 6.0f32);
             let pos = Vec2s::new((if self.face_right { ix + iw - 32 } else { ix - 20 }) as i16, iy as i16);
-            let timetolive = (RANDOM_INT(gp.get(), 60) + 120) as i16;
+            let timetolive = ticks(RANDOM_INT(gp.get(), 60) + 120) as i16;
             let obj = Ptr::new_box(CO_Bomb::new(
                 g,
                 rm.spr_bomb,
@@ -361,8 +361,8 @@ impl MO_SledgeBrother {
             ));
             gp.objectcontainer[2].add(g, obj);
         } else if self.iType == 2 {
-            let fFireVelX: f32 = (RANDOM_INT(gp.get(), 9) + 6) as f32 / 2.0f32 - if self.face_right { 0.0f32 } else { 10.0f32 };
-            let fFireVelY: f32 = RANDOM_INT(gp.get(), 17) as f32 / 2.0f32 - 4.0f32;
+            let fFireVelX: f32 = vel((RANDOM_INT(gp.get(), 9) + 6) as f32 / 2.0f32 - if self.face_right { 0.0f32 } else { 10.0f32 });
+            let fFireVelY: f32 = vel(RANDOM_INT(gp.get(), 17) as f32 / 2.0f32 - 4.0f32);
             let pos = Vec2s::new((if self.face_right { ix + iw - 32 } else { ix - 16 }) as i16, iy as i16);
             let obj = Ptr::new_box(MO_SuperFireball::new(
                 g,
@@ -386,7 +386,7 @@ impl MO_SledgeBrother {
         self.set_last_action(2);
 
         gp.rm.sfx_boomerang.play_loop(g, 3);
-        self.taunt_timer = 60;
+        self.taunt_timer = ticks(60) as i16;
         self.iActionState = 5;
 
         self.need_action[4] = 0;
@@ -418,7 +418,7 @@ impl MO_SledgeBrother {
         let mut gp = g.ptr();
         self.set_last_action(2);
 
-        self.wait_timer = RandomNumberGenerator::generator(gp.get()).get_integer_range(min as i32, max as i32) as i16;
+        self.wait_timer = ticks(RandomNumberGenerator::generator(gp.get()).get_integer_range(min as i32, max as i32)) as i16;
         self.iActionState = 1;
 
         self.need_action[3] = 0;
@@ -480,7 +480,7 @@ impl CObjectTrait for MO_SledgeBrother {
                 if self.iType == 0 {
                     // Shake screen and kill players
                     if_sound_on_play(g, &mut gp.rm.sfx_thunder);
-                    g.game_values.flags.screenshaketimer = 20;
+                    g.game_values.flags.screenshaketimer = ticks(20) as i16;
                     g.game_values.flags.screenshakeplayerid = -1;
                     g.game_values.flags.screenshaketeamid = -1;
                     g.game_values.flags.screenshakekillinair = false;
@@ -493,7 +493,7 @@ impl CObjectTrait for MO_SledgeBrother {
 
                     for _iThwomp in 0..numThwomps {
                         let x = RANDOM_INT(gp.get(), 591) as i16;
-                        let nspeed = 2.0f32 + RANDOM_INT(gp.get(), 20) as f32 / 10.0f32;
+                        let nspeed = vel(2.0f32 + RANDOM_INT(gp.get(), 20) as f32 / 10.0f32);
                         let obj = Ptr::new_box(OMO_Thwomp::new(g, rm.spr_thwomp, x, nspeed));
                         gp.objectcontainer[2].add(g, obj);
                     }
@@ -505,7 +505,7 @@ impl CObjectTrait for MO_SledgeBrother {
 
                     for _iPodobo in 0..numPodobos {
                         let x = RANDOM_INT(gp.get(), 608) as i16;
-                        let dVelY = -(RANDOM_INT(gp.get(), 9) as f32 / 2.0f32) - 9.0f32;
+                        let dVelY = vel(-(RANDOM_INT(gp.get(), 9) as f32 / 2.0f32) - 9.0f32);
                         let obj = Ptr::new_box(MO_Podobo::new(
                             g,
                             rm.spr_podobo,
@@ -529,20 +529,25 @@ impl CObjectTrait for MO_SledgeBrother {
             }
         } else if self.iActionState == 4 {
             // move towards destination
+            let step = vel(if g.game_values.gamemodesettings.boss.difficulty >= 3 { 2.0 } else { 1.0 });
             if self.ix < self.iDestX {
-                self.ix += if g.game_values.gamemodesettings.boss.difficulty >= 3 { 2 } else { 1 };
+                let fx = self.fx + step;
+                self.set_xf(fx);
 
                 if self.ix >= self.iDestX {
-                    self.ix = self.iDestX;
+                    let iDestX = self.iDestX;
+                    self.set_xi(iDestX);
                     self.iActionState = 0;
                     self.leg_offset_x = 0;
                     self.leg_movement_timer = 0;
                 }
             } else if self.ix > self.iDestX {
-                self.ix -= if g.game_values.gamemodesettings.boss.difficulty >= 3 { 2 } else { 1 };
+                let fx = self.fx - step;
+                self.set_xf(fx);
 
                 if self.ix <= self.iDestX {
-                    self.ix = self.iDestX;
+                    let iDestX = self.iDestX;
+                    self.set_xi(iDestX);
                     self.iActionState = 0;
                     self.leg_offset_x = 0;
                     self.leg_movement_timer = 0;

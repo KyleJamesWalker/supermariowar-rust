@@ -6,7 +6,7 @@ use crate::game::Game;
 use crate::common::game_mode::{GameModeType, *};
 use crate::common::game_mode_settings::GAMEMODESETTINGS_RAW_SIZE;
 
-use crate::common::global_constants::TICKS_PER_SECOND;
+use crate::common::global_constants::{TICKS_PER_SECOND, vel};
 use crate::common::input::{COutputControl, CPlayerInput};
 use crate::common::path::get_home_directory;
 use crate::common::random_number_generator::{RandomNumberGenerator, RandomNumberGeneratorType, RANDOM_INT};
@@ -874,7 +874,7 @@ impl NetClient {
         g.player(player).powerupused = Some(PowerupType::from_u8(pkg.powerup_id));
         g.player(player).powerupradius = 100.0;
         while missed_frames > 0 {
-            g.player(player).powerupradius -= g.game_values.storedpowerupdelay as f32 / 2.0;
+            g.player(player).powerupradius -= vel(g.game_values.storedpowerupdelay as f32 / 2.0);
             missed_frames -= 1;
         }
 

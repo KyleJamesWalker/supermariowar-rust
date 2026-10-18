@@ -4,6 +4,7 @@ use crate::game::Game;
 use crate::common::game_mode::game_mode_survival;
 use crate::common::gameplay_styles::ShieldStyle;
 use crate::globals::*;
+use crate::common::global_constants::{ticks};
 
 pub type PlayerShieldType = i32;
 pub const OFF: PlayerShieldType = 0;
@@ -39,7 +40,7 @@ impl PlayerShield {
 
     pub fn turn_on(&mut self, g: &mut Game) {
         self.r#type = if g.game_values.shieldstyle != ShieldStyle::NoShield { g.game_values.shieldstyle as PlayerShieldType } else { SOFT };
-        self.timer = 60;
+        self.timer = ticks(60) as i16;
     }
 
     pub fn abort(&mut self) {

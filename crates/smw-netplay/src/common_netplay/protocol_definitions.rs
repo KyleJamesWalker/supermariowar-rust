@@ -1,7 +1,7 @@
 //! Port of src/common_netplay/ProtocolDefinitions.h
 
 pub const NET_PROTOCOL_VERSION_MAJOR: u8 = 0;
-pub const NET_PROTOCOL_VERSION_MINOR: u8 = 6;
+pub const NET_PROTOCOL_VERSION_MINOR: u8 = 7;
 pub const NET_MAX_MESSAGE_SIZE: usize = 128;
 pub const NET_LOBBYSERVER_PORT: u16 = 12521;
 pub const NET_GAMEHOST_PORT: u16 = 12522;

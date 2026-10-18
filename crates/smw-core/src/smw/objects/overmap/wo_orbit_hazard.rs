@@ -4,7 +4,7 @@ use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
-use crate::common::global_constants::TWO_PI;
+use crate::common::global_constants::{vel, TWO_PI};
 use crate::common::math::trig::{cosf, sinf};
 use crate::common::math::vec2::{Vec2f, Vec2s};
 use crate::common::object_base::{object_orbithazard, CObjectTrait};
@@ -34,7 +34,7 @@ impl OMO_OrbitHazard {
     pub fn new(g: &mut Game, nspr: SpriteId,
         pos: Vec2s,
         radius: f32,
-        vel: f32,
+        velocity: f32,
         angle: f32,
         iNumSpr: i16,
         aniSpeed: i16,
@@ -71,7 +71,7 @@ impl OMO_OrbitHazard {
         this.objectType = object_orbithazard;
 
         this.dRadius = radius;
-        this.dVel = vel;
+        this.dVel = vel(velocity);
         this.dAngle = angle;
         this.dCenter = Vec2f::new(pos.x as f32, pos.y as f32);
 

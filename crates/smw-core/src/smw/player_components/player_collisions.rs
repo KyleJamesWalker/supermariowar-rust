@@ -381,7 +381,7 @@ impl PlayerCollisions {
             }
 
             let mut fKillPotential = false;
-            if g.player(player).vely > 1.0f32 && !g.player(other).is_shielded() {
+            if g.player(player).vely > vel(1.0f32) && !g.player(other).is_shielded() {
                 fKillPotential = true;
             }
 
@@ -410,7 +410,7 @@ impl PlayerCollisions {
                 }
 
                 g.player(player).iSuicideCreditPlayerID = g.player(other).globalID;
-                g.player(player).iSuicideCreditTimer = 20;
+                g.player(player).iSuicideCreditTimer = ticks(20) as i16;
             }
 
             return true;
@@ -628,23 +628,23 @@ impl PlayerCollisions {
         }
 
         if overlapcollision {
-            absv1 = (if g.player(o1).velx < 0.0f32 { g.player(o1).velx } else { -1.0f32 }) * dPlayer2Pushback; //o1 is on the left side (only positive velx counts)
-            absv2 = (if g.player(o2).velx > 0.0f32 { g.player(o2).velx } else { 1.0f32 }) * dPlayer1Pushback; //o2 right (only negative velx counts)
+            absv1 = (if g.player(o1).velx < 0.0f32 { g.player(o1).velx } else { vel(-1.0f32) }) * dPlayer2Pushback; //o1 is on the left side (only positive velx counts)
+            absv2 = (if g.player(o2).velx > 0.0f32 { g.player(o2).velx } else { vel(1.0f32) }) * dPlayer1Pushback; //o2 right (only negative velx counts)
         } else {
-            absv1 = (if g.player(o1).velx > 0.0f32 { g.player(o1).velx } else { 1.0f32 }) * dPlayer2Pushback; //o1 is on the left side (only positive velx counts)
-            absv2 = (if g.player(o2).velx < 0.0f32 { g.player(o2).velx } else { -1.0f32 }) * dPlayer1Pushback; //o2 right (only negative velx counts)
+            absv1 = (if g.player(o1).velx > 0.0f32 { g.player(o1).velx } else { vel(1.0f32) }) * dPlayer2Pushback; //o1 is on the left side (only positive velx counts)
+            absv2 = (if g.player(o2).velx < 0.0f32 { g.player(o2).velx } else { vel(-1.0f32) }) * dPlayer1Pushback; //o2 right (only negative velx counts)
         }
 
         if g.player(o1).state == PlayerState::Ready {
             g.player(o1).velx = cap_side_velocity(absv2);
             g.player(o1).iSuicideCreditPlayerID = g.player(o2).globalID;
-            g.player(o1).iSuicideCreditTimer = 62;
+            g.player(o1).iSuicideCreditTimer = TICKS_PER_SECOND as i16;
         }
 
         if g.player(o2).state == PlayerState::Ready {
             g.player(o2).velx = cap_side_velocity(absv1);
             g.player(o2).iSuicideCreditPlayerID = g.player(o1).globalID;
-            g.player(o2).iSuicideCreditTimer = 62;
+            g.player(o2).iSuicideCreditTimer = TICKS_PER_SECOND as i16;
         }
     }
 }

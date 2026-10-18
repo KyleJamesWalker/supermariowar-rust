@@ -40,7 +40,7 @@ impl PlayerSuicideTimer {
             }
         {
             self.counttimer = self.counttimer.wrapping_add(1);
-            if self.counttimer > 62 {
+            if self.counttimer >= TICKS_PER_SECOND as i16 {
                 self.counttimer = 0;
 
                 self.displaytimer = self.displaytimer.wrapping_sub(1);

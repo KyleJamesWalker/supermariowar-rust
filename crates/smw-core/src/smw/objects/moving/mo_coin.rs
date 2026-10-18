@@ -7,6 +7,7 @@ use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
+use crate::common::global_constants::ticks;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::math::vec2::{Vec2f, Vec2s};
 use crate::common::moving_object_types::*;
@@ -150,7 +151,7 @@ impl CObjectTrait for MO_Coin {
             }
 
             self.timer += 1;
-            if self.timer > 1000 {
+            if self.timer as i32 > ticks(1000) {
                 self.place_coin(g);
             }
         }

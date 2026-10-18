@@ -21,38 +21,38 @@ pub const HALFPH: i32 = 12;
 pub const HALFPW: i32 = 11;
 pub const PHOFFSET: i32 = 4;
 pub const PWOFFSET: i32 = 5;
-pub const VELMOVING: f32 = 4.0;
-pub const VELSLOWMOVING: f32 = 2.2;
-pub const VELMOVING_CHICKEN: f32 = 2.9;
-pub const VELMOVINGADD: f32 = 0.5;
+pub const VELMOVING: f32 = vel(4.0);
+pub const VELSLOWMOVING: f32 = vel(2.2);
+pub const VELMOVING_CHICKEN: f32 = vel(2.9);
+pub const VELMOVINGADD: f32 = acc(0.5);
 pub const VELMOVINGADDICE: f32 = VELMOVINGADD / 4.0;
-pub const VELTURBOMOVING: f32 = 5.5;
-pub const VELJUMP: f32 = 9.0;
-pub const VELSLOWJUMP: f32 = 7.0;
-pub const VELTURBOJUMP: f32 = 10.2;
-pub const VELSUPERJUMP: f32 = 13.0;
-pub const VELPUSHBACK: f32 = 5.0;
-pub const VELMAXBREAKBLOCK: f32 = 3.0;
-pub const VELNOTEBLOCKBOUNCE: f32 = 3.0;
-pub const VELNOTEBLOCKREPEL: f32 = 5.0;
-pub const VELBLOCKBOUNCE: f32 = 3.0;
-pub const VELBLOCKREPEL: f32 = 3.0;
-pub const VELPOWERUPBOUNCE: f32 = 8.1;
-pub const FIREBALLBOUNCE: f32 = 5.0;
-pub const HAMMERTHROW: f32 = 8.5;
-pub const VELMOVINGFRICTION: f32 = 0.2;
-pub const VELICEFRICTION: f32 = 0.06;
-pub const VELAIRFRICTION: f32 = 0.06;
-pub const VELSTOPJUMP: f32 = 5.0;
+pub const VELTURBOMOVING: f32 = vel(5.5);
+pub const VELJUMP: f32 = vel(9.0);
+pub const VELSLOWJUMP: f32 = vel(7.0);
+pub const VELTURBOJUMP: f32 = vel(10.2);
+pub const VELSUPERJUMP: f32 = vel(13.0);
+pub const VELPUSHBACK: f32 = vel(5.0);
+pub const VELMAXBREAKBLOCK: f32 = vel(3.0);
+pub const VELNOTEBLOCKBOUNCE: f32 = vel(3.0);
+pub const VELNOTEBLOCKREPEL: f32 = vel(5.0);
+pub const VELBLOCKBOUNCE: f32 = vel(3.0);
+pub const VELBLOCKREPEL: f32 = vel(3.0);
+pub const VELPOWERUPBOUNCE: f32 = vel(8.1);
+pub const FIREBALLBOUNCE: f32 = vel(5.0);
+pub const HAMMERTHROW: f32 = vel(8.5);
+pub const VELMOVINGFRICTION: f32 = acc(0.2);
+pub const VELICEFRICTION: f32 = acc(0.06);
+pub const VELAIRFRICTION: f32 = acc(0.06);
+pub const VELSTOPJUMP: f32 = vel(5.0);
 pub const BOUNCESTRENGTH: f32 = 0.5;
-pub const TAGGEDBOOST: f32 = 1.0;
-pub const VELSUPERSTOMP: f32 = 10.0;
-pub const VELTAILSHAKE: f32 = 1.0;
-pub const VELKURIBOBOUNCE: f32 = 3.0;
-pub const VELENEMYBOUNCE: f32 = 7.0;
-pub const GRAVITATION: f32 = 0.40;
-pub const MAXVELY: f32 = 20.0;
-pub const MAXSIDEVELY: f32 = 10.0;
+pub const TAGGEDBOOST: f32 = vel(1.0);
+pub const VELSUPERSTOMP: f32 = vel(10.0);
+pub const VELTAILSHAKE: f32 = vel(1.0);
+pub const VELKURIBOBOUNCE: f32 = vel(3.0);
+pub const VELENEMYBOUNCE: f32 = vel(7.0);
+pub const GRAVITATION: f32 = acc(0.40);
+pub const MAXVELY: f32 = vel(20.0);
+pub const MAXSIDEVELY: f32 = vel(10.0);
 pub const CRUNCHVELOCITY: i32 = 2;
 pub const CRUNCHAMOUNT: i32 = 16;
 pub const CRUNCHMAX: i32 = 32;
@@ -85,11 +85,38 @@ pub const WORLDMUSICSLEEP: i32 = MAXWORLDMUSICCATEGORY + 1;
 pub const WORLDMUSICWORLDS: i32 = MAXWORLDMUSICCATEGORY + 2;
 pub const MAXCATEGORYTRACKS: i32 = 64;
 pub const MAXEYECANDY: i32 = 192;
-pub const CORPSESTAY: i32 = 200;
-pub const WAITTIME: i32 = 16;
+pub const CORPSESTAY: i32 = ticks(200);
 /// Ticks of game logic per second of wall time on every platform, whatever the display refreshes at. Netplay
 /// depends on it, so changing it changes the protocol version.
 pub const TICKS_PER_SECOND: u32 = 60;
+/// Options files, world files and tours store durations in frames of the original 62-frames-per-second game.
+/// The original game ticked every 16 ms. Its per-tick velocities, accelerations and tick counts go through these, so
+/// the game moves at its original speed in wall time.
+pub const ORIGINAL_TICKS_PER_SECOND: f32 = 62.5;
+pub const TICK_SCALE: f32 = ORIGINAL_TICKS_PER_SECOND / TICKS_PER_SECOND as f32;
+pub const fn vel(per_original_tick: f32) -> f32 {
+    per_original_tick * TICK_SCALE
+}
+pub const fn acc(per_original_tick_squared: f32) -> f32 {
+    per_original_tick_squared * TICK_SCALE * TICK_SCALE
+}
+pub const fn ticks(original_ticks: i32) -> i32 {
+    let (num, den) = (TICKS_PER_SECOND as i64 * 2, (ORIGINAL_TICKS_PER_SECOND * 2.0) as i64);
+    let scaled = original_ticks as i64 * num;
+    (if scaled >= 0 { (scaled + den / 2) / den } else { (scaled - den / 2) / den }) as i32
+}
+/// Milliseconds from `start_ms` to the next tick boundary of wall time, for loops that sleep in whole ms.
+pub const fn ms_to_next_tick(start_ms: u32, now_ms: u32) -> u32 {
+    let tps = TICKS_PER_SECOND as u64;
+    let next = ((start_ms as u64 * tps / 1000 + 1) * 1000).div_ceil(tps) as u32;
+    next.saturating_sub(now_ms)
+}
+pub const fn ticks_from_disk(frames: i16) -> i16 {
+    ((frames as i32 * TICKS_PER_SECOND as i32 + 31) / 62) as i16
+}
+pub const fn ticks_to_disk(ticks: i16) -> i16 {
+    ((ticks as i32 * 62 + TICKS_PER_SECOND as i32 / 2) / TICKS_PER_SECOND as i32) as i16
+}
 /// The Graphics Options "Frame Rate" setting: present at the display's refresh, or at most one of these rates. Older
 /// options files hold a frame time in ms (at most 100) in its byte, so any other value reads as Display.
 pub const FRAME_RATE_DISPLAY: i16 = 200;
@@ -130,3 +157,20 @@ pub const NUMSTOMPENEMIES: i32 = 9;
 pub const NUMSURVIVALENEMIES: i32 = 3;
 pub const NUMFRENZYCARDS: i32 = 19;
 pub const MAX_PLAYERS: i32 = 4;
+
+#[cfg(test)]
+mod tick_scale_tests {
+    use super::*;
+
+    #[test]
+    fn ticks_keep_wall_time() {
+        assert_eq!(ticks(25), 24);
+        assert_eq!(ticks(580), 557);
+        assert_eq!(ticks(4), 4);
+        assert_eq!(ticks(-25), -24);
+        assert_eq!(ticks_from_disk(1860), 1800);
+        assert_eq!(ticks_to_disk(1800), 1860);
+        assert_eq!(ms_to_next_tick(0, 0), 17);
+        assert_eq!(ms_to_next_tick(17, 20), 14);
+    }
+}

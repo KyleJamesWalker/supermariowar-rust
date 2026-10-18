@@ -6,7 +6,6 @@
 use crate::common::keys::*;
 use crate::game::Game;
 use crate::common::game_values::AppState;
-use crate::common::global_constants::WAITTIME;
 use crate::common::random_number_generator::{RandomNumberGenerator, RandomNumberGeneratorType};
 use crate::common::sfx;
 use crate::globals::*;
@@ -213,7 +212,7 @@ fn strtol10(s: &str) -> i64 {
 }
 
 fn virtual_ticks(g: &mut Game) -> u32 {
-    1000u32.wrapping_add(h(g).frame.wrapping_mul(WAITTIME as u32))
+    1000u32.wrapping_add((h(g).frame as u64 * 1000 / crate::common::global_constants::TICKS_PER_SECOND as u64) as u32)
 }
 
 /// A recording's text: plain, or gzipped (.smwrp, .txt.gz).
@@ -1128,8 +1127,8 @@ fn record_wait_event(g: &mut Game) -> Input {
     }
 }
 
-/// About three seconds at the default 16 ms frame time.
-const UNFINISHED_TAIL_FRAMES: u32 = 188;
+/// Three seconds.
+const UNFINISHED_TAIL_FRAMES: u32 = 3 * crate::common::global_constants::TICKS_PER_SECOND;
 
 /// Writes `#@ frames=` and closes the recording, or removes a watch session's throwaway HOME.
 /// Safe to call more than once.

@@ -1,6 +1,7 @@
 //! Port of src/smw/ui/MI_NetRoomTeamSelect.cpp
 
 
+use crate::common::global_constants::ticks;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::input::CPlayerInput;
@@ -143,7 +144,7 @@ impl UI_ControlTrait for MI_NetRoomTeamSelect {
             } else if playerKeys.menu_up().fDown {
                 if self.iFastScroll == 0 {
                     self.iFastScrollTimer += 1;
-                    if self.iFastScrollTimer > 40 {
+                    if self.iFastScrollTimer > ticks(40) as i16 {
                         self.iFastScroll = 1;
                     }
                 } else {
@@ -175,7 +176,7 @@ impl UI_ControlTrait for MI_NetRoomTeamSelect {
             } else if playerKeys.menu_down().fDown {
                 if self.iFastScroll == 0 {
                     self.iFastScrollTimer += 1;
-                    if self.iFastScrollTimer > 40 {
+                    if self.iFastScrollTimer > ticks(40) as i16 {
                         self.iFastScroll = 1;
                     }
                 } else {

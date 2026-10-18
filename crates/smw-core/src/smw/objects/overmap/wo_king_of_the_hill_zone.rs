@@ -5,7 +5,7 @@ use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
-use crate::common::global_constants::{MAPHEIGHT, MAPWIDTH, TILESIZE};
+use crate::common::global_constants::{ticks, MAPHEIGHT, MAPWIDTH, TILESIZE};
 use crate::common::math::vec2::Vec2s;
 use crate::common::object_base::{object_kingofthehill_area, CObjectTrait};
 use crate::common::random_number_generator::RANDOM_INT;
@@ -272,7 +272,7 @@ impl CObjectTrait for OMO_KingOfTheHillZone {
             // Speed of point accumulation is proportional to how many players are in zone
             self.scoretimer = (self.scoretimer as i32 + (((iMax as i32) << 1) - self.totalTouchingPlayers as i32)) as i16;
 
-            if self.scoretimer >= g.game_values.pointspeed {
+            if self.scoretimer as i32 >= ticks(g.game_values.pointspeed as i32) {
                 self.scoretimer = 0;
                 g.player(gp.players[self.iPlayerID as usize]).score(g).adjust_score(g, self.multiplier);
                 gp.get().mode().check_winner(g, gp.get().players[self.iPlayerID as usize]);

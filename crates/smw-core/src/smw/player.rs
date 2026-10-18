@@ -395,7 +395,7 @@ impl CPlayer {
             carriedItem: ObjectId::NONE,
             ownerPlayerID: -1,
             ownerColorOffsetX: 0,
-            spawntext: 20, // set it to 20 so there is an immediate text spawned upon winning
+            spawntext: ticks(20) as i16, // set it to 20 so there is an immediate text spawned upon winning
             iSuicideCreditPlayerID: -1,
             iSuicideCreditTimer: 0,
             net_waitingForPowerupTrigger: false,
@@ -664,7 +664,7 @@ impl CPlayer {
                         self.jump(g, direction as i16, 1.0, true);
 
                         self.superjumptype = 3;
-                        self.superjumptimer = 16;
+                        self.superjumptimer = ticks(16) as i16;
                     }
                 }
             }
@@ -675,7 +675,7 @@ impl CPlayer {
 
             //If rain candy is turned on
             if (b(g.g_map.eyecandy[0] as i32 & 32) || b(g.g_map.eyecandy[1] as i32 & 32) || b(g.g_map.eyecandy[2] as i32 & 32))
-                && self.velx.abs() > VELMOVINGADD
+                && self.velx.abs() > vel(0.5)
                 && {
                     self.rainsteptimer += 1;
                     self.rainsteptimer > 7
@@ -783,10 +783,9 @@ impl CPlayer {
     pub fn update_waiting_for_respawn(&mut self, g: &mut Game) {
         debug_assert!(self.state == PlayerState::Waiting);
 
-        //use 31 frames to do 0.5 second increments
         if *self.respawncounter(g) > 0 && {
             self.waittimer += 1;
-            self.waittimer >= 31
+            self.waittimer >= (TICKS_PER_SECOND / 2) as i16
         } {
             self.waittimer = 0;
             *self.respawncounter(g) -= 1;
@@ -837,7 +836,7 @@ impl CPlayer {
         let numPodobos = (RANDOM_INT(gp.get(), 6) + 10) as i16;
         for _iPodobo in 0..numPodobos {
             let x = RANDOM_INT(gp.get(), (App::screenWidth as f32 * 0.95f32) as i32) as i16;
-            let vy = -((RANDOM_INT(gp.get(), 9) as f32) / 2.0f32) - 9.0f32;
+            let vy = vel(-((RANDOM_INT(gp.get(), 9) as f32) / 2.0f32) - 9.0f32);
             let obj = Ptr::new_box(MO_Podobo::new(
                 g,
                 rm.spr_podobo,
@@ -878,12 +877,12 @@ impl CPlayer {
         let mut gp = g.ptr();
         let mut rm = g.rm;
         let this = self.this();
-        let ttl = (RANDOM_INT(gp.get(), 120) + 120) as i16;
+        let ttl = ticks(RANDOM_INT(gp.get(), 120) + 120) as i16;
         let mut bomb = Ptr::new_box(CO_Bomb::new(
             g,
             rm.spr_bomb,
             Vec2s::new((ix + HALFPW - 14) as i16, (iy - 8) as i16),
-            Vec2f::new(if facingRight { 3.0 } else { -3.0 }, -3.0),
+            Vec2f::new(if facingRight { vel(3.0) } else { vel(-3.0) }, vel(-3.0)),
             4,
             self.globalID,
             self.teamID,
@@ -900,7 +899,7 @@ impl CPlayer {
         gp.objectcontainer[1].add(g, bomb);
         self.projectiles += 1;
 
-        self.hammertimer = 90;
+        self.hammertimer = ticks(90) as i16;
 
         if_sound_on_play(g, &mut gp.rm.sfx_fireball);
 
@@ -935,10 +934,10 @@ impl CPlayer {
             }
             SpawnStyle::Swirl => {
                 self.spawntimer += 1;
-                if self.spawntimer >= 50 {
+                if self.spawntimer as i32 >= ticks(50) {
                     self.state = PlayerState::Ready;
                 } else if self.spawntimer % 2 != 0 {
-                    let swirlindex = (self.spawntimer >> 1) as usize;
+                    let swirlindex = (self.spawntimer as i32 * 25 / ticks(50)) as usize;
                     let ixoffset = (self.ix as i32 - PWOFFSET) as i16;
                     let iyoffset = (self.iy as i32 - PHOFFSET) as i16;
                     let iColorIdOffset = ((self.colorID as i32) << 5) as i16;
@@ -1000,14 +999,14 @@ impl CPlayer {
             }
             PowerupType::Pow => {
                 if_sound_on_play(g, &mut gp.rm.sfx_thunder);
-                g.game_values.flags.screenshaketimer = 20;
+                g.game_values.flags.screenshaketimer = ticks(20) as i16;
                 g.game_values.flags.screenshakeplayerid = self.globalID;
                 g.game_values.flags.screenshaketeamid = self.teamID;
                 g.game_values.flags.screenshakekillinair = false;
                 g.game_values.flags.screenshakekillscount = 0;
             }
             PowerupType::BulletBill => {
-                g.game_values.bulletbilltimer[self.globalID as usize] = 400;
+                g.game_values.bulletbilltimer[self.globalID as usize] = ticks(400) as i16;
                 g.game_values.bulletbillspawntimer[self.globalID as usize] = 0;
             }
             PowerupType::Hammer => {
@@ -1040,7 +1039,7 @@ impl CPlayer {
             }
             PowerupType::Mod => {
                 if_sound_on_play(g, &mut gp.rm.sfx_thunder);
-                g.game_values.flags.screenshaketimer = 20;
+                g.game_values.flags.screenshaketimer = ticks(20) as i16;
                 g.game_values.flags.screenshakeplayerid = self.globalID;
                 g.game_values.flags.screenshaketeamid = self.teamID;
                 g.game_values.flags.screenshakekillinair = true;
@@ -1091,8 +1090,8 @@ impl CPlayer {
     pub fn update_use_powerup(&mut self, g: &mut Game) {
         debug_assert!(self.powerupused.is_some());
 
-        self.powerupradius -= g.game_values.storedpowerupdelay as f32 / 2.0f32;
-        self.powerupangle += 0.05f32;
+        self.powerupradius -= vel(g.game_values.storedpowerupdelay as f32 / 2.0f32);
+        self.powerupangle += vel(0.05f32);
 
         if g.netplay.active && self.net_waitingForPowerupTrigger {
             return;
@@ -1380,7 +1379,7 @@ impl CPlayer {
             //or if they have been flying for a while, stop them flying
             if self.frozen || {
                 self.flyingtimer += 1;
-                self.flyingtimer > 200
+                self.flyingtimer as i32 > ticks(200)
             } {
                 self.flyingtimer = 0;
                 self.flying = false;
@@ -1390,10 +1389,10 @@ impl CPlayer {
                 }
             } else {
                 //otherwise allow them to rise and swoop while flying
-                if self.keys(g).game_down().fDown && self.vely < 1.0 {
-                    self.vely += 1.0;
-                } else if !self.keys(g).game_down().fDown && self.vely > -1.0 {
-                    self.vely -= 1.5;
+                if self.keys(g).game_down().fDown && self.vely < vel(1.0) {
+                    self.vely += acc(1.0);
+                } else if !self.keys(g).game_down().fDown && self.vely > vel(-1.0) {
+                    self.vely -= acc(1.5);
                     self.inair = true;
                 }
             }
@@ -1462,7 +1461,7 @@ impl CPlayer {
             | (if k.game_powerup().fDown { 32 } else { 0 });
 
         //If any key was pressed, reset the suicide timer
-        if keymask != 0 || (keymaskdown != 0 && (self.velx < -1.0 || self.velx > 1.0)) {
+        if keymask != 0 || (keymaskdown != 0 && (self.velx < vel(-1.0) || self.velx > vel(1.0))) {
             self.suicidetimer.reset();
         }
 
@@ -1694,7 +1693,7 @@ impl CPlayer {
                     gp.get().rm.spr_hammer,
                     Vec2s::new((ix + 8) as i16, iy as i16),
                     6,
-                    Vec2f::new(vx + 2.0f32, -HAMMERTHROW),
+                    Vec2f::new(vx + vel(2.0f32), -HAMMERTHROW),
                     5,
                     self.globalID,
                     self.teamID,
@@ -1708,7 +1707,7 @@ impl CPlayer {
                     gp.get().rm.spr_hammer,
                     Vec2s::new((ix - 14) as i16, iy as i16),
                     6,
-                    Vec2f::new(vx - 2.0f32, -HAMMERTHROW),
+                    Vec2f::new(vx - vel(2.0f32), -HAMMERTHROW),
                     5,
                     self.globalID,
                     self.teamID,
@@ -1736,7 +1735,7 @@ impl CPlayer {
                     g,
                     rm.spr_iceblast,
                     Vec2s::new((ix + HALFPW - 2) as i16, (iy + HALFPH - 16) as i16),
-                    5.0,
+                    vel(5.0),
                     self.globalID,
                     self.teamID,
                     self.colorID,
@@ -1747,7 +1746,7 @@ impl CPlayer {
                     g,
                     rm.spr_iceblast,
                     Vec2s::new((ix + HALFPW - 30) as i16, (iy + HALFPH - 16) as i16),
-                    -5.0,
+                    vel(-5.0),
                     self.globalID,
                     self.teamID,
                     self.colorID,
@@ -1998,10 +1997,10 @@ impl CPlayer {
             //Add eyecandy for the dead player
             if deathStyle == PlayerDeathStyle::Shatter || self.frozen {
                 let ice = g.rm.spr_brokeniceblock;
-                g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, ice, (ix + HALFPW - 16) as i16, (iy + HALFPH - 16) as i16, -1.5, -7.0, 4, 2, 0, 0, 16, 16));
-                g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, ice, (ix + HALFPW) as i16, (iy + HALFPH - 16) as i16, 1.5, -7.0, 4, 2, 0, 0, 16, 16));
-                g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, ice, (ix + HALFPW - 16) as i16, (iy + HALFPH) as i16, -1.5, -4.0, 4, 2, 0, 0, 16, 16));
-                g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, ice, (ix + HALFPW) as i16, (iy + HALFPH) as i16, 1.5, -4.0, 4, 2, 0, 0, 16, 16));
+                g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, ice, (ix + HALFPW - 16) as i16, (iy + HALFPH - 16) as i16, vel(-1.5), vel(-7.0), 4, 2, 0, 0, 16, 16));
+                g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, ice, (ix + HALFPW) as i16, (iy + HALFPH - 16) as i16, vel(1.5), vel(-7.0), 4, 2, 0, 0, 16, 16));
+                g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, ice, (ix + HALFPW - 16) as i16, (iy + HALFPH) as i16, vel(-1.5), vel(-4.0), 4, 2, 0, 0, 16, 16));
+                g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, ice, (ix + HALFPW) as i16, (iy + HALFPH) as i16, vel(1.5), vel(-4.0), 4, 2, 0, 0, 16, 16));
 
                 g.game_values.unlocksecret2part2 += 1;
             } else if deathStyle == PlayerDeathStyle::Jump {
@@ -2169,7 +2168,7 @@ impl CPlayer {
 
     pub fn spawn_text(&mut self, g: &mut Game, szText: &str) {
         self.spawntext += 1;
-        if self.spawntext >= 20 {
+        if self.spawntext as i32 >= ticks(20) {
             g.eyecandy[2].emplace(EC_GravText::new(
                 Ptr::from_mut(&mut g.rm.game_font_large),
                 (self.ix as i32 + HALFPW) as i16,

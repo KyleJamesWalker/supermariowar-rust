@@ -40,6 +40,7 @@ fn calc_velocity(speed: f32, angle: f32) -> Vec2f {
 pub struct MovingPlatformPath {
     pub m_startPos: Vec2f,
     pub m_endPos: Vec2f,
+    /// Map-file units, per original tick; motion scales it with `vel`.
     pub m_speed: f32,
 
     pub m_velocity: [Vec2f; 2],
@@ -191,7 +192,7 @@ impl StraightPath {
     pub fn new(speed: f32, startPos: Vec2f, endPos: Vec2f, preview: bool) -> Self {
         let base = MovingPlatformPath::new(speed, startPos, endPos, preview);
         let (m_angle, length) = straight_angle_and_length(&base);
-        let m_steps = (length / base.m_speed) as i16 + 1;
+        let m_steps = (length / vel(base.m_speed)) as i16 + 1;
 
         let mut p = StraightPath { base, m_angle, m_steps, m_currentStep: [0, 0], m_goalPoint: [GoalPoint::Start, GoalPoint::Start] };
 
@@ -216,7 +217,7 @@ impl StraightPath {
     }
 
     fn set_velocity(&mut self, r#type: usize) {
-        self.base.m_velocity[r#type] = calc_velocity(self.base.m_speed, self.m_angle);
+        self.base.m_velocity[r#type] = calc_velocity(vel(self.base.m_speed), self.m_angle);
 
         if self.m_goalPoint[r#type] == GoalPoint::Start {
             self.base.m_velocity[r#type] *= -1.0;
@@ -278,7 +279,7 @@ impl StraightPathContinuous {
     pub fn new(speed: f32, startPos: Vec2f, angle: f32, preview: bool) -> Self {
         let base = MovingPlatformPath::new(speed, startPos, Vec2f::zero(), preview);
         let (m_angle, length) = straight_angle_and_length(&base);
-        let m_steps = (length / base.m_speed) as i16 + 1;
+        let m_steps = (length / vel(base.m_speed)) as i16 + 1;
 
         let mut p = StraightPathContinuous {
             base,
@@ -319,7 +320,7 @@ impl StraightPathContinuous {
     }
 
     fn set_velocity(&mut self, t: usize) {
-        self.base.m_velocity[t] = calc_velocity(self.base.m_speed, self.m_angle);
+        self.base.m_velocity[t] = calc_velocity(vel(self.base.m_speed), self.m_angle);
 
         if self.m_goalPoint[t] == GoalPoint::Start {
             self.base.m_velocity[t] *= -1.0;
@@ -424,7 +425,7 @@ impl MovingPlatformPathTrait for EllipsePath {
         let t = r#type as usize;
         let oldPos = self.base.m_currentPos[t];
 
-        self.m_angle[t] += self.base.m_speed;
+        self.m_angle[t] += vel(self.base.m_speed);
 
         if self.base.m_speed < 0.0 {
             while self.m_angle[t] < 0.0 {

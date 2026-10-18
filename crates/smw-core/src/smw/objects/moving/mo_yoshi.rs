@@ -164,7 +164,7 @@ impl CObjectTrait for MO_Yoshi {
         self.animate();
 
         self.timer += 1;
-        if self.timer > 2000 {
+        if self.timer as i32 > ticks(2000) {
             self.place_yoshi(g);
         }
     }

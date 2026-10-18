@@ -1,5 +1,6 @@
 //! Port of src/smw/ui/MI_TeamSelect.cpp
 
+use crate::common::global_constants::ticks;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -441,7 +442,7 @@ impl UI_ControlTrait for MI_TeamSelect {
                         } else if playerKeys.menu_up().fDown {
                             if self.iFastScroll[p] == 0 {
                                 self.iFastScrollTimer[p] += 1;
-                                if self.iFastScrollTimer[p] > 40 {
+                                if self.iFastScrollTimer[p] > ticks(40) as i16 {
                                     self.iFastScroll[p] = 1;
                                 }
                             } else {
@@ -479,7 +480,7 @@ impl UI_ControlTrait for MI_TeamSelect {
                         } else if playerKeys.menu_down().fDown {
                             if self.iFastScroll[p] == 0 {
                                 self.iFastScrollTimer[p] += 1;
-                                if self.iFastScrollTimer[p] > 40 {
+                                if self.iFastScrollTimer[p] > ticks(40) as i16 {
                                     self.iFastScroll[p] = 1;
                                 }
                             } else {

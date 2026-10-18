@@ -369,14 +369,8 @@ const SDL_BUTTON_RMASK: u32 = 1 << (SDL_BUTTON_RIGHT - 1);
 /// The end-of-frame wait every editor loop does; the reference harness `#define`s `SDL_Delay` to this.
 fn frame_wait(g: &mut Game, framestart: i32) {
     let mut gp = g.ptr();
-    let mut delay: i32 = WAITTIME - (crate::services::ticks(gp.get()) as i32 - framestart);
-    if delay < 0 {
-        delay = 0;
-    } else if delay > WAITTIME {
-        delay = WAITTIME;
-    }
-
-    editor_harness::frame_delay(g, delay as u32);
+    let delay = ms_to_next_tick(framestart as u32, crate::services::ticks(gp.get()));
+    editor_harness::frame_delay(g, delay);
 }
 
 fn tile(g: &mut Game, iCol: i16, iRow: i16) -> &'static mut WorldMapTile {
@@ -1370,7 +1364,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                                     g.g_worldmap.iMusicCategory.post_increment();
                                 }
 
-                                ed(gp.get()).g_musiccategorydisplaytimer = 90;
+                                ed(gp.get()).g_musiccategorydisplaytimer = ticks(90) as i16;
                             }
 
                             if key_sym(g) == SDLK_s {
@@ -1411,7 +1405,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                                     updateworldsurface(g);
 
                                     view_repeat_direction = 0;
-                                    view_repeat_timer = 30;
+                                    view_repeat_timer = ticks(30) as i16;
 
                                     iStageDisplay = -1;
                                 }
@@ -1421,7 +1415,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                                     updateworldsurface(g);
 
                                     view_repeat_direction = 1;
-                                    view_repeat_timer = 30;
+                                    view_repeat_timer = ticks(30) as i16;
 
                                     iStageDisplay = -1;
                                 }
@@ -1431,7 +1425,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                                     updateworldsurface(g);
 
                                     view_repeat_direction = 2;
-                                    view_repeat_timer = 30;
+                                    view_repeat_timer = ticks(30) as i16;
 
                                     iStageDisplay = -1;
                                 }
@@ -1441,7 +1435,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                                     updateworldsurface(g);
 
                                     view_repeat_direction = 3;
-                                    view_repeat_timer = 30;
+                                    view_repeat_timer = ticks(30) as i16;
 
                                     iStageDisplay = -1;
                                 }
@@ -4312,7 +4306,7 @@ pub fn savecurrentworld(g: &mut Game) -> i32 {
 
 pub fn SetDisplayMessage(g: &mut Game, iTime: i16, szTitle: &str, szLine1: &str, szLine2: &str, szLine3: &str) {
     let mut gp = g.ptr();
-    ed(gp.get()).g_messagedisplaytimer = iTime;
+    ed(gp.get()).g_messagedisplaytimer = ticks(iTime as i32) as i16;
     ed(gp.get()).g_szMessageTitle = szTitle.to_string();
     ed(gp.get()).g_szMessageLine[0] = szLine1.to_string();
     ed(gp.get()).g_szMessageLine[1] = szLine2.to_string();

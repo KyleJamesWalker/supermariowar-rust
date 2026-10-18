@@ -1,5 +1,6 @@
 //! Port of src/common/ui/MI_MapField.cpp
 
+use crate::common::global_constants::{ticks, vel};
 use crate::common::resource_manager::SpriteId;
 use crate::common::keys::*;
 use crate::common::gfx::soft_surface::Rect;
@@ -27,6 +28,7 @@ pub struct MI_MapField {
     pub miModifyImageRight: Box<MI_Image>,
 
     pub iSlideListOutGoal: i16,
+    pub dSlideListRemainder: f32,
 
     pub sSearchString: String,
     pub iSearchStringTimer: i16,
@@ -54,6 +56,7 @@ impl MI_MapField {
             miModifyImageLeft,
             miModifyImageRight,
             iSlideListOutGoal: 0,
+            dSlideListRemainder: 0.0,
             sSearchString: String::new(),
             iSearchStringTimer: 0,
             fShowtags: showtags,
@@ -189,7 +192,7 @@ impl UI_ControlTrait for MI_MapField {
                     //maplist->startswith((char)playerInput->iPressedKey);
 
                     self.sSearchString.push(iPressedKey as u8 as char);
-                    self.iSearchStringTimer = 10;
+                    self.iSearchStringTimer = ticks(10) as i16;
 
                     if !g.maplist.startswith(&self.sSearchString) {
                         self.sSearchString = String::new();
@@ -219,14 +222,18 @@ impl UI_ControlTrait for MI_MapField {
         }
 
         if self.iSlideListOut != self.iSlideListOutGoal {
+            self.dSlideListRemainder += vel(4.0);
+            let iStep = self.dSlideListRemainder as i16;
+            self.dSlideListRemainder -= iStep as f32;
+
             if self.iSlideListOutGoal > self.iSlideListOut {
-                self.iSlideListOut += 4;
+                self.iSlideListOut += iStep;
 
                 if self.iSlideListOut > self.iSlideListOutGoal {
                     self.iSlideListOut = self.iSlideListOutGoal;
                 }
             } else if self.iSlideListOutGoal < self.iSlideListOut {
-                self.iSlideListOut -= 4;
+                self.iSlideListOut -= iStep;
 
                 if self.iSlideListOut < self.iSlideListOutGoal {
                     self.iSlideListOut = self.iSlideListOutGoal;

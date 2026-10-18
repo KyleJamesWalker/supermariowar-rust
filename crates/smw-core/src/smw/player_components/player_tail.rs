@@ -8,6 +8,7 @@ use crate::common::player_kill_styles::KillStyle;
 use crate::globals::*;
 use crate::smw::objects::moving::mo_spin_attack::MO_SpinAttack;
 use crate::smw::player::CPlayer;
+use crate::common::global_constants::{vel};
 
 pub type PlayerTailState = i32;
 pub const TAIL_NOT_IN_USE: PlayerTailState = 0;
@@ -74,8 +75,8 @@ impl PlayerTail {
     //If player is shaking tail, slow decent
     pub fn slow_descent(&mut self, player: &mut CPlayer) {
         if self.iTailState == TAIL_SHAKE {
-            if player.vely > 1.5f32 {
-                player.vely = 1.5f32;
+            if player.vely > vel(1.5f32) {
+                player.vely = vel(1.5f32);
             }
         }
     }

@@ -80,7 +80,7 @@ pub fn pu_feather_powerup_update<T: PU_FeatherPowerupTrait + ?Sized>(this: &mut 
     // Have the powerup grow out of the powerup block
     if o.state == 0 {
         let fy = o.fy;
-        o.set_yf(fy - 4.0f32);
+        o.set_yf(fy - vel(4.0));
 
         if o.fy <= o.desty {
             o.state = 1;
@@ -90,7 +90,7 @@ pub fn pu_feather_powerup_update<T: PU_FeatherPowerupTrait + ?Sized>(this: &mut 
         o.fOldY = o.fy;
 
         let fy = o.fy;
-        o.set_yf(fy - 4.0f32);
+        o.set_yf(fy - vel(4.0));
 
         if o.fy <= o.desty - 128.0f32 {
             o.state = 2;
@@ -99,14 +99,14 @@ pub fn pu_feather_powerup_update<T: PU_FeatherPowerupTrait + ?Sized>(this: &mut 
         }
     } else {
         if !o.fFloatDirectionRight {
-            o.dFloatAngle += 0.035f32;
+            o.dFloatAngle += vel(0.035);
 
             if o.dFloatAngle >= THREE_QUARTER_PI {
                 o.dFloatAngle = THREE_QUARTER_PI;
                 o.fFloatDirectionRight = true;
             }
         } else {
-            o.dFloatAngle -= 0.035f32;
+            o.dFloatAngle -= vel(0.035);
 
             if o.dFloatAngle <= QUARTER_PI {
                 o.dFloatAngle = QUARTER_PI;
@@ -114,7 +114,7 @@ pub fn pu_feather_powerup_update<T: PU_FeatherPowerupTrait + ?Sized>(this: &mut 
             }
         }
 
-        o.dFloatCenterY += 1.0f32;
+        o.dFloatCenterY += vel(1.0);
 
         let x = 64.0f32 * cosf(o.dFloatAngle) + o.dFloatCenterX;
         o.set_xf(x);

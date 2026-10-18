@@ -245,6 +245,6 @@ impl MO_CarriedObjectTrait for CO_Flag {
 
     fn drop(&mut self, g: &mut Game) {
         mo_carried_object_drop(g, self);
-        self.owner_throw_timer = 62;
+        self.owner_throw_timer = TICKS_PER_SECOND as i16;
     }
 }

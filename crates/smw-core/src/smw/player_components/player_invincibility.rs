@@ -4,10 +4,11 @@ use crate::game::Game;
 use crate::common::gfx::gfx_palette::{invincibility_1, invincibility_2, invincibility_3, normal, PlayerPalette};
 use crate::globals::*;
 use crate::smw::player::CPlayer;
+use crate::common::global_constants::{ticks};
 
 const INVINCIBILITY_ANIMATION_STATES: [PlayerPalette; 4] = [normal, invincibility_1, invincibility_2, invincibility_3];
-const INVINCIBILITY_TIME: i16 = 580;
-const INVINCIBILITY_HURRYUP_TIME: i16 = 100;
+const INVINCIBILITY_TIME: i16 = ticks(580) as i16;
+const INVINCIBILITY_HURRYUP_TIME: i16 = ticks(100) as i16;
 const INVINCIBILITY_ANIMATION_DELAY: i16 = 4;
 const INVINCIBILITY_HURRYUP_ANIMATION_DELAY: i16 = 7;
 

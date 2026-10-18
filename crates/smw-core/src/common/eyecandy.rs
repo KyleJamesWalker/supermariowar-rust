@@ -411,8 +411,8 @@ impl EC_Leaf {
             self.iAnimationY = 48;
         }
 
-        self.velx = RANDOM_INT(gp.get(), 9) as f32 / 4.0f32;
-        self.vely = RANDOM_INT(gp.get(), 9) as f32 / 4.0f32 + 1.0f32;
+        self.velx = vel(RANDOM_INT(gp.get(), 9) as f32 / 4.0f32);
+        self.vely = vel(RANDOM_INT(gp.get(), 9) as f32 / 4.0f32 + 1.0f32);
 
         self.fForward = RANDOM_BOOL(gp.get());
         self.iAnimationFrame = ((RANDOM_INT(gp.get(), 3) + if self.fForward { 0 } else { 1 }) * self.iAnimationW as i32) as i16;
@@ -451,8 +451,8 @@ impl EC_Snow {
             vely: 0.0,
         };
 
-        this.velx = RANDOM_INT(gp.get(), 9) as f32 / 4.0f32;
-        this.vely = RANDOM_INT(gp.get(), 9) as f32 / 4.0f32 + 1.0f32;
+        this.velx = vel(RANDOM_INT(gp.get(), 9) as f32 / 4.0f32);
+        this.vely = vel(RANDOM_INT(gp.get(), 9) as f32 / 4.0f32 + 1.0f32);
         this
     }
 
@@ -534,8 +534,8 @@ impl EC_Rain {
 
     fn next_rain_drop(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        self.velx = -5.0f32 + RANDOM_INT(gp.get(), 5) as f32 / 4.0f32;
-        self.vely = 4.0f32 + RANDOM_INT(gp.get(), 5) as f32 / 4.0f32;
+        self.velx = vel(-5.0f32 + RANDOM_INT(gp.get(), 5) as f32 / 4.0f32);
+        self.vely = vel(4.0f32 + RANDOM_INT(gp.get(), 5) as f32 / 4.0f32);
 
         self.dy = -16.0f32;
         self.dx = RANDOM_INT(gp.get(), screenWidth) as f32;
@@ -602,8 +602,8 @@ impl EC_Bubble {
 
     fn next_bubble(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        self.velx = -1.0f32 + RANDOM_INT(gp.get(), 9) as f32 / 4.0f32;
-        self.vely = -4.0f32 + RANDOM_INT(gp.get(), 9) as f32 / 4.0f32;
+        self.velx = vel(-1.0f32 + RANDOM_INT(gp.get(), 9) as f32 / 4.0f32);
+        self.vely = vel(-4.0f32 + RANDOM_INT(gp.get(), 9) as f32 / 4.0f32);
 
         self.dy = screenHeight as f32;
         self.dx = RANDOM_INT(gp.get(), screenWidth) as f32;
@@ -1157,7 +1157,7 @@ impl EC_SwirlingAward {
 
     pub fn update(&mut self, g: &mut Game) {
         self.angle += self.vel;
-        self.radius += 3.0f32;
+        self.radius += vel(3.0f32);
 
         self.timer += 1;
         if self.timer > self.ttl {
@@ -1255,7 +1255,7 @@ impl EC_RocketAward {
     }
 
     pub fn update(&mut self, g: &mut Game) {
-        self.vely += 0.2f32;
+        self.vely += acc(0.2f32);
 
         self.y += self.vely;
         self.x += self.velx;
@@ -1448,7 +1448,7 @@ impl EC_SoulsAward {
         let mut gp = g.ptr();
         if !self.endmode && {
             self.timer += 1;
-            self.timer as f32 > self.speed
+            self.timer as i32 > ticks(self.speed as i32)
         } {
             self.timer = 0;
 
@@ -1456,8 +1456,8 @@ impl EC_SoulsAward {
             let startangle = -HALF_PI;
 
             let angle = (RANDOM_INT(gp.get(), 21) - 10) as f32 * addangle + startangle;
-            let velx = self.speed * cosf(angle);
-            let vely = self.speed * sinf(angle);
+            let velx = vel(self.speed) * cosf(angle);
+            let vely = vel(self.speed) * sinf(angle);
 
             let spr = g.rm.spr_awardsouls;
             g.eyecandy[2].emplace(EC_RocketAward::new(

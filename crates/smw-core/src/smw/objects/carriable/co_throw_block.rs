@@ -175,10 +175,10 @@ impl CO_ThrowBlock {
 
         let spr = g.rm.spr_brokeniceblock;
         let (ix, iy) = (self.ix as i32, self.iy as i32);
-        g.eyecandy[2].emplace(EC_FallingObject::new(&g.rm, spr, ix as i16, iy as i16, -1.5, -7.0, 4, 2, 0, 0, 16, 16));
-        g.eyecandy[2].emplace(EC_FallingObject::new(&g.rm, spr, (ix + 16) as i16, iy as i16, 1.5, -7.0, 4, 2, 0, 0, 16, 16));
-        g.eyecandy[2].emplace(EC_FallingObject::new(&g.rm, spr, ix as i16, (iy + 16) as i16, -1.5, -4.0, 4, 2, 0, 0, 16, 16));
-        g.eyecandy[2].emplace(EC_FallingObject::new(&g.rm, spr, (ix + 16) as i16, (iy + 16) as i16, 1.5, -4.0, 4, 2, 0, 0, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&g.rm, spr, ix as i16, iy as i16, vel(-1.5), vel(-7.0), 4, 2, 0, 0, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&g.rm, spr, (ix + 16) as i16, iy as i16, vel(1.5), vel(-7.0), 4, 2, 0, 0, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&g.rm, spr, ix as i16, (iy + 16) as i16, vel(-1.5), vel(-4.0), 4, 2, 0, 0, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&g.rm, spr, (ix + 16) as i16, (iy + 16) as i16, vel(1.5), vel(-4.0), 4, 2, 0, 0, 16, 16));
 
         g.game_values.unlocksecret2part2 += 1;
 
@@ -237,7 +237,7 @@ impl CObjectTrait for CO_ThrowBlock {
             self.animationspeed = 0;
 
             self.frozen = true;
-            self.frozentimer = 300;
+            self.frozentimer = ticks(300) as i16;
 
             g.eyecandy[2].emplace(EC_SingleAnimation::new(&g.rm, 
                 g.rm.spr_fireballexplosion,
@@ -368,10 +368,10 @@ impl IO_MovingObjectTrait for CO_ThrowBlock {
         let srcY = (self.iType as i32 * 16) as i16;
         let spr = g.rm.spr_brokenblueblock;
         let (ix, iy) = (self.ix as i32, self.iy as i32);
-        g.eyecandy[2].emplace(EC_FallingObject::new(&g.rm, spr, ix as i16, iy as i16, -1.5, -7.0, 6, 2, 0, srcY, 16, 16));
-        g.eyecandy[2].emplace(EC_FallingObject::new(&g.rm, spr, (ix + 16) as i16, iy as i16, 1.5, -7.0, 6, 2, 0, srcY, 16, 16));
-        g.eyecandy[2].emplace(EC_FallingObject::new(&g.rm, spr, ix as i16, (iy + 16) as i16, -1.5, -4.0, 6, 2, 0, srcY, 16, 16));
-        g.eyecandy[2].emplace(EC_FallingObject::new(&g.rm, spr, (ix + 16) as i16, (iy + 16) as i16, 1.5, -4.0, 6, 2, 0, srcY, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&g.rm, spr, ix as i16, iy as i16, vel(-1.5), vel(-7.0), 6, 2, 0, srcY, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&g.rm, spr, (ix + 16) as i16, iy as i16, vel(1.5), vel(-7.0), 6, 2, 0, srcY, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&g.rm, spr, ix as i16, (iy + 16) as i16, vel(-1.5), vel(-4.0), 6, 2, 0, srcY, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&g.rm, spr, (ix + 16) as i16, (iy + 16) as i16, vel(1.5), vel(-4.0), 6, 2, 0, srcY, 16, 16));
 
         self.die_helper(g);
     }
@@ -420,7 +420,7 @@ impl MO_CarriedObjectTrait for CO_ThrowBlock {
         let mut fVel: f32;
         let fPlayerBonusVel: f32 = g.player(self.owner).velx / 2.0;
         if g.player(self.owner).is_facing_right(g) {
-            fVel = 6.5;
+            fVel = vel(6.5);
             if fPlayerBonusVel > 0.0 {
                 fVel += fPlayerBonusVel;
             }
@@ -428,7 +428,7 @@ impl MO_CarriedObjectTrait for CO_ThrowBlock {
             // if (fVel >= 9.0f)
             //	fSmoking = true;
         } else {
-            fVel = -6.5;
+            fVel = vel(-6.5);
             if fPlayerBonusVel < 0.0 {
                 fVel += fPlayerBonusVel;
             }
@@ -444,7 +444,7 @@ impl MO_CarriedObjectTrait for CO_ThrowBlock {
         self.iTeamID = g.player(self.owner).teamID;
 
         self.owner = PlayerId::NONE;
-        self.iNoOwnerKillTime = 30;
+        self.iNoOwnerKillTime = ticks(30) as i16;
 
         self.state = 1;
 

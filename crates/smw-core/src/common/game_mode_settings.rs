@@ -61,7 +61,7 @@ pub struct JailGameModeSettings {
 
 impl JailGameModeSettings {
     pub fn new() -> Self {
-        JailGameModeSettings { style: JailStyle::Owned, tagfree: true, timetofree: 1240, percentkey: 30 }
+        JailGameModeSettings { style: JailStyle::Owned, tagfree: true, timetofree: 1200, percentkey: 30 }
     }
 }
 
@@ -115,7 +115,7 @@ pub struct FlagGameModeSettings {
 
 impl FlagGameModeSettings {
     pub fn new() -> Self {
-        FlagGameModeSettings { speed: 0, touchreturn: false, pointmove: true, autoreturn: 1240, homescore: false, centerflag: false }
+        FlagGameModeSettings { speed: 0, touchreturn: false, pointmove: true, autoreturn: 1200, homescore: false, centerflag: false }
     }
 }
 
@@ -166,7 +166,7 @@ pub struct DominationGameModeSettings {
 
 impl DominationGameModeSettings {
     pub fn new() -> Self {
-        DominationGameModeSettings { loseondeath: true, stealondeath: false, relocateondeath: false, relocationfrequency: 1240, quantity: 13 }
+        DominationGameModeSettings { loseondeath: true, stealondeath: false, relocateondeath: false, relocationfrequency: 1200, quantity: 13 }
     }
 }
 
@@ -179,7 +179,7 @@ pub struct KingOfTheHillModeSettings {
 
 impl KingOfTheHillModeSettings {
     pub fn new() -> Self {
-        KingOfTheHillModeSettings { areasize: 3, relocationfrequency: 1240, maxmultiplier: 1 }
+        KingOfTheHillModeSettings { areasize: 3, relocationfrequency: 1200, maxmultiplier: 1 }
     }
 }
 
@@ -209,7 +209,7 @@ impl FrenzyGameModeSettings {
         let mut powerupweight = [0i16; NUMFRENZYCARDS as usize];
         powerupweight[1] = 1;
         powerupweight[2] = 1;
-        FrenzyGameModeSettings { quantity: 6, rate: 186, storedshells: true, powerupweight }
+        FrenzyGameModeSettings { quantity: 6, rate: 180, storedshells: true, powerupweight }
     }
 }
 
@@ -237,7 +237,7 @@ pub struct GreedGameModeSettings {
 
 impl GreedGameModeSettings {
     pub fn new() -> Self {
-        GreedGameModeSettings { coinlife: 124, owncoins: true, multiplier: 2, percentextracoin: 10 }
+        GreedGameModeSettings { coinlife: 120, owncoins: true, multiplier: 2, percentextracoin: 10 }
     }
 }
 
@@ -264,7 +264,7 @@ pub struct CollectionGameModeSettings {
 
 impl CollectionGameModeSettings {
     pub fn new() -> Self {
-        CollectionGameModeSettings { quantity: 6, rate: 186, banktime: 310, cardlife: 310 }
+        CollectionGameModeSettings { quantity: 6, rate: 180, banktime: 300, cardlife: 300 }
     }
 }
 
@@ -564,6 +564,21 @@ impl GameModeSettings {
         copy.raw_visit(&mut c);
         debug_assert_eq!(c.pos, GAMEMODESETTINGS_RAW_SIZE);
         buf
+    }
+
+    /// The settings that are durations in ticks.
+    pub fn durations_mut(&mut self) -> [&mut i16; 9] {
+        [
+            &mut self.jail.timetofree,
+            &mut self.flag.autoreturn,
+            &mut self.domination.relocationfrequency,
+            &mut self.kingofthehill.relocationfrequency,
+            &mut self.frenzy.rate,
+            &mut self.greed.coinlife,
+            &mut self.collection.rate,
+            &mut self.collection.banktime,
+            &mut self.collection.cardlife,
+        ]
     }
 
     pub fn from_raw_bytes(&mut self, bytes: &[u8; GAMEMODESETTINGS_RAW_SIZE]) {

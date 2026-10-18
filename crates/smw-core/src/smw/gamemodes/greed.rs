@@ -9,6 +9,7 @@ use crate::common::math::vec2::{Vec2f, Vec2s};
 use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
 use crate::common::random_number_generator::RANDOM_INT;
+use crate::common::global_constants::{ticks, vel};
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::classic::CGM_Classic;
@@ -61,11 +62,11 @@ impl_base!(CGM_Greed => cgm_classic: CGM_Classic);
 fn drop_coins(g: &mut Game, player: PlayerId, iDamage: i16, pos: Vec2s) {
         let mut gp = g.ptr();
     for _k in 0..iDamage {
-        let speed: f32 = 7.0f32 + (RANDOM_INT(gp.get(), 9) as f32) / 2.0f32;
+        let speed: f32 = vel(7.0f32 + (RANDOM_INT(gp.get(), 9) as f32) / 2.0f32);
         let angle: f32 = -(RANDOM_INT(gp.get(), 314) as f32) / 100.0f32;
         let vel: Vec2f = Vec2f::new(speed * cosf(angle), speed * sinf(angle));
 
-        let obj = Ptr::new_box(MO_Coin::new(g, gp.get().rm.spr_coin, vel, pos, g.player(player).get_color_id(), g.player(player).get_team_id(), 1, 30, false));
+        let obj = Ptr::new_box(MO_Coin::new(g, gp.get().rm.spr_coin, vel, pos, g.player(player).get_color_id(), g.player(player).get_team_id(), 1, ticks(30) as i16, false));
         gp.get().objectcontainer[1].add(g, obj);
     }
 }

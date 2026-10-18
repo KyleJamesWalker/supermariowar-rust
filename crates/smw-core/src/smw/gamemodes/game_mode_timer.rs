@@ -3,7 +3,7 @@
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::eyecandy_styles::ScoreboardStyle;
-use crate::common::global_constants::WAITTIME;
+use crate::common::global_constants::TICKS_PER_SECOND;
 use crate::globals::*;
 
 #[derive(Clone, Default)]
@@ -26,7 +26,7 @@ pub struct GameTimerDisplay {
 
 impl GameTimerDisplay {
     pub fn new() -> Self {
-        GameTimerDisplay { iFramesPerSecond: (1000 / WAITTIME) as i16, ..Default::default() }
+        GameTimerDisplay { iFramesPerSecond: TICKS_PER_SECOND as i16, ..Default::default() }
     }
 
     pub fn init(&mut self, g: &mut Game, iTime: i16, fCountDown: bool) {

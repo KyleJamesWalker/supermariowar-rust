@@ -10,7 +10,7 @@ use crate::common::game_mode::*;
 use crate::common::game_values::{if_sound_on_play, AppState};
 use crate::common::gameplay_styles::TournamentControlStyle;
 use crate::common::gfx::{gfx_changefullscreen, gfx_loadpalette, gfx_take_screenshot};
-use crate::common::global_constants::{MAX_PLAYERS, PANNOUNCER_SOUND_LAST, TILESIZE};
+use crate::common::global_constants::{ticks, MAX_PLAYERS, PANNOUNCER_SOUND_LAST, TILESIZE};
 use crate::common::map::{read_type_full, read_type_preview};
 use crate::common::map_list::fgets_lines;
 use crate::common::match_types::{Boss, MatchType, Minigame};
@@ -542,7 +542,7 @@ impl MenuState {
             }
 
             if fNeedAI {
-                self.iTournamentAITimer = 60;
+                self.iTournamentAITimer = ticks(60) as i16;
                 self.mGameSettingsMenu.set_allow_exit(true);
             }
         }
@@ -564,7 +564,7 @@ impl MenuState {
             g.rm.spr_announcementicons,
             szMessage,
             iIcon,
-            120,
+            ticks(120) as i16,
             100,
         ));
     }
@@ -659,7 +659,7 @@ impl MenuState {
                 println!("  Match type: Tour");
                 if !self.read_tour_file(g) {
                     self.iDisplayError = DISPLAY_ERROR_READ_TOUR_FILE;
-                    self.iDisplayErrorTimer = 120;
+                    self.iDisplayErrorTimer = ticks(120) as i16;
                     fErrorReadingTourFile = true;
                 } else {
                     let numGames = g.game_values.tourstops.len() as i16;
@@ -714,7 +714,7 @@ impl MenuState {
                 }));
                 if result.is_err() {
                     self.iDisplayError = DISPLAY_ERROR_READ_WORLD_FILE;
-                    self.iDisplayErrorTimer = 120;
+                    self.iDisplayErrorTimer = ticks(120) as i16;
                     fErrorReadingTourFile = true;
                 }
             }
@@ -1393,7 +1393,7 @@ impl MenuState {
             } else {
                 //otherwise display a message
                 self.iDisplayError = DISPLAY_ERROR_MAP_FILTER;
-                self.iDisplayErrorTimer = 120;
+                self.iDisplayErrorTimer = ticks(120) as i16;
             }
         } else if MENU_CODE_TO_MAP_FILTERS == code {
             self.mGameSettingsMenu.open_map_filters(g);
@@ -1815,14 +1815,14 @@ impl GameState for MenuState {
                     if self.iTournamentAIStep == 1 {
                         g.ctl(self.mGameSettingsMenu.miMapField).choose_random_map(g);
 
-                        self.iTournamentAITimer = 60;
+                        self.iTournamentAITimer = ticks(60) as i16;
                     } else if self.iTournamentAIStep == 2 {
                         g.currentgamemode = RANDOM_INT(gp.get(), GAMEMODE_LAST) as i16;
                         g.game_values.gamemode = Some(crate::common::game_mode::ModeId::Standard((g.currentgamemode as usize) as u8));
                         self.mGameSettingsMenu.game_mode_changed(g, g.currentgamemode);
                         g.game_values.gamemode = Some(crate::common::game_mode::ModeId::Standard((self.mGameSettingsMenu.get_current_game_mode_id(g) as usize) as u8));
 
-                        self.iTournamentAITimer = 60;
+                        self.iTournamentAITimer = ticks(60) as i16;
                     } else if self.iTournamentAIStep == 3 {
                         //Choose a goal from the lower values for a quicker game
                         let iRandOption = (RANDOM_INT(gp.get(), 6) + 1) as i16;
@@ -1834,7 +1834,7 @@ impl GameState for MenuState {
 
                         self.mModeOptionsMenu.set_random_game_mode_settings(g, g.mode().gamemode as i16);
 
-                        self.iTournamentAITimer = 60;
+                        self.iTournamentAITimer = ticks(60) as i16;
                     } else if self.iTournamentAIStep == 4 {
                         self.iTournamentAIStep = 0;
                         self.start_game(g);
@@ -1889,7 +1889,7 @@ impl GameState for MenuState {
             }
 
             if g.game_values.screenfadespeed != 0 {
-                g.game_values.screenfade += g.game_values.screenfadespeed;
+                g.game_values.screenfade += g.game_values.screenfade_step();
 
                 if g.game_values.screenfade <= 0 {
                     g.game_values.screenfadespeed = 0;

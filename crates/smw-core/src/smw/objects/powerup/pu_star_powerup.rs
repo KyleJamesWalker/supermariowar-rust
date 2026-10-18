@@ -8,7 +8,7 @@ use crate::common::math::vec2::Vec2s;
 use crate::common::object_base::CObjectTrait;
 use crate::globals::*;
 use crate::impl_base;
-use crate::common::global_constants::VELPOWERUPBOUNCE;
+use crate::common::global_constants::{vel, VELPOWERUPBOUNCE};
 use crate::smw::objectgame::PowerupType;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::objects::powerup::powerup::{mo_powerup_draw, mo_powerup_update, MO_Powerup, MO_PowerupTrait};
@@ -28,9 +28,9 @@ impl PU_StarPowerup {
     pub fn new(g: &mut Game, nspr: SpriteId, pos: Vec2s, iNumSpr: i16, moveToRight: bool, aniSpeed: i16, iCollisionWidth: i16, iCollisionHeight: i16, iCollisionOffsetX: i16, iCollisionOffsetY: i16) -> Self {
         let mut o = PU_StarPowerup { mo_powerup: MO_Powerup::new(g, nspr, pos, iNumSpr, aniSpeed, iCollisionWidth, iCollisionHeight, iCollisionOffsetX, iCollisionOffsetY) };
         if moveToRight {
-            o.velx = 2.0f32;
+            o.velx = vel(2.0);
         } else {
-            o.velx = -2.0f32;
+            o.velx = vel(-2.0);
         }
 
         o.bounce = -VELPOWERUPBOUNCE;

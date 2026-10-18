@@ -62,12 +62,12 @@ pub fn mo_powerup_update<T: MO_PowerupTrait + ?Sized>(g: &mut Game, this: &mut T
     if this.pu().state == 0 {
         let o = this.pu_mut();
         let fy = o.fy;
-        o.set_yf(fy - 2.0);
+        o.set_yf(fy - vel(2.0));
 
         if o.fy <= o.desty {
             o.fy = o.desty;
             o.state = 1;
-            o.vely = 1.0;
+            o.vely = vel(1.0);
         }
     } else {
         // Then have it obey the physics

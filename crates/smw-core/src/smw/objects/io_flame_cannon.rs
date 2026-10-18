@@ -4,6 +4,7 @@ use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
+use crate::common::global_constants::ticks;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_drawpreview;
 use crate::common::map::g_rFlameRects;
@@ -83,7 +84,7 @@ impl IO_FlameCannon {
             }
             return;
         }
-        self.iTimer = (self.iFreq as i32 + RANDOM_INT(gp.get(), self.iFreq as i32)) as i16;
+        self.iTimer = ticks(self.iFreq as i32 + RANDOM_INT(gp.get(), self.iFreq as i32)) as i16;
     }
 }
 
@@ -105,45 +106,31 @@ impl CObjectTrait for IO_FlameCannon {
             }
         } else if self.state == 1 || self.state == 3 {
             // Start or end of flame but not deadly yet
+            let phase = ticks(32);
             self.iTimer += 1;
-            if self.iTimer >= 4 {
+            if self.iTimer as i32 >= phase {
                 self.iTimer = 0;
+                self.iFrame = 2;
 
-                self.iFrame += 1;
-                if self.iFrame > 1 {
-                    self.iFrame = 0;
-
-                    self.iCycle += 1;
-                    if self.iCycle >= 4 {
-                        self.iFrame = 2;
-                        self.iCycle = 0;
-
-                        if self.state == 1 {
-                            self.state = 2;
-                        } else {
-                            self.state = 0;
-                            self.set_new_timer(g);
-                        }
-                    }
+                if self.state == 1 {
+                    self.state = 2;
+                } else {
+                    self.state = 0;
+                    self.set_new_timer(g);
                 }
+            } else {
+                self.iFrame = ((self.iTimer as i32 * 32 / phase / 4) % 2) as i16;
             }
         } else if self.state == 2 {
             // Full flame
+            let phase = ticks(64);
             self.iTimer += 1;
-            if self.iTimer >= 4 {
+            if self.iTimer as i32 >= phase {
                 self.iTimer = 0;
-
-                self.iFrame += 1;
-                if self.iFrame > 3 {
-                    self.iFrame = 2;
-
-                    self.iCycle += 1;
-                    if self.iCycle >= 8 {
-                        self.state = 3;
-                        self.iFrame = 0;
-                        self.iCycle = 0;
-                    }
-                }
+                self.state = 3;
+                self.iFrame = 0;
+            } else {
+                self.iFrame = (2 + (self.iTimer as i32 * 64 / phase / 4) % 2) as i16;
             }
         }
     }

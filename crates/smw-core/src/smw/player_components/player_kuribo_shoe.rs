@@ -5,7 +5,7 @@ use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::ClipEdge;
-use crate::common::global_constants::{PHOFFSET, PWOFFSET};
+use crate::common::global_constants::{PHOFFSET, PWOFFSET, ticks};
 use crate::common::math::vec2::Vec2s;
 use crate::globals::*;
 use crate::smw::objects::carriable::co_kuribo_shoe::CO_KuriboShoe;
@@ -68,7 +68,7 @@ impl PlayerKuriboShoe {
         if self.is_on() && player.isready() && !player.frozen {
             if self.exitIndex > 0 {
                 self.exitTimer = self.exitTimer.wrapping_add(1);
-                if self.exitTimer >= 32 {
+                if self.exitTimer as i32 >= ticks(32) {
                     self.exitIndex = 0;
                     self.exitTimer = 0;
                 }
@@ -81,7 +81,7 @@ impl PlayerKuriboShoe {
                 self.exitTimer = 0;
             }
 
-            if self.exitIndex == 4 && self.exitTimer < 32 {
+            if self.exitIndex == 4 && (self.exitTimer as i32) < ticks(32) {
                 let shoe = Ptr::new_box(CO_KuriboShoe::new(
                     g,
                     rm.spr_kuriboshoe,

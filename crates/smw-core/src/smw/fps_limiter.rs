@@ -46,7 +46,7 @@ impl FPSLimiter {
 
         // `#if !_DEBUG`: the reference build is Release.
         if g.game_values.showfps {
-            let potentialFps = 1000.0f32 / (if g.game_values.framelimiter == 0 { 1 } else { g.game_values.framelimiter }) as f32;
+            let potentialFps = crate::common::global_constants::frame_rate_cap(g.game_values.framelimiter).unwrap_or(crate::common::global_constants::TICKS_PER_SECOND) as f32;
             // TODO(resource_manager): rm->menu_font_large.drawf(0, 480 - rm->menu_font_large.getHeight(),
             //     "Actual:%.1f/%.1f, Flip:%.1f, Potential:%.1f", realfps, potentialFps, flipfps, 1000.0f / (float)ticks);
         }
@@ -62,7 +62,7 @@ impl FPSLimiter {
         }
 
         //Sleep for time just under what we need
-        let tick_ms = 1000 / crate::common::global_constants::TICKS_PER_SECOND as i32;
+        let tick_ms = crate::common::global_constants::ms_to_next_tick(self.framestart, self.framestart) as i32;
         let framelimiter = if harness::speed(g) == 1.0 { tick_ms } else { (tick_ms as f32 / harness::speed(g)) as i32 };
         let mut delay: i16 = (framelimiter as u32).wrapping_sub(crate::services::ticks(gp.get())).wrapping_add(self.framestart).wrapping_sub(2) as i16;
 

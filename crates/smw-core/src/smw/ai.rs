@@ -1182,9 +1182,9 @@ fn follow_path(g: &mut Game, this: &mut CPlayerAI, actionType: i16, mut keys: Pt
 }
 
 /// How long the AI ignores a goal or an opponent behind a wall it cannot jump.
-const UNREACHABLE_FRAMES: i16 = 90;
+const UNREACHABLE_FRAMES: i16 = ticks(90) as i16;
 /// Jumping at a wall this long without getting past it means the wall cannot be jumped.
-const WALL_GIVE_UP_FRAMES: i16 = 45;
+const WALL_GIVE_UP_FRAMES: i16 = ticks(45) as i16;
 
 fn solid_at(g: &mut Game, tx: i32, ty: i32) -> bool {
     g.g_map.map(tx, ty) & tile_flag_solid as i32 != 0 || !g.map_block(tx as i16, ty as i16).is_null()
@@ -1286,7 +1286,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
          ***************************************************/
         this.get_nearest_objects(g);
 
-        let iTenSeconds: i16 = (15 * iDecisionPercentage[g.game_values.cpudifficulty as usize] as i32 / 10) as i16;
+        let iTenSeconds: i16 = ticks(15 * iDecisionPercentage[g.game_values.cpudifficulty as usize] as i32 / 10) as i16;
 
         //If there is a goal, then make sure we aren't paying attention to it for too long
         if !this.nearestObjects.goal.is_none() {
@@ -1440,7 +1440,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                             if piy <= iy32 && piy > iy32 - 60 && pix - ix32 < 90 && pix - ix32 > -90 {
                                 //And we are facing toward that player, throw the star
                                 if (pix > ix32 && g.player(pPlayer).is_facing_right(g)) || ((pix < ix32) && !g.player(pPlayer).is_facing_right(g)) {
-                                    g.player(pPlayer).throw_star = 30;
+                                    g.player(pPlayer).throw_star = ticks(30) as i16;
                                     playerKeys.game_turbo_mut().fDown = false;
                                 }
                             }
@@ -1712,12 +1712,12 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                     let carriedID = carriedItem.network_id();
                     if let Some(ao) = this.attentionObjects.get_mut(&carriedID) {
                         ao.iType = 1;
-                        ao.iTimer = iDecisionPercentage[g.game_values.cpudifficulty as usize] / 3;
+                        ao.iTimer = ticks(iDecisionPercentage[g.game_values.cpudifficulty as usize] as i32 / 3) as i16;
                     } else {
                         let ao = Box::new(AttentionObject {
                             iID: carriedID,
                             iType: 1,
-                            iTimer: iDecisionPercentage[g.game_values.cpudifficulty as usize] / 3,
+                            iTimer: ticks(iDecisionPercentage[g.game_values.cpudifficulty as usize] as i32 / 3) as i16,
                         });
                         this.attentionObjects.insert(ao.iID, ao);
                     }
@@ -1996,7 +1996,7 @@ impl CPlayerAITrait for CSimpleAI {
             }
         } else {
             //Try to jump 1 out of 50 chances when on ground
-            if RandomNumberGenerator::generator(gp.get()).get_boolean_scale(50) {
+            if RandomNumberGenerator::generator(gp.get()).get_boolean_scale(ticks(50)) {
                 playerKeys.game_jump_mut().fDown = true;
             } else {
                 playerKeys.game_jump_mut().fDown = false;

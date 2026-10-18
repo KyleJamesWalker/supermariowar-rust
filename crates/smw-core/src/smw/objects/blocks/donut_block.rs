@@ -4,7 +4,7 @@ use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
 use crate::common::gfx::gfx_sprite::gfxSprite;
-use crate::common::global_constants::TILESETNONE;
+use crate::common::global_constants::{ticks, TILESETNONE};
 use crate::common::io_block::{IO_Block, IO_BlockTrait};
 use crate::common::map::TilesetTile;
 use crate::common::math::vec2::{Vec2f, Vec2s};
@@ -82,7 +82,7 @@ impl CObjectTrait for B_DonutBlock {
             }
 
             self.counter += 1;
-            if self.counter > 50 {
+            if self.counter as i32 > ticks(50) {
                 let iPlayerId = (self.state as i32 - 1) as i16;
                 self.trigger_behavior_player(g, iPlayerId);
             }

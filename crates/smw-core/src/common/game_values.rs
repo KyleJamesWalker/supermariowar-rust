@@ -8,7 +8,7 @@ use crate::common::game::perror;
 use crate::common::game_mode::{CGameModeTrait, GAMEMODE_LAST};
 use crate::common::game_mode_settings::{GameModeSettings, GAMEMODESETTINGS_RAW_SIZE};
 use crate::common::gameplay_styles::{BoomerangStyle, ShieldStyle, TeamCollisionStyle, TournamentControlStyle, WarpLockStyle};
-use crate::common::global_constants::{MAXTOURNAMENTGAMES, MAX_PLAYERS, NUM_AUTO_FILTERS, NUM_POWERUPS, NUM_POWERUP_PRESETS, frame_rate_cap, FRAME_RATE_DISPLAY};
+use crate::common::global_constants::{MAXTOURNAMENTGAMES, MAX_PLAYERS, NUM_AUTO_FILTERS, NUM_POWERUPS, NUM_POWERUP_PRESETS, frame_rate_cap, ticks_from_disk, ticks_to_disk, FRAME_RATE_DISPLAY};
 use crate::common::input::*;
 use crate::common::match_types::{MatchType, Minigame};
 use crate::common::path::get_home_directory;
@@ -551,30 +551,30 @@ impl CGameValues {
         self.scoreboardstyle = ScoreboardStyle::Top;
         self.teamcolors = true;
         self.cputurn = -1;
-        self.shieldtime = 62;
+        self.shieldtime = 60;
         self.shieldstyle = ShieldStyle::SoftWithStomp;
         self.musicvolume = 128;
         self.soundvolume = 128;
         self.respawn = 2;
-        self.itemrespawntime = 1860; //default item respawn is 30 seconds (30 * 62 fps)
-        self.hiddenblockrespawn = 1860; //default item respawn is 30 seconds
+        self.itemrespawntime = 1800; //default item respawn is 30 seconds
+        self.hiddenblockrespawn = 1800; //default item respawn is 30 seconds
         self.outofboundstime = 5;
         self.warplockstyle = WarpLockStyle::ExitOnly; // Lock Warp Exit Only
-        self.warplocktime = 186; // 3 seconds
-        self.suicidetime = 310; // 5 seconds (the reference build is Release)
+        self.warplocktime = 180; // 3 seconds
+        self.suicidetime = 300; // 5 seconds (the reference build is Release)
         self.cpudifficulty = 2;
-        self.fireballttl = 310; // 5 seconds
-        self.shellttl = 496; // 8 seconds
-        self.blueblockttl = 310; // 5 seconds
-        self.redblockttl = 310; // 5 seconds
-        self.grayblockttl = 310; // 5 seconds
-        self.hammerdelay = 25; // 0.4 second
-        self.hammerttl = 49; // 0.8 second
+        self.fireballttl = 300; // 5 seconds
+        self.shellttl = 480; // 8 seconds
+        self.blueblockttl = 300; // 5 seconds
+        self.redblockttl = 300; // 5 seconds
+        self.grayblockttl = 300; // 5 seconds
+        self.hammerdelay = 24; // 0.4 second
+        self.hammerttl = 48; // 0.8 second
         self.hammerpower = true; //hammers die on first hit
         self.fireballlimit = 0; //Unlimited
         self.hammerlimit = 0; //Unlimited
         self.boomerangstyle = BoomerangStyle::SMB3; //SMB3 style
-        self.boomeranglife = 248; // 4 seconds of zelda boomerang
+        self.boomeranglife = 240; // 4 seconds of zelda boomerang
         self.boomeranglimit = 0; //Unlimited
         self.featherjumps = 1; //Allow one extra cape jump
         self.featherlimit = 0; //Unlimited
@@ -582,7 +582,7 @@ impl CGameValues {
         self.pwingslimit = 0; //Unlimited
         self.tanookilimit = 0; //Unlimited
         self.bombslimit = 0; //Unlimited
-        self.wandfreezetime = 310; //5 seconds of freeze time
+        self.wandfreezetime = 300; //5 seconds of freeze time
         self.wandlimit = 0; //Unlimited
         self.storedpowerupdelay = 4;
         self.bonuswheel = 1;
@@ -640,6 +640,15 @@ impl CGameValues {
                 self.allPowerupPresets[iPreset][iPowerup] = default_powerup_setting(iPreset, iPowerup);
             }
         }
+    }
+
+    /// The change in `screenfade` this tick. `screenfadespeed` is per original tick, and a fade starts at 255 going down
+    /// or 8 going up, so the steps taken so far follow from `screenfade`; one tick in 24 takes two.
+    pub fn screenfade_step(&self) -> i16 {
+        let speed = self.screenfadespeed as i32;
+        let start = if speed < 0 { 255 } else { 8 };
+        let steps = (self.screenfade as i32 - start).abs() / speed.abs().max(1);
+        (if steps % 25 == 23 { 2 * speed } else { speed }) as i16
     }
 
     pub fn reset_gameplay_settings(&mut self, g: &mut Game) {
@@ -778,18 +787,18 @@ impl CGameConfig {
         self.tournamentcontrolstyle = TournamentControlStyle::from_u8(options.read_u8());
         self.startmodedisplay = options.read_u8() != 0;
 
-        self.shieldtime = options.read_i16();
+        self.shieldtime = ticks_from_disk(options.read_i16());
         self.shieldstyle = ShieldStyle::from_u8(options.read_i16() as u8);
-        self.itemrespawntime = options.read_i16();
-        self.hiddenblockrespawn = options.read_i16();
-        self.fireballttl = options.read_i16();
+        self.itemrespawntime = ticks_from_disk(options.read_i16());
+        self.hiddenblockrespawn = ticks_from_disk(options.read_i16());
+        self.fireballttl = ticks_from_disk(options.read_i16());
         self.fireballlimit = options.read_i16();
-        self.hammerdelay = options.read_i16();
-        self.hammerttl = options.read_i16();
+        self.hammerdelay = ticks_from_disk(options.read_i16());
+        self.hammerttl = ticks_from_disk(options.read_i16());
         self.hammerpower = options.read_i16() != 0;
         self.hammerlimit = options.read_i16();
         self.boomerangstyle = BoomerangStyle::from_u8(options.read_i16() as u8);
-        self.boomeranglife = options.read_i16();
+        self.boomeranglife = ticks_from_disk(options.read_i16());
         self.boomeranglimit = options.read_i16();
         self.featherjumps = options.read_i16();
         self.featherlimit = options.read_i16();
@@ -797,16 +806,16 @@ impl CGameConfig {
         self.pwingslimit = options.read_i16();
         self.tanookilimit = options.read_i16();
         self.bombslimit = options.read_i16();
-        self.wandfreezetime = options.read_i16();
+        self.wandfreezetime = ticks_from_disk(options.read_i16());
         self.wandlimit = options.read_i16();
-        self.shellttl = options.read_i16();
-        self.blueblockttl = options.read_i16();
-        self.redblockttl = options.read_i16();
-        self.grayblockttl = options.read_i16();
+        self.shellttl = ticks_from_disk(options.read_i16());
+        self.blueblockttl = ticks_from_disk(options.read_i16());
+        self.redblockttl = ticks_from_disk(options.read_i16());
+        self.grayblockttl = ticks_from_disk(options.read_i16());
         self.storedpowerupdelay = options.read_i16();
         self.warplockstyle = WarpLockStyle::from_u8(options.read_i16() as u8);
-        self.warplocktime = options.read_i16();
-        self.suicidetime = options.read_i16();
+        self.warplocktime = ticks_from_disk(options.read_i16());
+        self.suicidetime = ticks_from_disk(options.read_i16());
 
         self.poweruppreset = options.read_i16();
         let mut presets = [0i16; (NUM_POWERUP_PRESETS * NUM_POWERUPS) as usize];
@@ -824,6 +833,9 @@ impl CGameConfig {
         let mut gms = [0u8; GAMEMODESETTINGS_RAW_SIZE];
         options.read_raw(&mut gms);
         self.gamemodemenusettings.from_raw_bytes(&gms);
+        for v in self.gamemodemenusettings.durations_mut() {
+            *v = ticks_from_disk(*v);
+        }
 
         let mut raw = [0u8; 8];
         options.read_raw(&mut raw);
@@ -916,18 +928,18 @@ impl CGameConfig {
         options.write_u8(self.tournamentcontrolstyle as u8);
         options.write_u8(self.startmodedisplay as u8);
 
-        options.write_i16(self.shieldtime);
+        options.write_i16(ticks_to_disk(self.shieldtime));
         options.write_i16(self.shieldstyle as i16);
-        options.write_i16(self.itemrespawntime);
-        options.write_i16(self.hiddenblockrespawn);
-        options.write_i16(self.fireballttl);
+        options.write_i16(ticks_to_disk(self.itemrespawntime));
+        options.write_i16(ticks_to_disk(self.hiddenblockrespawn));
+        options.write_i16(ticks_to_disk(self.fireballttl));
         options.write_i16(self.fireballlimit);
-        options.write_i16(self.hammerdelay);
-        options.write_i16(self.hammerttl);
+        options.write_i16(ticks_to_disk(self.hammerdelay));
+        options.write_i16(ticks_to_disk(self.hammerttl));
         options.write_i16(self.hammerpower as i16);
         options.write_i16(self.hammerlimit);
         options.write_i16(self.boomerangstyle as i16);
-        options.write_i16(self.boomeranglife);
+        options.write_i16(ticks_to_disk(self.boomeranglife));
         options.write_i16(self.boomeranglimit);
         options.write_i16(self.featherjumps);
         options.write_i16(self.featherlimit);
@@ -935,16 +947,16 @@ impl CGameConfig {
         options.write_i16(self.pwingslimit);
         options.write_i16(self.tanookilimit);
         options.write_i16(self.bombslimit);
-        options.write_i16(self.wandfreezetime);
+        options.write_i16(ticks_to_disk(self.wandfreezetime));
         options.write_i16(self.wandlimit);
-        options.write_i16(self.shellttl);
-        options.write_i16(self.blueblockttl);
-        options.write_i16(self.redblockttl);
-        options.write_i16(self.grayblockttl);
+        options.write_i16(ticks_to_disk(self.shellttl));
+        options.write_i16(ticks_to_disk(self.blueblockttl));
+        options.write_i16(ticks_to_disk(self.redblockttl));
+        options.write_i16(ticks_to_disk(self.grayblockttl));
         options.write_i16(self.storedpowerupdelay);
         options.write_i16(self.warplockstyle as i16);
-        options.write_i16(self.warplocktime);
-        options.write_i16(self.suicidetime);
+        options.write_i16(ticks_to_disk(self.warplocktime));
+        options.write_i16(ticks_to_disk(self.suicidetime));
 
         options.write_i16(self.poweruppreset);
         let mut presets = Vec::with_capacity((NUM_POWERUP_PRESETS * NUM_POWERUPS * 2) as usize);
@@ -961,7 +973,11 @@ impl CGameConfig {
             options.write_i16(gp.gamemodes[k].goal);
         }
 
-        options.write_raw(&self.gamemodemenusettings.to_raw_bytes());
+        let mut gms = self.gamemodemenusettings.clone();
+        for v in gms.durations_mut() {
+            *v = ticks_to_disk(*v);
+        }
+        options.write_raw(&gms.to_raw_bytes());
 
         let mut raw = Vec::new();
         for v in self.skinids.iter() {
