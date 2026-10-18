@@ -4,7 +4,7 @@ Status: proposed, on the backlog. Decision: rollback, because the RG35XX measure
 
 ## Summary
 
-Replace host-authoritative netplay with input exchange over one WebRTC transport for every build. Each client runs the same deterministic match from all players' inputs, with rollback if the RG35XX can afford it and delay-based lockstep if it cannot. This removes the per-event sync code and lets browser and native players share a game. It also retires ENet, the WebSocket relay's game traffic and our NAT punching.
+Replace host-authoritative netplay with input exchange over one WebRTC transport for every build. Each client runs the same deterministic match from all players' inputs and hides latency with rollback. This removes the per-event sync code and lets browser and native players share a game. It also retires ENet, the WebSocket relay's game traffic and our NAT punching.
 
 ## Background
 
@@ -26,7 +26,7 @@ Replace host-authoritative netplay with input exchange over one WebRTC transport
 - **Rollback.** A client predicts that remote players repeat their last input and runs ahead. When a real input differs, it restores the snapshot from that tick and re-runs to the present.
 - **Lockstep.** The same library with prediction off and an input delay. A client waits for every input of a tick before it runs that tick.
 
-Menus, the world map and the screens between games stay on reliable messages. Rollback covers only the match.
+Menus, the world map and the screens between games stay on reliable messages. Rollback covers only the match. The match start message carries everything the simulation reads: the seed, the mode settings, the map and the skins (today `NET_G2P_SYNC`, `NET_NOTICE_GAMEMODESETTINGS`, `NET_G2P_MATCH_MAP` and `NET_NOTICE_SKIN_CHANGE`). These move to a reliable data channel.
 
 **Transport.** WebRTC data channels, unreliable and unordered, in browsers and native builds. Peers connect directly through STUN, and fall back to a TURN relay when NAT punching fails. `matchbox` provides one socket API for native and wasm and plugs into GGRS. Its signaling server takes over the lobby role of `smw_relay`. `coturn` is the TURN server.
 
@@ -50,6 +50,9 @@ Menus, the world map and the screens between games stay on reliable messages. Ro
 - **Visual snaps.** A misprediction moves a remote player at once. Input delay of one or two ticks reduces how often this happens.
 - **Four players, full mesh.** Each peer talks to every other peer. Uploads stay small because only inputs travel.
 - **TURN hosting.** Players behind strict NATs relay through TURN, which needs a server and bandwidth.
+- **`matchbox` under Emscripten.** The web build targets `wasm32-unknown-emscripten`. The `matchbox` browser socket uses `wasm-bindgen` and `web-sys`, which target `wasm32-unknown-unknown`. Check this first in step 3. If it does not build, the browser opens its data channels through a small JavaScript shim and speaks the same signaling protocol as native `matchbox`.
+- **Lobby features.** `smw_server` and the relay's lobby list rooms, take room names and passwords, and report players. The `matchbox` signaling server only pairs peers that name the same room. Step 3 decides whether our lobby keeps those features and hands each room to signaling, or the signaling server grows them. The saved server list (`servers.toml`) follows that choice.
+- **Library versions.** Pin current `ggrs` and `matchbox` releases in step 3. This plan did not check their versions or their four-player limits.
 - **CPU players.** They run inside each client's deterministic simulation, so they need no network input. Their AI must read only game state.
 
 ## Rollout
