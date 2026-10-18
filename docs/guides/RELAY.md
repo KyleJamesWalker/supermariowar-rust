@@ -57,13 +57,22 @@ The browser build connects to `wss://smw-relay.vps.pocketsquirrel.com` unless th
 
 ## Deploy
 
-The `Relay` workflow publishes `ghcr.io/kylejameswalker/supermariowar-rust-relay` for `linux/amd64` and `linux/arm64`. `deploy/` holds a compose file and a Caddyfile that put it behind Caddy.
+The `Relay` workflow publishes two images for `linux/amd64` and `linux/arm64`:
+
+- `ghcr.io/kylejameswalker/supermariowar-rust-relay`: the relay.
+- `ghcr.io/kylejameswalker/supermariowar-rust-signal`: `matchbox_server` 0.14.0, the netplay v2 signaling server (`deploy/signal/Dockerfile`).
+
+`deploy/` holds a compose file that runs both behind Caddy, plus `coturn` for netplay v2 players whose NAT blocks a direct connection.
 
 1. Point a DNS `A` (or `AAAA`) record for `smw-relay.vps.pocketsquirrel.com` at the server.
 2. On the server, create the shared network: `docker network create caddy`.
-3. Copy `deploy/docker-compose.yml` and `deploy/Caddyfile` to one directory. If Caddy already runs on the `caddy` network, add the Caddyfile's site block to its config and remove the `caddy` service.
-4. Run `docker compose up -d`. Caddy gets the certificate and proxies the WebSocket to `smw-relay:8080`.
-5. Check `curl https://smw-relay.vps.pocketsquirrel.com/healthz` returns `ok`.
+3. Copy `deploy/docker-compose.yml`, `deploy/Caddyfile` and `deploy/turnserver.conf` to one directory. If Caddy already runs on the `caddy` network, add the Caddyfile's site block to its config and remove the `caddy` service.
+4. Create a `.env` file there with `TURN_SECRET=<hex>`, for example from `openssl rand -hex 32`. Use hex only: the coturn image evaluates its arguments in a shell. The lobby needs the same secret to issue TURN credentials.
+5. Open TCP and UDP port 3478 and UDP ports 49160-49259 for `coturn`. It uses host networking.
+6. Run `docker compose up -d`. Caddy gets the certificate and proxies `/signal/*` to `smw-signal:3536` and everything else to `smw-relay:8080`.
+7. Check that `curl https://smw-relay.vps.pocketsquirrel.com/healthz` returns `ok`. A WebSocket client can join `wss://smw-relay.vps.pocketsquirrel.com/signal/<room>`, for example `SIGNAL_URL=wss://smw-relay.vps.pocketsquirrel.com/signal node tools/web_peer_test.mjs`.
+
+`coturn` relays only to public addresses (`denied-peer-ip` in `turnserver.conf`), so it cannot reach the server's private network.
 
 ## Limits
 
