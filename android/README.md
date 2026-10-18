@@ -1,6 +1,6 @@
 # Super Mario War on Android
 
-`SuperMarioWar-<version>.apk` is a debug-signed APK for Android 5.0 (API 21) and newer on arm64-v8a, armeabi-v7a and x86_64. `.github/workflows/build_android.yml` builds it, plays replays on an x86_64 emulator, and uploads it as the `smw-android-apk` artifact.
+`SuperMarioWar-<version>.apk` is a debug-signed APK for Android 7.0 (API 24) and newer on arm64-v8a, armeabi-v7a and x86_64. `.github/workflows/build_android.yml` builds it, plays replays on an x86_64 emulator, and uploads it as the `smw-android-apk` artifact.
 
 It plays with on-screen touch controls, a gamepad or a keyboard; see [Controls](#controls) and [Touch controls](#touch-controls).
 
