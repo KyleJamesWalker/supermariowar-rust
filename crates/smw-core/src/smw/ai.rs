@@ -176,6 +176,8 @@ pub struct CPlayerAI {
     /// The tile column and move the AI left the ground for, followed while in the air.
     pub nav_step: Option<(i32, Move)>,
     pub style: Style,
+    /// Thinks since `nav` was built, on a map whose moving platforms make it go stale.
+    pub nav_age: u8,
 
     pub _alias: Aliased,
 }
@@ -499,6 +501,7 @@ impl CPlayerAI {
             nav: None,
             nav_step: None,
             style: Style::Balanced,
+            nav_age: 0,
             _alias: Aliased::new(),
         }
     }
@@ -1110,8 +1113,10 @@ fn follow_path(g: &mut Game, this: &mut CPlayerAI, actionType: i16, mut keys: Pt
         this.nav_step = None;
         return;
     };
-    if this.nav.is_none() {
+    this.nav_age = this.nav_age.saturating_add(1);
+    if this.nav.is_none() || (!g.g_map.platforms.is_empty() && this.nav_age >= 8) {
         this.nav = Some(NavGraph::build(g));
+        this.nav_age = 0;
     }
     let pPlayer = this.pPlayer;
     let (ix, iy) = (g.player(pPlayer).ix as i32, g.player(pPlayer).iy as i32);

@@ -43,7 +43,26 @@ fn idx(x: i32, y: i32) -> usize {
 
 impl NavGraph {
     pub fn build(g: &Game) -> Self {
-        let flags = |x: i32, y: i32| g.g_map.map(x, y);
+        // Moving platforms count as tiles where they are now, so the graph only holds until they move on.
+        let mut platform = vec![0i32; (W * H) as usize];
+        for &id in &g.g_map.platforms {
+            let p = g.g_map.platform(id);
+            if p.fDead {
+                continue;
+            }
+            for col in 0..p.iTileWidth {
+                for row in 0..p.iTileHeight {
+                    let f = tile_to_flags(p.tile_type_at(col as usize, row as usize)) as i32;
+                    let px = (p.fx - p.iHalfWidth as f32) as i32 + col as i32 * TILESIZE + TILESIZE / 2;
+                    let py = (p.fy - p.iHalfHeight as f32) as i32 + row as i32 * TILESIZE + TILESIZE / 2;
+                    let (cx, cy) = (px.rem_euclid(App::screenWidth) / TILESIZE, py.div_euclid(TILESIZE));
+                    if (0..H).contains(&cy) {
+                        platform[idx(cx, cy)] |= f;
+                    }
+                }
+            }
+        }
+        let flags = |x: i32, y: i32| g.g_map.map(x, y) | platform[idx(x, y)];
         let solid = |x: i32, y: i32| {
             if y < 0 {
                 return false;
