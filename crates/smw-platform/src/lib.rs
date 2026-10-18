@@ -51,6 +51,10 @@ pub trait Video {
     fn show_error(&mut self, message: &str);
     /// Shows or hides the mouse cursor over the window.
     fn show_cursor(&mut self, on: bool);
+    /// Whether `present` waits for the display's refresh.
+    fn vsync(&self) -> bool {
+        false
+    }
 }
 
 pub trait Events {
@@ -116,6 +120,10 @@ pub trait AudioOut {
 pub trait Clock {
     /// Wall-clock milliseconds. Only the frame driver, the FPS overlay and netplay message timestamps read it.
     fn now_ms(&self) -> u64;
+    /// Wall-clock microseconds, for the tick pacing; only differences between two readings mean anything.
+    fn now_us(&self) -> u64 {
+        self.now_ms() * 1000
+    }
     fn sleep_ms(&self, ms: u32);
 }
 
@@ -406,4 +414,14 @@ mod tests {
         services.audio.play(0, SoundId(3), -1);
         assert_eq!(*log.borrow(), ["load 3 4", "play 3 ch=0 loops=-1"]);
     }
+}
+
+/// Whether a backend should ask for vsync: not when `SMW_VSYNC=0`, not for uncapped replays (`SMW_NOLIMIT`) or a test
+/// display rate (`SMW_PRESENT_HZ`), and not on SDL's dummy and offscreen drivers, which emulate it by sleeping.
+pub fn want_vsync() -> bool {
+    let set = |name: &str| std::env::var_os(name).is_some_and(|v| !v.is_empty() && v != "0");
+    std::env::var_os("SMW_VSYNC").is_none_or(|v| v != "0")
+        && !set("SMW_NOLIMIT")
+        && !set("SMW_PRESENT_HZ")
+        && !std::env::var("SDL_VIDEODRIVER").is_ok_and(|d| d == "dummy" || d == "offscreen")
 }

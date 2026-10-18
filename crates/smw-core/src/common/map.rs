@@ -2465,15 +2465,18 @@ impl CMap {
     pub fn draw_platforms(&mut self, g: &mut Game, iLayer: i16) {
         for &platform in &self.platformdrawlayer[iLayer as usize].clone() {
             let mut p = platform;
+            crate::common::gfx::display_list::set_owner(crate::common::gfx::display_list::owner_of(self.platform(p)));
             self.platform(p).draw(g);
         }
 
         if iLayer == 2 {
             for &platform in &self.tempPlatforms.clone() {
                 let mut p = platform;
+                crate::common::gfx::display_list::set_owner(crate::common::gfx::display_list::owner_of(self.platform(p)));
                 self.platform(p).draw(g);
             }
         }
+        crate::common::gfx::display_list::set_owner(crate::common::gfx::display_list::Owner::None);
     }
 
     /// `drawPlatforms(short iOffsetX, short iOffsetY, short iLayer)`

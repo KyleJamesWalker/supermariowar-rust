@@ -1717,8 +1717,10 @@ impl CEyecandyContainer {
 
     pub fn draw(&self, g: &mut Game) {
         for ec in &self.eyecandies {
+            crate::common::gfx::display_list::set_owner(crate::common::gfx::display_list::owner_of(&**ec));
             ec.draw(g);
         }
+        crate::common::gfx::display_list::set_owner(crate::common::gfx::display_list::Owner::None);
     }
 
     pub fn clean(&mut self) {

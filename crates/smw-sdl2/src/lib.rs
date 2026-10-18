@@ -24,6 +24,10 @@ impl Clock for Sdl2Clock {
         unsafe { sdl2::sys::SDL_GetTicks() as u64 }
     }
 
+    fn now_us(&self) -> u64 {
+        unsafe { (sdl2::sys::SDL_GetPerformanceCounter() as u128 * 1_000_000 / sdl2::sys::SDL_GetPerformanceFrequency().max(1) as u128) as u64 }
+    }
+
     fn sleep_ms(&self, ms: u32) {
         unsafe { sdl2::sys::SDL_Delay(ms) }
     }

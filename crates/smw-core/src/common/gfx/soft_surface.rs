@@ -359,6 +359,16 @@ pub fn blit_supported(state: &BlitState, src_alpha: bool, dst_alpha: bool) -> bo
 
 /// `upper_blit` on pixel views.
 pub fn blit(src: &Pixels, state: &BlitState, src_rect: Option<&Rect>, dst: &mut PixelsMut, dst_rect: Option<&mut Rect>) {
+    blit_or_clip(src, state, src_rect, dst, dst_rect, true);
+}
+
+/// `blit`'s clipping alone: writes the clipped destination rectangle to `dst_rect` and draws nothing.
+pub fn clip_blit(src: &Pixels, src_rect: Option<&Rect>, dst: &mut PixelsMut, dst_rect: Option<&mut Rect>) {
+    let state = BlitState { color_key: None, alpha_mod: 255, blend: BlendMode::None };
+    blit_or_clip(src, &state, src_rect, dst, dst_rect, false);
+}
+
+fn blit_or_clip(src: &Pixels, state: &BlitState, src_rect: Option<&Rect>, dst: &mut PixelsMut, dst_rect: Option<&mut Rect>, draw: bool) {
     let mut r_src = Rect::new(0, 0, src.w, src.h);
     let mut r_dst = match &dst_rect {
         Some(d) => Rect::new(d.x, d.y, 0, 0),
@@ -389,7 +399,9 @@ pub fn blit(src: &Pixels, state: &BlitState, src_rect: Option<&Rect>, dst: &mut 
             if let Some(out) = out {
                 *out = r_dst;
             }
-            lower_blit(src, state, &r_src, dst, r_dst.x, r_dst.y);
+            if draw {
+                lower_blit(src, state, &r_src, dst, r_dst.x, r_dst.y);
+            }
         }
         (None, Some(out)) => {
             out.w = 0;

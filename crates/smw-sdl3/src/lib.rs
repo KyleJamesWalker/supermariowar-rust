@@ -24,6 +24,10 @@ impl Clock for Sdl3Clock {
         unsafe { SDL_GetTicks() }
     }
 
+    fn now_us(&self) -> u64 {
+        unsafe { SDL_GetTicksNS() / 1000 }
+    }
+
     fn sleep_ms(&self, ms: u32) {
         unsafe { SDL_Delay(ms) }
     }

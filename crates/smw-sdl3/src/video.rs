@@ -15,11 +15,12 @@ pub struct Sdl3Video {
     texture: *mut SDL_Texture,
     overlay_generation: Option<u64>,
     overlay_textures: Vec<*mut SDL_Texture>,
+    vsync: bool,
 }
 
 impl Sdl3Video {
     pub fn new() -> Self {
-        Sdl3Video { window: null_mut(), renderer: null_mut(), texture: null_mut(), overlay_generation: None, overlay_textures: Vec::new() }
+        Sdl3Video { window: null_mut(), renderer: null_mut(), texture: null_mut(), overlay_generation: None, overlay_textures: Vec::new(), vsync: false }
     }
 
     fn set_logical(&self, on: bool) {
@@ -85,6 +86,10 @@ impl Drop for Sdl3Video {
 }
 
 impl Video for Sdl3Video {
+    fn vsync(&self) -> bool {
+        self.vsync
+    }
+
     fn show_cursor(&mut self, on: bool) {
         unsafe {
             if on {
@@ -116,6 +121,7 @@ impl Video for Sdl3Video {
                 panic!("Couldn't create renderer: {}\n", sdl_error());
             }
             SDL_SetRenderDrawColor(self.renderer, 0, 0, 0, 255);
+            self.vsync = smw_platform::want_vsync() && SDL_SetRenderVSync(self.renderer, 1);
             self.set_logical(true);
             let name = SDL_GetRendererName(self.renderer);
             println!("[gfx] Renderer: {}", if name.is_null() { String::new() } else { CStr::from_ptr(name).to_string_lossy().into_owned() });

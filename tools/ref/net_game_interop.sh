@@ -6,7 +6,8 @@
 # Usage: net_game_interop.sh
 # Env: SMW_RUST_BIN (smw), SMW_RUST_SERVER (smw_server), SMW_RUST_DATA,
 #      NET_GAMES (scenario directories beside this script; default: every net_game*),
-#      NET_GAME_WORK (where the logs go; default: a temporary directory).
+#      NET_GAME_WORK (where the logs go; default: a temporary directory),
+#      HOST_PRESENT_HZ / JOIN_PRESENT_HZ (that client presents at this display rate while ticking at 60, SMW_PRESENT_HZ).
 # A scenario's host.txt may name a map from net_maps/ (`#@ map=<name>`; each client gets an APFS clone of its data
 # tree with the map added), a host sync seed (`#@ net_seed=<n>`, so the game spawns alike every run) and extra
 # net_game_compare.py arguments (`#@ compare=...`).
@@ -44,6 +45,8 @@ client() {
   local mapenv=()
   [ "$role" = host ] && [ -n "$(param map "$game")" ] && mapenv=(SMW_MAP="$(param map "$game")")
   [ "$role" = host ] && [ -n "$(param net_seed "$game")" ] && mapenv+=(SMW_NET_SEED="$(param net_seed "$game")")
+  [ "$role" = host ] && [ -n "${HOST_PRESENT_HZ:-}" ] && mapenv+=(SMW_PRESENT_HZ="$HOST_PRESENT_HZ")
+  [ "$role" = join ] && [ -n "${JOIN_PRESENT_HZ:-}" ] && mapenv+=(SMW_PRESENT_HZ="$JOIN_PRESENT_HZ")
   local home=$dir/home-$role
   mkdir -p "$home/Library/Preferences/.smw"
   printf 'player_name = "%s"\nservers = ["127.0.0.1"]\n' "$name" > "$home/Library/Preferences/.smw/servers.toml"

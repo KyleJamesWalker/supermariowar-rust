@@ -181,8 +181,10 @@ impl CObjectContainer {
         let n = self.m_list.len();
         for i in 0..n {
             let mut obj = unsafe { (&(*this).m_list)[i] };
+            crate::common::gfx::display_list::set_owner(crate::common::gfx::display_list::owner_of(obj.as_ptr()));
             obj.draw(g);
         }
+        crate::common::gfx::display_list::set_owner(crate::common::gfx::display_list::Owner::None);
     }
 
     pub fn get_closest_object(&self, ix: i16, iy: i16, objectType: ObjectType) -> f32 {

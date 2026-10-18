@@ -1,6 +1,7 @@
 //! Port of src/smw/menu/options/GraphicsOptionsMenu.cpp
 
 use crate::common::uicontrol::{ControlId, Ctl};
+use crate::common::global_constants::FRAME_RATE_DISPLAY;
 use crate::game::Game;
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_button::MI_Button;
@@ -48,34 +49,16 @@ impl UI_GraphicsOptionsMenu {
                 &mut g.game_values.toplayer, g);
             g.ctl(this.miTopLayerField).set_auto_advance(true);
 
-            this.miFrameLimiterField = select_field(spr_selectfield, 70, 160, "Frame Limit", 500, 220,
+            this.miFrameLimiterField = select_field(spr_selectfield, 70, 160, "Frame Rate", 500, 220,
                 &[
-                    ("10 FPS", 100),
-                    ("15 FPS", 67),
-                    ("20 FPS", 50),
-                    ("25 FPS", 40),
-                    ("30 FPS", 33),
-                    ("35 FPS", 28),
-                    ("40 FPS", 25),
-                    ("45 FPS", 22),
-                    ("50 FPS", 20),
-                    ("55 FPS", 18),
-                    ("62 FPS (Normal)", 16),
-                    ("66 FPS", 15),
-                    ("71 FPS", 14),
-                    ("77 FPS", 13),
-                    ("83 FPS", 12),
-                    ("90 FPS", 11),
-                    ("100 FPS", 10),
-                    ("111 FPS", 9),
-                    ("125 FPS", 8),
-                    ("142 FPS", 7),
-                    ("166 FPS", 6),
-                    ("200 FPS", 5),
-                    ("250 FPS", 4),
-                    ("333 FPS", 3),
-                    ("500 FPS", 2),
-                    ("No Limit", 0),
+                    ("Display", FRAME_RATE_DISPLAY),
+                    ("30 FPS", 201),
+                    ("40 FPS", 202),
+                    ("45 FPS", 203),
+                    ("60 FPS", 204),
+                    ("90 FPS", 205),
+                    ("120 FPS", 206),
+                    ("144 FPS", 207),
                 ],
                 &mut g.game_values.framelimiter, g);
 

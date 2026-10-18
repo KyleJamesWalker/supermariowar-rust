@@ -1,6 +1,7 @@
 //! Port of src/common/gfx.cpp
 
 pub mod blit;
+pub mod display_list;
 pub mod color;
 pub mod gfx_font;
 pub mod gfx_palette;
