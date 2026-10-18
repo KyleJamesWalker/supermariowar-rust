@@ -1422,8 +1422,9 @@ impl CPlayer {
         //Call the AI if cpu controlled
         if self.state == PlayerState::Ready {
             if self.pPlayerAI.is_some() {
-                //Calculate movement every 4th frame (speed up optimization)
-                if gp.game_values.cputurn == self.globalID {
+                //Calculate movement every 4th frame (speed up optimization), every 2nd for Very Hard CPUs
+                let turn = gp.game_values.cputurn;
+                if turn == self.globalID || (gp.game_values.cpudifficulty >= 4 && turn == (self.globalID + 2) % 4) {
                     self.cpu_think(g);
 
                     if self.keys(g).game_jump().fDown || self.keys(g).game_left().fDown || self.keys(g).game_right().fDown {

@@ -92,7 +92,7 @@ The steps run from most payoff per effort to least.
 9. **Skill-based difficulty and personalities**.
    Difficulty sets planning depth, jump precision, and objective focus.
    Personalities (aggressive, objective, cautious) are weight presets for step 4.
-   First cut: each CPU draws a style at match start from the game RNG (balanced, aggressive, objective or cautious), which sets the distances that pull it off its goal, the threat distance it runs from, and how close an opponent above it must be before it backs away (`style_ranges`). Very Easy CPUs steer in straight lines, Easy ones plan routes only to goals, and the lead jump and stomp dodge need Moderate or harder.
+   First cut: each CPU draws a style at match start from the game RNG (balanced, aggressive, objective or cautious), which sets the distances that pull it off its goal, the threat distance it runs from, and how close an opponent above it must be before it backs away (`style_ranges`). Very Easy CPUs steer in straight lines, Easy ones plan routes only to goals, and the lead jump and stomp dodge need Moderate or harder. Very Hard CPUs think every second tick instead of every fourth, so their think-counted timers run in half the time; in head-to-head matches they won 50 to 36 in Classic and 54 to 19 in Frenzy.
 
 All randomness stays on the game RNG, and no logic depends on wall-clock time or hash map iteration order.
 
