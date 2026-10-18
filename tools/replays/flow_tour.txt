@@ -1,8 +1,8 @@
 # 4 CPU players: first Tour, first stop.
 #@ seed=202
 #@ map=0smw
-#@ frames=5000
-#@ shots=486,2500,4999
+#@ frames=7100
+#@ shots=486,2500,6000,7099
 10 down Return
 12 up Return
 30 down Down

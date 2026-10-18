@@ -3,6 +3,7 @@
 use crate::smw::object_container::ObjectId;
 use crate::common::map::{WARP_DOWN, WARP_LEFT, WARP_RIGHT};
 use crate::smw::ai_nav::{Move, NavGraph, Route};
+use crate::smw::objects::blocks::powerup_block::B_PowerupBlock;
 use crate::smw::players::PlayerId;
 use crate::game::Game;
 use crate::common::game::App;
@@ -11,7 +12,7 @@ use crate::common::global_constants::*;
 use crate::common::input::COutputControl;
 use crate::common::moving_object_types::*;
 use crate::common::object_base::*;
-use crate::common::random_number_generator::{RandomNumberGenerator, RandomNumberGeneratorType, RANDOM_BOOL};
+use crate::common::random_number_generator::{RandomNumberGenerator, RandomNumberGeneratorType, RANDOM_BOOL, RANDOM_INT};
 use crate::common::tile_types::*;
 use crate::globals::*;
 use crate::smw::gamemodes::chicken::CGM_Chicken;
@@ -175,8 +176,42 @@ pub struct CPlayerAI {
     pub nav: Option<NavGraph>,
     /// The tile column and move the AI left the ground for, followed while in the air.
     pub nav_step: Option<(i32, Move)>,
+    pub style: Style,
+    /// Thinks since `nav` was built, on a map whose moving platforms make it go stale.
+    pub nav_age: u8,
 
     pub _alias: Aliased,
+}
+
+/// A CPU's play style (docs/CPU_AI.md, step 9), drawn at match start.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum Style {
+    #[default]
+    Balanced,
+    /// Leaves the objective for opponents farther away and backs off from fewer of them.
+    Aggressive,
+    /// Leaves the objective only for opponents right next to it.
+    Objective,
+    /// Keeps more distance from threats and from opponents above it.
+    Cautious,
+}
+
+/// Squared distances that pull a CPU of `style` off its goal: a stomp target and the nearest player in objective modes,
+/// the same in other modes, a threat to run from, and an opponent above it to back away from.
+struct StyleRanges {
+    objective: (i32, i32),
+    open: (i32, i32),
+    threat: i32,
+    back_off: i32,
+}
+
+fn style_ranges(style: Style) -> StyleRanges {
+    match style {
+        Style::Balanced => StyleRanges { objective: (3600, 2025), open: (14400, 8100), threat: 14400, back_off: 8100 },
+        Style::Aggressive => StyleRanges { objective: (4900, 3600), open: (22500, 14400), threat: 8100, back_off: 3600 },
+        Style::Objective => StyleRanges { objective: (1600, 900), open: (14400, 8100), threat: 14400, back_off: 8100 },
+        Style::Cautious => StyleRanges { objective: (3600, 2025), open: (10000, 4900), threat: 22500, back_off: 14400 },
+    }
 }
 
 impl Default for CPlayerAI {
@@ -466,6 +501,8 @@ impl CPlayerAI {
             ignored_player: (PlayerId::NONE, 0),
             nav: None,
             nav_step: None,
+            style: Style::Balanced,
+            nav_age: 0,
             _alias: Aliased::new(),
         }
     }
@@ -853,6 +890,25 @@ impl CPlayerAI {
             }
         }
 
+        // Without a powerup, a CPU goes for a nearby block that still holds one in the modes won by stomping.
+        let stomp_mode = matches!(g.mode().gamemode, game_mode_classic | game_mode_frag | game_mode_timelimit);
+        if stomp_mode && g.player(pPlayer).powerup == -1 && carriedItem.is_null() && self.nearestObjects.goal.is_none() {
+            let (mut block, mut distance, mut wrap) = (ObjectId::NONE, 160 * 160, false);
+            for i in 0..g.noncolcontainer.list().len() {
+                let obj = g.noncolcontainer.list()[i];
+                let pb = dynamic_cast::<B_PowerupBlock>(obj);
+                if pb.is_null() || pb.hidden || obj.get_state() != 0 || self.attentionObjects.contains_key(&obj.network_id()) {
+                    continue;
+                }
+                self.distance_to_object(g, obj, &mut block, &mut distance, &mut wrap);
+            }
+            if !block.is_none() {
+                self.nearestObjects.goal = block;
+                self.nearestObjects.goaldistance = distance;
+                self.nearestObjects.goalwrap = wrap;
+            }
+        }
+
         let gmChicken = dynamic_cast_gamemode::<CGM_Chicken>(g);
         let mut best_weighted = i32::MAX;
         let mut fallback = PlayerId::NONE;
@@ -1011,7 +1067,8 @@ fn wrap_open(g: &Game, y: i32) -> bool {
 }
 
 /// How much farther `opponent` counts when `me` picks whom to chase: each other CPU already chasing it doubles,
-/// triples and so on its distance, the score leader counts at three quarters, and a flag carrier at half.
+/// triples and so on its distance, the score leader counts at three quarters, and a flag carrier or the holder of a
+/// star worth keeping at half.
 fn spread_weight(g: &mut Game, me: PlayerId, opponent: PlayerId) -> (i64, i64) {
     let mut chasers = 0;
     let mut leader = true;
@@ -1034,7 +1091,8 @@ fn spread_weight(g: &mut Game, me: PlayerId, opponent: PlayerId) -> (i64, i64) {
         }
     }
     let carried = g.carried_item(opponent);
-    let carrier = !carried.is_null() && carried.get_moving_object_type() == movingobject_flag;
+    let carrier = !carried.is_null()
+        && (carried.get_moving_object_type() == movingobject_flag || (carried.get_moving_object_type() == movingobject_star && star_type(carried) == 1));
     (if leader { 3 } else { 4 } * (1 + chasers), if carrier { 8 } else { 4 })
 }
 
@@ -1073,12 +1131,19 @@ fn heads_right(from: i32, to: i32) -> bool {
 /// Steers along the navigation graph when the straight line the action chose is not the path, and gives up on a
 /// target the graph cannot reach.
 fn follow_path(g: &mut Game, this: &mut CPlayerAI, actionType: i16, mut keys: Ptr<COutputControl>) {
-    let Some(target) = path_target(g, this, actionType) else {
+    let planned = match g.game_values.cpudifficulty {
+        0 => false,
+        1 => actionType == 1,
+        _ => true,
+    };
+    let Some(target) = path_target(g, this, actionType).filter(|_| planned) else {
         this.nav_step = None;
         return;
     };
-    if this.nav.is_none() {
+    this.nav_age = this.nav_age.saturating_add(1);
+    if this.nav.is_none() || (!g.g_map.platforms.is_empty() && this.nav_age >= 8) {
         this.nav = Some(NavGraph::build(g));
+        this.nav_age = 0;
     }
     let pPlayer = this.pPlayer;
     let (ix, iy) = (g.player(pPlayer).ix as i32, g.player(pPlayer).iy as i32);
@@ -1091,6 +1156,10 @@ fn follow_path(g: &mut Game, this: &mut CPlayerAI, actionType: i16, mut keys: Pt
     let nav = this.nav.as_ref().unwrap();
     let Some(me) = nav.cell_of(ix, iy) else { return };
     if g.player(pPlayer).inair {
+        // A note block keeps a CPU in the air, so a step whose column it has reached ends here.
+        if this.nav_step.is_some_and(|(x, _)| x == me.0) {
+            this.nav_step = None;
+        }
         if let Some((x, how)) = this.nav_step {
             let right = heads_right(me.0, x);
             keys.game_left_mut().fDown = me.0 != x && !right;
@@ -1186,6 +1255,97 @@ const UNREACHABLE_FRAMES: i16 = ticks(90) as i16;
 /// Jumping at a wall this long without getting past it means the wall cannot be jumped.
 const WALL_GIVE_UP_FRAMES: i16 = ticks(45) as i16;
 
+/// Whether jumping now brings `me` down onto `target`'s head: `me` stands on the ground, `target` can be stomped and
+/// is within a jump's height, and the horizontal gap equals the distance `me` closes on it while the jump carries its
+/// feet up to `target`'s head and back down onto it.
+fn stomp_lead_jump(g: &mut Game, me: PlayerId, target: PlayerId, wrap: bool) -> bool {
+    let (p, t) = (g.player(me), g.player(target));
+    if p.inair || t.is_invincible() || t.bobomb || p.is_invincible() {
+        return false;
+    }
+    let mut dx = t.ix as i32 - p.ix as i32;
+    if wrap {
+        dx -= dx.signum() * App::screenWidth;
+    }
+    let closing = (p.velx - t.velx) * dx.signum() as f32;
+    if closing <= 0.0 {
+        return false;
+    }
+    let jump = if p.velx.abs() > VELMOVING { VELTURBOJUMP } else { VELJUMP };
+    let rise = (p.iy as i32 + PH - t.iy as i32) as f32;
+    let discriminant = jump * jump - 2.0 * GRAVITATION * rise;
+    if rise < -(TILESIZE as f32) || discriminant < 0.0 {
+        return false;
+    }
+    let airtime = (jump + discriminant.sqrt()) / GRAVITATION;
+    let lead = closing * airtime;
+    // The AI thinks every fourth tick, so the window spans what it closes in that time.
+    let window = closing * 4.0;
+    (dx.abs() as f32 - lead).abs() <= window.max(PW as f32 / 2.0)
+}
+
+/// The way to step (true for right) to get out from under an opponent falling onto `me`, if one is.
+fn dodge_stomp(g: &mut Game, me: PlayerId) -> Option<bool> {
+    let p = g.player(me);
+    if p.is_invincible() || p.shyguy || p.bobomb {
+        return None;
+    }
+    let (mx, my, team) = (p.ix as i32, p.iy as i32, p.teamID);
+    for i in 0..g.players.len() {
+        let o = g.player(g.players[i]);
+        if g.players[i] == me || o.teamID == team || !o.isready() || o.vely <= 0.0 {
+            continue;
+        }
+        let mut dx = o.ix as i32 - mx;
+        if dx.abs() > App::screenWidth / 2 {
+            dx -= dx.signum() * App::screenWidth;
+        }
+        let gap = my - (o.iy as i32 + PH);
+        if dx.abs() < PW + 8 && (0..96).contains(&gap) {
+            return Some(dx < 0 || (dx == 0 && p.is_facing_right(g)));
+        }
+    }
+    None
+}
+
+fn star_type(carried: Ptr<dyn MO_CarriedObjectTrait>) -> i16 {
+    static_cast::<CO_Star>(carried_as_object(carried)).get_type()
+}
+
+/// Whether `player` carries a star of `kind` (0 the one to pass on, 1 the one to keep).
+fn holds_star(g: &mut Game, player: PlayerId, kind: i16) -> bool {
+    let carried = g.carried_item(player);
+    !carried.is_null() && carried.get_moving_object_type() == movingobject_star && star_type(carried) == kind
+}
+
+/// Whether an opponent stands where `me`'s weapon would reach it: in front within two rows for a fireball,
+/// boomerang or ice blast, in front and not far below for a thrown hammer or bomb, and within reach of a spin.
+fn weapon_lined_up(g: &mut Game, me: PlayerId) -> bool {
+    let p = g.player(me);
+    if !(1..=7).contains(&p.powerup) {
+        return false;
+    }
+    let facing_right = p.is_facing_right(g);
+    (0..g.players.len()).any(|i| {
+        let t = g.player(g.players[i]);
+        if g.players[i] == me || t.teamID == p.teamID || t.is_invincible() || !t.isready() {
+            return false;
+        }
+        let mut dx = t.ix as i32 - p.ix as i32;
+        if dx.abs() > App::screenWidth / 2 {
+            dx -= dx.signum() * App::screenWidth;
+        }
+        let dy = t.iy as i32 - p.iy as i32;
+        let ahead = if facing_right { dx } else { -dx };
+        match p.powerup {
+            1 | 4 | 5 => ahead > 0 && ahead < 240 && dy.abs() < 2 * TILESIZE,
+            2 | 6 => ahead > 0 && ahead < 200 && dy > -3 * TILESIZE && dy < TILESIZE,
+            3 | 7 => dx.abs() < PW * 2 && dy.abs() < PH,
+            _ => false,
+        }
+    })
+}
+
 fn solid_at(g: &mut Game, tx: i32, ty: i32) -> bool {
     g.g_map.map(tx, ty) & tile_flag_solid as i32 != 0 || !g.map_block(tx as i16, ty as i16).is_null()
 }
@@ -1216,6 +1376,12 @@ fn wall_too_tall(g: &mut Game, tx: i32, y: i32) -> bool {
 
 //Setup AI so that it can ignore or pay attention to some objects
 pub fn cplayer_ai_init(g: &mut Game, this: &mut CPlayerAI) {
+    this.style = match RANDOM_INT(g, 4) {
+        1 => Style::Aggressive,
+        2 => Style::Objective,
+        3 => Style::Cautious,
+        _ => Style::Balanced,
+    };
     //Scan yoshi's egg mode objects to make sure that we ignore eggs without matching yoshis
     if g.mode().gamemode == game_mode_eggs {
         let mut fYoshi: [bool; 4] = [false, false, false, false];
@@ -1261,6 +1427,12 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
         //Clear out the old input settings
         playerKeys.game_left_mut().fDown = false;
         playerKeys.game_right_mut().fDown = false;
+
+        // A frozen player breaks out sooner for each press of left.
+        if g.player(pPlayer).frozen && g.game_values.cpudifficulty >= 1 {
+            playerKeys.game_left_mut().fPressed = true;
+            return;
+        }
 
         //A percentage of the time the cpu will do nothing based on the difficulty level
         if RandomNumberGenerator::generator(gp.get()).get_boolean_threshold(100, iDecisionPercentage[g.game_values.cpudifficulty as usize] as i32)
@@ -1348,14 +1520,15 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
         let no = &this.nearestObjects;
         let objective = !no.goal.is_none() && objective_mode(g.mode().gamemode);
         let carrying_flag = !g.carried_item(pPlayer).is_null() && g.carried_item(pPlayer).get_moving_object_type() == movingobject_flag;
+        let ranges = style_ranges(this.style);
         let (stomp_range, attack_range) = if carrying_flag && !no.goal.is_none() {
             (0, 0)
         } else if objective {
-            (3600, 2025)
+            ranges.objective
         } else {
-            (14400, 8100)
+            ranges.open
         };
-        if !no.threat.is_none() && no.threatdistance < 14400 && !g.player(pPlayer).is_invincible() {
+        if !no.threat.is_none() && no.threatdistance < ranges.threat && !g.player(pPlayer).is_invincible() {
             actionType = 2;
         } else if !no.stomp.is_none() && no.stompdistance < stomp_range {
             actionType = 4;
@@ -1429,20 +1602,18 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                 let piy = g.player(player).iy as i32;
 
                 //Move player relative to opponent when we are playing star mode and we are holding a star
-                if g.mode().gamemode == game_mode_star {
-                    if !carriedItem.is_null() && carriedItem.get_moving_object_type() == movingobject_star {
-                        if static_cast::<CO_Star>(carriedObj).get_type() == 1 {
-                            *moveAway = true;
-                        } else {
-                            *moveToward = true;
+                if g.mode().gamemode == game_mode_star && !carriedItem.is_null() && carriedItem.get_moving_object_type() == movingobject_star {
+                    if static_cast::<CO_Star>(carriedObj).get_type() == 1 {
+                        *moveAway = true;
+                    } else {
+                        *moveToward = true;
 
-                            //If player is close
-                            if piy <= iy32 && piy > iy32 - 60 && pix - ix32 < 90 && pix - ix32 > -90 {
-                                //And we are facing toward that player, throw the star
-                                if (pix > ix32 && g.player(pPlayer).is_facing_right(g)) || ((pix < ix32) && !g.player(pPlayer).is_facing_right(g)) {
-                                    g.player(pPlayer).throw_star = ticks(30) as i16;
-                                    playerKeys.game_turbo_mut().fDown = false;
-                                }
+                        //If player is close
+                        if piy <= iy32 && piy > iy32 - 60 && pix - ix32 < 90 && pix - ix32 > -90 {
+                            //And we are facing toward that player, throw the star
+                            if (pix > ix32 && g.player(pPlayer).is_facing_right(g)) || ((pix < ix32) && !g.player(pPlayer).is_facing_right(g)) {
+                                g.player(pPlayer).throw_star = ticks(30) as i16;
+                                playerKeys.game_turbo_mut().fDown = false;
                             }
                         }
                     }
@@ -1463,6 +1634,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                         }
                     }
                 } else if (!gmTag.is_null() && gmTag.tagged() == player)
+                    || holds_star(g, player, 0)
                     || g.player(player).is_invincible()
                     || g.player(player).shyguy
                     || (!gmChicken.is_null() && gmChicken.chicken() == pPlayer)
@@ -1473,7 +1645,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                 } else if piy >= iy32 && !g.player(player).is_invincible() && !g.player(player).bobomb {
                     *moveToward = true;
                 } else {
-                    if no.playerdistance < 8100 {
+                    if no.playerdistance < ranges.back_off {
                         //else if player is near but higher, run away (left)
                         *moveAway = true;
                     } else {
@@ -1496,7 +1668,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                         playerKeys.game_down_mut().fDown = true;
                     }
 
-                    if !g.player(pPlayer).superstomp.is_in_super_stomp_state() {
+                    if g.player(pPlayer).inair && !g.player(pPlayer).superstomp.is_in_super_stomp_state() {
                         //If the player has the tanooki or shoe, then try to super stomp on them
                         if g.player(pPlayer).tanookisuit.is_on() || g.player(pPlayer).kuriboshoe.is_on() {
                             playerKeys.game_down_mut().fDown = true;
@@ -1507,6 +1679,9 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                             }
                         }
                     }
+                }
+                if g.game_values.cpudifficulty >= 2 && !playerKeys.game_jump().fDown && stomp_lead_jump(g, pPlayer, player, no.playerwrap) {
+                    playerKeys.game_jump_mut().fDown = true;
                 }
             } else if actionType == 1 {
                 //Go for goal
@@ -1648,7 +1823,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                         playerKeys.game_down_mut().fDown = true;
                     }
 
-                    if !g.player(pPlayer).superstomp.is_in_super_stomp_state() {
+                    if g.player(pPlayer).inair && !g.player(pPlayer).superstomp.is_in_super_stomp_state() {
                         //If the player has the tanooki or shoe, then try to super stomp on them
                         if g.player(pPlayer).tanookisuit.is_on() || g.player(pPlayer).kuriboshoe.is_on() {
                             playerKeys.game_down_mut().fDown = true;
@@ -1741,6 +1916,28 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
         }
 
         follow_path(g, this, actionType, playerKeys);
+
+        // Turbo fires once per press, so with a target lined up a CPU that already fired lets go to fire again.
+        if g.game_values.cpudifficulty >= 1 && carriedItem.is_null() && weapon_lined_up(g, pPlayer) {
+            playerKeys.game_turbo_mut().fDown = !g.player(pPlayer).lockfire;
+        }
+
+        if g.game_values.cpudifficulty >= 2 {
+            if let Some(right) = dodge_stomp(g, pPlayer) {
+                playerKeys.game_left_mut().fDown = !right;
+                playerKeys.game_right_mut().fDown = right;
+            }
+        }
+
+        // Down with turbo on the ground turns the tanooki suit to stone, and holding down keeps it there; that only
+        // helps against a threat.
+        if actionType != 2 && g.player(pPlayer).tanookisuit.is_on() && !g.player(pPlayer).inair && !g.player(pPlayer).superstomp.is_stomping() {
+            if !g.player(pPlayer).tanookisuit.not_statue() {
+                playerKeys.game_down_mut().fDown = false;
+            } else if playerKeys.game_down().fDown {
+                playerKeys.game_turbo_mut().fDown = false;
+            }
+        }
 
         if let Some(column) = wall_ahead(g, ix32, iy32, playerKeys.game_left().fDown, playerKeys.game_right().fDown) {
             playerKeys.game_jump_mut().fDown = true;

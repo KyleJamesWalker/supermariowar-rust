@@ -26,7 +26,7 @@ sys.path.insert(0, str(TOOLS))
 from replay_clip import read_recording, recording_stem  # noqa: E402
 W, H = 640, 480
 FRAME = W * H * 4
-FPS = Fraction(125, 2)
+FPS = Fraction(60)
 HEADER = 20
 BG = bytes((32, 24, 24, 255))
 WHITE = bytes((255, 255, 255, 255))
