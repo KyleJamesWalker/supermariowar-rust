@@ -37,7 +37,7 @@ tools/replay_video.py tools/replays/start_classic.txt --diff \
 | `--label-before`, `--label-after` | Panel labels (default: the rev or binary name and the extra env). |
 | `--scale n` | Nearest-neighbour scale (default 2). |
 
-The video plays at the game's real 62.5 fps (16 ms frames), H.264 in `yuv420p`, so it opens in QuickTime and browsers. Each panel carries its label and the game frame number. `ffmpeg` (with `libx264`) is the only dependency; the Homebrew build has no `drawtext`, so the script draws the text itself.
+The video plays at the game's 60 ticks per second, H.264 in `yuv420p`, so it opens in QuickTime and browsers. Each panel carries its label and the game frame number. `ffmpeg` (with `libx264`) is the only dependency; the Homebrew build has no `drawtext`, so the script draws the text itself.
 
 ## How it works
 
