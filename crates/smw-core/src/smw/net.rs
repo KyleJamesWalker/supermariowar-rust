@@ -265,6 +265,58 @@ fn net_layer<'a>(g: &mut Game) -> &'a mut NetworkHandler {
     g.networkHandler.as_ptr().get()
 }
 
+/// How long the Servers menu waits for the lobby to accept the connection.
+const CONNECT_DEADLINE_FRAMES: u32 = 8 * TICKS_PER_SECOND;
+/// How long the lobby menus wait for the server to answer a join or create request.
+const REQUEST_DEADLINE_FRAMES: u32 = 5 * TICKS_PER_SECOND;
+
+/// Why a lobby request failed, for the menu to show.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum LobbyError {
+    Unreachable,
+    ConnectTimeout,
+    ClientOutdated,
+    ServerOutdated,
+    VersionMismatch,
+    Denied,
+    ServerFull,
+    NameTaken,
+    ConnectionLost,
+    RequestTimeout,
+    RoomFull,
+    RoomNotFound,
+    WrongPassword,
+    CreateFailed,
+}
+
+impl LobbyError {
+    pub fn message(self) -> &'static str {
+        match self {
+            LobbyError::Unreachable => "Could not reach the server",
+            LobbyError::ConnectTimeout | LobbyError::RequestTimeout => "The server did not answer",
+            LobbyError::ClientOutdated => "Update the game for this server",
+            LobbyError::ServerOutdated => "The server needs an update",
+            LobbyError::VersionMismatch => "Game and server versions differ",
+            LobbyError::Denied => "The server refused to connect",
+            LobbyError::ServerFull => "The server is full",
+            LobbyError::NameTaken => "That name is already taken",
+            LobbyError::ConnectionLost => "Lost connection to the server",
+            LobbyError::RoomFull => "The room is full",
+            LobbyError::RoomNotFound => "That room no longer exists",
+            LobbyError::WrongPassword => "Wrong room password",
+            LobbyError::CreateFailed => "Could not create the room",
+        }
+    }
+
+    /// Whether the lobby connection is unusable, so the player starts over from the Servers menu.
+    pub fn disconnects(self) -> bool {
+        !matches!(
+            self,
+            LobbyError::RequestTimeout | LobbyError::RoomFull | LobbyError::RoomNotFound | LobbyError::WrongPassword | LobbyError::CreateFailed
+        )
+    }
+}
+
 /// How long the host waits for its joiners to load, and a joiner for the host's go, before playing anyway.
 const START_TIMEOUT_MS: u32 = 5000;
 /// How long every client shows the match settings before gameplay frame 1, at least.
@@ -359,6 +411,11 @@ pub struct NetClient {
     pub lastReceivedMessage: LastMessage,
     /// The reply a waiting menu acts on; later messages in the same poll cannot overwrite it.
     pub lastReply: LastMessage,
+    lobby_error: Option<LobbyError>,
+    lobby_connecting: bool,
+    /// Menu frames left to wait for the pending request's reply; 0 when nothing is pending.
+    deadline: u32,
+    deadline_error: LobbyError,
 
     pub local_gamehost: NetGameHost,
 
@@ -377,6 +434,10 @@ impl Clone for NetClient {
             lastSentMessage: self.lastSentMessage.clone(),
             lastReceivedMessage: self.lastReceivedMessage.clone(),
             lastReply: self.lastReply.clone(),
+            lobby_error: self.lobby_error,
+            lobby_connecting: false,
+            deadline: self.deadline,
+            deadline_error: self.deadline_error,
             local_gamehost: self.local_gamehost.clone(),
             foreign_lobbyserver: Ptr::null(),
             foreign_gamehost: Ptr::null(),
@@ -392,6 +453,10 @@ impl NetClient {
             lastSentMessage: LastMessage::default(),
             lastReceivedMessage: LastMessage::default(),
             lastReply: LastMessage::default(),
+            lobby_error: None,
+            lobby_connecting: false,
+            deadline: 0,
+            deadline_error: LobbyError::RequestTimeout,
             local_gamehost: NetGameHost::new(),
             foreign_lobbyserver: Ptr::null(),
             foreign_gamehost: Ptr::null(),
@@ -435,8 +500,40 @@ impl NetClient {
             self.foreign_gamehost = Ptr::null();
         }
 
+        self.lobby_connecting = false;
+        self.deadline = 0;
+
         if !net_record::replaying(g) {
             net_layer(g).client_shutdown(g);
+        }
+    }
+
+    /// Reports a failed lobby request to the menu; the first failure until the menu takes it wins.
+    fn fail(&mut self, error: LobbyError) {
+        println!("[net] {}", error.message());
+        self.deadline = 0;
+        self.lobby_error.get_or_insert(error);
+    }
+
+    pub fn take_lobby_error(&mut self) -> Option<LobbyError> {
+        self.lobby_error.take()
+    }
+
+    fn start_deadline(&mut self, frames: u32, error: LobbyError) {
+        self.deadline = frames;
+        self.deadline_error = error;
+    }
+
+    /// Counts down the pending request's deadline, once per menu frame.
+    pub fn tick_deadline(&mut self, g: &mut Game) {
+        if !g.netplay.operationInProgress {
+            self.deadline = 0;
+        } else if self.deadline > 0 {
+            self.deadline -= 1;
+            if self.deadline == 0 {
+                let error = self.deadline_error;
+                self.fail(error);
+            }
         }
     }
 
@@ -454,11 +551,15 @@ impl NetClient {
 
     pub fn send_connect_request_to_selected_server(&mut self, g: &mut Game) -> bool {
         let hostname = g.netplay.savedServers[g.netplay.selectedServerIndex as usize].hostname.clone();
+        self.lobby_error = None;
         if !self.connect_lobby(g, &hostname, NET_LOBBYSERVER_PORT) {
+            self.fail(LobbyError::Unreachable);
             return false;
         }
 
         g.netplay.operationInProgress = true;
+        self.lobby_connecting = true;
+        self.start_deadline(CONNECT_DEADLINE_FRAMES, LobbyError::ConnectTimeout);
         true
     }
 
@@ -520,6 +621,7 @@ impl NetClient {
 
         self.send_message_to_lobby_server(g, msg.as_bytes());
         g.netplay.operationInProgress = true;
+        self.start_deadline(REQUEST_DEADLINE_FRAMES, LobbyError::RequestTimeout);
     }
 
     fn handle_room_created_message(&mut self, g: &mut Game, data: &[u8]) {
@@ -564,6 +666,7 @@ impl NetClient {
         let msg = pkgs::JoinRoom::with(entry.roomID, "");
         self.send_message_to_lobby_server(g, msg.as_bytes());
         g.netplay.operationInProgress = true;
+        self.start_deadline(REQUEST_DEADLINE_FRAMES, LobbyError::RequestTimeout);
     }
 
     pub fn send_leave_room_message(&mut self, g: &mut Game) {
@@ -990,7 +1093,7 @@ impl NetClient {
 
     /// Every client message goes reliably: a lost lobby request or start handshake leaves the client waiting forever.
     fn send_to(&mut self, g: &mut Game, mut peer: Ptr<dyn NetPeer>, data: &[u8]) -> bool {
-        if !peer.send_reliable(data) {
+        if peer.is_null() || !peer.send_reliable(data) {
             return false;
         }
 
@@ -1021,6 +1124,7 @@ impl NetClient {
         self.lastReceivedMessage.timestamp = ticks(g);
         if matches!(packageType, NET_RESPONSE_CONNECT_OK | NET_RESPONSE_JOIN_OK | NET_RESPONSE_CREATE_OK | NET_G2E_GAME_START) {
             self.lastReply = self.lastReceivedMessage;
+            self.deadline = 0;
         }
     }
 
@@ -1040,6 +1144,7 @@ impl NetworkEventHandler<Game> for NetClient {
 
         if self.foreign_lobbyserver.is_null() {
             self.foreign_lobbyserver = newPeer;
+            self.lobby_connecting = false;
 
             let message = pkgs::ClientConnection::with(&g.netplay.myPlayerName);
             self.send_message_to_lobby_server(g, message.as_bytes());
@@ -1060,6 +1165,15 @@ impl NetworkEventHandler<Game> for NetClient {
 
         if !self.foreign_lobbyserver.is_null() && client.same_peer(&*self.foreign_lobbyserver) {
             println!("[net] Disconnected from lobby server.");
+            self.foreign_lobbyserver = Ptr::null();
+            g.netplay.connectSuccessful = false;
+            self.fail(LobbyError::ConnectionLost);
+            return;
+        }
+
+        if self.foreign_lobbyserver.is_null() && self.lobby_connecting {
+            self.lobby_connecting = false;
+            self.fail(LobbyError::Unreachable);
             return;
         }
 
@@ -1075,12 +1189,17 @@ impl NetworkEventHandler<Game> for NetClient {
         let protocolMinor = data[1];
         let packageType = data[2];
         if protocolMajor != NET_PROTOCOL_VERSION_MAJOR || protocolMinor != NET_PROTOCOL_VERSION_MINOR {
-            println!("Not implemented: bad protocol version");
+            println!("[net] Protocol version {}.{} differs from ours", protocolMajor, protocolMinor);
+            let from_lobby = !self.foreign_lobbyserver.is_null() && client.same_peer(&*self.foreign_lobbyserver);
+            if from_lobby {
+                let older = (protocolMajor, protocolMinor) < (NET_PROTOCOL_VERSION_MAJOR, NET_PROTOCOL_VERSION_MINOR);
+                self.fail(if older { LobbyError::ServerOutdated } else { LobbyError::ClientOutdated });
+            }
             return;
         }
 
         match packageType {
-            NET_RESPONSE_BADPROTOCOL => println!("Not implemented: NET_RESPONSE_BADPROTOCOL"),
+            NET_RESPONSE_BADPROTOCOL => self.fail(LobbyError::VersionMismatch),
 
             NET_RESPONSE_SERVERINFO => self.handle_serverinfo_and_close(data),
 
@@ -1100,18 +1219,18 @@ impl NetworkEventHandler<Game> for NetClient {
             }
 
             NET_RESPONSE_CONNECT_DENIED => {
-                println!("Not implemented: NET_RESPONSE_CONNECT_DENIED");
                 g.netplay.connectSuccessful = false;
+                self.fail(LobbyError::Denied);
             }
 
             NET_RESPONSE_CONNECT_SERVERFULL => {
-                println!("Not implemented: NET_RESPONSE_CONNECT_SERVERFULL");
                 g.netplay.connectSuccessful = false;
+                self.fail(LobbyError::ServerFull);
             }
 
             NET_RESPONSE_CONNECT_NAMETAKEN => {
-                println!("Not implemented: NET_RESPONSE_CONNECT_NAMETAKEN");
                 g.netplay.connectSuccessful = false;
+                self.fail(LobbyError::NameTaken);
             }
 
             NET_RESPONSE_ROOM_LIST_ENTRY => self.handle_new_room_list_entry(g, data),
@@ -1125,8 +1244,18 @@ impl NetworkEventHandler<Game> for NetClient {
             }
 
             NET_RESPONSE_ROOM_FULL => {
-                println!("Not implemented: [net] The room is full");
                 g.netplay.joinSuccessful = false;
+                self.fail(LobbyError::RoomFull);
+            }
+
+            NET_RESPONSE_ROOM_NOT_FOUND => {
+                g.netplay.joinSuccessful = false;
+                self.fail(LobbyError::RoomNotFound);
+            }
+
+            NET_RESPONSE_WRONG_PASSWORD => {
+                g.netplay.joinSuccessful = false;
+                self.fail(LobbyError::WrongPassword);
             }
 
             NET_NOTICE_ROOM_CHANGE => self.handle_room_changed_message(g, data),
@@ -1141,7 +1270,7 @@ impl NetworkEventHandler<Game> for NetClient {
 
             NET_RESPONSE_CREATE_OK => self.handle_room_created_message(g, data),
 
-            NET_RESPONSE_CREATE_ERROR => println!("Not implemented: NET_RESPONSE_CREATE_ERROR"),
+            NET_RESPONSE_CREATE_ERROR => self.fail(LobbyError::CreateFailed),
 
             NET_L2P_GAMEHOST_INFO => self.handle_room_start_message(g, client, data),
 

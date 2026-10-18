@@ -10,7 +10,7 @@ use crate::common::game_mode::*;
 use crate::common::game_values::{if_sound_on_play, AppState};
 use crate::common::gameplay_styles::TournamentControlStyle;
 use crate::common::gfx::{gfx_changefullscreen, gfx_loadpalette, gfx_take_screenshot};
-use crate::common::global_constants::{ticks, MAX_PLAYERS, PANNOUNCER_SOUND_LAST, TILESIZE};
+use crate::common::global_constants::{ticks, MAX_PLAYERS, PANNOUNCER_SOUND_LAST, TICKS_PER_SECOND, TILESIZE};
 use crate::common::map::{read_type_full, read_type_preview};
 use crate::common::map_list::fgets_lines;
 use crate::common::match_types::{Boss, MatchType, Minigame};
@@ -59,7 +59,7 @@ use crate::smw::menu::network::net_room_menu::UI_NetRoomMenu;
 use crate::smw::menu::network::net_servers_menu::UI_NetServersMenu;
 use crate::common::path::get_home_directory;
 use crate::common_netplay::protocol_definitions::*;
-use crate::smw::net::{net_end_session, net_start_session};
+use crate::smw::net::{net_end_session, net_start_session, LobbyError};
 use std::ops::{Deref, DerefMut};
 use std::path::Path;
 
@@ -68,6 +68,7 @@ pub const DISPLAY_ERROR_NONE: DisplayError = 0;
 pub const DISPLAY_ERROR_READ_TOUR_FILE: DisplayError = 1;
 pub const DISPLAY_ERROR_READ_WORLD_FILE: DisplayError = 2;
 pub const DISPLAY_ERROR_MAP_FILTER: DisplayError = 3;
+pub const DISPLAY_ERROR_NET: DisplayError = 4;
 
 /// Which menu `MenuState` shows; the mode options menu's sub-menus are numbered by game mode.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -177,6 +178,7 @@ pub struct MenuState {
 
     iDisplayError: DisplayError,
     iDisplayErrorTimer: i16,
+    net_error: &'static str,
     fNeedMenuMusicReset: bool,
 
 
@@ -228,6 +230,7 @@ impl MenuState {
             mNetRoomMenu: Slot::empty(),
             iDisplayError: DISPLAY_ERROR_NONE,
             iDisplayErrorTimer: 0,
+            net_error: "",
             fNeedMenuMusicReset: false,
             iUnlockMinigameOptionIndex: 0,
             iTournamentAIStep: 0,
@@ -1429,6 +1432,13 @@ impl MenuState {
         }
 
         if g.netplay.active {
+            gp.netplay.client.tick_deadline(g);
+            let lobby_error = gp.netplay.client.take_lobby_error();
+            if let Some(error) = lobby_error {
+                g.netplay.operationInProgress = false;
+                code = self.lobby_error_code(g, error, code);
+            }
+
             // Override menu code if response has arrived
             if g.netplay.operationInProgress {
                 let previousCode = code;
@@ -1553,11 +1563,53 @@ impl MenuState {
 
                 g.netplay.currentMenuChanged = false;
             }
+
+            if let Some(error) = lobby_error.filter(|_| self.in_net_menu()) {
+                self.net_error = error.message();
+                self.iDisplayError = DISPLAY_ERROR_NET;
+                self.iDisplayErrorTimer = (4 * TICKS_PER_SECOND) as i16;
+            }
         }
 
         /*if (code != MENU_CODE_NONE)
             printf("Code: %d\n", code);*/
         false
+    }
+}
+
+impl MenuState {
+    fn in_net_menu(&self) -> bool {
+        matches!(
+            self.mCurrentMenu,
+            MenuId::NetServers | MenuId::NetEditServers | MenuId::NetLobby | MenuId::NetNewRoom | MenuId::NetNewRoomSettings | MenuId::NetRoom
+        )
+    }
+
+    /// The menu code that takes the player from a failed lobby request back to a menu that works.
+    fn lobby_error_code(&mut self, g: &mut Game, error: LobbyError, code: MenuCodeEnum) -> MenuCodeEnum {
+        if !self.in_net_menu() || self.mCurrentMenu == MenuId::NetEditServers {
+            return code;
+        }
+        if error.disconnects() {
+            if self.mCurrentMenu == MenuId::NetServers {
+                return MENU_CODE_NET_CONNECT_ABORT;
+            }
+            g.netplay.currentRoom.roomID = 0;
+            g.netplay.joinSuccessful = false;
+            g.netplay.gameRunning = false;
+            self.mNetServersMenu.restore(g);
+            self.mNetLobbyMenu.restore(g);
+            self.mNetNewRoomMenu.restore(g);
+            self.mCurrentMenu = MenuId::NetServers;
+            self.current().reset_menu(g);
+            net_start_session(g);
+            return MENU_CODE_NONE;
+        }
+        match self.mCurrentMenu {
+            MenuId::NetLobby => MENU_CODE_NET_JOIN_ROOM_ABORT,
+            MenuId::NetNewRoom => MENU_CODE_TO_NET_NEW_ROOM_CREATE_ABORT,
+            _ => code,
+        }
     }
 }
 
@@ -1880,6 +1932,8 @@ impl GameState for MenuState {
                     gp.rm.menu_font_large.draw_centered(g, 320, 405, "Error Reading World File!");
                 } else if self.iDisplayError == DISPLAY_ERROR_MAP_FILTER {
                     gp.rm.menu_font_large.draw_centered(g, 320, 405, "No Maps Meet All Filter Conditions!");
+                } else if self.iDisplayError == DISPLAY_ERROR_NET {
+                    gp.rm.menu_font_large.draw_chop_centered(g, 320, 405, 470, self.net_error);
                 }
 
                 self.iDisplayErrorTimer -= 1;
