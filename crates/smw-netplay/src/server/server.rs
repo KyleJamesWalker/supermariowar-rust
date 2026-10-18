@@ -826,4 +826,31 @@ mod tests {
         let (host, guest) = start_two_player_room(&mut server);
         assert!(match_rooms(&host).is_empty() && match_rooms(&guest).is_empty());
     }
+
+    fn skin(slot_hint: u8) -> Vec<u8> {
+        let mut data = MessageHeader::new(NET_NOTICE_SKIN_CHANGE).as_bytes().to_vec();
+        data.extend_from_slice(&[slot_hint, 10, 0, 2, 0, 1, 2]);
+        data
+    }
+
+    fn skins_from(outbox: &Outbox) -> Vec<u8> {
+        outbox.borrow().iter().filter(|m| m[2] == NET_NOTICE_SKIN_CHANGE).map(|m| m[3]).collect()
+    }
+
+    #[test]
+    fn a_joining_player_and_the_room_swap_skins() {
+        let mut server = server();
+        let host = connect(&mut server, 1, "Host");
+        send(&mut server, 1, &host, &skin(0xFF));
+        send(&mut server, 1, &host, NewRoom::with("Room", "").as_bytes());
+        let created = host.borrow().iter().find(|m| m[2] == NET_RESPONSE_CREATE_OK).cloned().unwrap();
+        let room = NewRoomCreated::from_bytes(&created).roomID;
+        host.borrow_mut().clear();
+
+        let guest = connect(&mut server, 2, "Guest");
+        send(&mut server, 2, &guest, &skin(0xFF));
+        send(&mut server, 2, &guest, JoinRoom::with(room, "").as_bytes());
+        assert_eq!(skins_from(&guest), [0], "the guest gets the host's skin, from slot 0");
+        assert_eq!(skins_from(&host), [1], "the host gets the guest's skin, from slot 1");
+    }
 }

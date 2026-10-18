@@ -73,10 +73,11 @@ impl Room {
                 // send new player's skin to others
                 self.share_skin_of(player);
                 // send skins of others to new player
-                for p in 0..4u8 {
-                    if !self.players[p as usize].is_null() && self.players[p as usize] != player {
-                        let other = self.players[p as usize];
-                        self.send_blob_to(p, BlobRef::SkinOf(other));
+                let joined = p;
+                for other in 0..4u8 {
+                    if !self.players[other as usize].is_null() && self.players[other as usize] != player {
+                        let other = self.players[other as usize];
+                        self.send_blob_to(joined, BlobRef::SkinOf(other));
                     }
                 }
             } else {
