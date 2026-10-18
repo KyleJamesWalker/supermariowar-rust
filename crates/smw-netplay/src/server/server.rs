@@ -189,7 +189,7 @@ impl SMWServer {
     }
 
     fn send_visible_room_entries(&mut self, client: &mut dyn NetPeer) {
-        if self.rooms.is_empty() {
+        if !self.rooms.values().any(|room| room.visible && !room.mapPackage.empty()) {
             self.send_code(client, NET_RESPONSE_NO_ROOMS);
             return;
         }
@@ -250,7 +250,7 @@ impl SMWServer {
         // create
         let mut room = Room::new(self.roomCreateID, &pkg.name, &pkg.password, player);
         room.set_gamemode(pkg.gamemodeID, pkg.gamemodeGoal);
-        let (roomID, roomName, roomPassword) = (room.roomID, cstr_field(&room.name), cstr_field(&room.password));
+        let (roomID, roomName, hasPassword) = (room.roomID, cstr_field(&room.name), room.password[0] != 0);
         self.rooms.insert(self.roomCreateID, room);
 
         player.currentRoomID = self.roomCreateID;
@@ -261,7 +261,7 @@ impl SMWServer {
         package.roomID = self.roomCreateID;
         player.send_data(package.as_bytes());
 
-        log(&format!("New room by {} : {{id: {}; name: {}; pw: {}}}", player.to_string(), roomID as i32, roomName, roomPassword));
+        log(&format!("New room by {} : {{id: {}; name: {}; pw: {}}}", player.to_string(), roomID as i32, roomName, hasPassword));
 
         self.roomCreateID += 1; // increase global ID
     }
@@ -283,8 +283,14 @@ impl SMWServer {
 
         let Some(room) = self.rooms.get_mut(&{ pkg.roomID }) else {
             println!("No such room! ({})", { pkg.roomID });
+            player.send_code(NET_RESPONSE_ROOM_NOT_FOUND);
             return;
         };
+
+        if cstr_bytes(&room.password) != cstr_bytes(&pkg.password) {
+            player.send_code(NET_RESPONSE_WRONG_PASSWORD);
+            return;
+        }
 
         // Find first empty slot
         room.try_adding_player(player);
@@ -523,6 +529,10 @@ impl NetworkEventHandler for SMWServer {
     }
 }
 
+fn cstr_bytes(field: &[u8]) -> &[u8] {
+    &field[..field.iter().position(|&c| c == 0).unwrap_or(field.len())]
+}
+
 /// `strtol(value.c_str(), NULL, 10)`
 fn strtol10(s: &[u8]) -> i64 {
     let mut i = 0;
@@ -543,5 +553,139 @@ fn strtol10(s: &[u8]) -> i64 {
         -v
     } else {
         v
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use smw::common_netplay::protocol_packages::RoomList;
+    use std::any::Any;
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    type Outbox = Rc<RefCell<Vec<Vec<u8>>>>;
+
+    struct TestPeer {
+        id: u64,
+        outbox: Outbox,
+    }
+
+    impl NetPeer for TestPeer {
+        fn send(&mut self, data: &[u8]) -> bool {
+            self.outbox.borrow_mut().push(data.to_vec());
+            true
+        }
+        fn send_reliable(&mut self, data: &[u8]) -> bool {
+            self.send(data)
+        }
+        fn disconnect(&mut self) {}
+        fn address_host(&self) -> u32 {
+            0
+        }
+        fn address_port(&self) -> u16 {
+            self.id as u16
+        }
+        fn address_as_string(&self) -> String {
+            format!("test:{}", self.id)
+        }
+        fn average_rtt(&self) -> u32 {
+            0
+        }
+        fn get_player_id(&self) -> u64 {
+            self.id
+        }
+        fn same_peer(&self, other: &dyn NetPeer) -> bool {
+            other.get_player_id() == self.id
+        }
+        fn as_any(&self) -> &dyn Any {
+            self
+        }
+    }
+
+    struct NoLayer;
+
+    impl NetworkLayer for NoLayer {
+        fn init(&mut self, _max_players: u64) -> bool {
+            true
+        }
+        fn cleanup(&mut self) {}
+        fn listen(&mut self, _handler: &mut dyn NetworkEventHandler) {}
+    }
+
+    fn server() -> SMWServer {
+        static ONCE: std::sync::Once = std::sync::Once::new();
+        ONCE.call_once(|| set_net_layer(Box::new(NoLayer)));
+        SMWServer::new()
+    }
+
+    fn connect(server: &mut SMWServer, id: u64, name: &str) -> Outbox {
+        let outbox = Outbox::default();
+        server.on_connect(&mut (), Box::new(TestPeer { id, outbox: outbox.clone() }));
+        send(server, id, &outbox, ClientConnection::with(name).as_bytes());
+        outbox
+    }
+
+    fn send(server: &mut SMWServer, id: u64, outbox: &Outbox, data: &[u8]) {
+        server.on_receive(&mut (), &mut TestPeer { id, outbox: outbox.clone() }, data);
+    }
+
+    fn codes(outbox: &Outbox) -> Vec<u8> {
+        outbox.borrow_mut().drain(..).map(|m| m[2]).collect()
+    }
+
+    fn room_with_password(server: &mut SMWServer, password: &str) -> u32 {
+        let host = connect(server, 1, "Host");
+        send(server, 1, &host, NewRoom::with("Room", password).as_bytes());
+        let created = host.borrow().iter().find(|m| m[2] == NET_RESPONSE_CREATE_OK).cloned().unwrap();
+        NewRoomCreated::from_bytes(&created).roomID
+    }
+
+    #[test]
+    fn join_needs_the_room_password() {
+        let mut server = server();
+        let room = room_with_password(&mut server, "secret");
+        let guest = connect(&mut server, 2, "Guest");
+        codes(&guest);
+
+        send(&mut server, 2, &guest, JoinRoom::with(room, "").as_bytes());
+        assert_eq!(codes(&guest), [NET_RESPONSE_WRONG_PASSWORD]);
+        send(&mut server, 2, &guest, JoinRoom::with(room, "Secret").as_bytes());
+        assert_eq!(codes(&guest), [NET_RESPONSE_WRONG_PASSWORD]);
+
+        send(&mut server, 2, &guest, JoinRoom::with(room, "secret").as_bytes());
+        assert!(codes(&guest).contains(&NET_RESPONSE_JOIN_OK));
+    }
+
+    #[test]
+    fn join_without_password_when_the_room_has_none() {
+        let mut server = server();
+        let room = room_with_password(&mut server, "");
+        let guest = connect(&mut server, 2, "Guest");
+        codes(&guest);
+
+        send(&mut server, 2, &guest, JoinRoom::with(room, "").as_bytes());
+        assert!(codes(&guest).contains(&NET_RESPONSE_JOIN_OK));
+    }
+
+    #[test]
+    fn join_of_a_missing_room_is_answered() {
+        let mut server = server();
+        let guest = connect(&mut server, 2, "Guest");
+        codes(&guest);
+
+        send(&mut server, 2, &guest, JoinRoom::with(99, "").as_bytes());
+        assert_eq!(codes(&guest), [NET_RESPONSE_ROOM_NOT_FOUND]);
+    }
+
+    #[test]
+    fn room_list_without_visible_rooms_says_so() {
+        let mut server = server();
+        room_with_password(&mut server, "");
+        let guest = connect(&mut server, 2, "Guest");
+        codes(&guest);
+
+        send(&mut server, 2, &guest, RoomList::new().as_bytes());
+        assert_eq!(codes(&guest), [NET_RESPONSE_NO_ROOMS]);
     }
 }

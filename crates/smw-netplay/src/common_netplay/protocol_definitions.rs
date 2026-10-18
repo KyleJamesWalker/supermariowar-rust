@@ -1,7 +1,7 @@
 //! Port of src/common_netplay/ProtocolDefinitions.h
 
 pub const NET_PROTOCOL_VERSION_MAJOR: u8 = 0;
-pub const NET_PROTOCOL_VERSION_MINOR: u8 = 7;
+pub const NET_PROTOCOL_VERSION_MINOR: u8 = 8;
 pub const NET_MAX_MESSAGE_SIZE: usize = 128;
 pub const NET_LOBBYSERVER_PORT: u16 = 12521;
 pub const NET_GAMEHOST_PORT: u16 = 12522;
@@ -33,9 +33,11 @@ pub const NET_NOTICE_MAP_CHANGE: u8 = 35;
 pub const NET_NOTICE_GAMEMODESETTINGS: u8 = 36;
 pub const NET_NOTICE_SKIN_CHANGE: u8 = 37;
 pub const NET_NOTICE_ROOM_CHAT_MSG: u8 = 38;
+pub const NET_RESPONSE_ROOM_NOT_FOUND: u8 = 39;
 pub const NET_REQUEST_CREATE_ROOM: u8 = 40;
 pub const NET_RESPONSE_CREATE_OK: u8 = 41;
 pub const NET_RESPONSE_CREATE_ERROR: u8 = 42;
+pub const NET_RESPONSE_WRONG_PASSWORD: u8 = 43;
 // L: lobby server
 // G: game host player
 // P: regular players
