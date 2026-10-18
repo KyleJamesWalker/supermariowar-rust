@@ -9,6 +9,7 @@ use crate::common::match_types::MatchType;
 use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
 use crate::common::random_number_generator::{RANDOM_BOOL, RANDOM_INT};
+use crate::common::global_constants::ticks;
 use crate::globals::*;
 use crate::smw::net_random::{self, Ev};
 use crate::smw::objects::powerup::pu_treasure_chest_bonus::PU_TreasureChestBonus;
@@ -218,7 +219,7 @@ pub fn remove_team_now(g: &mut Game, teamid: i16) -> bool {
             g.rm.spr_announcementicons,
             "Team Removed!".to_string(),
             iAnnouncementColor,
-            90,
+            ticks(90) as i16,
             200,
         ));
         gp.rm.sfx_announcer[(iAnnouncementColor as i32 + 16) as usize].play(g);

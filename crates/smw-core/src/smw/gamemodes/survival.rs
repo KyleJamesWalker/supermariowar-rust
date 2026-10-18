@@ -4,7 +4,7 @@ use crate::smw::players::PlayerId;
 use crate::game::Game;
 use crate::common::game::App;
 use crate::common::game_mode::*;
-use crate::common::global_constants::NUMSURVIVALENEMIES;
+use crate::common::global_constants::{ticks, vel, NUMSURVIVALENEMIES};
 use crate::common::math::vec2::{Vec2f, Vec2s};
 use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
@@ -48,7 +48,7 @@ impl CGM_Survival {
         let mut gp = g.ptr();
         let mut rm = g.rm;
         self.ratetimer += 1;
-        if self.ratetimer == 10 {
+        if self.ratetimer as i32 == ticks(10) {
             self.ratetimer = 0;
 
             self.rate -= 1;
@@ -69,18 +69,18 @@ impl CGM_Survival {
 
         if 0 == self.iSelectedEnemy {
             let x = RANDOM_INT(gp.get(), (App::screenWidth as f32 * 0.92f32) as i32) as i16;
-            let nspeed = g.game_values.gamemodesettings.survival.speed as f32 / 2.0f32 + (RANDOM_INT(gp.get(), 20) as f32) / 10.0f32;
+            let nspeed = vel(g.game_values.gamemodesettings.survival.speed as f32 / 2.0f32 + (RANDOM_INT(gp.get(), 20) as f32) / 10.0f32);
             let obj = Ptr::new_box(OMO_Thwomp::new(g, rm.spr_thwomp, x, nspeed));
             gp.objectcontainer[2].add(g, obj);
-            self.timer = (RANDOM_INT(gp.get(), 21) - 10 + self.rate as i32) as i16;
+            self.timer = ticks(RANDOM_INT(gp.get(), 21) - 10 + self.rate as i32) as i16;
         } else if 1 == self.iSelectedEnemy {
             let x = RANDOM_INT(gp.get(), (App::screenWidth as f32 * 0.95f32) as i32) as i16;
-            let nspeed = -((RANDOM_INT(gp.get(), 9) as f32) / 2.0f32) - 8.0f32;
+            let nspeed = vel(-((RANDOM_INT(gp.get(), 9) as f32) / 2.0f32) - 8.0f32);
             let obj = Ptr::new_box(MO_Podobo::new(g, rm.spr_podobo, Vec2s::new(x, App::screenHeight as i16), nspeed, -1, -1, -1, false));
             gp.objectcontainer[2].add(g, obj);
-            self.timer = (RANDOM_INT(gp.get(), 21) - 10 + self.rate as i32 - 20) as i16;
+            self.timer = ticks(RANDOM_INT(gp.get(), 21) - 10 + self.rate as i32 - 20) as i16;
         } else {
-            let dSpeed: f32 = ((RANDOM_INT(gp.get(), 21) + 20) as f32) / 10.0f32;
+            let dSpeed: f32 = vel(((RANDOM_INT(gp.get(), 21) + 20) as f32) / 10.0f32);
             let dVel: f32 = if RANDOM_BOOL(gp.get()) { dSpeed } else { -dSpeed };
 
             let mut x: i16 = -54;
@@ -91,7 +91,7 @@ impl CGM_Survival {
             let y = RANDOM_INT(gp.get(), (App::screenHeight as f32 * 0.93f32) as i32) as i16;
             let obj = Ptr::new_box(OMO_BowserFire::new(g, rm.spr_bowserfire, Vec2s::new(x, y), Vec2f::new(dVel, 0.0f32), -1, -1, -1));
             gp.objectcontainer[2].add(g, obj);
-            self.timer = (RANDOM_INT(gp.get(), 21) - 10 + self.rate as i32) as i16;
+            self.timer = ticks(RANDOM_INT(gp.get(), 21) - 10 + self.rate as i32) as i16;
         }
     }
 }
@@ -110,7 +110,7 @@ impl CGameModeTrait for CGM_Survival {
         cgm_classic_init(g, &mut self.cgm_classic);
 
         self.rate = (3 * g.game_values.gamemodesettings.survival.density as i32) as i16;
-        self.timer = (RANDOM_INT(gp.get(), 21) - 10 + self.rate as i32) as i16;
+        self.timer = ticks(RANDOM_INT(gp.get(), 21) - 10 + self.rate as i32) as i16;
         self.ratetimer = 0;
 
         self.iEnemyWeightCount = 0;

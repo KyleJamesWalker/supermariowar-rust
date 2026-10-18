@@ -14,6 +14,7 @@
 //! Objects made during setup and inside events get the same `iNetworkID` on every client, so events
 //! can name them.
 
+use crate::common::global_constants::ticks;
 use crate::game::Game;
 use crate::common::math::vec2::Vec2s;
 use crate::common::object_base::{set_network_id_context, CObjectTrait};
@@ -175,8 +176,8 @@ fn random_state(g: &mut Game) -> &mut NetRandomState {
 }
 
 /// A joiner's player whose death or warp the game host never saw gives up waiting after this.
-const FALLBACK_FRAMES: u32 = 90;
-const PENDING_FRAMES: u32 = 180;
+const FALLBACK_FRAMES: u32 = ticks(90) as u32;
+const PENDING_FRAMES: u32 = ticks(180) as u32;
 
 /// From the net game's sync until its first gameplay frame the clients draw in step and number objects alike.
 pub fn begin_setup(g: &mut Game) {

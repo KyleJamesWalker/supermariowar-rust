@@ -5,7 +5,7 @@ use crate::game::Game;
 use crate::common::eyecandy::{EC_GravText, EC_SingleAnimation};
 use crate::common::game_mode::*;
 use crate::common::game_values::if_sound_on_play;
-use crate::common::global_constants::VELJUMP;
+use crate::common::global_constants::{ticks, VELJUMP};
 use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
 use crate::globals::*;
@@ -111,7 +111,7 @@ impl CGameModeTrait for CGM_Tag {
             let mut tagged = self.m_tagged;
             if g.player(tagged).isready() {
                 self.counter += 1;
-                if self.counter >= g.game_values.pointspeed {
+                if self.counter as i32 >= ticks(g.game_values.pointspeed as i32) {
                     self.counter = 0;
 
                     if self.fReverseScoring {

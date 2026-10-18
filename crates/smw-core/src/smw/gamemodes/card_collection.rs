@@ -9,6 +9,7 @@ use crate::common::moving_object_types::movingobject_collectioncard;
 use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
 use crate::common::random_number_generator::RANDOM_INT;
+use crate::common::global_constants::{ticks, vel};
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::{self as gm, remove_players_but_team, setup_score_board, show_score_board};
@@ -49,7 +50,7 @@ impl CGM_Collection {
     fn drop_card(&mut self, g: &mut Game, mut player: PlayerId, pos: Vec2s) {
         let mut gp = g.ptr();
         {
-            let speed: f32 = 7.0f32 + RANDOM_INT(gp.get(), 9) as f32 / 2.0f32;
+            let speed: f32 = vel(7.0f32 + RANDOM_INT(gp.get(), 9) as f32 / 2.0f32);
             let angle: f32 = -(RANDOM_INT(gp.get(), 314) as f32) / 100.0f32;
             let vel = Vec2f::new(speed * cosf(angle), speed * sinf(angle));
 
@@ -62,7 +63,7 @@ impl CGM_Collection {
 
             g.player(player).score(g).subscore[1] &= iCardMaskInverted;
 
-            let obj = Ptr::new_box(MO_CollectionCard::new(g, gp.get().rm.spr_collectcards, 1, iValue, 30, vel, pos));
+            let obj = Ptr::new_box(MO_CollectionCard::new(g, gp.get().rm.spr_collectcards, 1, iValue, ticks(30) as i16, vel, pos));
             gp.get().objectcontainer[1].add(g, obj);
         }
     }

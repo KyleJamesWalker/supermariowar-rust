@@ -2,11 +2,11 @@
 //! own after three seconds. The Enter press goes through the platform's event queue, so a recording keeps it and a
 //! replay plays it back instead of pressing again.
 
+use crate::common::global_constants::TICKS_PER_SECOND;
 use crate::game::Game;
 use smw_platform::{Input, InputEvent, Keycode};
 
-/// Three seconds at the 16 ms frame time.
-const DELAY_FRAMES: u16 = 188;
+const DELAY_FRAMES: u16 = 3 * TICKS_PER_SECOND as u16;
 const SDLK_RETURN: i32 = 13;
 const SDL_SCANCODE_RETURN: i32 = 40;
 

@@ -5,6 +5,7 @@ use crate::game::Game;
 use crate::common::game_mode::{game_mode_owned, CGameMode, CGameModeTrait};
 use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
+use crate::common::global_constants::ticks;
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::{self as gm, remove_players_but_team, setup_score_board, show_score_board};
@@ -49,7 +50,7 @@ impl CGameModeTrait for CGM_Owned {
             self.displayplayertext(g);
         } else {
             self.counter += 1;
-            if self.counter >= g.game_values.pointspeed {
+            if self.counter as i32 >= ticks(g.game_values.pointspeed as i32) {
                 self.counter = 0;
 
                 let mut i = 0;

@@ -285,7 +285,7 @@ pub fn createpowerup(g: &mut Game, iType: i16, pos: Vec2s, side: bool, spawn: bo
         }
         Spawned::None => {
             //If no powerups were selected for this block, then fire out a podobo
-            let dVelY = -(RANDOM_INT(gp.get(), 5) as f32 / 2.0) - 6.0;
+            let dVelY = vel(-(RANDOM_INT(gp.get(), 5) as f32 / 2.0) - 6.0);
             let podobo = Ptr::new_box(MO_Podobo::new(
                 g,
                 rm.spr_podobo,

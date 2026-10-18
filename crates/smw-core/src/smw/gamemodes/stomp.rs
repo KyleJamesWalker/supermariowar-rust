@@ -3,7 +3,7 @@
 use crate::smw::players::PlayerId;
 use crate::game::Game;
 use crate::common::game_mode::*;
-use crate::common::global_constants::NUMSTOMPENEMIES;
+use crate::common::global_constants::{ticks, NUMSTOMPENEMIES};
 use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
 use crate::common::random_number_generator::{RANDOM_BOOL, RANDOM_INT};
@@ -93,7 +93,7 @@ impl CGM_Stomp {
     fn reset_spawn_timer(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         let rate = g.game_values.gamemodesettings.stomp.rate;
-        self.spawntimer = ((RANDOM_INT(gp.get(), rate as i32) as i16) as i32 + rate as i32) as i16;
+        self.spawntimer = ticks((RANDOM_INT(gp.get(), rate as i32) as i16) as i32 + rate as i32) as i16;
     }
 }
 
