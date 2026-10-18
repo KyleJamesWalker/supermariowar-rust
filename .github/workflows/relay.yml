@@ -15,7 +15,6 @@ on:
       - Dockerfile
       - .dockerignore
       - vendor/**
-      - deploy/signal/**
       - .github/workflows/relay.yml
       - .github/workflows/build_relay.yml
   pull_request:
@@ -31,7 +30,6 @@ on:
       - Dockerfile
       - .dockerignore
       - vendor/**
-      - deploy/signal/**
       - .github/workflows/relay.yml
       - .github/workflows/build_relay.yml
   workflow_dispatch:

@@ -30,7 +30,7 @@ Menus, the world map and the screens between games stay on reliable messages. Ro
 
 **Transport.** WebRTC data channels in browsers and native builds, through `crates/smw-peer`. Each pair of players shares a reliable channel for match setup and an unreliable, unordered one for GGRS. Peers connect directly through STUN, and fall back to a TURN relay when NAT punching fails. `coturn` is the TURN server.
 
-- **Signaling.** A stock `matchbox_server` pairs the peers of a room. Both builds speak its protocol: native builds through `webrtc` (webrtc-rs) and `tokio-tungstenite`, the web build through `web/peer_socket.js`.
+- **Signaling.** `smw_relay` pairs the peers of a room on `/signal/<room>`, speaking the `matchbox_server` protocol (`apps/smw_relay/src/signal.rs`); a stock `matchbox_server` works too. Both builds speak that protocol: native builds through `webrtc` (webrtc-rs) and `tokio-tungstenite`, the web build through `web/peer_socket.js`.
 - **Lobby.** `smw_relay` keeps the room list, room names, passwords and player counts. When a room starts, the lobby gives each admitted player a random `matchbox` room ID. Only admitted players learn it, so the ID is the ticket. If that proves too weak, the relay can host `matchbox_signaling` itself and check each connection against the lobby.
 
 **Game work.**
@@ -77,7 +77,7 @@ Menus, the world map and the screens between games stay on reliable messages. Ro
 2. **Decide.** Rollback. The RG35XX worst case is about 3 ms snapshot, 5.5 ms re-run and 5 ms drawing, which fits the 16.67 ms tick. A trimmed snapshot widens the margin.
 3. **Transport (in progress).** In three PRs:
    1. `smw-peer`: the peer socket for both builds and its GGRS socket. CI connects two browser pages and a native peer in one room (`tools/web_peer_test.mjs`).
-   2. The lobby hands started rooms to signaling. `matchbox_server` runs in `deploy/`.
+   2. The lobby hands started rooms to signaling: its own `/signal`, or the server `SMW_SIGNAL_URL` names.
    3. `coturn` in `deploy/`, and TURN credentials for clients.
 4. **GGRS session for matches (in progress).**
    1. Rollback engine (`smw/rollback.rs`). `MatchState` holds what a match tick reads and writes: game values, map, objects, players, scores, modes, RNG, the virtual mixer, the gameplay state and the frame counter. It skips the screen surface and the display lists. `advance` runs one tick with given keys and can mute it. `checksum` hashes the harness dump. Every replay's match runs under GGRS's sync test, which loads the state from 7 ticks back and re-runs it on every tick. All 47 replays that reach a match stay in sync for 600 ticks.

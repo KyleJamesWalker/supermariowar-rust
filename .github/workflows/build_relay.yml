@@ -35,8 +35,6 @@ jobs:
         include:
           - image: ghcr.io/kylejameswalker/supermariowar-rust-relay
             context: .
-          - image: ghcr.io/kylejameswalker/supermariowar-rust-signal
-            context: deploy/signal
     runs-on: ubuntu-latest
     env:
       IMAGE: ${{ matrix.image }}
