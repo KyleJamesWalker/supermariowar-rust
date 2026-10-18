@@ -1047,7 +1047,8 @@ fn wrap_open(g: &Game, y: i32) -> bool {
 }
 
 /// How much farther `opponent` counts when `me` picks whom to chase: each other CPU already chasing it doubles,
-/// triples and so on its distance, the score leader counts at three quarters, and a flag carrier at half.
+/// triples and so on its distance, the score leader counts at three quarters, and a flag carrier or the holder of a
+/// star worth keeping at half.
 fn spread_weight(g: &mut Game, me: PlayerId, opponent: PlayerId) -> (i64, i64) {
     let mut chasers = 0;
     let mut leader = true;
@@ -1070,7 +1071,8 @@ fn spread_weight(g: &mut Game, me: PlayerId, opponent: PlayerId) -> (i64, i64) {
         }
     }
     let carried = g.carried_item(opponent);
-    let carrier = !carried.is_null() && carried.get_moving_object_type() == movingobject_flag;
+    let carrier = !carried.is_null()
+        && (carried.get_moving_object_type() == movingobject_flag || (carried.get_moving_object_type() == movingobject_star && star_type(carried) == 1));
     (if leader { 3 } else { 4 } * (1 + chasers), if carrier { 8 } else { 4 })
 }
 
@@ -1270,6 +1272,16 @@ fn dodge_stomp(g: &mut Game, me: PlayerId) -> Option<bool> {
         }
     }
     None
+}
+
+fn star_type(carried: Ptr<dyn MO_CarriedObjectTrait>) -> i16 {
+    static_cast::<CO_Star>(carried_as_object(carried)).get_type()
+}
+
+/// Whether `player` carries a star of `kind` (0 the one to pass on, 1 the one to keep).
+fn holds_star(g: &mut Game, player: PlayerId, kind: i16) -> bool {
+    let carried = g.carried_item(player);
+    !carried.is_null() && carried.get_moving_object_type() == movingobject_star && star_type(carried) == kind
 }
 
 fn solid_at(g: &mut Game, tx: i32, ty: i32) -> bool {
@@ -1522,20 +1534,18 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                 let piy = g.player(player).iy as i32;
 
                 //Move player relative to opponent when we are playing star mode and we are holding a star
-                if g.mode().gamemode == game_mode_star {
-                    if !carriedItem.is_null() && carriedItem.get_moving_object_type() == movingobject_star {
-                        if static_cast::<CO_Star>(carriedObj).get_type() == 1 {
-                            *moveAway = true;
-                        } else {
-                            *moveToward = true;
+                if g.mode().gamemode == game_mode_star && !carriedItem.is_null() && carriedItem.get_moving_object_type() == movingobject_star {
+                    if static_cast::<CO_Star>(carriedObj).get_type() == 1 {
+                        *moveAway = true;
+                    } else {
+                        *moveToward = true;
 
-                            //If player is close
-                            if piy <= iy32 && piy > iy32 - 60 && pix - ix32 < 90 && pix - ix32 > -90 {
-                                //And we are facing toward that player, throw the star
-                                if (pix > ix32 && g.player(pPlayer).is_facing_right(g)) || ((pix < ix32) && !g.player(pPlayer).is_facing_right(g)) {
-                                    g.player(pPlayer).throw_star = ticks(30) as i16;
-                                    playerKeys.game_turbo_mut().fDown = false;
-                                }
+                        //If player is close
+                        if piy <= iy32 && piy > iy32 - 60 && pix - ix32 < 90 && pix - ix32 > -90 {
+                            //And we are facing toward that player, throw the star
+                            if (pix > ix32 && g.player(pPlayer).is_facing_right(g)) || ((pix < ix32) && !g.player(pPlayer).is_facing_right(g)) {
+                                g.player(pPlayer).throw_star = ticks(30) as i16;
+                                playerKeys.game_turbo_mut().fDown = false;
                             }
                         }
                     }
@@ -1556,6 +1566,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                         }
                     }
                 } else if (!gmTag.is_null() && gmTag.tagged() == player)
+                    || holds_star(g, player, 0)
                     || g.player(player).is_invincible()
                     || g.player(player).shyguy
                     || (!gmChicken.is_null() && gmChicken.chicken() == pPlayer)
