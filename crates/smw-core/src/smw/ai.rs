@@ -3,6 +3,7 @@
 use crate::smw::object_container::ObjectId;
 use crate::common::map::{WARP_DOWN, WARP_LEFT, WARP_RIGHT};
 use crate::smw::ai_nav::{Move, NavGraph, Route};
+use crate::smw::objects::blocks::powerup_block::B_PowerupBlock;
 use crate::smw::players::PlayerId;
 use crate::game::Game;
 use crate::common::game::App;
@@ -886,6 +887,25 @@ impl CPlayerAI {
                 _ => {
                     nearest!(self.distance_to_object(g, obj, goal, goaldistance, goalwrap));
                 }
+            }
+        }
+
+        // Without a powerup, a CPU goes for a nearby block that still holds one in the modes won by stomping.
+        let stomp_mode = matches!(g.mode().gamemode, game_mode_classic | game_mode_frag | game_mode_timelimit);
+        if stomp_mode && g.player(pPlayer).powerup == -1 && carriedItem.is_null() && self.nearestObjects.goal.is_none() {
+            let (mut block, mut distance, mut wrap) = (ObjectId::NONE, 160 * 160, false);
+            for i in 0..g.noncolcontainer.list().len() {
+                let obj = g.noncolcontainer.list()[i];
+                let pb = dynamic_cast::<B_PowerupBlock>(obj);
+                if pb.is_null() || pb.hidden || obj.get_state() != 0 || self.attentionObjects.contains_key(&obj.network_id()) {
+                    continue;
+                }
+                self.distance_to_object(g, obj, &mut block, &mut distance, &mut wrap);
+            }
+            if !block.is_none() {
+                self.nearestObjects.goal = block;
+                self.nearestObjects.goaldistance = distance;
+                self.nearestObjects.goalwrap = wrap;
             }
         }
 
