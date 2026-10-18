@@ -1127,8 +1127,8 @@ fn record_wait_event(g: &mut Game) -> Input {
     }
 }
 
-/// About three seconds at the default 16 ms frame time.
-const UNFINISHED_TAIL_FRAMES: u32 = 188;
+/// Three seconds.
+const UNFINISHED_TAIL_FRAMES: u32 = 3 * crate::common::global_constants::TICKS_PER_SECOND;
 
 /// Writes `#@ frames=` and closes the recording, or removes a watch session's throwaway HOME.
 /// Safe to call more than once.

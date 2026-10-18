@@ -263,7 +263,10 @@ const iCountDownNumbers: [[[Rect; 2]; 4]; 4] = [
     ],
 ];
 
-const iCountDownTimes: [i16; 28] = [3, 3, 3, 15, 3, 3, 3, 3, 3, 3, 15, 3, 3, 3, 3, 3, 3, 15, 3, 3, 3, 3, 3, 3, 45, 3, 3, 3];
+const iCountDownTimes: [i16; 28] = {
+    let (p, l) = (ticks(15) as i16, ticks(45) as i16);
+    [3, 3, 3, p, 3, 3, 3, 3, 3, 3, p, 3, 3, 3, 3, 3, 3, p, 3, 3, 3, 3, 3, 3, l, 3, 3, 3]
+};
 const iCountDownRectSize: [i16; 28] = [3, 2, 1, 0, 1, 2, 3, 3, 2, 1, 0, 1, 2, 3, 3, 2, 1, 0, 1, 2, 3, 3, 2, 1, 0, 1, 2, 3];
 const iCountDownRectGroup: [i16; 28] = [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3];
 const iCountDownAnnounce: [i16; 28] = [-1, -1, -1, 12, -1, -1, -1, -1, -1, -1, 13, -1, -1, -1, -1, -1, -1, 14, -1, -1, -1, -1, -1, -1, 15, -1, -1, -1];
@@ -508,7 +511,7 @@ impl GameplayState {
                     //add cloud to eyecandy array
                     let x = RANDOM_INT(gp.get(), App::screenWidth) as f32;
                     let y = RANDOM_INT(gp.get(), 100) as f32;
-                    g.eyecandy[iEyeCandyLayer].emplace(EC_Cloud::new(&gp.rm, g.rm.spr_clouds, x, y, velx, 0, srcy, w, h));
+                    g.eyecandy[iEyeCandyLayer].emplace(EC_Cloud::new(&gp.rm, g.rm.spr_clouds, x, y, vel(velx), 0, srcy, w, h));
                 }
             }
 
@@ -527,7 +530,7 @@ impl GameplayState {
                         g.rm.spr_ghosts,
                         x,
                         y,
-                        velx,
+                        vel(velx),
                         8,
                         2,
                         if velx < 0.0f32 { 64 } else { 0 },
@@ -593,7 +596,7 @@ impl GameplayState {
                         g.rm.spr_fish,
                         x,
                         dDestY,
-                        velx,
+                        vel(velx),
                         (srcx as i32 + if velx > 0.0f32 { 64 } else { 0 }) as i16,
                         srcy,
                         w,
@@ -644,8 +647,8 @@ impl GameplayState {
         self.init_eye_candy(g);
 
         self.iWindTimer = 0;
-        self.dNextWind = (RANDOM_INT(gp.get(), 41) - 20) as f32 / 4.0f32;
-        g.game_values.flags.gamewindx = ((RANDOM_INT(gp.get(), 41)) - 20) as f32 / 4.0f32;
+        self.dNextWind = vel((RANDOM_INT(gp.get(), 41) - 20) as f32 / 4.0f32);
+        g.game_values.flags.gamewindx = vel(((RANDOM_INT(gp.get(), 41)) - 20) as f32 / 4.0f32);
 
         //Initialize players after game init has finished
         for i in 0..g.players.len() {
@@ -766,22 +769,22 @@ pub fn check_wind_event(g: &mut Game, iWindTimer: &mut i16, dNextWind: &mut f32)
     if *iWindTimer <= 0 {
         //Then trigger next wind event
         if g.game_values.flags.gamewindx < *dNextWind {
-            g.game_values.flags.gamewindx += 0.02f32;
+            g.game_values.flags.gamewindx += acc(0.02f32);
 
             if g.game_values.flags.gamewindx >= *dNextWind {
-                *iWindTimer = ((RANDOM_INT(gp.get(), 60)) + 30) as i16;
+                *iWindTimer = ticks((RANDOM_INT(gp.get(), 60)) + 30) as i16;
             }
         } else if g.game_values.flags.gamewindx >= *dNextWind {
-            g.game_values.flags.gamewindx -= 0.02f32;
+            g.game_values.flags.gamewindx -= acc(0.02f32);
 
             if g.game_values.flags.gamewindx <= *dNextWind {
-                *iWindTimer = ((RANDOM_INT(gp.get(), 60)) + 30) as i16;
+                *iWindTimer = ticks((RANDOM_INT(gp.get(), 60)) + 30) as i16;
             }
         }
     } else {
         *iWindTimer -= 1;
         if *iWindTimer <= 0 {
-            *dNextWind = ((RANDOM_INT(gp.get(), 41)) - 20) as f32 / 4.0f32;
+            *dNextWind = vel(((RANDOM_INT(gp.get(), 41)) - 20) as f32 / 4.0f32);
         }
     }
 }
@@ -993,22 +996,22 @@ impl GameplayState {
 
         if self.spindirection == 0 || self.spindirection == 2 {
             self.spintimer += 1;
-            if self.spintimer >= 300 {
+            if self.spintimer as i32 >= ticks(300) {
                 self.spindirection += 1;
                 self.spintimer = 0;
             }
         } else if self.spindirection == 1 {
-            self.spinspeed += 0.0008f32;
+            self.spinspeed += acc(0.0008f32);
 
-            if self.spinspeed >= 0.05f32 {
-                self.spinspeed = 0.05f32;
+            if self.spinspeed >= vel(0.05f32) {
+                self.spinspeed = vel(0.05f32);
                 self.spindirection += 1;
             }
         } else {
-            self.spinspeed -= 0.0008f32;
+            self.spinspeed -= acc(0.0008f32);
 
-            if self.spinspeed <= -0.05f32 {
-                self.spinspeed = -0.05f32;
+            if self.spinspeed <= vel(-0.05f32) {
+                self.spinspeed = vel(-0.05f32);
                 self.spindirection = 0;
             }
         }
@@ -1021,12 +1024,12 @@ impl GameplayState {
             self.spinangle += TWO_PI;
         }
 
-        let mut shakey: f32 = self.spinspeed * App::screenWidth as f32 * sinf(self.spinangle);
+        let mut shakey: f32 = self.spinspeed / TICK_SCALE * App::screenWidth as f32 * sinf(self.spinangle);
         if shakey < 0.0f32 {
             shakey -= 1.0f32;
         }
 
-        g.x_shake = (self.spinspeed * App::screenWidth as f32 * cosf(self.spinangle)) as i16;
+        g.x_shake = (self.spinspeed / TICK_SCALE * App::screenWidth as f32 * cosf(self.spinangle)) as i16;
         g.y_shake = shakey as i16;
     }
 }
@@ -1406,7 +1409,7 @@ impl GameplayState {
                         g.rm.menu_mode_large,
                         szMode,
                         iMode,
-                        130,
+                        ticks(130) as i16,
                         90,
                     ));
                 }
@@ -1477,12 +1480,12 @@ impl GameplayState {
             }
 
             g.game_values.flags.swapplayersblinkcount += 1;
-            if g.game_values.flags.swapplayersblinkcount > 10 {
+            if g.game_values.flags.swapplayersblinkcount as i32 > ticks(10) {
                 g.game_values.flags.swapplayersblinkcount = 0;
                 g.game_values.flags.swapplayersblink = !g.game_values.flags.swapplayersblink;
             }
 
-            g.game_values.flags.swapplayersposition += 0.02f32;
+            g.game_values.flags.swapplayersposition += vel(0.02f32);
             if g.game_values.flags.swapplayersposition >= 1.0f32 {
                 g.game_values.flags.swapplayersposition = 0.0f32;
                 g.game_values.flags.swapplayers = false;
@@ -1570,7 +1573,7 @@ impl GameplayState {
             draw_rect(
                 g,
                 &gp.rm.sprite(gp.rm.spr_windmeter),
-                ((gp.game_values.flags.gamewindx * 20.0f32) as i16) as i32 + App::screenWidth / 2,
+                ((gp.game_values.flags.gamewindx / TICK_SCALE * 20.0f32) as i16) as i32 + App::screenWidth / 2,
                 iDisplayWindMeterY as i32 + 6,
                 220,
                 0,
@@ -2208,8 +2211,8 @@ pub fn update_bullet_bill_powerup(g: &mut Game) {
 
 pub fn net_bullet_bill(g: &mut Game, p: usize) {
         let mut gp = g.ptr();
-    g.game_values.bulletbillspawntimer[p] = (RANDOM_INT(gp.get(), 20) + 25) as i16;
-    let speed: f32 = ((RANDOM_INT(gp.get(), 21) + 20) as f32) / 10.0f32;
+    g.game_values.bulletbillspawntimer[p] = ticks(RANDOM_INT(gp.get(), 20) + 25) as i16;
+    let speed: f32 = vel(((RANDOM_INT(gp.get(), 21) + 20) as f32) / 10.0f32);
     let posy = RANDOM_INT(gp.get(), 448) as i16;
     let vel = if RANDOM_INT(gp.get(), 2) != 0 { speed } else { -speed };
     let obj = Ptr::new_box(MO_BulletBill::new(
@@ -2229,7 +2232,7 @@ pub fn net_bullet_bill(g: &mut Game, p: usize) {
 pub fn update_scoreboard_animation(g: &mut Game) {
     if g.game_values.flags.showscoreboard {
         if g.game_values.flags.scorepercentmove < 1.0f32 {
-            g.game_values.flags.scorepercentmove += 0.01f32;
+            g.game_values.flags.scorepercentmove += vel(0.01f32);
 
             if g.game_values.flags.scorepercentmove >= 1.0f32 {
                 g.game_values.flags.scorepercentmove = 1.0f32;
@@ -2637,7 +2640,7 @@ impl GameplayState {
 
         if g.game_values.flags.slowdownon != -1 {
             g.game_values.flags.slowdowncounter += 1;
-            if g.game_values.flags.slowdowncounter > 580 {
+            if g.game_values.flags.slowdowncounter as i32 > ticks(580) {
                 g.game_values.flags.slowdownon = -1;
                 g.game_values.flags.slowdowncounter = 0;
             }
@@ -2872,7 +2875,7 @@ pub fn net_mystery_swap(g: &mut Game, iUsingPlayerID: i16) -> bool {
         //Give credit for deaths to the player that used the mystery mushroom
         if iUsingPlayerID == iNewSpot {
             g.player(player).iSuicideCreditPlayerID = g.player(newPlayer).globalID;
-            g.player(player).iSuicideCreditTimer = 62;
+            g.player(player).iSuicideCreditTimer = TICKS_PER_SECOND as i16;
         }
     }
 

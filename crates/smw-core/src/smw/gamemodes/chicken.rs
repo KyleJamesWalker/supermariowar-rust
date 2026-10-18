@@ -7,7 +7,7 @@ use crate::common::eyecandy::{EC_GravText, EC_SingleAnimation};
 use crate::common::game_mode::*;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::ClipEdge;
-use crate::common::global_constants::{PHOFFSET, PWOFFSET, VELJUMP, VELMOVING_CHICKEN};
+use crate::common::global_constants::{ticks, PHOFFSET, PWOFFSET, VELJUMP, VELMOVING_CHICKEN};
 use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
 use crate::globals::*;
@@ -83,7 +83,7 @@ impl CGameModeTrait for CGM_Chicken {
 
             if g.player(chicken).isready() && !g.player(chicken).is_tanooki_statue() {
                 self.counter += 1;
-                if self.counter >= g.game_values.pointspeed {
+                if self.counter as i32 >= ticks(g.game_values.pointspeed as i32) {
                     self.counter = 0;
                     g.player(chicken).score(g).adjust_score(g, 1);
                     self.check_winner(g, chicken);

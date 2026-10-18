@@ -9,6 +9,7 @@ use crate::common::math::vec2::{Vec2f, Vec2s};
 use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
 use crate::common::random_number_generator::RANDOM_INT;
+use crate::common::global_constants::{ticks, vel};
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::{self as gm, remove_players_but_team, remove_team, setup_score_board, show_score_board};
@@ -50,13 +51,13 @@ impl CGM_Boxes_MiniGame {
 
             let pos = Vec2s::new((g.player(player).center_x() as i32 - 16) as i16, (g.player(player).center_y() as i32 - 16) as i16);
 
-            let speed: f32 = 7.0f32 + RANDOM_INT(gp.get(), 9) as f32 / 2.0f32;
+            let speed: f32 = vel(7.0f32 + RANDOM_INT(gp.get(), 9) as f32 / 2.0f32);
             let angle: f32 = -(RANDOM_INT(gp.get(), 314) as f32) / 100.0f32;
             let vel = Vec2f::new(speed * cosf(angle), speed * sinf(angle));
 
             if_sound_on_play(g, &mut gp.rm.sfx_coin);
 
-            let obj = Ptr::new_box(MO_Coin::new(g, gp.get().rm.spr_coin, vel, pos, 2, -1, 2, 30, false));
+            let obj = Ptr::new_box(MO_Coin::new(g, gp.get().rm.spr_coin, vel, pos, 2, -1, 2, ticks(30) as i16, false));
             gp.get().objectcontainer[1].add(g, obj);
         }
     }

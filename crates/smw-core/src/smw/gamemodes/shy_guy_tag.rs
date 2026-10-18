@@ -5,7 +5,7 @@ use crate::game::Game;
 use crate::common::eyecandy::{EC_GravText, EC_SingleAnimation};
 use crate::common::game_mode::{game_mode_shyguytag, CGameMode, CGameModeTrait};
 use crate::common::game_values::if_sound_on_play;
-use crate::common::global_constants::VELJUMP;
+use crate::common::global_constants::{ticks, VELJUMP};
 use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
 use crate::globals::*;
@@ -166,7 +166,7 @@ impl CGameModeTrait for CGM_ShyGuyTag {
         //Award points to non shyguys
         if shyguycount > 0 {
             self.scorecounter += 1;
-            if self.scorecounter >= g.game_values.pointspeed {
+            if self.scorecounter as i32 >= ticks(g.game_values.pointspeed as i32) {
                 self.scorecounter = 0;
 
                 let mut pCheckWinner: PlayerId = PlayerId::NONE;

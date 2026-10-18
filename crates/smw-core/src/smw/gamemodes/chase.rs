@@ -5,7 +5,7 @@ use crate::smw::players::PlayerId;
 use crate::game::Game;
 use crate::common::game::App;
 use crate::common::game_mode::{game_mode_chase, CGameMode, CGameModeTrait};
-use crate::common::global_constants::CRUNCHMAX;
+use crate::common::global_constants::{ticks, CRUNCHMAX};
 use crate::common::math::vec2::Vec2s;
 use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
@@ -85,7 +85,7 @@ impl CGameModeTrait for CGM_Chase {
         if !keyholder.is_none() {
             if g.player(keyholder).isready() && !g.player(keyholder).is_tanooki_statue() {
                 self.counter += 1;
-                if self.counter >= g.game_values.pointspeed {
+                if self.counter as i32 >= ticks(g.game_values.pointspeed as i32) {
                     self.counter = 0;
                     g.player(keyholder).score(g).adjust_score(g, 1);
                     self.check_winner(g, keyholder);

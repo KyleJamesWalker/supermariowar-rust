@@ -338,7 +338,7 @@ impl MovingPlatform {
         if !g.player(player).platform.is_none() {
             fColVelY += g.g_map.platform(g.player(player).platform).fOldVelY - GRAVITATION;
 
-            if g.player(player).velx < -0.6 || g.player(player).velx > 0.6 {
+            if g.player(player).velx < -vel(0.6) || g.player(player).velx > vel(0.6) {
                 fColVelX += g.g_map.platform(g.player(player).platform).fOldVelX;
             }
         } else if !g.player(player).inair {
@@ -1053,7 +1053,7 @@ impl MovingPlatform {
         if !object.platform.is_none() {
             fColVelY += g.g_map.platform(object.platform).fOldVelY - GRAVITATION;
 
-            if object.velx < -0.6 || object.velx > 0.6 {
+            if object.velx < -vel(0.6) || object.velx > vel(0.6) {
                 fColVelX += g.g_map.platform(object.platform).fOldVelX;
             }
         } else if !object.inair {
