@@ -14,6 +14,7 @@ const MSG_SLOT: u8 = 1;
 const MSG_START_PART: u8 = 2;
 const MSG_READY: u8 = 3;
 const MSG_GO: u8 = 4;
+const MSG_LEAVE: u8 = 5;
 const PART_BYTES: usize = 16 * 1024;
 const START_DEADLINE: Duration = Duration::from_secs(20);
 const RESEND_TICKS: u64 = 30;
@@ -41,6 +42,8 @@ pub struct V2Match {
     ready: Vec<PeerId>,
     restored: bool,
     go: bool,
+    /// A joiner's own options.bin and controls bytes: the host's match start replaces them for the match.
+    own_config: Option<(Vec<u8>, Vec<u8>)>,
     phase: Phase,
     targets: Vec<KeySlot>,
     local_device: COutputControl,
@@ -76,6 +79,7 @@ pub fn match_starting(g: &mut Game) -> bool {
         ready: Vec::new(),
         restored: host,
         go: false,
+        own_config: None,
         phase: Phase::Starting,
         targets: Vec::new(),
         local_device: g.game_values.playerInput.outputControls[0],
@@ -109,8 +113,12 @@ pub fn tick(g: &mut Game) {
 }
 
 fn finish(g: &mut Game) {
+    let mut gp = g.ptr();
     g.netplay.v2_match = false;
     if let Some(m) = g.netplay.client.v2.take() {
+        if let Some((options, controls)) = m.own_config.clone() {
+            gp.game_values.read_config_bytes(g, options, controls);
+        }
         println!(
             "[net] v2: match over after {} ticks, {} re-run ticks, {} desyncs",
             m.ticks, m.rollback_ticks, m.desyncs
@@ -158,6 +166,8 @@ impl V2Match {
                     }
                     if !self.restored && self.parts.iter().all(Option::is_some) {
                         let bytes: Vec<u8> = self.parts.iter().flatten().flatten().copied().collect();
+                        let mut gp = g.ptr();
+                        self.own_config = Some(gp.game_values.config_bytes(g));
                         crate::smw::checkpoint::restore_shared(g, bytes)?;
                         // The host captured mid-tick; this finishes that tick as its frame_end did there.
                         crate::smw::harness::end_rollback_tick(g);
@@ -247,6 +257,14 @@ impl V2Match {
         builder.start_p2p_session(self.socket.take_ggrs_socket())
     }
 
+    /// Leaves the match for the menu and tells the other peers, who follow once their match is over too.
+    fn leave(&mut self, g: &mut Game) {
+        let mut gp = g.ptr();
+        self.send_all(&[MSG_LEAVE]);
+        gp.netplay.client.send_leave_game_message(g);
+        crate::smw::game_state::GameStateManager::instance(g).change_state_to(gp.get(), crate::smw::game_state::StateId::Menu);
+    }
+
     /// One frame of the running match. False when it ended.
     fn run_step(&mut self, g: &mut Game) -> bool {
         let mut gp = g.ptr();
@@ -264,14 +282,22 @@ impl V2Match {
             }
         }
 
+        let others_left = self.socket.receive(RELIABLE).iter().any(|(_, msg)| msg.first() == Some(&MSG_LEAVE));
+        if others_left && g.mode().gameover {
+            println!("[net] v2: another player ended the match");
+            crate::smw::gs_gameplay::clean_up(g);
+            g.game_values.appstate = crate::common::game_values::AppState::Menu;
+            self.leave(g);
+            return false;
+        }
+
         crate::smw::harness::frame_start_input(g);
         g.game_values.playerInput.outputControls[0] = self.local_device;
         let gameplay = gp.gps.as_mut().expect("a v2 match outside gameplay");
         gameplay.gather_input(g);
         self.local_device = g.game_values.playerInput.outputControls[0];
         if crate::smw::gs_gameplay::update_exit_pause_dialog(g, gameplay.countdown_state()) {
-            gp.netplay.client.send_leave_game_message(g);
-            crate::smw::game_state::GameStateManager::instance(g).change_state_to(gp.get(), crate::smw::game_state::StateId::Menu);
+            self.leave(g);
             return false;
         }
 
