@@ -1466,6 +1466,10 @@ impl MenuState {
             } else if MENU_CODE_NET_HOST_LAN == code {
                 if crate::smw::net::host_on_this_device(g) {
                     self.mNetServersMenu.refresh_scroll(g);
+                } else {
+                    self.net_error = "Hosting needs a desktop or handheld build";
+                    self.iDisplayError = DISPLAY_ERROR_NET;
+                    self.iDisplayErrorTimer = (4 * TICKS_PER_SECOND) as i16;
                 }
             } else if MENU_CODE_TO_NET_ADDREMOVE_SERVER_MENU == code {
                 self.mCurrentMenu = MenuId::NetEditServers;
