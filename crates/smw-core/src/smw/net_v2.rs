@@ -1,6 +1,6 @@
 //! Netplay v2 matches (docs/design/NETPLAY_V2.md, rollout step 4): every peer restores the host's match start, then
-//! the match runs under a GGRS P2P session over the room's WebRTC connections. Opt in with `SMW_NETPLAY_V2=1` on every
-//! client; without it the match runs over v1 as before.
+//! the match runs under a GGRS P2P session over the room's WebRTC connections. `SMW_NETPLAY_V2=0` opts a client out, and
+//! a match whose lobby sends no WebRTC room runs over v1.
 
 use crate::common::input::COutputControl;
 use crate::game::Game;
@@ -26,7 +26,7 @@ const DISCONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const INTERRUPTED_AFTER: Duration = Duration::from_secs(1);
 
 pub fn enabled() -> bool {
-    std::env::var("SMW_NETPLAY_V2").is_ok_and(|v| v == "1")
+    std::env::var("SMW_NETPLAY_V2").map_or(true, |v| v != "0")
 }
 
 enum Phase {

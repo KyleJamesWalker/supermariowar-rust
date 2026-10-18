@@ -76,9 +76,9 @@ The `Relay` workflow publishes two images for `linux/amd64` and `linux/arm64`:
 
 ### Netplay v2 settings
 
-When a room starts, the lobby (`smw_relay` or `smw_server`) sends each of its players `NET_L2P_MATCH_ROOM`. It holds a new random signaling room under `SMW_SIGNAL_URL`, plus TURN credentials for `SMW_TURN_URL`, minted from `SMW_TURN_SECRET` and valid for six hours. Without `SMW_SIGNAL_URL` the lobby sends nothing and rooms start as before. The compose file sets all three for the relay. For now the game only connects the peers and logs the result (`[net] v2:` lines); the match itself still runs over v1.
+When a room starts, the lobby (`smw_relay` or `smw_server`) sends each of its players `NET_L2P_MATCH_ROOM`. It holds a new random signaling room under `SMW_SIGNAL_URL`, plus TURN credentials for `SMW_TURN_URL`, minted from `SMW_TURN_SECRET` and valid for six hours. Without `SMW_SIGNAL_URL`, `smw_relay` uses its own signaling on `/signal` and `smw_server` sends nothing, so its rooms play over v1. The compose file sets all three for the relay. The match then runs over WebRTC under GGRS (`docs/design/NETPLAY_V2.md`); a client started with `SMW_NETPLAY_V2=0` plays over v1 instead.
 
 ## Limits
 
-- A native client joins the relay's lobby when its server list holds the relay as a `ws://` or `wss://` URL, for example `wss://smw-relay.vps.pocketsquirrel.com`; a bare host name still means ENet and `smw_server`. Browser and native players then share rooms. Their match runs over the relay's game tunnel (v1) or, with `SMW_NETPLAY_V2=1`, over WebRTC (`docs/design/NETPLAY_V2.md`).
+- A native client joins the relay's lobby when its server list holds the relay as a `ws://` or `wss://` URL, for example `wss://smw-relay.vps.pocketsquirrel.com`; a bare host name still means ENet and `smw_server`. Browser and native players then share rooms. Their match runs over WebRTC (`docs/design/NETPLAY_V2.md`), or over the relay's game tunnel (v1) with `SMW_NETPLAY_V2=0`.
 - All game traffic passes through the relay, so its round trip adds to each player's latency.

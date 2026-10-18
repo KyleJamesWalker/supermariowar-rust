@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Netplay v2 matches end to end: the scripted net games of tools/ref/net_game_interop.sh with SMW_NETPLAY_V2=1, so
+"""Netplay v2 matches end to end: the scripted net games of tools/ref/net_game_interop.sh with a signaling server, so
 each match runs under GGRS over WebRTC, with lag and packet loss on the GGRS channel. Both clients log the state they
 checksum at every saved frame (SMW_V2_STATE_LOG); every frame both logged must be identical, every match must start
 its GGRS session, and neither client may report a desync.
@@ -53,7 +53,6 @@ if not lan:
 
 env = dict(
     os.environ,
-    SMW_NETPLAY_V2="1",
     NET_GAMES=games,
     NET_GAME_WORK=str(work),
     SMW_RUST_BIN=str(wrapper),

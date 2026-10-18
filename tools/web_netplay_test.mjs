@@ -16,8 +16,8 @@
 //   NET_GAMES  scenarios (default: every tools/ref/net_game*)
 //   MIXED=1    with WEB_NETPLAY_V2=1: the joiner is the native build (SMW_BIN, default target/release/smw), which
 //              reaches the same relay lobby through a ws:// server entry; MIXED=host makes the host native instead
-//   WEB_NETPLAY_V2=1  play each match over netplay v2 (GGRS over WebRTC; the relay needs SMW_SIGNAL_URL) and compare
-//              the pages' per-frame states instead of their dumps
+//   WEB_NETPLAY_V2=1  play each match over netplay v2 (GGRS over WebRTC) and compare the pages' per-frame states
+//              instead of their dumps; without it the pages opt out with SMW_NETPLAY_V2=0 and play over v1
 import { spawn, spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -257,7 +257,7 @@ const play = async (game) => {
     mkdirSync(dir, { recursive: true });
     const logStart = relayLog.length;
     const pages = [];
-    const v2 = V2 ? { SMW_NETPLAY_V2: '1', SMW_V2_STATE_LOG: '/v2state.log' } : {};
+    const v2 = V2 ? { SMW_NETPLAY_V2: '1', SMW_V2_STATE_LOG: '/v2state.log' } : { SMW_NETPLAY_V2: '0' };
     let native = null;
     for (const r of roles) {
         if (MIXED && r.role === nativeRole) {

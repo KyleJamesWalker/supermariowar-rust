@@ -21,7 +21,7 @@ pub struct Config {
     pub allowed_origins: Vec<String>,
     pub max_clients: usize,
     pub max_connections_per_client: usize,
-    /// The lobby's `SMW_SIGNAL_URL` when set here; `/signal` means this relay's own signaling.
+    /// Overrides the lobby's `SMW_SIGNAL_URL`; `/signal` means this relay's own signaling.
     pub signal_url: Option<String>,
     pub log_file: bool,
     /// The lobby's player and room limits when set here instead of in its config file.
@@ -38,7 +38,7 @@ impl Config {
             allowed_origins: parse_origins(&env::var("SMW_RELAY_ALLOWED_ORIGINS").unwrap_or_else(|_| DEFAULT_ORIGINS.to_string())),
             max_clients: 64,
             max_connections_per_client: 8,
-            signal_url: None,
+            signal_url: env::var_os("SMW_SIGNAL_URL").is_none().then(|| "/signal".to_string()),
             log_file: true,
             lobby_max_players: None,
             lobby_max_rooms: None,
