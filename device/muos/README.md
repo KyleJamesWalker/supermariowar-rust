@@ -41,7 +41,7 @@ The built-in controls are player 1's gamepad. The game reads them through muOS's
 
 Text fields, such as your name and a room name under **Multiplayer**, open an on-screen keyboard: the D-pad moves, A presses a key (Shift, Space, Del and Done are on the bottom row), and B erases a character, or leaves an empty field.
 
-Y, the shoulder buttons and the triggers are free to bind under **Controls** in the main menu. `docs/GAME_MANUAL.md` covers the menus and modes.
+Y, the shoulder buttons and the triggers are free to bind under **Controls** in the main menu. `docs/guides/GAME_MANUAL.md` covers the menus and modes.
 
 With one controller, the other players that were human become **Bot** at launch, so a match starts against the computer. Set them to **None** in the main menu's **Players** row for fewer opponents. Each extra controller (a USB or Bluetooth pad) joins as the next human player.
 
@@ -72,7 +72,7 @@ Everything the game writes stays in its folder, `<card>/MUOS/application/SuperMa
 | Path | Contents |
 |---|---|
 | `home/Library/Preferences/.smw/options.bin`, `controls.sdl2.bin` | settings and control bindings |
-| `home/Library/Preferences/.smw/replays/` | session recordings, newest 10 (see `docs/REPLAY.md`) |
+| `home/Library/Preferences/.smw/replays/` | session recordings, newest 10 (see `docs/guides/REPLAY.md`) |
 | `log.txt` | the last session's output, overwritten at each launch |
 
 A recording copied to a computer plays with `smw --replay <file>`.

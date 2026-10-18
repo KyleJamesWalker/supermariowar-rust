@@ -1,6 +1,6 @@
 //! Not in upstream: the length SDL2_mixer gives every sound and track in data/, which the virtual mixer
 //! (sfx.rs) turns into channel and music end times. The table is the input for making the virtual mixer
-//! independent of the backend's decoder (docs/ARCHITECTURE_V2.md, Audio).
+//! independent of the backend's decoder (docs/design/ARCHITECTURE_V2.md, Audio).
 //!
 //! Regenerate with `cargo run -p smw-sdl2 --example sfx_durations > crates/smw-core/src/common/sfx_durations.txt`.
 

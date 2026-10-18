@@ -1,4 +1,4 @@
-//! Global-state infrastructure (see docs/ARCHITECTURE.md) and re-exports of every C++ global.
+//! Global-state infrastructure (see docs/guides/CODE_CONVENTIONS.md) and re-exports of every C++ global.
 use crate::game::Game;
 
 pub use smw_globals::{Aliased, Global, Owned, Ptr};

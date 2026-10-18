@@ -438,7 +438,7 @@ pub fn net_state(g: &mut Game) -> String {
     }
 }
 
-/// Replay-harness `T` record (docs/REPLAY.md).
+/// Replay-harness `T` record (docs/guides/REPLAY.md).
 pub fn harness_record(g: &mut Game) -> Option<String> {
     star_mode(g).map(|this| {
         let ids: Vec<String> = this.starPlayer.iter().map(|p| if p.is_none() { "-1".to_string() } else { g.player(*p).globalID.to_string() }).collect();

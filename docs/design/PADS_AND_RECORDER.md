@@ -1,6 +1,6 @@
 # Pads and the recorder move into the backend
 
-Status: accepted. It finishes phase 3 of `ARCHITECTURE_V2.md` and unblocks phase 6 (`smw-sdl3`).
+Status: done; smw-core dropped `sdl2` in #178 and keeps it only as a dev-dependency and on Android. It finishes phase 3 of `ARCHITECTURE_V2.md` and unblocks phase 6 (`smw-sdl3`).
 
 ## Summary
 

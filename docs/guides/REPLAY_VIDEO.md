@@ -42,7 +42,7 @@ The video plays at the game's 60 ticks per second, H.264 in `yuv420p`, so it ope
 ## How it works
 
 - A git rev is checked out into a temporary worktree and built with `cargo build --release`. The binary is cached in `~/.cache/smw-replay-video/bin/<sha>/` (`--cache-dir` or `SMW_VIDEO_CACHE` move it), and one shared `CARGO_TARGET_DIR` there keeps rebuilds incremental. `HEAD` means the commit, not uncommitted changes; pass `target/release/smw` for those. The data submodule is the checkout's `data/` when the commit matches, otherwise a temporary worktree of it.
-- Each side runs headless through `tools/run_ref.sh` with `SMW_SHOT_STREAM` pointed at a pipe (`docs/REPLAY.md`, Environment variables). The script compares the two frames, composes the panels and pipes them into one `ffmpeg`, so frames never reach the disk.
+- Each side runs headless through `tools/run_ref.sh` with `SMW_SHOT_STREAM` pointed at a pipe (`docs/guides/REPLAY.md`, Environment variables). The script compares the two frames, composes the panels and pipes them into one `ffmpeg`, so frames never reach the disk.
 - A binary built before `SMW_SHOT_STREAM` existed (an older rev, or the C++ reference before `harness-shot-stream`) falls back to BMP screenshots: the replay reruns once per 240 frames, and each BMP is deleted once read. That is about 8x slower and uses about 300 MB of temporary space.
 - Temporary files, worktrees and game processes are removed on exit, including on failure or Ctrl-C.
 

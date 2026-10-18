@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the coverage replays in tools/replays/ (see docs/REPLAY.md).
+"""Generate the coverage replays in tools/replays/ (see docs/guides/REPLAY.md).
 
   gen_replays.py [name ...]     (default: every replay defined here)
   gen_replays.py sweep          (tools/replays_sweep/: one game on every map)

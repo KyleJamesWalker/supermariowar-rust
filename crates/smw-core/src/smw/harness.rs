@@ -1,7 +1,7 @@
 //! Port of src/smw/Harness.cpp from tools/cpp-harness.patch (not in upstream C++).
 //!
 //! Deterministic replay/dump harness. Every entry point is a no-op unless the corresponding
-//! SMW_* environment variable is set; docs/REPLAY.md is the byte-level spec.
+//! SMW_* environment variable is set; docs/guides/REPLAY.md is the byte-level spec.
 
 use crate::common::keys::*;
 use crate::game::Game;
@@ -743,7 +743,7 @@ pub fn frame_end(g: &mut Game) {
 //------------------------------------------------------------------------------------------------
 // Session recording (not in the C++). A normal launch, i.e. one without SMW_REPLAY, runs seeded and
 // records every input the game sees to <settings dir>/replays/<timestamp>.txt in the replay format,
-// so the session can be watched again or replayed on the C++ reference. See docs/REPLAY.md, "Recordings".
+// so the session can be watched again or replayed on the C++ reference. See docs/guides/REPLAY.md, "Recordings".
 //------------------------------------------------------------------------------------------------
 
 const KEEP_RECORDINGS: usize = 10;
@@ -1203,7 +1203,7 @@ pub fn prepare_watch(g: &mut Game, file: &str, speed: Option<f32>, segment: Opti
 //------------------------------------------------------------------------------------------------
 // Markers, checkpoints and segment replays (not in the C++). A recording marks each change of game
 // state with a `#@ mark` line and saves a `#@ checkpoint` at the start of each match, from which a
-// segment replay starts that match directly. See docs/REPLAY.md, "Markers, checkpoints and clips".
+// segment replay starts that match directly. See docs/guides/REPLAY.md, "Markers, checkpoints and clips".
 //------------------------------------------------------------------------------------------------
 
 /// A replay's event, written to its SMW_RECORD_TO recording as it is pushed.

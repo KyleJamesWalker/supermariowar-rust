@@ -1,5 +1,5 @@
 //! Not in the C++: the browser's network layer. Each ENet connection becomes a virtual connection to
-//! `smw_relay`, all of them over one WebSocket (web/relay_socket.js, docs/RELAY.md).
+//! `smw_relay`, all of them over one WebSocket (web/relay_socket.js, docs/guides/RELAY.md).
 
 use crate::game::Game;
 use crate::common_netplay::network_interface::{NetPeer, NetworkEventHandler};

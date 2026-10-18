@@ -212,7 +212,7 @@ const checkManual = async (label) => {
     check(await evaluate(`(() => {
         const links = [...document.querySelectorAll('.top a')];
         return links.some((a) => a.textContent.includes('Back to the game') && a.href === ${JSON.stringify(url)})
-            && links.some((a) => a.textContent.includes('View on GitHub') && a.href.endsWith('/docs/GAME_MANUAL.md'));
+            && links.some((a) => a.textContent.includes('View on GitHub') && a.href.endsWith('/docs/guides/GAME_MANUAL.md'));
     })()`), `${label}: Back to the game and View on GitHub links`);
 };
 

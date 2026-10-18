@@ -297,7 +297,7 @@
       a.remove();
       setTimeout(function () { URL.revokeObjectURL(a.href); }, 10000);
     };
-    // A .smwrp is the recording's text gzipped (docs/REPLAY.md); plain .txt on request.
+    // A .smwrp is the recording's text gzipped (docs/guides/REPLAY.md); plain .txt on request.
     var SAVE_TEXT_KEY = 'smw-save-text';
     var saveTextElement = document.getElementById('saveText');
     try { saveTextElement.checked = localStorage.getItem(SAVE_TEXT_KEY) === '1'; } catch (e) {}
@@ -329,7 +329,7 @@
       downloadFile(currentReplay(), link.hasAttribute('data-plain'));
     });
 
-    // A recording marks each match with `#@ mark` lines and a `#@ checkpoint` (docs/REPLAY.md, "Markers,
+    // A recording marks each match with `#@ mark` lines and a `#@ checkpoint` (docs/guides/REPLAY.md, "Markers,
     // checkpoints and clips"); a clip is the header, one match's markers and checkpoint and its input,
     // which the game plays from the checkpoint (tools/replay_clip.py writes the same file).
     var directiveFields = function (line) {

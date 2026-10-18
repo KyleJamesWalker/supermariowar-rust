@@ -1,6 +1,6 @@
 # Architecture v2: platform-free core, SDL2 and SDL3 backends
 
-Status: accepted; the decisions are under Risks and decisions. Owner: the port's maintainer. Phase 0 (the Cargo workspace) is PR #23.
+Status: done. Phases 0 to 7 have merged; phase 6 (`smw-sdl3` in CI) was #180 and phase 7 (Rust goldens primary) #167. The text below is the plan as accepted. Decision 7 (netplay) is superseded by `NETPLAY_V2.md`.
 
 ## Summary
 
@@ -14,7 +14,7 @@ This document proposes how the faithful C++ translation becomes idiomatic Rust w
 
 ## Background
 
-The port mirrors the C++ tree one module per file (`docs/ARCHITECTURE.md`). It keeps C++ names, numeric semantics and global state, so a replay produces the same per-frame dump and screenshots as the C++ reference (`docs/REPLAY.md`). The numbers at `origin/main` (`8df9905`):
+The port mirrors the C++ tree one module per file (`docs/guides/CODE_CONVENTIONS.md`). It keeps C++ names, numeric semantics and global state, so a replay produces the same per-frame dump and screenshots as the C++ reference (`docs/guides/REPLAY.md`). The numbers at `origin/main` (`8df9905`):
 
 | Measure | Value |
 |---|---|
@@ -27,7 +27,7 @@ The port mirrors the C++ tree one module per file (`docs/ARCHITECTURE.md`). It k
 | Editor sessions (`tools/editor_replays`) | 13 |
 | Segment replays (`tools/segment_replays`) | 9 |
 
-Several deliberate deviations already make the Rust game the better baseline. These include correctly rounded trigonometry (`src/common/math/trig.rs`, CORE-MATH, also linked into the reference), host-decided netplay outcomes, pad translation and touch controls. `docs/PROGRESS.md` lists them all.
+Several deliberate deviations already make the Rust game the better baseline. These include correctly rounded trigonometry (`src/common/math/trig.rs`, CORE-MATH, also linked into the reference), host-decided netplay outcomes, pad translation and touch controls. `docs/guides/DEVIATIONS.md` lists them all.
 
 Platforms: macOS, Linux and Windows (SDL2, or sdl2-compat over SDL3 on Homebrew), web (Emscripten's SDL2 port), Android (SDL2 `SDLActivity`, `libmain.so` from `cargo ndk rustc --lib`) and muOS. On muOS the device provides `libSDL2`, which carries the GPU driver.
 
@@ -36,7 +36,7 @@ Platforms: macOS, Linux and Windows (SDL2, or sdl2-compat over SDL3 on Homebrew)
 1. **SDL is everywhere.** Game logic calls `sdl2::sys` in 116 files. An SDL3 backend would mean editing all of them, and SDL2 and SDL3 export the same `SDL_*` symbol names, so one binary cannot link both.
 2. **Global state blocks testing and new features.** All state is process-global `static mut`. One process runs one game, tests cannot run replays in-process or in parallel, and a checkpoint has to list every global by hand (`src/smw/checkpoint.rs`). Rollback or lockstep netplay would need several game instances in one process.
 3. **Input is split by device.** Keyboard and joystick events reach `CPlayerInput::update` as raw `SDL_Event`s. `pad.rs` rewrites controller events inside an SDL event filter. Android touch (`touch.rs`, on its branch) and web touch (`web/touch.js`) push fake key events. The harness pushes replay events into SDL's queue and attaches SDL virtual joysticks. Every input source has its own path.
-4. **Pixels depend on the SDL build.** Screenshots come from SDL's software blitter. sdl2-compat has two known differences from SDL2 (`docs/sdl2-compat-rle.md`, `docs/sdl2-compat-convert-blend.md`), and the port turns RLE off natively to stay identical. SDL3's blitter is a third implementation.
+4. **Pixels depend on the SDL build.** Screenshots come from SDL's software blitter. sdl2-compat has two known differences from SDL2 (`docs/upstream/sdl2-compat-rle.md`, `docs/upstream/sdl2-compat-convert-blend.md`), and the port turns RLE off natively to stay identical. SDL3's blitter is a third implementation.
 5. **Sound timing depends on SDL_mixer.** The virtual mixer computes channel end times from SDL_mixer's decoded chunk length and `Mix_MusicDuration`. A different mixer (SDL3_mixer) or resampler can change those lengths. That moves `isPlaying()` results, and gameplay reads them.
 
 ## Proposed design
@@ -186,7 +186,7 @@ The accessor returns `Ptr<Game>`, not `&'static mut Game`. Step 3 passes `&mut G
 
 **Step 3: pass `&mut Game` down.** The frame loop passes `&mut Game` into `GameStateManager`, then each state's `update`/`draw`, then subsystems. A PR converts one call tree, and leaf code that still calls `game()` keeps working through the `Ptr`. When no caller remains, the static is deleted and `&mut Game` becomes the only path. `Game` is then an ordinary value, so one process can run several games: parallel in-process replay tests, and later rollback.
 
-Step 3 meets the object graph: methods that take `&mut self` on an object inside `Game` while touching other parts of `Game`. The `Ptr`/`Aliased` convention (`docs/ARCHITECTURE.md`, Pointers and ownership) stays valid through all three steps. Replacing `Ptr` graphs with arenas and typed handles is a separate later design (decision 9).
+Step 3 meets the object graph: methods that take `&mut self` on an object inside `Game` while touching other parts of `Game`. The `Ptr`/`Aliased` convention (`docs/guides/CODE_CONVENTIONS.md`, Pointers and ownership) stays valid through all three steps. Replacing `Ptr` graphs with arenas and typed handles is a separate later design (decision 9).
 
 ### Normalized input
 
@@ -297,7 +297,7 @@ Decisions (maintainer, 2026-10-05):
 2. **The core owns all pixels.** Accepted. Per-backend goldens are not an option.
 3. **Default backend per platform.** SDL3 on desktop. SDL2 on muOS, web and Android until their SDL3 ports are proven.
 4. **Controller translation (`SMW_PAD_TRANSLATE`) becomes the default** on every platform at phase 7, because it changes desktop behavior. It stays opt-in until then.
-5. **Hot-plug replay lines are adopted.** `<frame> jadd <dev>` and `<frame> jremove <dev>` (`REPLAY.md`) landed with the Android gamepad work (PR #20) and stay. They are written only when a pad connects or disconnects mid-session with `SMW_PAD_TRANSLATE=1`, so other recordings still replay on the C++ harness; `replay_compare.sh` refuses the ones that have them. No `#@ format=2` header is used. Text-input lines remain deferred.
+5. **Hot-plug replay lines are adopted.** `<frame> jadd <dev>` and `<frame> jremove <dev>` (`docs/guides/REPLAY.md`) landed with the Android gamepad work (PR #20) and stay. They are written only when a pad connects or disconnects mid-session with `SMW_PAD_TRANSLATE=1`, so other recordings still replay on the C++ harness; `replay_compare.sh` refuses the ones that have them. No `#@ format=2` header is used. Text-input lines remain deferred.
 6. **Web touch controls move into the core** after phase 4, once the core already draws the Android overlay. One layout and one hit test, and the web replay tests can then exercise touch.
 7. **Netplay stays host-authoritative** through phase 7. Lockstep or rollback is decided once `Game` is a value (phase 5) and cross-platform determinism is CI-enforced (phase 6). `NETPLAY_V2.md` proposes the follow-up: GGRS rollback or lockstep over WebRTC, which also lets browser and native clients play together.
 8. **`libz-sys` is replaced by `miniz_oxide`.** It can land at any time. The only compressed bytes written are checkpoint lines in recordings, and every reader, including the C++ harness, only inflates. This also removes the Emscripten zlib special case in `file_compressor.rs`.

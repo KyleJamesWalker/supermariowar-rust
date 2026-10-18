@@ -1,4 +1,4 @@
-//! In-process replays on the headless backend (docs/ARCHITECTURE_V2.md, Testing): the game runs a replay as
+//! In-process replays on the headless backend (docs/design/ARCHITECTURE_V2.md, Testing): the game runs a replay as
 //! `tools/run_rust.sh` does, and its dump and screenshots must equal the goldens `tools/parity.sh` reads.
 
 use std::io::Read;
@@ -225,7 +225,7 @@ fn segment_from_checkpoint() {
     let _ = std::fs::remove_dir_all(&base);
 }
 
-/// Handles step 6 (docs/HANDLES.md): a copy of the match made at frame `at` plays the rest of the replay alongside
+/// Handles step 6 (docs/design/HANDLES.md): a copy of the match made at frame `at` plays the rest of the replay alongside
 /// the original. Both dump what the golden holds and the original's screenshots stay the golden's, so the copy shares
 /// nothing the match changes.
 fn clone_mid_match(name: &str, at: u32) {

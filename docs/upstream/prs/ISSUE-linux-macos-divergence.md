@@ -1,6 +1,6 @@
 # Uninitialized members make Linux and macOS builds play the same game differently
 
-Draft issue for mmatyas/supermariowar, not filed. Backlog item M9 (`docs/UPSTREAM_BACKLOG.md`). Evidence is in `evidence/M9/`.
+Draft issue for mmatyas/supermariowar, not filed. Backlog item M9 (`docs/upstream/UPSTREAM_BACKLOG.md`). Evidence is in `evidence/M9/`.
 
 ## Summary
 

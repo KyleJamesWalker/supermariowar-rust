@@ -1,4 +1,4 @@
-//! The SDL3 backend (docs/ARCHITECTURE_V2.md): smw-platform's traits over SDL3, with keys, scancodes and pad events
+//! The SDL3 backend (docs/design/ARCHITECTURE_V2.md): smw-platform's traits over SDL3, with keys, scancodes and pad events
 //! in SDL2's numbering, which settings files and replays store.
 
 use sdl3_sys::everything::*;

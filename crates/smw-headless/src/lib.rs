@@ -1,4 +1,4 @@
-//! The headless backend (docs/ARCHITECTURE_V2.md): smw-platform's traits in memory, with no SDL. It answers the
+//! The headless backend (docs/design/ARCHITECTURE_V2.md): smw-platform's traits in memory, with no SDL. It answers the
 //! game's queries as SDL2 does on its dummy drivers, so replays dump and draw as under `tools/run_rust.sh`.
 
 use smw_platform::{AudioOut, Clock, Events, Frame, Input, InputEvent, Overlay, PadChange, PadFamily, PadInfo, PadSlot, Pads, Services, SoundId, Storage, TrackId, Video, SCREEN_H, SCREEN_W};

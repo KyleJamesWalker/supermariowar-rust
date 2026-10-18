@@ -1,4 +1,4 @@
-//! SDL2 events to smw-platform's normalized `InputEvent` and back (docs/ARCHITECTURE_V2.md, Normalized input).
+//! SDL2 events to smw-platform's normalized `InputEvent` and back (docs/design/ARCHITECTURE_V2.md, Normalized input).
 //! `from_sdl` keeps every field the game reads, so `to_sdl(&from_sdl(e))` reads the same as `e`.
 
 use sdl2::sys::SDL_EventType::*;

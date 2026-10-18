@@ -8,15 +8,15 @@ Replace host-authoritative netplay with input exchange over one WebRTC transport
 
 ## Background
 
-- **Model.** The host decides random outcomes, deaths, scores and mode settings. Joiners replay those decisions a few frames later (`PROGRESS.md`, "Netplay deviations").
-- **Transport.** Native clients speak ENet over UDP to `smw_server` and to the game host. Browsers tunnel the same connections over WebSocket through `smw_relay` (`RELAY.md`).
+- **Model.** The host decides random outcomes, deaths, scores and mode settings. Joiners replay those decisions a few frames later (`docs/guides/DEVIATIONS.md`, "Netplay deviations").
+- **Transport.** Native clients speak ENet over UDP to `smw_server` and to the game host. Browsers tunnel the same connections over WebSocket through `smw_relay` (`docs/guides/RELAY.md`).
 - **Prerequisites now met.** `Game::clone_match` copies a running match (`HANDLES.md`). CI gates cross-platform determinism across native, web, SDL3 and aarch64 builds (`ARCHITECTURE_V2.md`, phases 6 and 7).
 
 ## Problem
 
 - Every random event needs its own sync rule. The deviation list covers block bounces, respawn fallbacks after 90 frames, hazards waiting for the host, and network IDs for objects made in events. Each new feature with randomness adds another rule.
 - Joiners see host-decided events late.
-- Browser and native clients cannot play together (`RELAY.md`, Limitations).
+- Browser and native clients cannot play together (`docs/guides/RELAY.md`, Limitations).
 - Browser game traffic runs over TCP. One lost packet stalls every packet behind it, so browser players stutter on lossy links where ENet players do not.
 
 ## Proposed design

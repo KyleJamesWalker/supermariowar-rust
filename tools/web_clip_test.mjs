@@ -192,7 +192,7 @@ const KEYS = { Enter: 13, Escape: 27, ArrowLeft: 37, ArrowUp: 38, ArrowRight: 39
 const keyEvent = (type, name) => send('Input.dispatchKeyEvent', {
     type, key: name, code: name.length === 1 ? `Key${name.toUpperCase()}` : name, windowsVirtualKeyCode: KEYS[name],
 });
-// The frame, state, menu and player 1's x of the newest complete dump block (docs/REPLAY.md, "Dump format").
+// The frame, state, menu and player 1's x of the newest complete dump block (docs/guides/REPLAY.md, "Dump format").
 const frameState = async () => {
     const dump = await evaluate(`(() => { try { return Module.FS.readFile('/dump.txt', { encoding: 'utf8' }).slice(-4000); } catch { return ''; } })()`);
     const blocks = dump.split('\nF ');

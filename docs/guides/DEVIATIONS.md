@@ -1,53 +1,6 @@
-# Rust port progress
+# Deviations from the C++
 
-Faithful port of [Super Mario War](https://github.com/mmatyas/supermariowar) (C++/SDL2) to Rust + rust-sdl2. Logic mirrors the C++ file by file; parity is checked by differential replay (see `REPLAY.md`).
-
-Scope order: core game + menus + sound, then netplay, level editor, world editor.
-
-## Module map
-
-| C++ | Rust | Status | Parity |
-|---|---|---|---|
-| (filled in as modules land) | | | |
-| common/gfx.cpp, gfx/gfxSprite, gfxFont, gfxPalette, gfxSDL, Color.h | common/gfx.rs, common/gfx/* | done (upstream `5693918f`: SFont is gone) | `tools/gfx_smoke/compare.sh`: BMP byte-identical to C++ |
-| common/util/SdlHelpers.cpp | common/util/sdl_helpers.rs | done | n/a |
-| common/sfx.cpp | common/sfx.rs | done | `S` records (virtual mixer) match C++ on every replay |
-| common/input.cpp | common/input.rs | done | replays (keyboard path) |
-| common/ResourceManager.cpp | common/resource_manager.rs | done | `crates/smw-core/examples/rm_smoke.rs` loads every asset; replay screenshots match |
-| common/eyecandy.cpp | common/eyecandy.rs | done | `O ec*` counts match on replays |
-| common/GlobalConstants.h, Version.h, MatchTypes.h, GameplayStyles.h, PlayerKill*.h, MovingObjectTypes.h, EyecandyStyles.h, Score.h | common/global_constants.rs etc. | done | n/a |
-| common/RandomNumberGenerator.cpp | common/random_number_generator.rs | done | unit test vs C++ outputs (`tools/ref/rng_ref.cpp`) |
-| common/FileIO.cpp, linfunc.cpp, path.cpp, util/DirIterator.cpp, util/Grid.h, util/ContainerHelpers.h, math/Vec2.h | same names | done | unit tests |
-| common/FileList.cpp, GameModeSettings.cpp | common/file_list.rs, game_mode_settings.rs | done | unit tests on data/; GameModeSettings raw image matches clang layout (`tools/ref/layout_ref.cpp`) |
-| common/TileTypes.cpp | common/tile_types.rs | done | unit test |
-| common/map.cpp, map/MapReader*.cpp | common/map.rs, common/map/* | done (drawing ported, untested on screen) | all 504 maps x 3 read types vs C++ (`tools/ref/map_dump.sh`, `SMW_MAP_DUMP=... cargo test matches_cpp_map_dump`) |
-| common/movingplatform.cpp, MovingPlatformPaths.cpp | common/movingplatform.rs, moving_platform_paths.rs | done | platform paths covered by the map dump (120 frames); collisions untested until CPlayer lands |
-| common/TilesetManager.cpp | common/tileset_manager.rs | done | via map dump |
-| common/MapList.cpp | common/map_list.rs | done | not yet |
-| common/WorldTourStop.cpp | common/world_tour_stop.rs | done | strtok unit test |
-| common/GameValues.cpp | common/game_values.rs | done except full options.bin IO (handed to gfx) | not yet |
-| common/ObjectBase.cpp, IO_Block.h, GameMode.h, Game.cpp | common/object_base.rs, io_block.rs, game_mode.rs, game.rs | done (headers + base structs/traits) | n/a |
-| smw/player.cpp | smw/player.rs | done except netplay branches | start_classic, map_blockpiles, frenzy_cpu: all frames identical, all shots match |
-| smw/player_components/* | smw/player_components/*.rs | done | via the replays above |
-| smw/ai.cpp | smw/ai.rs | done | frenzy_cpu: all 2780 frames identical, including RNG call counts |
-| smw/GSGameplay.cpp | smw/gs_gameplay.rs | done except netplay (TODO(net)) | start_classic: not yet run |
-| smw/gamemodes/* (GameMode, GameModeTimer, all 22 modes, bonus house, 3 minigames) | smw/gamemodes/*.rs | done except netplay disconnect text | via start_classic / frenzy_cpu, not yet run |
-| smw/main.cpp create_gamemodes, mode globals | smw/main.rs | done | |
-| smw/objects/blocks/* (IO_Block + 11 blocks) | smw/objects/blocks/*.rs | done | not yet (gameplay not reached in replays) |
-| smw/objects/moving/* (MovingObject, CarriedObject, 19 MO_*) | smw/objects/moving/*.rs | done | not yet |
-| smw/objects/carriable/* (11 CO_*) | smw/objects/carriable/*.rs | done | not yet |
-| smw/objects/powerup/* (MO_Powerup + 25 PU_*) | smw/objects/powerup/*.rs | done | not yet |
-| smw/objects/walkingenemy/* | smw/objects/walkingenemy/*.rs | done | not yet |
-| smw/objects/overmap/* (IO_OverMapObject + 10 OMO_*) | smw/objects/overmap/*.rs | done | not yet |
-| smw/objects/IO_BulletBillCannon, IO_FlameCannon, MysteryMushroomTempPlayer, SwitchColor.h, ThrowBlockType.h | smw/objects/*.rs | done | not yet |
-| smw/ObjectContainer.cpp, objectgame.cpp, objecthazard.cpp | smw/object_container.rs, objectgame.rs, objecthazard.rs | done | not yet |
-| server/* (smw-server) | server/*.rs, bin/smw_server.rs | done; rooms and players use a libc++-order unordered_map (unit test vs `tools/ref/unordered_map_order.cpp`) | `tools/ref/net_interop.sh`: every C++/Rust client pairing on both servers; `net_game_interop.sh` SYNCED with `SMW_SERVER` = Rust server |
-| screenshot/screenshot.cpp | | intentionally not ported: dead code upstream (not in CMake, does not compile against current sources); the level editor's `takescreenshot` covers the feature | n/a |
-| worldeditor/worldeditor.cpp | worldeditor/worldeditor.rs, bin/worldeditor.rs | done | `tools/editor_parity.sh`: 5 scripted sessions (paint, stages/vehicles/warps/items, navigate/resize, stage menus incl. delete) match C++ dump, screenshots and saved world files byte for byte |
-| leveleditor/leveleditor.cpp | leveleditor/leveleditor.rs, bin/leveleditor.rs | done | `tools/editor_parity.sh`: 6 scripted sessions (tiles, blocks/items/warps/no-spawn/eyecandy, platforms, hazards/move/copy/mode items/Save As/Find, tile and animated tile types/backgrounds/clear, smoke) match C++ dump, screenshots and saved .map/.tls files byte for byte |
-| (harness) common/EditorHarness.cpp | common/editor_harness.rs | done | shared by both editors; see EDITOR_REPLAY.md |
-| common/GameModeSettingsSerialization.cpp | common/game_mode_settings_serialization.rs | done | tour-stop settings in every replay that loads a tour or world |
-| smw/network/NetConfigManager.cpp (servers.toml) | smw/network/net_config_manager.rs | done | `tools/ref/net_config_interop.sh`: 300 fuzzed files written byte-identically to toml11. Adds `room_name` (last hosted room), written only when set |
+Where this port behaves differently from upstream [Super Mario War](https://github.com/mmatyas/supermariowar) on purpose, and the upstream bugs it still reproduces. `tools/cpp_divergences.txt` lists the replays these change.
 
 ## Known C++ issues
 
@@ -81,8 +34,8 @@ Since phase 7 every golden comes from the Rust build. `tools/cpp_divergences.txt
 - Android touch controls (`touch.rs`, `SMW_TOUCH=1` from the manifest): the game draws the web build's controls, with the same D-pad or floating-stick choice, beside the 4:3 picture and turns fingers into player 1's default key events at the frame start, so recordings stay ordinary key input. With no pad at launch they are player 1 ahead of the pads; otherwise they follow the pads. The keyboard sets get no other player and the rest are bots. A recording marks a touch session with `#@ touch=1`, so the replay assigns players the same way. Details in `android/README.md`.
 - Replays ignore connected pads: natively, `--replay` and the harness set the `SDL_JOYSTICK_HIDAPI`, `SDL_JOYSTICK_MFI` and `SDL_JOYSTICK_IOKIT` hints to 0, leaving only the replay's virtual joysticks. The browser's SDL has no virtual joysticks, so a browser replay opens no pads and takes the joystick count from the replay; its events carry the device index the game binds, so pad sessions can be watched in the browser.
 - The Rust harness records and replays axes and buttons 0-63; a browser recording that uses axis 6+ or button 16+ does not replay on the C++ harness.
-- smw-core draws on its own surfaces (`gfx/soft_surface.rs`) in every build, so SDL surface RLE no longer applies; through sdl2-compat it cost 8-16x CPU per frame (`sdl2-compat-rle.md`) and drew map foreground layers' magenta colour key opaque (`sdl2-compat-convert-blend.md`). The reference is built with `-DSMW_NO_RLE=ON` to match.
-- A player removed mid-match (e.g. the losers at a Capture the Flag game over) no longer leaves a thrown flag's `owner_throw` dangling: `clean_dead_players` clears it, so the flag scores for nobody. Upstream reads freed memory there, which differs between allocators (native and web diverged on `tools/segment_replays/tour_long.txt`; `UPSTREAM_BACKLOG.md` M8).
+- smw-core draws on its own surfaces (`gfx/soft_surface.rs`) in every build, so SDL surface RLE no longer applies; through sdl2-compat it cost 8-16x CPU per frame (`docs/upstream/sdl2-compat-rle.md`) and drew map foreground layers' magenta colour key opaque (`docs/upstream/sdl2-compat-convert-blend.md`). The reference is built with `-DSMW_NO_RLE=ON` to match.
+- A player removed mid-match (e.g. the losers at a Capture the Flag game over) no longer leaves a thrown flag's `owner_throw` dangling: `clean_dead_players` clears it, so the flag scores for nobody. Upstream reads freed memory there, which differs between allocators (native and web diverged on `tools/segment_replays/tour_long.txt`; `docs/upstream/UPSTREAM_BACKLOG.md` M8).
 - Trigonometry is correctly rounded: the game's `sin`, `cos` and `atan2` come from a Rust port of CORE-MATH's `sinf`, `cosf` and `atan2f` (`crates/smw-core/src/common/math/trig.rs`, MIT), and the reference's harness build links the same C files, so native (macOS, Linux) and web builds compute the same game state. Upstream calls the platform libm, which rounds differently per platform. Against the earlier goldens only `replays_sweep/gg_boo_rondell` and `jjames_clocks_on_fire` changed (one frame each, a player's `fy` in the fourth decimal); they were regenerated from the new reference.
 - Netplay works in the browser (upstream's web build is `NO_NETWORK` and disables Multiplayer). A WebSocket network layer carries ENet's connections to `smw_relay` (`RELAY.md`), the game host skips NAT punching, and skins and maps compress with flate2's Rust backend (miniz_oxide), as in the native builds. Browser and native clients cannot play together.
 - Android ships `data/` in the APK and copies it to the app's external files directory on the first launch after an install or update; upstream's port reads it from `$EXTERNAL_STORAGE/supermariowar/data`, copied there by hand. Settings go to that files directory, upstream's settings directory on Android (`android/README.md`).

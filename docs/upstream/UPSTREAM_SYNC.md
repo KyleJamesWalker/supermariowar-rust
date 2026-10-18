@@ -225,7 +225,7 @@ The port reads and writes `servers.yml` with `yaml-rust2` and emulates yaml-cpp 
 
 ## Problems hit
 
-- **CMake flags changed.** Upstream removed `cmake/Platform*.cmake`, so `-DDISABLE_DEFAULT_CFLAGS=ON` no longer exists and is no longer needed on arm64. The build now always appends `-O3` after the user flags. The dumps stay deterministic and match, because `-ffp-contract=off` still applies. toml11 v4.4.0 and zlib v1.3.2 come through FetchContent, and SDL2 still comes from Homebrew. The editor targets are now `smw-leveledit` and `smw-worldedit`. `build-reference.sh` and `REPLAY.md` need the new flags.
+- **CMake flags changed.** Upstream removed `cmake/Platform*.cmake`, so `-DDISABLE_DEFAULT_CFLAGS=ON` no longer exists and is no longer needed on arm64. The build now always appends `-O3` after the user flags. The dumps stay deterministic and match, because `-ffp-contract=off` still applies. toml11 v4.4.0 and zlib v1.3.2 come through FetchContent, and SDL2 still comes from Homebrew. The editor targets are now `smw-leveledit` and `smw-worldedit`. `build-reference.sh` and `docs/guides/REPLAY.md` need the new flags.
 - **One merge conflict.** `src/worldeditor/worldeditor.cpp`: upstream moved global construction into a new `inner_main()`. The resolution keeps `editorharness::init()` and `setDumper()` right after `gfx_init`, ahead of the moved construction. The merge commit is `287e5daa`.
 - **Symlinked data trees escape the sandbox.** `run_ref.sh` and `run_editor.sh` clone the data tree with `cp -R`, which copies a symlink as a link. Pointing the editor reference at a symlinked `data` made six concurrent C++ editor runs write into the same checkout. The first editor goldens were wrong. `upstream_sync.sh` now makes a real APFS clone.
 - **The new C++ level editor is nondeterministic under load.** In 1 of 6 parallel runs of `leveledit/smoke`, the frame-0 map hash differs. Sequential runs agree with each other and with Rust. The cause is not found. Editor goldens are now made serially, twice, and compared.
@@ -252,7 +252,7 @@ In [supermariowar-cpp-reference](https://github.com/KyleJamesWalker/supermariowa
 5. For each divergence, match the first differing record to a commit in `commits.txt`. A shift in RNG count points at data loading or randomness. A shift in pixels points at gfx.
 6. Port one upstream commit per Rust commit, with the upstream hash in the subject. Rerun the full suite after each port.
 7. Run dense screenshots (`SMW_SHOT_FRAMES` every 25 frames) on five replays, and rerun the 504-map dump against the new C++. Those cover pixel-only and map-loading changes that the sampled suite misses.
-8. When the suites match, regenerate the committed goldens, update the commit pin in `README.md`, the build flags in `REPLAY.md`, the C++ bug list in `PROGRESS.md`, and `GAME_MANUAL.md` (with `docs/gfx/docs/`) if upstream's `docs/readme-v1.8.md` changed.
+8. When the suites match, regenerate the committed goldens, update the commit pin in `README.md`, the build flags in `docs/guides/REPLAY.md`, the C++ bug list in `docs/guides/DEVIATIONS.md`, and `docs/guides/GAME_MANUAL.md` (with `docs/guides/gfx/docs/`) if upstream's `docs/readme-v1.8.md` changed.
 
 ## Next sync
 

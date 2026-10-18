@@ -183,7 +183,7 @@ pub struct CPlayerAI {
     pub _alias: Aliased,
 }
 
-/// A CPU's play style (docs/CPU_AI.md, step 9), drawn at match start.
+/// A CPU's play style (docs/design/CPU_AI.md, step 9), drawn at match start.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
 pub enum Style {
     #[default]

@@ -1,5 +1,5 @@
 //! SDL3 events to smw-platform's normalized `InputEvent` and back, in SDL2's key, scancode and pad numbering
-//! (docs/ARCHITECTURE_V2.md, Normalized input). `to_sdl(&from_sdl(e))` reads the same as `e` for every field the
+//! (docs/design/ARCHITECTURE_V2.md, Normalized input). `to_sdl(&from_sdl(e))` reads the same as `e` for every field the
 //! game reads.
 
 use sdl3_sys::everything::*;

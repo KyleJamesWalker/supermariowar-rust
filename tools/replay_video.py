@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render a replay to an H.264 MP4, alone or side by side for two builds. See docs/REPLAY_VIDEO.md.
+"""Render a replay to an H.264 MP4, alone or side by side for two builds. See docs/guides/REPLAY_VIDEO.md.
 
   replay_video.py <replay.txt|.smwrp> --after <bin|git-rev> [--before <bin|git-rev>] [-o out.mp4]
                   [--frames a-b] [--speed x] [--diff] [--scale n]
@@ -109,7 +109,7 @@ def directive(replay, key):
 
 
 def segment_start(replay):
-    """The first frame a segment replay or clip plays (docs/REPLAY.md, "Markers, checkpoints and clips"), else 0."""
+    """The first frame a segment replay or clip plays (docs/guides/REPLAY.md, "Markers, checkpoints and clips"), else 0."""
     match = os.environ.get("SMW_SEGMENT") or directive(replay, "segment")
     if match:
         for line in read_recording(replay).splitlines():
