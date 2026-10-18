@@ -57,6 +57,7 @@ pub struct RoomListEntry {
     pub roomID: u32,
     pub name: String,
     pub playerCount: u8,
+    pub passwordRequired: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -601,14 +602,22 @@ impl NetClient {
     fn handle_new_room_list_entry(&mut self, g: &mut Game, data: &[u8]) {
         let roomInfo = pkgs::RoomInfo::from_bytes(data);
 
-        let newRoom = RoomListEntry { roomID: roomInfo.roomID, name: cstr_field(&roomInfo.name), playerCount: roomInfo.currentPlayerCount };
+        let newRoom = RoomListEntry {
+            roomID: roomInfo.roomID,
+            name: cstr_field(&roomInfo.name),
+            playerCount: roomInfo.currentPlayerCount,
+            passwordRequired: roomInfo.passwordRequired != 0,
+        };
         println!("  Incoming room entry: [{}] {} ({}/4)", newRoom.roomID, newRoom.name, newRoom.playerCount);
         let name = newRoom.name.clone();
         g.netplay.currentRooms.push(newRoom);
 
         if !self.uiRoomList.is_none() {
-            let playerCountString: String =
+            let mut playerCountString: String =
                 [(b'0'.wrapping_add(roomInfo.currentPlayerCount)) as char, '/', '4'].iter().collect();
+            if roomInfo.passwordRequired != 0 {
+                playerCountString.insert_str(0, "PW ");
+            }
             g.ctl(self.uiRoomList).add(&name, &playerCountString);
         }
     }
@@ -652,7 +661,7 @@ impl NetClient {
         self.local_gamehost.start(g, lobby);
     }
 
-    pub fn send_join_room_message(&mut self, g: &mut Game) {
+    pub fn send_join_room_message(&mut self, g: &mut Game, password: &str) {
         let entry = g.netplay.currentRooms[g.netplay.selectedRoomIndex as usize].clone();
         println!(
             "currentRooms[{}] = {{id={}, name='{}', cnt={}}}, össz: {}",
@@ -663,7 +672,7 @@ impl NetClient {
             g.netplay.currentRooms.len()
         );
 
-        let msg = pkgs::JoinRoom::with(entry.roomID, "");
+        let msg = pkgs::JoinRoom::with(entry.roomID, password);
         self.send_message_to_lobby_server(g, msg.as_bytes());
         g.netplay.operationInProgress = true;
         self.start_deadline(REQUEST_DEADLINE_FRAMES, LobbyError::RequestTimeout);

@@ -1528,6 +1528,8 @@ impl MenuState {
                 self.mNetNewRoomMenu.restore(g); // remove 'in progress' dialog
             } else if MENU_CODE_NET_JOIN_ROOM_IN_PROGRESS == code {
                 self.mNetLobbyMenu.join_in_progress(g);
+            } else if MENU_CODE_NET_JOIN_ROOM_PASSWORD_OK == code {
+                self.mNetLobbyMenu.join_with_password(g);
             } else if MENU_CODE_NET_JOIN_ROOM_ABORT == code {
                 self.mNetLobbyMenu.abort_join(g);
                 self.iDisplayError = DISPLAY_ERROR_NONE;

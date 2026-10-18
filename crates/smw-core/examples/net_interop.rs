@@ -128,7 +128,7 @@ fn main() {
             1 if !is_host && !gp.netplay.currentRooms.is_empty() => {
                 println!("EV room listed: {} ({}/4)", gp.netplay.currentRooms[0].name, gp.netplay.currentRooms[0].playerCount);
                 gp.netplay.selectedRoomIndex = 0;
-                gp.get().netplay.client.send_join_room_message(gp.get());
+                gp.get().netplay.client.send_join_room_message(gp.get(), "");
                 stage = 2;
             }
             2 if gp.netplay.currentRoom.player_count() >= 2 => {
