@@ -1137,6 +1137,10 @@ fn follow_path(g: &mut Game, this: &mut CPlayerAI, actionType: i16, mut keys: Pt
     let nav = this.nav.as_ref().unwrap();
     let Some(me) = nav.cell_of(ix, iy) else { return };
     if g.player(pPlayer).inair {
+        // A note block keeps a CPU in the air, so a step whose column it has reached ends here.
+        if this.nav_step.is_some_and(|(x, _)| x == me.0) {
+            this.nav_step = None;
+        }
         if let Some((x, how)) = this.nav_step {
             let right = heads_right(me.0, x);
             keys.game_left_mut().fDown = me.0 != x && !right;
