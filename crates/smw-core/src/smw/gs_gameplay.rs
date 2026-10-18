@@ -402,11 +402,11 @@ impl GameplayState {
             self.respawnCount[p] = 0;
 
             if g.game_values.singleplayermode == -1 || g.game_values.singleplayermode == iPlayer {
-                if g.game_values.playercontrol[p] > 0 {
-                    let mut teamid: i16 = 0;
-                    let mut subteamid: i16 = 0;
-                    lookup_team_id_sub(g, iPlayer, Some(&mut teamid), Some(&mut subteamid));
-
+                let mut teamid: i16 = 0;
+                let mut subteamid: i16 = 0;
+                lookup_team_id_sub(g, iPlayer, Some(&mut teamid), Some(&mut subteamid));
+                // A player switched on after the teams were set (a hot-plugged pad) sits this game out.
+                if g.game_values.playercontrol[p] > 0 && teamid >= 0 {
                     let mut ai: Option<Box<CPlayerAI>> = None;
                     if g.game_values.playercontrol[p] == 2 {
                         ai = Some(Box::new(CPlayerAI::new()));

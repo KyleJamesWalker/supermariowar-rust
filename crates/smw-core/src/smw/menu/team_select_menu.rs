@@ -51,6 +51,10 @@ impl UI_TeamSelectMenu {
         g.ctl(self.miTeamSelect).reset(g);
     }
 
+    pub fn players_changed(&mut self, g: &mut Game) {
+        g.ctl(self.miTeamSelect).players_changed(g);
+    }
+
     pub fn get_team_count(&self, g: &mut Game) -> i16 {
         let mut ts = self.miTeamSelect;
         g.ctl(ts).organize_teams(g)

@@ -283,6 +283,18 @@ impl MenuState {
         g.ptr().get().ms.get_or_insert_with(MenuState::new)
     }
 
+    /// A pad plugged in after launch changed who plays (main.rs `assign_hotplugged`). Team select takes the change,
+    /// and the teams the game settings menu already has are rebuilt from it.
+    pub fn players_changed(&mut self, g: &mut Game) {
+        if self.mCurrentMenu == MenuId::None {
+            return;
+        }
+        self.mTeamSelectMenu.players_changed(g);
+        if self.mCurrentMenu == MenuId::GameSettings {
+            g.score_cnt = self.mTeamSelectMenu.get_team_count(g);
+        }
+    }
+
     pub fn harness_menu_name(&self) -> &'static str {
         let names: [(MenuId, &'static str); 28] = [
             (MenuId::Main, "main"),
