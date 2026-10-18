@@ -15,7 +15,8 @@ pub struct PeerProbe {
 }
 
 impl PeerProbe {
-    pub fn open(pkg: &MatchRoom) -> PeerProbe {
+    /// `lobby` is the lobby's URL; a room URL that starts with `/` is on that server (a relay's own signaling).
+    pub fn open(pkg: &MatchRoom, lobby: &str) -> PeerProbe {
         let mut ice = IceConfig::default();
         let turn_url = cstr_field(&pkg.turnURL);
         if !turn_url.is_empty() {
@@ -27,7 +28,11 @@ impl PeerProbe {
         }
         let others = (pkg.playerCount as usize).saturating_sub(1);
         println!("[net] v2: joining the match's WebRTC room ({} other players, TURN {})", others, if ice.servers.len() > 1 { "on" } else { "off" });
-        PeerProbe { socket: PeerSocket::connect(&cstr_field(&pkg.roomURL), &ice), others, opened: Instant::now(), reported: false }
+        let mut room = cstr_field(&pkg.roomURL);
+        if room.starts_with('/') {
+            room = format!("{}{}", lobby.trim_end_matches('/'), room);
+        }
+        PeerProbe { socket: PeerSocket::connect(&room, &ice), others, opened: Instant::now(), reported: false }
     }
 
     pub fn into_socket(self) -> (PeerSocket, usize) {
