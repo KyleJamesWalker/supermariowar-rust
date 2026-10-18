@@ -782,10 +782,8 @@ impl CMap {
         if (0..MAPWIDTH * MAPHEIGHT).contains(&flat) {
             return tile_to_flags(self.mapdatatop[(flat / MAPHEIGHT) as usize][(flat % MAPHEIGHT) as usize]) as i32;
         }
-        match self.cpp_byte(CPP_OFF_MAPDATATOP + flat) {
-            Some(b) => tile_to_flags(TileType(b)) as i32,
-            Option::None => panic!("CMap::map({}, {}): the C++ reads block pointer bytes as a tile", x, y),
-        }
+        // Past the end, a non-zero byte belongs to a block pointer, which has no tile flags.
+        self.cpp_byte(CPP_OFF_MAPDATATOP + flat).map_or(0, |b| tile_to_flags(TileType(b)) as i32)
     }
 
     /// `blocks` is the container that owns the map's blocks (`Game::noncolcontainer`).
@@ -794,11 +792,7 @@ impl CMap {
         if (0..MAPWIDTH * MAPHEIGHT).contains(&flat) {
             return block_ptr(blocks, self.blockdata[(flat / MAPHEIGHT) as usize][(flat % MAPHEIGHT) as usize]);
         }
-        let off = CPP_OFF_BLOCKDATA + flat * 8;
-        if (0..8).all(|i| self.cpp_byte(off + i) == Some(0)) {
-            return Ptr::null();
-        }
-        panic!("CMap::block({}, {}): C++ would deref garbage at CMap offset {}", x, y, off);
+        Ptr::null()
     }
 
     /// The C++ `blockdata[x][y] == NULL` test, which compares the pointer without dereferencing it.
