@@ -3,6 +3,7 @@
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
+use crate::common::global_constants::ticks;
 use crate::common::eyecandy::SpotlightId;
 use crate::common::gameplay_styles::TeamCollisionStyle;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -51,7 +52,7 @@ impl MO_IceBlast {
             o.drawframe = o.animationWidth - o.iw;
         }
 
-        o.ttl = 120;
+        o.ttl = ticks(120) as i16;
 
         o.fObjectCollidesWithMap = false;
 

@@ -5,6 +5,7 @@ use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
+use crate::common::global_constants::{ticks, vel};
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::gfxSprite;
@@ -67,8 +68,8 @@ impl MO_FlagBase {
         o.iGraphicOffsetX = (iColorID as i32 * 48) as i16;
 
         o.angle = RANDOM_INT(gp.get(), 1000) as f32 * 0.00628f32;
-        o.anglechange = RANDOM_INT(gp.get(), 100) as f32 * 0.0002f32;
-        o.anglechangetimer = (RANDOM_INT(gp.get(), 50) + 100) as i16;
+        o.anglechange = vel(RANDOM_INT(gp.get(), 100) as f32 * 0.0002f32);
+        o.anglechangetimer = ticks(RANDOM_INT(gp.get(), 50) + 100) as i16;
 
         o.velx = sinf(o.angle);
         o.vely = cosf(o.angle);
@@ -77,7 +78,7 @@ impl MO_FlagBase {
 
         o.place_flag_base(g, true);
 
-        o.speed = g.game_values.gamemodesettings.flag.speed as f32 / 4.0f32;
+        o.speed = vel(g.game_values.gamemodesettings.flag.speed as f32 / 4.0f32);
 
         o.timer = 0;
 
@@ -140,8 +141,8 @@ impl MO_FlagBase {
 
     pub fn change_angle(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        self.anglechange = (RANDOM_INT(gp.get(), 101) - 50) as f32 * 0.0002f32;
-        self.anglechangetimer = (RANDOM_INT(gp.get(), 50) + 100) as i16;
+        self.anglechange = vel((RANDOM_INT(gp.get(), 101) - 50) as f32 * 0.0002f32);
+        self.anglechangetimer = ticks(RANDOM_INT(gp.get(), 50) + 100) as i16;
     }
 
     pub fn set_flag(&mut self, flag: ObjectId) {
@@ -227,7 +228,7 @@ impl CObjectTrait for MO_FlagBase {
         if g.game_values.gamemodesettings.flag.speed == 0 && {
             let t = self.timer;
             self.timer += 1;
-            t > 1000
+            t as i32 > ticks(1000)
         } {
             self.place_flag_base(g, false);
         }

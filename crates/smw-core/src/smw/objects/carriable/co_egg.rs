@@ -45,7 +45,7 @@ impl_base!(CO_Egg => mo_carried_object: MO_CarriedObject);
 impl CO_Egg {
     pub fn new(g: &mut Game, nspr: SpriteId, iColor: i16) -> Self {
         let mut o = CO_Egg {
-            mo_carried_object: MO_CarriedObject::new_anim(g, nspr, Vec2s::zero(), 2, 16, 28, 30, 2, 1, 0, ((iColor as i32) << 5) as i16, 32, 32),
+            mo_carried_object: MO_CarriedObject::new_anim(g, nspr, Vec2s::zero(), 2, ticks(16) as i16, 28, 30, 2, 1, 0, ((iColor as i32) << 5) as i16, 32, 32),
             relocatetimer: 0,
             explosiondrawframe: 0,
             explosiondrawtimer: 0,
@@ -72,8 +72,8 @@ impl CO_Egg {
         o.egganimationrates[1] = 4;
         o.egganimationrates[2] = 6;
         o.egganimationrates[3] = 8;
-        o.egganimationrates[4] = 12;
-        o.egganimationrates[5] = 16;
+        o.egganimationrates[4] = ticks(12) as i16;
+        o.egganimationrates[5] = ticks(16) as i16;
 
         o.iOwnerRightOffset = HALFPW as i16;
         o.iOwnerLeftOffset = (HALFPW - 28) as i16;
@@ -98,7 +98,7 @@ impl CO_Egg {
         self.relocatetimer = 0;
         if g.game_values.gamemodesettings.egg.explode > 0 {
             self.explosiondrawframe = g.game_values.gamemodesettings.egg.explode - 1;
-            self.explosiondrawtimer = 62;
+            self.explosiondrawtimer = TICKS_PER_SECOND as i16;
 
             if self.explosiondrawframe < 5 {
                 self.animationspeed = self.egganimationrates[self.explosiondrawframe as usize];
@@ -160,7 +160,7 @@ impl CObjectTrait for CO_Egg {
             self.owner_throw = self.owner;
         } else if {
             self.relocatetimer += 1;
-            self.relocatetimer > 1500
+            self.relocatetimer as i32 > ticks(1500)
         } {
             self.place_egg(g);
             self.owner_throw = PlayerId::NONE;
@@ -195,7 +195,7 @@ impl CObjectTrait for CO_Egg {
         if g.game_values.gamemodesettings.egg.explode > 0 {
             self.explosiondrawtimer -= 1;
             if self.explosiondrawtimer <= 0 {
-                self.explosiondrawtimer = 62;
+                self.explosiondrawtimer = TICKS_PER_SECOND as i16;
                 self.explosiondrawframe -= 1;
                 if self.explosiondrawframe < 0 {
                     let obj = Ptr::new_box(MO_Explosion::new(
@@ -256,6 +256,6 @@ impl MO_CarriedObjectTrait for CO_Egg {
 
     fn drop(&mut self, g: &mut Game) {
         mo_carried_object_drop(g, self);
-        self.owner_throw_timer = 62;
+        self.owner_throw_timer = TICKS_PER_SECOND as i16;
     }
 }

@@ -64,9 +64,10 @@ impl CObjectTrait for MO_BonusHouseChest {
     fn update(&mut self, g: &mut Game) {
         // Draw rising powerup from chest
         if self.state == 2 {
-            self.drawbonusitemy -= 2;
-
             self.drawbonusitemtimer -= 1;
+            let risen = vel(2.0) * (ticks(75) - self.drawbonusitemtimer as i32) as f32;
+            self.drawbonusitemy = (self.iy as i32 + 32 - risen as i32) as i16;
+
             if self.drawbonusitemtimer <= 0 {
                 g.eyecandy[2].emplace(EC_SingleAnimation::new(&g.rm, 
                     g.rm.spr_fireballexplosion,
@@ -148,9 +149,9 @@ impl CObjectTrait for MO_BonusHouseChest {
             self.state = 2;
 
             self.drawbonusitemy = (self.iy as i32 + 32) as i16;
-            self.drawbonusitemtimer = 75;
+            self.drawbonusitemtimer = ticks(75) as i16;
 
-            g.game_values.flags.forceexittimer = 180;
+            g.game_values.flags.forceexittimer = ticks(180) as i16;
             g.mode().gameover = true;
             g.mode().winningteam = g.player(player).teamID;
         }

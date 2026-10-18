@@ -31,9 +31,9 @@ impl PU_ExtraGuyPowerup {
     pub fn new(g: &mut Game, nspr: SpriteId, pos: Vec2s, iNumSpr: i16, moveToRight: bool, aniSpeed: i16, iCollisionWidth: i16, iCollisionHeight: i16, iCollisionOffsetX: i16, iCollisionOffsetY: i16, r#type: i16) -> Self {
         let mut o = PU_ExtraGuyPowerup { mo_powerup: MO_Powerup::new(g, nspr, pos, iNumSpr, aniSpeed, iCollisionWidth, iCollisionHeight, iCollisionOffsetX, iCollisionOffsetY), iType: r#type };
         if moveToRight {
-            o.velx = 1.0f32 + r#type as f32;
+            o.velx = vel(1.0f32 + r#type as f32);
         } else {
-            o.velx = -1.0f32 - r#type as f32;
+            o.velx = vel(-1.0f32 - r#type as f32);
         }
         o
     }
@@ -62,8 +62,8 @@ impl CObjectTrait for PU_ExtraGuyPowerup {
                 (g.player(player).ix as i32 + HALFPW - 19) as i16,
                 (g.player(player).iy as i32 - 16) as i16,
                 0.0f32,
-                -1.5f32,
-                62,
+                vel(-1.5),
+                TICKS_PER_SECOND as i16,
                 (g.player(player).colorID as i32 * 38) as i16,
                 iSrcY,
                 38,

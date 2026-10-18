@@ -100,7 +100,7 @@ impl CObjectTrait for B_ViewBlock {
 
         if self.state == 0 && !self.fNoPowerupsSelected {
             self.poweruptimer += 1;
-            if self.poweruptimer as i32 > self.settings[self.powerupindex as usize] as i32 * 10 {
+            if self.poweruptimer as i32 > ticks(self.settings[self.powerupindex as usize] as i32 * 10) {
                 self.poweruptimer = 0;
                 self.get_next_powerup(g);
             }

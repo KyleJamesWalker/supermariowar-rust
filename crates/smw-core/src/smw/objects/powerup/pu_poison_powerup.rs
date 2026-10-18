@@ -3,6 +3,7 @@
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
+use crate::common::global_constants::vel;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::math::vec2::Vec2s;
 use crate::common::object_base::CObjectTrait;
@@ -29,9 +30,9 @@ impl PU_PoisonPowerup {
     pub fn new(g: &mut Game, nspr: SpriteId, pos: Vec2s, iNumSpr: i16, moveToRight: bool, aniSpeed: i16, iCollisionWidth: i16, iCollisionHeight: i16, iCollisionOffsetX: i16, iCollisionOffsetY: i16) -> Self {
         let mut o = PU_PoisonPowerup { mo_powerup: MO_Powerup::new(g, nspr, pos, iNumSpr, aniSpeed, iCollisionWidth, iCollisionHeight, iCollisionOffsetX, iCollisionOffsetY) };
         if moveToRight {
-            o.velx = 2.0f32;
+            o.velx = vel(2.0);
         } else {
-            o.velx = -2.0f32;
+            o.velx = vel(-2.0);
         }
 
         o.movingObjectType = movingobject_poisonpowerup;

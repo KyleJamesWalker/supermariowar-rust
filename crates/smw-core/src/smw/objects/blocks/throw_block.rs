@@ -184,10 +184,10 @@ impl IO_BlockTrait for B_ThrowBlock {
         let srcY = (self.iType as i32 * 16) as i16;
         let spr = g.rm.spr_brokenblueblock;
         let (ix, iy) = (self.ix, self.iy);
-        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, ix, iy, -1.5f32, -7.0f32, 6, 2, 0, srcY, 16, 16));
-        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, ix + 16, iy, 1.5f32, -7.0f32, 6, 2, 0, srcY, 16, 16));
-        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, ix, iy + 16, -1.5f32, -4.0f32, 6, 2, 0, srcY, 16, 16));
-        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, ix + 16, iy + 16, 1.5f32, -4.0f32, 6, 2, 0, srcY, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, ix, iy, vel(-1.5), vel(-7.0), 6, 2, 0, srcY, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, ix + 16, iy, vel(1.5), vel(-7.0), 6, 2, 0, srcY, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, ix, iy + 16, vel(-1.5), vel(-4.0), 6, 2, 0, srcY, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, ix + 16, iy + 16, vel(1.5), vel(-4.0), 6, 2, 0, srcY, 16, 16));
 
         if_sound_on_play(g, &mut gp.rm.sfx_breakblock);
     }

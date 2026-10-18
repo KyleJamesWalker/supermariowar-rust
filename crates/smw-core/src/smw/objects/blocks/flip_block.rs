@@ -66,10 +66,10 @@ impl B_FlipBlock {
         let mut gp = g.ptr();
         let spr = g.rm.spr_brokenflipblock;
         let (ix, iy) = (self.ix, self.iy);
-        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, ix, iy, -2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
-        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, ix + 16, iy, 2.2f32, -10.0f32, 4, 2, 0, 0, 16, 16));
-        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, ix, iy + 16, -2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
-        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, ix + 16, iy + 16, 2.2f32, -5.5f32, 4, 2, 0, 0, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, ix, iy, vel(-2.2), vel(-10.0), 4, 2, 0, 0, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, ix + 16, iy, vel(2.2), vel(-10.0), 4, 2, 0, 0, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, ix, iy + 16, vel(-2.2), vel(-5.5), 4, 2, 0, 0, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, ix + 16, iy + 16, vel(2.2), vel(-5.5), 4, 2, 0, 0, 16, 16));
 
         if_sound_on_play(g, &mut gp.rm.sfx_breakblock);
     }
@@ -136,7 +136,7 @@ impl CObjectTrait for B_FlipBlock {
 
         if self.state == 1 {
             self.counter += 1;
-            if self.counter >= 10 {
+            if self.counter as i32 >= ticks(10) {
                 self.counter = 0;
                 self.frame += self.iw;
 
@@ -146,7 +146,7 @@ impl CObjectTrait for B_FlipBlock {
             }
 
             self.timer += 1;
-            if self.timer >= 240 {
+            if self.timer as i32 >= ticks(240) {
                 self.reset();
                 g.update_tile_gap(self.col, self.row);
 

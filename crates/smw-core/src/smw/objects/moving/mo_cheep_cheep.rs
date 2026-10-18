@@ -51,11 +51,11 @@ impl MO_CheepCheep {
 
         o.velx = 0.0;
         while o.velx == 0.0 {
-            o.velx = (RANDOM_INT(gp.get(), 19) - 9) as f32 / 2.0f32;
+            o.velx = vel((RANDOM_INT(gp.get(), 19) - 9) as f32 / 2.0f32);
         }
 
         // Cheep cheep up velocity is between 9.0 and 13.0 in 0.5 increments
-        o.vely = -(RANDOM_INT(gp.get(), 11) as f32 / 2.0f32) - 9.0f32;
+        o.vely = vel(-(RANDOM_INT(gp.get(), 11) as f32 / 2.0f32) - 9.0f32);
 
         o.movingObjectType = movingobject_cheepcheep;
         o.state = 1;
@@ -108,10 +108,10 @@ impl MO_CheepCheep {
         let iBrokenIceX: i16 = (self.ix as i32 - self.collisionOffsetX as i32) as i16;
         let iBrokenIceY: i16 = (self.iy as i32 - self.collisionOffsetY as i32) as i16;
         let spr = g.rm.spr_brokeniceblock;
-        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, iBrokenIceX, iBrokenIceY, -1.5f32, -7.0f32, 4, 2, 0, 0, 16, 16));
-        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, (iBrokenIceX as i32 + 16) as i16, iBrokenIceY, 1.5f32, -7.0f32, 4, 2, 0, 0, 16, 16));
-        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, iBrokenIceX, (iBrokenIceY as i32 + 16) as i16, -1.5f32, -4.0f32, 4, 2, 0, 0, 16, 16));
-        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, (iBrokenIceX as i32 + 16) as i16, (iBrokenIceY as i32 + 16) as i16, 1.5f32, -4.0f32, 4, 2, 0, 0, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, iBrokenIceX, iBrokenIceY, vel(-1.5), vel(-7.0), 4, 2, 0, 0, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, (iBrokenIceX as i32 + 16) as i16, iBrokenIceY, vel(1.5), vel(-7.0), 4, 2, 0, 0, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, iBrokenIceX, (iBrokenIceY as i32 + 16) as i16, vel(-1.5), vel(-4.0), 4, 2, 0, 0, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, (iBrokenIceX as i32 + 16) as i16, (iBrokenIceY as i32 + 16) as i16, vel(1.5), vel(-4.0), 4, 2, 0, 0, 16, 16));
 
         g.game_values.unlocksecret2part2 += 1;
     }
@@ -133,7 +133,7 @@ impl CObjectTrait for MO_CheepCheep {
         self.set_yf(fy);
 
         // Cheep cheep gravitation
-        self.vely += 0.2f32;
+        self.vely += acc(0.2);
 
         self.animate();
 

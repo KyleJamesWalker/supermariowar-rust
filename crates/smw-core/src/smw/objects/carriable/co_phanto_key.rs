@@ -107,7 +107,7 @@ impl CObjectTrait for CO_PhantoKey {
             self.relocatetimer = 0;
         } else if {
             self.relocatetimer += 1;
-            self.relocatetimer > 1000
+            self.relocatetimer as i32 > ticks(1000)
         } {
             self.place_key(g);
         } else {

@@ -7,7 +7,7 @@ use crate::common::game::App;
 use crate::common::game_mode::game_mode_chase;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::gfxSprite;
-use crate::common::global_constants::CRUNCHMAX;
+use crate::common::global_constants::{acc, vel, CRUNCHMAX, TICKS_PER_SECOND};
 use crate::common::math::vec2::Vec2s;
 use crate::common::object_base::{object_phanto, CObjectTrait};
 use crate::common::player_kill_styles::KillStyle;
@@ -48,7 +48,7 @@ impl OMO_Phanto {
     pub fn change_speed(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         self.iSpeedTimer = 0;
-        self.dReactionSpeed = (0.05f32 + RANDOM_INT(gp.get(), 20) as f32 / 100.0f32) * self.dSpeedRatio;
+        self.dReactionSpeed = acc((0.05f32 + RANDOM_INT(gp.get(), 20) as f32 / 100.0f32) * self.dSpeedRatio);
     }
 
     pub fn return_offscreen(&mut self, g: &mut Game) {
@@ -72,11 +72,11 @@ impl OMO_Phanto {
         this.velx = dVelX;
         this.vely = dVelY;
 
-        this.dMaxSpeedY = g.game_values.gamemodesettings.chase.phantospeed as f32 / 2.0f32;
-        this.dMaxSpeedX = this.dMaxSpeedY + 1.0f32;
+        this.dMaxSpeedY = vel(g.game_values.gamemodesettings.chase.phantospeed as f32 / 2.0f32);
+        this.dMaxSpeedX = this.dMaxSpeedY + vel(1.0);
         this.dSpeedRatio = g.game_values.gamemodesettings.chase.phantospeed as f32 / 6.0f32;
 
-        this.dReactionSpeed = 0.2f32;
+        this.dReactionSpeed = acc(0.2);
         this
     }
 
@@ -107,7 +107,7 @@ impl CObjectTrait for OMO_Phanto {
         }
 
         self.iSpeedTimer += 1;
-        if self.iSpeedTimer > 62 && !net_random::object_event(g, Ev::Wander, &net_random::wander_args(self.iNetworkID, self.fx, self.fy, 0.0)) {
+        if self.iSpeedTimer as i32 > TICKS_PER_SECOND as i32 && !net_random::object_event(g, Ev::Wander, &net_random::wander_args(self.iNetworkID, self.fx, self.fy, 0.0)) {
             self.change_speed(g);
         }
 

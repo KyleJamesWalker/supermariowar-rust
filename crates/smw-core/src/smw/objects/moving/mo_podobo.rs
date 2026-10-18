@@ -4,6 +4,7 @@ use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
+use crate::common::global_constants::acc;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gameplay_styles::TeamCollisionStyle;
@@ -68,7 +69,7 @@ impl CObjectTrait for MO_Podobo {
 
     fn update(&mut self, g: &mut Game) {
         // Special slow podobo gravity
-        self.vely += 0.2f32;
+        self.vely += acc(0.2);
 
         let (fx, velx) = (self.fx, self.velx);
         self.set_xf(fx + velx);

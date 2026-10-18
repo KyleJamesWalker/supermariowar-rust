@@ -7,7 +7,7 @@ use crate::game::Game;
 use crate::common::game::App;
 use crate::common::game_mode::game_mode_frenzy;
 use crate::common::gfx::gfx_sprite::gfxSprite;
-use crate::common::global_constants::NUMFRENZYCARDS;
+use crate::common::global_constants::{ticks, NUMFRENZYCARDS};
 use crate::common::math::vec2::Vec2s;
 use crate::common::object_base::{object_frenzycard, CObjectTrait};
 use crate::common::random_number_generator::RANDOM_INT;
@@ -148,7 +148,7 @@ impl CObjectTrait for MO_FrenzyCard {
         }
 
         self.timer += 1;
-        if self.timer > 1500 {
+        if self.timer as i32 > ticks(1500) {
             self.place_card(g);
         }
     }
