@@ -7,6 +7,7 @@ use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
+use crate::common::global_constants::ticks;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::math::vec2::{Vec2f, Vec2s};
 use crate::common::moving_object_types::*;
@@ -163,7 +164,7 @@ impl CObjectTrait for MO_CollectionCard {
             self.timer = 0;
         } else if self.state == 3 {
             self.timer += 1;
-            if self.timer > 200 {
+            if self.timer as i32 > ticks(200) {
                 self.dead = true;
                 g.eyecandy[2].emplace(EC_SingleAnimation::new(&g.rm, g.rm.spr_fireballexplosion, self.ix, self.iy, 3, 8));
             }
@@ -180,7 +181,7 @@ impl CObjectTrait for MO_CollectionCard {
 
         if self.r#type == 0 {
             self.timer += 1;
-            if self.timer > 1500 {
+            if self.timer as i32 > ticks(1500) {
                 self.place_card(g);
             }
         } else {

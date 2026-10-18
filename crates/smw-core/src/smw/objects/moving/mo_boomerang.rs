@@ -4,6 +4,7 @@ use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
+use crate::common::global_constants::{acc, ticks, vel};
 use crate::common::eyecandy::SpotlightId;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
@@ -80,9 +81,9 @@ impl MO_Boomerang {
         o.fMoveToRight = moveToRight;
 
         if moveToRight {
-            o.velx = 5.0;
+            o.velx = vel(5.0);
         } else {
-            o.velx = -5.0;
+            o.velx = vel(-5.0);
         }
 
         o.vely = 0.0;
@@ -211,37 +212,37 @@ impl CObjectTrait for MO_Boomerang {
 
             if self.state == 1 {
                 self.fOldY = self.fy;
-                let fy = self.fy - 3.2f32;
+                let fy = self.fy - vel(3.2);
                 self.set_yf(fy);
 
-                if self.iStateTimer >= 20 {
+                if self.iStateTimer as i32 >= ticks(20) {
                     self.iStateTimer = 0;
                     self.state = 2;
                 }
             } else if self.state == 2 {
-                if self.iStateTimer >= 26 {
+                if self.iStateTimer as i32 >= ticks(26) {
                     self.iStateTimer = 0;
                     self.state = 3;
                 }
             } else if self.state == 3 {
                 self.fOldY = self.fy;
-                let fy = self.fy + 1.0f32;
+                let fy = self.fy + vel(1.0);
                 self.set_yf(fy);
 
                 if self.fMoveToRight {
                     // Add amount so that by time fy lowers by two tiles, we turn around the boomerang
-                    self.velx -= 0.15625f32;
+                    self.velx -= acc(0.15625);
 
-                    if self.velx <= -5.0f32 {
-                        self.velx = -5.0;
+                    if self.velx <= vel(-5.0) {
+                        self.velx = vel(-5.0);
                         self.state = 4;
                         self.fFlipped = true;
                     }
                 } else {
-                    self.velx += 0.15625f32;
+                    self.velx += acc(0.15625);
 
-                    if self.velx >= 5.0f32 {
-                        self.velx = 5.0;
+                    if self.velx >= vel(5.0) {
+                        self.velx = vel(5.0);
                         self.state = 4;
                         self.fFlipped = true;
                     }
@@ -249,7 +250,7 @@ impl CObjectTrait for MO_Boomerang {
 
                 self.iStateTimer = 0;
             } else if self.state == 4 {
-                if self.iStateTimer >= 46 {
+                if self.iStateTimer as i32 >= ticks(46) {
                     if (self.fMoveToRight && self.fx < 0.0 && self.fOldX >= 0.0)
                         || (!self.fMoveToRight && self.fx + self.iw as f32 >= screenWidth && self.fOldX + (self.iw as f32) < screenWidth)
                     {
@@ -280,7 +281,7 @@ impl CObjectTrait for MO_Boomerang {
             }
 
             if self.state == 1 {
-                if self.iStateTimer >= 64 {
+                if self.iStateTimer as i32 >= ticks(64) {
                     self.state = 2;
                     self.fFlipped = true;
 
@@ -319,30 +320,30 @@ impl CObjectTrait for MO_Boomerang {
                     // Wrap Boomerang
                     // if (player->ix < ix)  //No Wrap Boomerang
                     {
-                        self.velx -= 0.2f32;
+                        self.velx -= acc(0.2);
 
-                        if self.velx < -5.0f32 {
-                            self.velx = -5.0;
+                        if self.velx < vel(-5.0) {
+                            self.velx = vel(-5.0);
                         }
                     } else {
-                        self.velx += 0.2f32;
+                        self.velx += acc(0.2);
 
-                        if self.velx > 5.0f32 {
-                            self.velx = 5.0;
+                        if self.velx > vel(5.0) {
+                            self.velx = vel(5.0);
                         }
                     }
 
                     if g.player(player).iy < self.iy {
-                        self.vely -= 0.2f32;
+                        self.vely -= acc(0.2);
 
-                        if self.vely < -3.0f32 {
-                            self.vely = -3.0;
+                        if self.vely < vel(-3.0) {
+                            self.vely = vel(-3.0);
                         }
                     } else {
-                        self.vely += 0.2f32;
+                        self.vely += acc(0.2);
 
-                        if self.vely > 3.0f32 {
-                            self.vely = 3.0;
+                        if self.vely > vel(3.0) {
+                            self.vely = vel(3.0);
                         }
                     }
                 } else {

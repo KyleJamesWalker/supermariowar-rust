@@ -168,12 +168,12 @@ impl CO_Shell {
             self.kick(g);
             self.fSmoking = false;
             if (g.player(player).ix as i32 + HALFPW) < self.ix as i32 + (self.iw as i32 >> 1) {
-                self.velx = 5.0;
+                self.velx = vel(5.0);
             } else {
-                self.velx = -5.0;
+                self.velx = vel(-5.0);
             }
 
-            self.iIgnoreBounceTimer = 10;
+            self.iIgnoreBounceTimer = ticks(10) as i16;
         } else if self.state == 1 && self.iIgnoreBounceTimer == 0 {
             // Moving
             self.stop(g);
@@ -220,9 +220,9 @@ impl CO_Shell {
                     self.owner = player;
                     self.kick(g);
                     if (g.player(player).ix as i32 + HALFPW + flipx as i32) < self.ix as i32 + (self.iw as i32 >> 1) {
-                        self.velx = 5.0;
+                        self.velx = vel(5.0);
                     } else {
-                        self.velx = -5.0;
+                        self.velx = vel(-5.0);
                     }
                 }
             }
@@ -302,10 +302,10 @@ impl CO_Shell {
         let iBrokenIceX = (self.ix as i32 - self.collisionOffsetX as i32) as i16;
         let iBrokenIceY = (self.iy as i32 - self.collisionOffsetY as i32) as i16;
         let spr = g.rm.spr_brokeniceblock;
-        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, iBrokenIceX, iBrokenIceY, -1.5, -7.0, 4, 2, 0, 0, 16, 16));
-        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, (iBrokenIceX as i32 + 16) as i16, iBrokenIceY, 1.5, -7.0, 4, 2, 0, 0, 16, 16));
-        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, iBrokenIceX, (iBrokenIceY as i32 + 16) as i16, -1.5, -4.0, 4, 2, 0, 0, 16, 16));
-        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, (iBrokenIceX as i32 + 16) as i16, (iBrokenIceY as i32 + 16) as i16, 1.5, -4.0, 4, 2, 0, 0, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, iBrokenIceX, iBrokenIceY, vel(-1.5), vel(-7.0), 4, 2, 0, 0, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, (iBrokenIceX as i32 + 16) as i16, iBrokenIceY, vel(1.5), vel(-7.0), 4, 2, 0, 0, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, iBrokenIceX, (iBrokenIceY as i32 + 16) as i16, vel(-1.5), vel(-4.0), 4, 2, 0, 0, 16, 16));
+        g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, (iBrokenIceX as i32 + 16) as i16, (iBrokenIceY as i32 + 16) as i16, vel(1.5), vel(-4.0), 4, 2, 0, 0, 16, 16));
     }
 
     pub fn is_threat(&self) -> bool {
@@ -450,7 +450,7 @@ impl CObjectTrait for CO_Shell {
             self.animationspeed = 0;
 
             self.frozen = true;
-            self.frozentimer = 300;
+            self.frozentimer = ticks(300) as i16;
 
             g.eyecandy[2].emplace(EC_SingleAnimation::new(&g.rm, 
                 g.rm.spr_fireballexplosion,
@@ -508,7 +508,7 @@ impl CObjectTrait for CO_Shell {
         // Have the powerup grow out of the powerup block
         if self.state == 0 {
             let fy = self.fy;
-            self.set_yf(fy - 2.0);
+            self.set_yf(fy - vel(2.0));
 
             if self.fy <= self.iDestY as f32 {
                 self.state = 2;
@@ -720,7 +720,7 @@ impl MO_CarriedObjectTrait for CO_Shell {
         let mut fVel: f32;
         let fPlayerBonusVel: f32 = g.player(self.owner).velx / 2.0;
         if g.player(self.owner).is_facing_right(g) {
-            fVel = 5.0;
+            fVel = vel(5.0);
             if fPlayerBonusVel > 0.0 {
                 fVel += fPlayerBonusVel;
             }
@@ -728,7 +728,7 @@ impl MO_CarriedObjectTrait for CO_Shell {
             // if (fVel >= 7.5f)
             //	fSmoking = true;
         } else {
-            fVel = -5.0;
+            fVel = vel(-5.0);
             if fPlayerBonusVel < 0.0 {
                 fVel += fPlayerBonusVel;
             }
@@ -744,7 +744,7 @@ impl MO_CarriedObjectTrait for CO_Shell {
         self.iTeamID = g.player(self.owner).teamID;
 
         self.owner = PlayerId::NONE;
-        self.iNoOwnerKillTime = 30;
+        self.iNoOwnerKillTime = ticks(30) as i16;
 
         self.state = 1;
 

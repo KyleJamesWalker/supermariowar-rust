@@ -39,6 +39,7 @@ pub struct MO_PirhanaPlant {
     pub iAnimationTimer: i16,
     pub iFrame: i16,
     pub iActionTimer: i16,
+    pub fExtent: f32,
 
     pub fPreview: bool,
 }
@@ -56,6 +57,7 @@ impl MO_PirhanaPlant {
             iAnimationTimer: 0,
             iFrame: 0,
             iActionTimer: 0,
+            fExtent: 0.0,
             fPreview: false,
         };
 
@@ -162,6 +164,25 @@ impl MO_PirhanaPlant {
         } else {
             self.collisionWidth = 0;
         }
+        self.fExtent = 0.0;
+    }
+
+    fn set_extent(&mut self, extent: i16) {
+        let delta = if self.iDirection <= 1 {
+            let d = extent - self.collisionHeight;
+            self.collisionHeight = extent;
+            d
+        } else {
+            let d = extent - self.collisionWidth;
+            self.collisionWidth = extent;
+            d
+        };
+
+        if self.iDirection == 0 {
+            self.iy -= delta;
+        } else if self.iDirection == 2 {
+            self.ix -= delta;
+        }
     }
 
     pub fn set_new_timer(&mut self, g: &mut Game) {
@@ -172,7 +193,7 @@ impl MO_PirhanaPlant {
             }
             return;
         }
-        self.iTimer = (self.iFreq as i32 + RANDOM_INT(gp.get(), self.iFreq as i32)) as i16;
+        self.iTimer = ticks(self.iFreq as i32 + RANDOM_INT(gp.get(), self.iFreq as i32)) as i16;
 
         // Face the green fireball plant in a random direction
         if self.iType == 0 {
@@ -234,17 +255,9 @@ impl CObjectTrait for MO_PirhanaPlant {
             }
         } else if self.state == 1 {
             // appearing
-            if self.iDirection <= 1 {
-                self.collisionHeight += 2;
-            } else {
-                self.collisionWidth += 2;
-            }
-
-            if self.iDirection == 0 {
-                self.iy -= 2;
-            } else if self.iDirection == 2 {
-                self.ix -= 2;
-            }
+            let full = if self.iDirection <= 1 { self.ih } else { self.iw };
+            self.fExtent = (self.fExtent + vel(2.0)).min(full as f32);
+            self.set_extent(self.fExtent as i16);
 
             if (self.iDirection <= 1 && self.collisionHeight >= self.ih) || (self.iDirection >= 2 && self.collisionWidth >= self.iw) {
                 self.state = 2;
@@ -252,23 +265,14 @@ impl CObjectTrait for MO_PirhanaPlant {
         } else if self.state == 2 {
             // extended
             self.iTimer += 1;
-            if self.iTimer > 60 {
+            if self.iTimer as i32 > ticks(60) {
                 self.iTimer = 0;
                 self.state = 3;
             }
         } else if self.state == 3 {
             // retreating
-            if self.iDirection <= 1 {
-                self.collisionHeight -= 2;
-            } else {
-                self.collisionWidth -= 2;
-            }
-
-            if self.iDirection == 0 {
-                self.iy += 2;
-            } else if self.iDirection == 2 {
-                self.ix += 2;
-            }
+            self.fExtent = (self.fExtent - vel(2.0)).max(0.0);
+            self.set_extent(self.fExtent.ceil() as i16);
 
             if (self.iDirection <= 1 && self.collisionHeight <= 0) || (self.iDirection >= 2 && self.collisionWidth <= 0) {
                 self.state = 0;
@@ -335,7 +339,7 @@ impl CObjectTrait for MO_PirhanaPlant {
         }
 
         // Fire a fireball
-        if self.iType <= 1 && self.state == 2 && self.iTimer == 30 {
+        if self.iType <= 1 && self.state == 2 && self.iTimer as i32 == ticks(30) {
             let (ix, iy, iw, ih) = (self.ix as i32, self.iy as i32, self.iw as i32, self.ih as i32);
             let pos = Vec2s::new(
                 (if self.iDirection != 3 { ix + 7 } else { ix + iw - 23 }) as i16,
@@ -347,7 +351,7 @@ impl CObjectTrait for MO_PirhanaPlant {
                 rm.spr_hazard_fireball[if self.fPreview { 1 } else { 0 }],
                 pos,
                 angle,
-                3.0f32,
+                vel(3.0),
                 4,
                 8,
                 18,

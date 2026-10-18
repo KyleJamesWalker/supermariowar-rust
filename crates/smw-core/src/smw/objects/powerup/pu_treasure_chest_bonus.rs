@@ -30,6 +30,7 @@ pub struct PU_TreasureChestBonus {
     pub sparkledrawframe: i16,
     pub drawbonusitemx: i16,
     pub drawbonusitemy: i16,
+    pub drawbonusitemfy: f32,
     pub drawbonusitemtimer: i16,
 }
 impl_base!(PU_TreasureChestBonus => mo_powerup: MO_Powerup);
@@ -46,6 +47,7 @@ impl PU_TreasureChestBonus {
             sparkledrawframe: 0,
             drawbonusitemx: 0,
             drawbonusitemy: 0,
+            drawbonusitemfy: 0.0,
             drawbonusitemtimer: 0,
         };
         o.velx = 0.0;
@@ -92,7 +94,8 @@ impl CObjectTrait for PU_TreasureChestBonus {
 
         // Draw rising powerup from chest
         if self.state == 3 {
-            self.drawbonusitemy -= 2;
+            self.drawbonusitemfy -= vel(2.0);
+            self.drawbonusitemy = self.drawbonusitemfy as i16;
 
             self.drawbonusitemtimer -= 1;
             if self.drawbonusitemtimer <= 0 {
@@ -148,7 +151,8 @@ impl CObjectTrait for PU_TreasureChestBonus {
 
             self.drawbonusitemx = self.ix;
             self.drawbonusitemy = self.iy;
-            self.drawbonusitemtimer = 60;
+            self.drawbonusitemfy = self.iy as f32;
+            self.drawbonusitemtimer = ticks(60) as i16;
 
             g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, g.rm.spr_fireballexplosion, self.ix, self.iy, 3, 8));
 

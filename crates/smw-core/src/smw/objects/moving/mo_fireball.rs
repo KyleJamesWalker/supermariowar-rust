@@ -57,9 +57,9 @@ impl MO_Fireball {
         };
 
         if moveToRight {
-            o.velx = 5.0;
+            o.velx = vel(5.0);
         } else {
-            o.velx = -5.0;
+            o.velx = vel(-5.0);
         }
 
         // fireball sprites have both right and left sprites in them

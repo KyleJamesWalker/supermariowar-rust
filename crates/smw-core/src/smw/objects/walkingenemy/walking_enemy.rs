@@ -103,9 +103,9 @@ impl MO_WalkingEnemy {
         };
 
         if moveToRight {
-            o.velx = 1.0f32;
+            o.velx = vel(1.0);
         } else {
-            o.velx = -1.0f32;
+            o.velx = vel(-1.0);
         }
 
         o.movingObjectType = movingobject_none;
@@ -204,8 +204,8 @@ pub fn mo_walking_enemy_update<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, t
 
     if this.we().state == 0 {
         let o = this.we_mut();
-        o.spawnradius -= 2.0f32;
-        o.spawnangle += 0.05f32;
+        o.spawnradius -= vel(2.0);
+        o.spawnangle += vel(0.05);
 
         if o.spawnradius < 10.0f32 {
             o.state = 1;
@@ -217,8 +217,8 @@ pub fn mo_walking_enemy_update<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, t
     // Deal with terminal burnup velocity
     if this.we().vely >= MAXVELY {
         this.we_mut().burnuptimer += 1;
-        if this.we().burnuptimer > 20 {
-            if this.we().burnuptimer > 80 {
+        if this.we().burnuptimer as i32 > ticks(20) {
+            if this.we().burnuptimer as i32 > ticks(80) {
                 this.kill_object_map_hazard(g, -1);
             } else {
                 let o = this.we();
@@ -417,7 +417,7 @@ pub fn mo_walking_enemy_collide_object<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut
             o.bounce = GRAVITATION;
 
             o.frozen = true;
-            o.frozentimer = 300;
+            o.frozentimer = ticks(300) as i16;
 
             g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
                 g.rm.spr_fireballexplosion,
@@ -457,10 +457,10 @@ pub fn mo_walking_enemy_shatter_die<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Ga
     let iBrokenIceX: i16 = (o.ix as i32 - o.collisionOffsetX as i32 + o.iw as i32 - 32) as i16;
     let iBrokenIceY: i16 = (o.iy as i32 - o.collisionOffsetY as i32 + o.ih as i32 - 32) as i16;
     let spr = g.rm.spr_brokeniceblock;
-    g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, iBrokenIceX, iBrokenIceY, -1.5f32, -7.0f32, 4, 2, 0, 0, 16, 16));
-    g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, (iBrokenIceX as i32 + 16) as i16, iBrokenIceY, 1.5f32, -7.0f32, 4, 2, 0, 0, 16, 16));
-    g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, iBrokenIceX, (iBrokenIceY as i32 + 16) as i16, -1.5f32, -4.0f32, 4, 2, 0, 0, 16, 16));
-    g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, (iBrokenIceX as i32 + 16) as i16, (iBrokenIceY as i32 + 16) as i16, 1.5f32, -4.0f32, 4, 2, 0, 0, 16, 16));
+    g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, iBrokenIceX, iBrokenIceY, vel(-1.5), vel(-7.0), 4, 2, 0, 0, 16, 16));
+    g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, (iBrokenIceX as i32 + 16) as i16, iBrokenIceY, vel(1.5), vel(-7.0), 4, 2, 0, 0, 16, 16));
+    g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, iBrokenIceX, (iBrokenIceY as i32 + 16) as i16, vel(-1.5), vel(-4.0), 4, 2, 0, 0, 16, 16));
+    g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, (iBrokenIceX as i32 + 16) as i16, (iBrokenIceY as i32 + 16) as i16, vel(1.5), vel(-4.0), 4, 2, 0, 0, 16, 16));
 
     g.game_values.unlocksecret2part2 += 1;
 }

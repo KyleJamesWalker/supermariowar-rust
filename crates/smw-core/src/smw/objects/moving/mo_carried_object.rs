@@ -97,8 +97,8 @@ impl MO_CarriedObject {
         self.owner = PlayerId::NONE;
         self.fSmoking = false;
 
-        self.dKickX = 2.0;
-        self.dKickY = 4.0;
+        self.dKickX = vel(2.0);
+        self.dKickY = vel(4.0);
 
         self.iOwnerRightOffset = HALFPW as i16;
         self.iOwnerLeftOffset = (HALFPW - 32) as i16;

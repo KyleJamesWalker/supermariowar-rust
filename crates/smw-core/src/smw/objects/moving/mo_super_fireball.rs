@@ -4,6 +4,7 @@ use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
+use crate::common::global_constants::ticks;
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
@@ -70,7 +71,7 @@ impl MO_SuperFireball {
 
         o.velx = vel.x;
         o.vely = vel.y;
-        o.ttl = (RANDOM_INT(gp.get(), 30) + 60) as i16;
+        o.ttl = ticks(RANDOM_INT(gp.get(), 30) + 60) as i16;
 
         o.drawframe = 0;
 

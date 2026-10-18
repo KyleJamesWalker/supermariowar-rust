@@ -3,6 +3,7 @@
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
+use crate::common::global_constants::{ticks, vel};
 use crate::common::game_values::if_sound_on_play;
 use crate::common::math::vec2::Vec2s;
 use crate::common::object_base::{object_bulletbillcannon, CObject, CObjectTrait};
@@ -27,9 +28,9 @@ pub struct IO_BulletBillCannon {
 impl_base!(IO_BulletBillCannon => cobject: CObject);
 
 impl IO_BulletBillCannon {
-    pub fn new(g: &mut Game, pos: Vec2s, freq: i16, vel: f32, preview: bool) -> Self {
+    pub fn new(g: &mut Game, pos: Vec2s, freq: i16, velocity: f32, preview: bool) -> Self {
         let mut gp = g.ptr();
-        let mut this = IO_BulletBillCannon { cobject: CObject::new(gp.get(), SpriteId::NONE, pos), m_freq: freq, m_timer: 0, m_vel: vel, m_preview: preview };
+        let mut this = IO_BulletBillCannon { cobject: CObject::new(gp.get(), SpriteId::NONE, pos), m_freq: freq, m_timer: 0, m_vel: vel(velocity), m_preview: preview };
         this.objectType = object_bulletbillcannon;
         this.set_new_timer(g);
         this
@@ -37,7 +38,7 @@ impl IO_BulletBillCannon {
 
     fn set_new_timer(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        self.m_timer = (self.m_freq as i32 + RANDOM_INT(gp.get(), self.m_freq as i32)) as i16;
+        self.m_timer = ticks(self.m_freq as i32 + RANDOM_INT(gp.get(), self.m_freq as i32)) as i16;
     }
 }
 

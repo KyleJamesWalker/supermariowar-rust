@@ -60,8 +60,8 @@ impl CO_Star {
         o.sparkleanimationtimer = 0;
         o.sparkledrawframe = 0;
 
-        o.dKickX = 3.0;
-        o.dKickY = 6.0;
+        o.dKickX = vel(3.0);
+        o.dKickY = vel(6.0);
 
         o.fCarriedByKuriboShoe = true;
 
@@ -131,7 +131,7 @@ impl CObjectTrait for CO_Star {
         let mut oldstar = starmode.swapplayer(g, self.iID, player);
 
         if self.owner == oldstar {
-            g.player(oldstar).throw_star = 30;
+            g.player(oldstar).throw_star = ticks(30) as i16;
             self.kick(g);
         }
 
@@ -144,7 +144,7 @@ impl CObjectTrait for CO_Star {
             self.timer = 0;
         } else if {
             self.timer += 1;
-            self.timer > 300
+            self.timer as i32 > ticks(300)
         } {
             self.place_star(g);
         } else {

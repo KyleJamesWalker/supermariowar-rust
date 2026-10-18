@@ -119,7 +119,7 @@ impl CObjectTrait for MO_Explosion {
 
         // RFC: why 48?
         self.timer += 1;
-        if self.timer >= 48 {
+        if self.timer as i32 >= ticks(48) {
             self.dead = true;
         }
     }

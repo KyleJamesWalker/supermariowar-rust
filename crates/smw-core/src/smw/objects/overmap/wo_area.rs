@@ -4,6 +4,7 @@ use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
+use crate::common::global_constants::ticks;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::math::vec2::Vec2s;
@@ -121,7 +122,7 @@ impl CObjectTrait for OMO_Area {
 
         if self.iPlayerID != -1 && !g.mode().gameover {
             self.scoretimer += 1;
-            if self.scoretimer as i32 >= ((g.game_values.pointspeed as i32) << 1) {
+            if self.scoretimer as i32 >= ticks((g.game_values.pointspeed as i32) << 1) {
                 self.scoretimer = 0;
                 g.player(gp.players[self.iPlayerID as usize]).score(g).adjust_score(g, 1);
                 gp.get().mode().check_winner(g, gp.get().players[self.iPlayerID as usize]);
