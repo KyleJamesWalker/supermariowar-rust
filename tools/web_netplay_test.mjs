@@ -14,6 +14,8 @@
 //   RELAY_BIN  smw_relay binary (default: target/release/smw_relay)
 //   WEB_DIR    web build (default: dist/web)
 //   NET_GAMES  scenarios (default: every tools/ref/net_game*)
+//   WEB_NETPLAY_V2=1  play each match over netplay v2 (GGRS over WebRTC; the relay needs SMW_SIGNAL_URL) and compare
+//              the pages' per-frame states instead of their dumps
 import { spawn, spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -29,6 +31,7 @@ const chrome = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/M
 const out = resolve(process.argv[2] ?? join(tmpdir(), 'smw-web-netplay'));
 mkdirSync(out, { recursive: true });
 
+const V2 = process.env.WEB_NETPLAY_V2 === '1';
 const games = (process.env.NET_GAMES ?? 'net_game net_game_blocks net_game_frenzy net_game_stomp net_game_coins net_game_classic net_game_stompkill net_game_stompkill_powerup').split(/\s+/).filter(Boolean);
 
 // The native scripts assume both clients start together. Pages load at different speeds, so the
@@ -245,7 +248,8 @@ const play = async (game) => {
     mkdirSync(dir, { recursive: true });
     const logStart = relayLog.length;
     const pages = [];
-    for (const r of roles) pages.push(await openPage({ ...r, frames, env: { SMW_RECORD_TO: '/rec.txt', ...(r.netSeed && { SMW_NET_SEED: r.netSeed }) } }));
+    const v2 = V2 ? { SMW_NETPLAY_V2: '1', SMW_V2_STATE_LOG: '/v2state.log' } : {};
+    for (const r of roles) pages.push(await openPage({ ...r, frames, env: { SMW_RECORD_TO: '/rec.txt', ...(r.netSeed && { SMW_NET_SEED: r.netSeed }), ...v2 } }));
 
     let shot = false;
     let timedOut = false;
@@ -268,6 +272,12 @@ const play = async (game) => {
 
     console.log(`== ${game}`);
     let ok = !timedOut;
+    if (V2) {
+        for (const page of pages) {
+            const state = await within(page.evaluate(`(() => { try { return Module.FS.readFile('/v2state.log', { encoding: 'utf8' }); } catch { return ''; } })()`), 10000).catch(() => '');
+            writeFileSync(join(dir, `${page.role}.v2state.log`), state);
+        }
+    }
     const recordings = {};
     for (const page of pages) {
         try {
@@ -282,13 +292,19 @@ const play = async (game) => {
         page.close();
     }
     writeFileSync(join(dir, 'relay.log'), relayLog.slice(logStart));
-    if (!shot) {
+    if (!shot && !V2) {
         console.error('a page never reached 300 gameplay frames');
         ok = false;
     }
     if (!relayLog.slice(logStart).includes('starting.')) {
         console.error('the lobby never started a room');
         ok = false;
+    }
+    if (V2) {
+        ok &&= compareV2(dir, pages);
+        for (const page of pages) page.close();
+        console.log(`${game}: ${ok ? 'PASS' : 'FAIL'} (${dir})`);
+        return ok;
     }
     const compare = spawnSync(
         'python3',
@@ -303,6 +319,42 @@ const play = async (game) => {
     if (ok) ok = await replayOffline(game, dir, roles, recordings);
     console.log(`${game}: ${ok ? 'PASS' : 'FAIL'} (${dir})`);
     return ok;
+};
+
+// Netplay v2: each page logs the state it checksums at every saved frame; both must match wherever both logged, both
+// must have run a GGRS session, and neither may report a desync. v1's dump comparison and offline replays do not apply.
+const compareV2 = (dir, pages) => {
+    const frames = (text) => {
+        const out = new Map();
+        let cur = null;
+        for (const line of text.split('\n')) {
+            if (line.startsWith('#F ')) {
+                const f = line.split(' ');
+                cur = [f[2]];
+                out.set(Number(f[1]), cur);
+            } else if (cur) cur.push(line);
+        }
+        return out;
+    };
+    let ok = true;
+    for (const page of pages) {
+        if (!page.consoleLines.some((l) => l.includes('[net] v2: GGRS session started'))) {
+            console.error(`${page.role}: no GGRS session`);
+            ok = false;
+        }
+        const desync = page.consoleLines.find((l) => l.includes('[net] v2: desync'));
+        if (desync) {
+            console.error(`${page.role}: ${desync}`);
+            ok = false;
+        }
+    }
+    const [h, j] = pages.map((p) => frames(readFileSync(join(dir, `${p.role}.v2state.log`), 'utf8')));
+    // A page's last frames may be predictions the session never confirmed before the match ended.
+    const last = Math.min(Math.max(...h.keys()), Math.max(...j.keys())) - 8;
+    const common = [...h.keys()].filter((f) => j.has(f) && f <= last).sort((a, b) => a - b);
+    const differ = common.find((f) => h.get(f).join('\n') !== j.get(f).join('\n'));
+    console.log(`  v2: ${common.length} frames compared${differ === undefined ? ', identical' : `, states differ from frame ${differ}`}`);
+    return ok && differ === undefined && common.length >= 300;
 };
 
 const clipOf = (dir, role) => {

@@ -91,7 +91,9 @@ for game in games.split():
     compared = 0
     if host.exists() and join.exists():
         h, j = frames(host), frames(join)
-        common = sorted(set(h) & set(j))
+        # The last frames may be predictions the session never confirmed before the match ended.
+        last = min(max(h), max(j)) - 8
+        common = sorted(f for f in set(h) & set(j) if f <= last)
         compared = len(common)
         differ = [f for f in common if h[f] != j[f]]
         if differ:
