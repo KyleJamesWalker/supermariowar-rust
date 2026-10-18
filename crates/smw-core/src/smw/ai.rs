@@ -1299,6 +1299,34 @@ fn holds_star(g: &mut Game, player: PlayerId, kind: i16) -> bool {
     !carried.is_null() && carried.get_moving_object_type() == movingobject_star && star_type(carried) == kind
 }
 
+/// Whether an opponent stands where `me`'s weapon would reach it: in front within two rows for a fireball,
+/// boomerang or ice blast, in front and not far below for a thrown hammer or bomb, and within reach of a spin.
+fn weapon_lined_up(g: &mut Game, me: PlayerId) -> bool {
+    let p = g.player(me);
+    if !(1..=7).contains(&p.powerup) {
+        return false;
+    }
+    let facing_right = p.is_facing_right(g);
+    (0..g.players.len()).any(|i| {
+        let t = g.player(g.players[i]);
+        if g.players[i] == me || t.teamID == p.teamID || t.is_invincible() || !t.isready() {
+            return false;
+        }
+        let mut dx = t.ix as i32 - p.ix as i32;
+        if dx.abs() > App::screenWidth / 2 {
+            dx -= dx.signum() * App::screenWidth;
+        }
+        let dy = t.iy as i32 - p.iy as i32;
+        let ahead = if facing_right { dx } else { -dx };
+        match p.powerup {
+            1 | 4 | 5 => ahead > 0 && ahead < 240 && dy.abs() < 2 * TILESIZE,
+            2 | 6 => ahead > 0 && ahead < 200 && dy > -3 * TILESIZE && dy < TILESIZE,
+            3 | 7 => dx.abs() < PW * 2 && dy.abs() < PH,
+            _ => false,
+        }
+    })
+}
+
 fn solid_at(g: &mut Game, tx: i32, ty: i32) -> bool {
     g.g_map.map(tx, ty) & tile_flag_solid as i32 != 0 || !g.map_block(tx as i16, ty as i16).is_null()
 }
@@ -1863,6 +1891,11 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
         }
 
         follow_path(g, this, actionType, playerKeys);
+
+        // Turbo fires once per press, so with a target lined up a CPU that already fired lets go to fire again.
+        if g.game_values.cpudifficulty >= 1 && carriedItem.is_null() && weapon_lined_up(g, pPlayer) {
+            playerKeys.game_turbo_mut().fDown = !g.player(pPlayer).lockfire;
+        }
 
         if g.game_values.cpudifficulty >= 2 {
             if let Some(right) = dodge_stomp(g, pPlayer) {
