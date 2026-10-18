@@ -1,11 +1,11 @@
 //! The browser side: web/peer_socket.js owns the WebSocket and the RTCPeerConnections; this polls it.
 
-use crate::{PeerId, PeerState, UNRELIABLE};
+use crate::{IceConfig, PeerId, PeerState, UNRELIABLE};
 use std::ffi::CString;
 use std::os::raw::c_char;
 
 extern "C" {
-    fn smw_peer_open(url: *const c_char);
+    fn smw_peer_open(url: *const c_char, ice_servers_json: *const c_char, relay_only: i32);
     fn smw_peer_signaling_closed() -> i32;
     fn smw_peer_id(id: *mut u8) -> i32;
     fn smw_peer_change(id: *mut u8) -> i32;
@@ -15,6 +15,37 @@ extern "C" {
 }
 
 const MAX_PACKET: usize = 64 * 1024;
+
+fn json_string(s: &str) -> String {
+    let mut out = String::from("\"");
+    for c in s.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            c if (c as u32) < 0x20 => out.push_str(&format!("\\u{:04x}", c as u32)),
+            c => out.push(c),
+        }
+    }
+    out.push('"');
+    out
+}
+
+fn ice_servers_json(ice: &IceConfig) -> String {
+    let servers: Vec<String> = ice
+        .servers
+        .iter()
+        .map(|s| {
+            let urls: Vec<String> = s.urls.iter().map(|u| json_string(u)).collect();
+            format!(
+                "{{\"urls\":[{}],\"username\":{},\"credential\":{}}}",
+                urls.join(","),
+                json_string(&s.username),
+                json_string(&s.credential)
+            )
+        })
+        .collect();
+    format!("[{}]", servers.join(","))
+}
 
 fn receive(channel: usize) -> Vec<(PeerId, Vec<u8>)> {
     let mut packets = Vec::new();
@@ -43,9 +74,10 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn connect(room_url: &str) -> Socket {
+    pub fn connect(room_url: &str, ice: &IceConfig) -> Socket {
         let url = CString::new(room_url).unwrap_or_default();
-        unsafe { smw_peer_open(url.as_ptr()) };
+        let servers = CString::new(ice_servers_json(ice)).unwrap_or_default();
+        unsafe { smw_peer_open(url.as_ptr(), servers.as_ptr(), ice.relay_only as i32) };
         Socket {
             unreliable_taken: false,
         }

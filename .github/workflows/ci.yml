@@ -165,11 +165,30 @@ jobs:
         timeout-minutes: 3
         run: node tools/web_peer_test.mjs "$RUNNER_TEMP/web-peer"
 
+      - name: Browser and native peers through TURN only
+        timeout-minutes: 4
+        env:
+          TURN_URL: turn:127.0.0.1:3478
+          TURN_SECRET: 0123abcd
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y --no-install-recommends coturn
+          sudo systemctl stop coturn || true
+          # The deploy config denies loopback peers; the test relays between allocations on 127.0.0.1.
+          turnserver -c deploy/turnserver.conf --log-file=stdout --listening-ip=127.0.0.1 --relay-ip=127.0.0.1 \
+            --allowed-peer-ip=127.0.0.1 --allow-loopback-peers --static-auth-secret="$TURN_SECRET" \
+            --pidfile="$RUNNER_TEMP/turnserver.pid" > "$RUNNER_TEMP/web-peer-turn.log" 2>&1 &
+          sleep 1
+          node tools/web_peer_test.mjs "$RUNNER_TEMP/web-peer-turn"
+
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: web-peer
-          path: ${{ runner.temp }}/web-peer
+          path: |
+            ${{ runner.temp }}/web-peer
+            ${{ runner.temp }}/web-peer-turn
+            ${{ runner.temp }}/web-peer-turn.log
           retention-days: 7
 
   parity-build:

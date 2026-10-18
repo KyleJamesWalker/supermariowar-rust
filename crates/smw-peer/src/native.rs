@@ -1,6 +1,6 @@
 //! Native peers: a matchbox-protocol signaling client and webrtc-rs connections, run on one tokio thread.
 
-use crate::{PeerId, PeerState, RELIABLE, UNRELIABLE};
+use crate::{IceConfig, PeerId, PeerState, RELIABLE, UNRELIABLE};
 use bytes::Bytes;
 use futures_util::{SinkExt, StreamExt};
 use serde_json::{json, Value};
@@ -17,13 +17,10 @@ use webrtc::ice_transport::ice_candidate::RTCIceCandidateInit;
 use webrtc::ice_transport::ice_server::RTCIceServer;
 use webrtc::peer_connection::configuration::RTCConfiguration;
 use webrtc::peer_connection::peer_connection_state::RTCPeerConnectionState;
+use webrtc::peer_connection::policy::ice_transport_policy::RTCIceTransportPolicy;
 use webrtc::peer_connection::sdp::session_description::RTCSessionDescription;
 use webrtc::peer_connection::RTCPeerConnection;
 
-const STUN: [&str; 2] = [
-    "stun:stun.l.google.com:19302",
-    "stun:stun1.l.google.com:19302",
-];
 const KEEP_ALIVE: Duration = Duration::from_secs(10);
 
 #[derive(Default)]
@@ -48,10 +45,11 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn connect(room_url: &str) -> Socket {
+    pub fn connect(room_url: &str, ice: &IceConfig) -> Socket {
         let shared = SharedRef::default();
         let (commands, rx) = unbounded_channel();
         let url = room_url.to_string();
+        let ice = ice.clone();
         let task_shared = shared.clone();
         std::thread::Builder::new()
             .name("smw-peer".into())
@@ -60,7 +58,7 @@ impl Socket {
                     .enable_all()
                     .build()
                     .expect("tokio runtime");
-                runtime.block_on(run(url, task_shared.clone(), rx));
+                runtime.block_on(run(url, ice, task_shared.clone(), rx));
                 task_shared.lock().unwrap().signaling_closed = true;
             })
             .expect("spawn the peer socket thread");
@@ -158,6 +156,7 @@ struct Peer {
 /// What a peer's callbacks need: where packets and state changes go, and how to reach the signaling server.
 #[derive(Clone)]
 struct Context {
+    ice: RTCConfiguration,
     shared: SharedRef,
     outgoing: UnboundedSender<String>,
     gone: UnboundedSender<PeerId>,
@@ -171,7 +170,34 @@ impl Context {
     }
 }
 
-async fn run(url: String, shared: SharedRef, mut commands: UnboundedReceiver<Command>) {
+fn rtc_configuration(ice: &IceConfig) -> RTCConfiguration {
+    let ice_servers = ice
+        .servers
+        .iter()
+        .map(|s| RTCIceServer {
+            urls: s.urls.clone(),
+            username: s.username.clone(),
+            credential: s.credential.clone(),
+        })
+        .collect();
+    let ice_transport_policy = if ice.relay_only {
+        RTCIceTransportPolicy::Relay
+    } else {
+        RTCIceTransportPolicy::All
+    };
+    RTCConfiguration {
+        ice_servers,
+        ice_transport_policy,
+        ..Default::default()
+    }
+}
+
+async fn run(
+    url: String,
+    ice: IceConfig,
+    shared: SharedRef,
+    mut commands: UnboundedReceiver<Command>,
+) {
     let _ = rustls::crypto::ring::default_provider().install_default();
     let stream = match tokio_tungstenite::connect_async(url.as_str()).await {
         Ok((stream, _)) => stream,
@@ -184,6 +210,7 @@ async fn run(url: String, shared: SharedRef, mut commands: UnboundedReceiver<Com
     let (outgoing, mut outgoing_rx) = unbounded_channel::<String>();
     let (gone, mut gone_rx) = unbounded_channel::<PeerId>();
     let context = Context {
+        ice: rtc_configuration(&ice),
         shared: shared.clone(),
         outgoing,
         gone,
@@ -280,14 +307,7 @@ async fn on_event(
 }
 
 async fn new_peer(api: &API, context: &Context, id: PeerId, offerer: bool) -> Option<Peer> {
-    let config = RTCConfiguration {
-        ice_servers: vec![RTCIceServer {
-            urls: STUN.iter().map(|s| s.to_string()).collect(),
-            ..Default::default()
-        }],
-        ..Default::default()
-    };
-    let connection = Arc::new(api.new_peer_connection(config).await.ok()?);
+    let connection = Arc::new(api.new_peer_connection(context.ice.clone()).await.ok()?);
     let connected = Arc::new(AtomicBool::new(false));
     let opened = Arc::new(AtomicUsize::new(0));
     let mut channels = Vec::new();

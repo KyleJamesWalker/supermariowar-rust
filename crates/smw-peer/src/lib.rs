@@ -17,6 +17,38 @@ pub const RELIABLE: usize = 0;
 /// GGRS traffic; GGRS resends what it needs.
 pub const UNRELIABLE: usize = 1;
 
+/// A STUN or TURN server, as in the browser's `RTCIceServer`.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct IceServer {
+    pub urls: Vec<String>,
+    pub username: String,
+    pub credential: String,
+}
+
+/// How peers look for a route to each other.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct IceConfig {
+    pub servers: Vec<IceServer>,
+    /// Use TURN relays only, so other players never learn this player's address.
+    pub relay_only: bool,
+}
+
+impl Default for IceConfig {
+    fn default() -> Self {
+        let urls = [
+            "stun:stun.l.google.com:19302",
+            "stun:stun1.l.google.com:19302",
+        ];
+        IceConfig {
+            servers: vec![IceServer {
+                urls: urls.map(String::from).to_vec(),
+                ..Default::default()
+            }],
+            relay_only: false,
+        }
+    }
+}
+
 /// A peer's signaling UUID as a number; ordering it orders players the same way on every peer.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub struct PeerId(pub u128);
@@ -35,9 +67,9 @@ pub struct PeerSocket {
 
 impl PeerSocket {
     /// `room_url` is `ws[s]://<signaling server>/<room>`.
-    pub fn connect(room_url: &str) -> PeerSocket {
+    pub fn connect(room_url: &str, ice: &IceConfig) -> PeerSocket {
         PeerSocket {
-            inner: imp::Socket::connect(room_url),
+            inner: imp::Socket::connect(room_url, ice),
             connected: Vec::new(),
         }
     }

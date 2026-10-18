@@ -4,7 +4,8 @@ addToLibrary({
     $SMWPeer: {
         // Channel 0 reliable, channel 1 unordered with no retransmits (crates/smw-peer RELIABLE, UNRELIABLE).
         channels: [{ ordered: true }, { ordered: false, maxRetransmits: 0 }],
-        iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }],
+        iceServers: [],
+        relayOnly: false,
         gatherTimeoutMs: 5000,
         socket: null,
         failed: false,
@@ -31,8 +32,10 @@ addToLibrary({
             if (socket && socket.readyState === 1) socket.send(JSON.stringify({ Signal: { receiver, data } }));
         },
 
-        open: (url) => {
+        open: (url, iceServers, relayOnly) => {
             SMWPeer.close();
+            SMWPeer.iceServers = iceServers;
+            SMWPeer.relayOnly = relayOnly;
             let socket;
             try {
                 socket = new WebSocket(url);
@@ -62,7 +65,10 @@ addToLibrary({
 
         // A matchbox peer: the RTCPeerConnection and its two pre-negotiated channels.
         peer: (id) => {
-            const pc = new RTCPeerConnection({ iceServers: SMWPeer.iceServers });
+            const pc = new RTCPeerConnection({
+                iceServers: SMWPeer.iceServers,
+                iceTransportPolicy: SMWPeer.relayOnly ? 'relay' : 'all',
+            });
             const peer = { pc, channels: [], open: 0, connected: false, gone: false, remoteSet: false, candidates: [], pending: [] };
             // Firefox drops the connection without a handler here (matchbox issue 36).
             pc.oniceconnectionstatechange = () => {};
@@ -185,7 +191,8 @@ addToLibrary({
     },
 
     smw_peer_open__deps: ['$SMWPeer', '$UTF8ToString'],
-    smw_peer_open: (url) => SMWPeer.open(UTF8ToString(url)),
+    smw_peer_open: (url, iceServers, relayOnly) =>
+        SMWPeer.open(UTF8ToString(url), JSON.parse(UTF8ToString(iceServers)), relayOnly !== 0),
 
     smw_peer_signaling_closed__deps: ['$SMWPeer'],
     smw_peer_signaling_closed: () => (SMWPeer.failed ? 1 : 0),

@@ -9,7 +9,10 @@
 //                 (default: target/release/examples)
 //   SIGNAL_URL    an already running signaling server, e.g. ws://127.0.0.1:3536 for matchbox_server
 //                 (default: start the signal example)
+//   TURN_URL      with TURN_SECRET: every peer connects through this TURN server only (relay-only ICE),
+//                 with credentials minted from the secret as the lobby does
 import { spawn } from 'node:child_process';
+import { createHmac } from 'node:crypto';
 import { createServer } from 'node:http';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -39,8 +42,15 @@ const fail = (message) => {
 };
 setTimeout(() => fail('timed out after 90 s'), 90_000).unref();
 
-const start = (bin, args, log) => {
-    const child = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'], detached: true });
+const useTurn = Boolean(process.env.TURN_URL && process.env.TURN_SECRET);
+const turnFor = (name) => {
+    const username = `${Math.floor(Date.now() / 1000) + 600}:web-peer-test-${process.pid}-${name}`;
+    const credential = createHmac('sha1', process.env.TURN_SECRET).update(username).digest('base64');
+    return { urls: [process.env.TURN_URL], username, credential };
+};
+
+const start = (bin, args, log, env = {}) => {
+    const child = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'], detached: true, env: { ...process.env, ...env } });
     children.push(child);
     let text = '';
     const append = (d) => {
@@ -72,11 +82,10 @@ const page = `<!doctype html><meta charset="utf-8"><title>peer test</title>
 <script>window.addToLibrary = (lib) => { window.SMWPeer = lib.$SMWPeer; };</script>
 <script src="peer_socket.js"></script>
 <script>
-SMWPeer.iceServers = [];
 window.received = [new Set(), new Set()];
 window.connected = new Set();
-window.run = (url, name) => {
-    SMWPeer.open(url);
+window.run = (url, name, iceServers, relayOnly) => {
+    SMWPeer.open(url, iceServers, relayOnly);
     setInterval(() => {
         for (let c; (c = SMWPeer.changes.shift()); ) c[1] ? connected.add(c[0]) : connected.delete(c[0]);
         for (let ch = 0; ch < 2; ch++)
@@ -147,12 +156,17 @@ const openPage = async (name) => {
     const evaluate = async (expression) =>
         (await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }, sessionId)).result.value;
     while (!(await evaluate('typeof window.run === "function"'))) await new Promise((ok) => setTimeout(ok, 50));
-    await evaluate(`run(${JSON.stringify(room)}, ${JSON.stringify(name)})`);
+    const iceServers = useTurn ? [turnFor(name)] : [];
+    await evaluate(`run(${JSON.stringify(room)}, ${JSON.stringify(name)}, ${JSON.stringify(iceServers)}, ${useTurn})`);
     return { name, evaluate };
 };
 
 const pages = [await openPage('a'), await openPage('b')];
-const native = start(join(examples, 'echo_peer'), [room, '80'], 'echo_peer.log');
+const nativeTurn = useTurn && turnFor('native');
+const turnEnv = nativeTurn
+    ? { SMW_TURN_URL: nativeTurn.urls[0], SMW_TURN_USERNAME: nativeTurn.username, SMW_TURN_CREDENTIAL: nativeTurn.credential }
+    : {};
+const native = start(join(examples, 'echo_peer'), [room, '80'], 'echo_peer.log', turnEnv);
 
 const expected = (name, other) =>
     [0, 1].map((ch) => [`${other}-hello/${ch}`, `echo:${name}-hello/${ch}`, `native-hello/${ch}`].sort());
@@ -175,6 +189,6 @@ for (;;) {
 const nativeIds = [...native.output().matchAll(/^([0-9a-f]{32}) connected$/gm)].map((m) => m[1]);
 if (nativeIds.length !== 2) fail(`native peer saw ${nativeIds.length} connections:\n${native.output()}`);
 writeFileSync(join(out, 'pages.json'), JSON.stringify(states, null, 2));
-console.log('PASS: 2 browser peers and 1 native peer connected in full mesh; both channels delivered both ways');
+console.log(`PASS: 2 browser peers and 1 native peer connected in full mesh${useTurn ? ' through TURN only' : ''}; both channels delivered both ways`);
 cleanup();
 process.exit(0);

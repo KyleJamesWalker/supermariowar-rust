@@ -3,7 +3,7 @@
 use ggrs::{Config, GgrsRequest, InputStatus, PredictRepeatLast, SessionBuilder, SessionState};
 use matchbox_signaling::SignalingServer;
 use serde::{Deserialize, Serialize};
-use smw_peer::{PeerId, PeerSocket, RELIABLE, UNRELIABLE};
+use smw_peer::{IceConfig, PeerId, PeerSocket, RELIABLE, UNRELIABLE};
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
 
@@ -25,8 +25,12 @@ static ONE_ROOM: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 fn connect_all(n: usize, room: &str) -> Vec<PeerSocket> {
     let port = signaling_server();
+    let local = IceConfig {
+        servers: Vec::new(),
+        relay_only: false,
+    };
     let mut sockets: Vec<PeerSocket> = (0..n)
-        .map(|_| PeerSocket::connect(&format!("ws://127.0.0.1:{port}/{room}")))
+        .map(|_| PeerSocket::connect(&format!("ws://127.0.0.1:{port}/{room}"), &local))
         .collect();
     let deadline = Instant::now() + Duration::from_secs(60);
     while sockets.iter().any(|s| s.connected_peers().len() < n - 1) {
