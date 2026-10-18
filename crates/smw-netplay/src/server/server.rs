@@ -425,6 +425,16 @@ impl SMWServer {
         room.share_skin_of(player);
     }
 
+    /// The room's host is back from a match: the room shows in the room list again, for the next one.
+    fn host_reopens_room(&mut self, playerID: u64) {
+        let Some(player) = self.player(playerID) else { return };
+        let Some(room) = self.rooms.get_mut(&player.currentRoomID) else { return };
+        if room.players[room.hostPlayerNumber as usize] == player {
+            room.visible = true;
+            log(&format!("[info] Room #{} open again.", room.roomID as i32));
+        }
+    }
+
     fn player_sends_chat_msg(&mut self, playerID: u64, data: &[u8]) {
         let Some(mut player) = self.player(playerID) else { return };
         let roomID = player.currentRoomID;
@@ -589,6 +599,7 @@ impl NetworkEventHandler for SMWServer {
             NET_NOTICE_GAMEMODESETTINGS => self.host_changes_game_mode_settings(playerID, data),
 
             NET_NOTICE_SKIN_CHANGE => self.player_changes_skin(playerID, data),
+            NET_G2L_GAME_RESULTS => self.host_reopens_room(playerID),
 
             NET_NOTICE_ROOM_CHAT_MSG => self.player_sends_chat_msg(playerID, data),
 
