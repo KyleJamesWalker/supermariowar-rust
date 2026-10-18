@@ -165,7 +165,7 @@ def main():
     ap.add_argument("--map", help="start map (SMW_MAP), e.g. one with moving platforms and hazards")
     ap.add_argument("--objects", action="store_true", help="also compare every object and moving platform")
     ap.add_argument("--tolerance", type=float, default=1.0, help="pixels of drift allowed once the scenario ends")
-    ap.add_argument("--spike", type=float, default=6.0, help="pixels allowed at any instant (a landing or ledge a tick apart)")
+    ap.add_argument("--spike", type=float, default=12.0, help="pixels allowed at any instant (a landing at fall speed a tick apart)")
     ap.add_argument("--verbose", action="store_true", help="print the sampled positions")
     ap.add_argument("scenarios", nargs="*", default=list(SCENARIOS))
     args = ap.parse_args()

@@ -1386,7 +1386,7 @@ impl GameplayState {
         let mut gp = g.ptr();
         if g.game_values.screenfadespeed != 0 {
             gp.g_map.update(g);
-            g.game_values.screenfade = (g.game_values.screenfade as i32 + g.game_values.screenfadespeed as i32) as i16;
+            g.game_values.screenfade = (g.game_values.screenfade as i32 + g.game_values.screenfade_step() as i32) as i16;
 
             if g.game_values.screenfade <= 0 {
                 g.game_values.screenfadespeed = 0;

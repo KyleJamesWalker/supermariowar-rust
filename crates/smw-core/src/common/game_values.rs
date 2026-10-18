@@ -642,6 +642,15 @@ impl CGameValues {
         }
     }
 
+    /// The change in `screenfade` this tick. `screenfadespeed` is per original tick, and a fade starts at 255 going down
+    /// or 8 going up, so the steps taken so far follow from `screenfade`; one tick in 24 takes two.
+    pub fn screenfade_step(&self) -> i16 {
+        let speed = self.screenfadespeed as i32;
+        let start = if speed < 0 { 255 } else { 8 };
+        let steps = (self.screenfade as i32 - start).abs() / speed.abs().max(1);
+        (if steps % 25 == 23 { 2 * speed } else { speed }) as i16
+    }
+
     pub fn reset_gameplay_settings(&mut self, g: &mut Game) {
         self.flags = GameplayFlags::default();
 
