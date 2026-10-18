@@ -1871,9 +1871,14 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
             }
         }
 
-        // Down with turbo on the ground turns the tanooki suit to stone, which only helps against a threat.
-        if actionType != 2 && g.player(pPlayer).tanookisuit.is_on() && !g.player(pPlayer).inair && playerKeys.game_down().fDown {
-            playerKeys.game_turbo_mut().fDown = false;
+        // Down with turbo on the ground turns the tanooki suit to stone, and holding down keeps it there; that only
+        // helps against a threat.
+        if actionType != 2 && g.player(pPlayer).tanookisuit.is_on() && !g.player(pPlayer).inair && !g.player(pPlayer).superstomp.is_stomping() {
+            if !g.player(pPlayer).tanookisuit.not_statue() {
+                playerKeys.game_down_mut().fDown = false;
+            } else if playerKeys.game_down().fDown {
+                playerKeys.game_turbo_mut().fDown = false;
+            }
         }
 
         if let Some(column) = wall_ahead(g, ix32, iy32, playerKeys.game_left().fDown, playerKeys.game_right().fDown) {
