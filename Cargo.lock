@@ -2372,8 +2372,10 @@ version = "0.1.0"
 dependencies = [
  "enet-sys",
  "flate2",
+ "ggrs",
  "png",
  "sdl2",
+ "serde",
  "smw-globals",
  "smw-netplay",
  "smw-peer",
@@ -2391,6 +2393,7 @@ name = "smw-headless"
 version = "0.1.0"
 dependencies = [
  "flate2",
+ "ggrs",
  "png",
  "smw-core",
  "smw-platform",

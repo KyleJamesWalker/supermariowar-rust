@@ -30,5 +30,6 @@ pub mod menu;
 pub mod network;
 pub mod objects;
 pub mod player_components;
+pub mod rollback;
 pub mod ui;
 pub mod checkpoint;

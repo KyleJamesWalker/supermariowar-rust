@@ -283,3 +283,104 @@ fn clone_capture_the_flag() {
 fn clone_frenzy() {
     clone_mid_match("frenzy_cpu", 1200);
 }
+
+/// Netplay v2 rollback (docs/design/NETPLAY_V2.md): from frame `at`, the match runs under GGRS's sync test, which
+/// loads the state from `check` ticks back and re-runs them every tick and fails on any checksum difference.
+fn rollback_mid_match(name: &str, at: Option<u32>, ticks: u32, check: usize) -> u32 {
+    use smw::common::game_values::AppState;
+    use smw::smw::game_state::StateId;
+    use smw::smw::rollback::{handle_requests, GgrsConfig, Keys};
+
+    let tools = repo().join("tools");
+    let out = std::env::temp_dir().join(format!("smw-headless-{}-rollback-{}", std::process::id(), name));
+    let mut ran = 0;
+    let mut failure = None;
+    let mut in_match = 0;
+    sandboxed(&tools.join("replays").join(format!("{}.txt", name)), &out, None, |argv, services| {
+        let g = smw::game::Game::create();
+        g.services = Some(services);
+        smw::globals::init_globals(g);
+        g.RootDataDirectory = argv[2].clone();
+        smw::smw::main::startup(g);
+        smw::smw::main::gameloop_start(g);
+        let mut session: Option<ggrs::SyncTestSession<GgrsConfig<usize>>> = None;
+        while g.game_values.appstate != AppState::Quit && ran < ticks && failure.is_none() {
+            let Some(s) = session.as_mut().filter(|_| g.gsm.currentState == StateId::Gameplay) else {
+                in_match = if g.gsm.currentState == StateId::Gameplay { in_match + 1 } else { 0 };
+                let start = match at {
+                    Some(at) => smw::smw::harness::frame(g) == at,
+                    None => in_match == 300,
+                };
+                if start {
+                    let frame = smw::smw::harness::frame(g);
+                    assert_eq!(g.gsm.currentState, StateId::Gameplay, "{}: frame {} is not in a match", name, frame);
+                    let builder = ggrs::SessionBuilder::<GgrsConfig<usize>>::new().with_num_players(4).unwrap().with_check_distance(check);
+                    session = Some(builder.start_synctest_session().unwrap());
+                    continue;
+                }
+                if session.is_some() {
+                    break;
+                }
+                smw::smw::main::frame(g);
+                continue;
+            };
+            smw::smw::harness::frame_start_input(g);
+            let mut gp = g.ptr();
+            gp.gps.as_mut().unwrap().gather_input(g);
+            for p in 0..4 {
+                s.add_local_input(p, Keys::of(&g.game_values.playerInput.outputControls[p])).unwrap();
+            }
+            match s.advance_frame() {
+                Ok(requests) => {
+                    handle_requests(g, requests, &[0, 1, 2, 3], true);
+                }
+                Err(e) => failure = Some(format!("{} at tick {}: {}", name, ran, e)),
+            }
+            ran += 1;
+        }
+        smw::smw::main::shutdown(g);
+    });
+    let _ = std::fs::remove_dir_all(&out);
+    if let Some(failure) = failure {
+        panic!("{}", failure);
+    }
+    assert!(ran == 0 || ran >= ticks.min(300), "{}: only {} ticks under rollback", name, ran);
+    ran
+}
+
+#[test]
+fn rollback_capture_the_flag() {
+    assert_eq!(rollback_mid_match("cpu_ctf", Some(1500), 400, 7), 400);
+}
+
+#[test]
+fn rollback_frenzy() {
+    assert_eq!(rollback_mid_match("frenzy_cpu", Some(1200), 400, 7), 400);
+}
+
+/// Every replay's first match under rollback; `SMW_ROLLBACK_SWEEP=<substring>` picks replays. Run with --ignored.
+#[test]
+#[ignore]
+fn rollback_sweep() {
+    let pick = std::env::var("SMW_ROLLBACK_SWEEP").unwrap_or_default();
+    let mut names: Vec<String> = std::fs::read_dir(repo().join("tools").join("replays"))
+        .unwrap()
+        .filter_map(|e| e.ok()?.file_name().to_str()?.strip_suffix(".txt").map(String::from))
+        .filter(|n| n.contains(&pick))
+        .collect();
+    names.sort();
+    let mut failed = Vec::new();
+    for name in &names {
+        match std::panic::catch_unwind(|| rollback_mid_match(name, None, 600, 7)) {
+            Err(e) => {
+                let msg = e.downcast_ref::<String>().cloned().unwrap_or_else(|| "panic".into());
+                println!("ROLLBACK FAIL {}", msg);
+                failed.push(name.clone());
+            }
+            Ok(0) => println!("ROLLBACK SKIP {} (no match)", name),
+            Ok(ticks) => println!("ROLLBACK OK {} ({} ticks)", name, ticks),
+        }
+    }
+    assert!(failed.is_empty(), "{} of {} replays failed: {:?}", failed.len(), names.len(), failed);
+}
+

@@ -16,6 +16,8 @@ no_network = []
 smw-globals = { path = "../smw-globals" }
 smw-netplay = { path = "../smw-netplay" }
 smw-peer = { path = "../smw-peer" }
+ggrs = "=0.13.0"
+serde = { version = "1", features = ["derive"] }
 smw-platform = { path = "../smw-platform" }
 toml = "1.1"
 flate2 = { version = "1", default-features = false, features = ["rust_backend"] }

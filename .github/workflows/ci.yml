@@ -92,6 +92,9 @@ jobs:
       - name: cargo test
         # Ubuntu 24.04 has no SDL3 package, so Linux builds it (cached with the target directory).
         run: cargo test --locked --workspace --exclude smw_relay ${{ runner.os == 'Linux' && '--features smw-sdl3/build-from-source' || '' }} ${{ matrix.profile == 'release' && '--release' || '' }}
+      - name: Every replay's match under rollback
+        if: runner.os == 'Linux' && matrix.profile == 'release'
+        run: cargo test --locked --release --package smw-headless --test replays rollback_sweep -- --ignored
 
   net:
     runs-on: ubuntu-24.04
