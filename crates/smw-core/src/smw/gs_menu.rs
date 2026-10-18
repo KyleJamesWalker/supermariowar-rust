@@ -1558,6 +1558,10 @@ impl MenuState {
                 self.start_game(g);
             }
 
+            if self.mCurrentMenu == MenuId::NetLobby {
+                gp.netplay.client.update_room_list(g);
+            }
+
             // on room change
             if g.netplay.currentMenuChanged {
                 self.mNetServersMenu.refresh(g);

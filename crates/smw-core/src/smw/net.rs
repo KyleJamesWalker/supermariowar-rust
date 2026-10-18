@@ -52,7 +52,7 @@ pub struct ServerAddress {
     pub hostname: String,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct RoomListEntry {
     pub roomID: u32,
     pub name: String,
@@ -270,6 +270,8 @@ fn net_layer<'a>(g: &mut Game) -> &'a mut NetworkHandler {
 const CONNECT_DEADLINE_FRAMES: u32 = 8 * TICKS_PER_SECOND;
 /// How long the lobby menus wait for the server to answer a join or create request.
 const REQUEST_DEADLINE_FRAMES: u32 = 5 * TICKS_PER_SECOND;
+/// How often the lobby menu asks for the room list again.
+const ROOM_LIST_REFRESH_FRAMES: u32 = 3 * TICKS_PER_SECOND;
 
 /// Why a lobby request failed, for the menu to show.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -418,6 +420,14 @@ pub struct NetClient {
     deadline: u32,
     deadline_error: LobbyError,
 
+    /// Every room the server listed; `Networking::currentRooms` holds the ones the lobby's search shows.
+    rooms: Vec<RoomListEntry>,
+    room_list_pending: bool,
+    room_list_timer: u32,
+    /// The room selected when the pending list's first entry arrived.
+    room_list_keep: Option<u32>,
+    shown_filter: String,
+
     pub local_gamehost: NetGameHost,
 
     foreign_lobbyserver: Ptr<dyn NetPeer>,
@@ -439,6 +449,11 @@ impl Clone for NetClient {
             lobby_connecting: false,
             deadline: self.deadline,
             deadline_error: self.deadline_error,
+            rooms: self.rooms.clone(),
+            room_list_pending: self.room_list_pending,
+            room_list_timer: self.room_list_timer,
+            room_list_keep: self.room_list_keep,
+            shown_filter: self.shown_filter.clone(),
             local_gamehost: self.local_gamehost.clone(),
             foreign_lobbyserver: Ptr::null(),
             foreign_gamehost: Ptr::null(),
@@ -458,6 +473,11 @@ impl NetClient {
             lobby_connecting: false,
             deadline: 0,
             deadline_error: LobbyError::RequestTimeout,
+            rooms: Vec::new(),
+            room_list_pending: false,
+            room_list_timer: 0,
+            room_list_keep: None,
+            shown_filter: String::new(),
             local_gamehost: NetGameHost::new(),
             foreign_lobbyserver: Ptr::null(),
             foreign_gamehost: Ptr::null(),
@@ -590,12 +610,66 @@ impl NetClient {
     ****************************/
 
     pub fn request_room_list(&mut self, g: &mut Game) {
-        let msg = pkgs::RoomList::new();
-        self.send_message_to_lobby_server(g, msg.as_bytes());
-
+        self.rooms.clear();
         g.netplay.currentRooms.clear();
         if !self.uiRoomList.is_none() {
             g.ctl(self.uiRoomList).clear();
+        }
+        self.poll_room_list(g);
+    }
+
+    /// Asks for the room list again, showing the current one until the answer arrives.
+    pub fn poll_room_list(&mut self, g: &mut Game) {
+        let msg = pkgs::RoomList::new();
+        self.send_message_to_lobby_server(g, msg.as_bytes());
+        self.room_list_pending = true;
+        self.room_list_timer = 0;
+    }
+
+    /// Called every frame the lobby menu is shown: refreshes the room list now and then, and applies the search text.
+    pub fn update_room_list(&mut self, g: &mut Game) {
+        if !g.netplay.operationInProgress {
+            self.room_list_timer += 1;
+            if self.room_list_timer >= ROOM_LIST_REFRESH_FRAMES {
+                self.poll_room_list(g);
+            }
+        }
+        if g.netplay.roomFilter != self.shown_filter {
+            let selected = self.selected_room_id(g);
+            self.show_rooms(g, selected);
+        }
+    }
+
+    fn selected_room_id(&self, g: &Game) -> Option<u32> {
+        g.netplay.currentRooms.get(g.netplay.selectedRoomIndex as usize).map(|r| r.roomID)
+    }
+
+    fn start_room_list_answer(&mut self, g: &mut Game) {
+        if self.room_list_pending {
+            self.room_list_pending = false;
+            self.room_list_keep = self.selected_room_id(g);
+            self.rooms.clear();
+        }
+    }
+
+    /// Shows the rooms whose name contains the search text, ignoring case, keeping `selected` selected.
+    fn show_rooms(&mut self, g: &mut Game, selected: Option<u32>) {
+        self.shown_filter = g.netplay.roomFilter.clone();
+        let filter = self.shown_filter.to_lowercase();
+        let shown: Vec<RoomListEntry> = self.rooms.iter().filter(|r| r.name.to_lowercase().contains(&filter)).cloned().collect();
+        if shown == g.netplay.currentRooms {
+            return;
+        }
+        let index = selected.and_then(|id| shown.iter().position(|r| r.roomID == id)).unwrap_or(0);
+        let items: Vec<(String, String)> = shown
+            .iter()
+            .map(|r| (r.name.clone(), format!("{}{}/4", if r.passwordRequired { "PW " } else { "" }, r.playerCount)))
+            .collect();
+        g.netplay.currentRooms = shown;
+        if self.uiRoomList.is_none() {
+            g.netplay.selectedRoomIndex = 0;
+        } else {
+            g.ctl(self.uiRoomList).replace_items(&items, index);
         }
     }
 
@@ -609,17 +683,10 @@ impl NetClient {
             passwordRequired: roomInfo.passwordRequired != 0,
         };
         println!("  Incoming room entry: [{}] {} ({}/4)", newRoom.roomID, newRoom.name, newRoom.playerCount);
-        let name = newRoom.name.clone();
-        g.netplay.currentRooms.push(newRoom);
-
-        if !self.uiRoomList.is_none() {
-            let mut playerCountString: String =
-                [(b'0'.wrapping_add(roomInfo.currentPlayerCount)) as char, '/', '4'].iter().collect();
-            if roomInfo.passwordRequired != 0 {
-                playerCountString.insert_str(0, "PW ");
-            }
-            g.ctl(self.uiRoomList).add(&name, &playerCountString);
-        }
+        self.start_room_list_answer(g);
+        self.rooms.push(newRoom);
+        let keep = self.room_list_keep;
+        self.show_rooms(g, keep);
     }
 
     pub fn send_create_room_message(&mut self, g: &mut Game) {
@@ -1244,7 +1311,10 @@ impl NetworkEventHandler<Game> for NetClient {
 
             NET_RESPONSE_ROOM_LIST_ENTRY => self.handle_new_room_list_entry(g, data),
 
-            NET_RESPONSE_NO_ROOMS => println!("Not implemented: [net] There are no rooms currently on the server."),
+            NET_RESPONSE_NO_ROOMS => {
+                self.start_room_list_answer(g);
+                self.show_rooms(g, None);
+            }
 
             NET_RESPONSE_JOIN_OK => {
                 println!("Not implemented: [net] Joined to room.");
@@ -1260,6 +1330,7 @@ impl NetworkEventHandler<Game> for NetClient {
             NET_RESPONSE_ROOM_NOT_FOUND => {
                 g.netplay.joinSuccessful = false;
                 self.fail(LobbyError::RoomNotFound);
+                self.poll_room_list(g);
             }
 
             NET_RESPONSE_WRONG_PASSWORD => {
