@@ -111,11 +111,10 @@ impl UI_NetServersMenu {
         this.add_non_control(t);
         this.add_control(g, connect, select, addremove, null, null);
         let host = this.miNetServersHostButton.id();
-        let host_right = if cfg!(target_os = "emscripten") { null } else { host };
-        // Reached with Right, so Down from Add / Remove still leads to Back as recorded sessions expect.
-        this.add_control(g, addremove, connect, back, null, host_right);
-        this.add_control(g, host, addremove, back, addremove, null);
-        this.add_control(g, back, addremove, nick, null, null);
+        let below_addremove = if cfg!(target_os = "emscripten") { back } else { host };
+        this.add_control(g, addremove, connect, below_addremove, null, null);
+        this.add_control(g, host, addremove, back, null, null);
+        this.add_control(g, back, below_addremove, nick, null, null);
 
         let (l, r, h) = (this.miNetServersLeftHeaderBar.id(), this.miNetServersRightHeaderBar.id(), this.miNetServersHeaderText.id());
         this.add_non_control(l);
