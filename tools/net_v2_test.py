@@ -5,7 +5,8 @@ checksum at every saved frame (SMW_V2_STATE_LOG); every frame both logged must b
 its GGRS session, and neither client may report a desync.
 
 Usage: tools/net_v2_test.py [work_dir]
-  NET_GAMES        scenarios (default: every tools/ref/net_game*)
+  NET_GAMES        scenarios (default: every tools/ref/net_game*); a scenario's `matches` file sets how many GGRS
+                   sessions each client must start (default 1)
   SMW_PEER_LAG_MS  delay per GGRS packet (default 60)
   SMW_PEER_LOSS    percent of GGRS packets dropped (default 10)
   LAN=1            no smw_server and no signaling server: the host runs SMW_LAN_HOST=1 and both clients list
@@ -90,9 +91,12 @@ failed = False
 for game in games.split():
     problems = []
     logs = {role: (work / game / f"{role}.log").read_text(errors="replace") for role in ("host", "join")}
+    matches_file = REPO / "tools" / "ref" / game / "matches"
+    matches = int(matches_file.read_text()) if matches_file.exists() else 1
     for role, log in logs.items():
-        if "[net] v2: GGRS session started" not in log:
-            problems.append(f"{role} never started its GGRS session")
+        started = log.count("[net] v2: GGRS session started")
+        if started < matches:
+            problems.append(f"{role} started {started} of {matches} GGRS sessions")
         desyncs = [l for l in log.splitlines() if "[net] v2: desync" in l]
         if desyncs:
             problems.append(f"{role}: {desyncs[0]}")
