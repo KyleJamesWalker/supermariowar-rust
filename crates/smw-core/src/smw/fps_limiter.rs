@@ -46,7 +46,7 @@ impl FPSLimiter {
 
         // `#if !_DEBUG`: the reference build is Release.
         if g.game_values.showfps {
-            let potentialFps = 1000.0f32 / (if g.game_values.framelimiter == 0 { 1 } else { g.game_values.framelimiter }) as f32;
+            let potentialFps = crate::common::global_constants::frame_rate_cap(g.game_values.framelimiter).unwrap_or(crate::common::global_constants::TICKS_PER_SECOND) as f32;
             // TODO(resource_manager): rm->menu_font_large.drawf(0, 480 - rm->menu_font_large.getHeight(),
             //     "Actual:%.1f/%.1f, Flip:%.1f, Potential:%.1f", realfps, potentialFps, flipfps, 1000.0f / (float)ticks);
         }

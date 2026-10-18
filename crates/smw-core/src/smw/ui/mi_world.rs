@@ -6,7 +6,7 @@ use crate::common::eyecandy::{EC_Announcement, EC_SingleAnimation};
 use crate::common::file_list::WorldMusicCategory;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
-use crate::common::global_constants::{NUM_POWERUPS, TILESIZE, TWO_PI};
+use crate::common::global_constants::{ticks, vel, NUM_POWERUPS, TILESIZE, TWO_PI};
 use crate::common::input::{COutputControl, CPlayerInput, DEVICE_KEYBOARD};
 use crate::common::random_number_generator::RANDOM_INT;
 use crate::common::sfx::sfxMusic;
@@ -71,8 +71,8 @@ pub struct MI_World {
     iWarpCol: i16,
     iWarpRow: i16,
 
-    iScreenfade: i16,
-    iScreenfadeRate: i16,
+    dScreenfade: f32,
+    dScreenfadeRate: f32,
 
     dTeleportStarRadius: f32,
     dTeleportStarAngle: f32,
@@ -142,8 +142,8 @@ impl MI_World {
             iVehicleId: 0,
             iWarpCol: 0,
             iWarpRow: 0,
-            iScreenfade: 0,
-            iScreenfadeRate: 0,
+            dScreenfade: 0.0,
+            dScreenfadeRate: 0.0,
             dTeleportStarRadius: 0.0,
             dTeleportStarAngle: 0.0,
             iTeleportStarAnimationFrame: 0,
@@ -257,7 +257,7 @@ impl MI_World {
             g.rm.spr_announcementicons,
             szMessage,
             g.game_values.colorids[self.iControllingPlayerId as usize],
-            120,
+            ticks(120) as i16,
             100,
         ));
     }
@@ -643,7 +643,6 @@ impl UI_ControlTrait for MI_World {
         let mut fPlayerVehicleCollision = false;
         let fPlayerMoveDone = gp.g_worldmap.update(g, &mut fPlayerVehicleCollision);
 
-        let iPlayerDrawPos = g.g_worldmap.get_player_position();
         let iPlayerState = g.g_worldmap.get_player_state();
 
         self.update_map_surface(g, self.iCycleIndex);
@@ -678,34 +677,13 @@ impl UI_ControlTrait for MI_World {
             }
         }
 
-        let w32 = (g.g_worldmap.iWidth as i32) << 5;
-        let h32 = (g.g_worldmap.iHeight as i32) << 5;
-
-        //Player is moving from one tile to the next (up)
-        if iPlayerState == 1 {
-            if g.g_worldmap.iHeight > 15 && self.iMapOffsetY < 0 && (iPlayerDrawPos.y as f32) < h32 as f32 - (App::screenHeight as f32 * 0.53f32) {
-                self.iMapOffsetY += 2;
-            }
-        } else if iPlayerState == 2 {
-            //down
-            if g.g_worldmap.iHeight > 15 && (self.iMapOffsetY as i32) > App::screenHeight - h32 && (iPlayerDrawPos.y as f32) > (App::screenHeight as f32 * 0.47f32) {
-                self.iMapOffsetY -= 2;
-            }
-        } else if iPlayerState == 3 {
-            //left
-            if g.g_worldmap.iWidth > 20 && self.iMapOffsetX < 0 && (iPlayerDrawPos.x as f32) < w32 as f32 - (App::screenWidth as f32 * 0.525f32) {
-                self.iMapOffsetX += 2;
-            }
-        } else if iPlayerState == 4 {
-            //right
-            if g.g_worldmap.iWidth > 20 && (self.iMapOffsetX as i32) > App::screenWidth - w32 && (iPlayerDrawPos.x as f32) > (App::screenWidth as f32 * 0.475f32) {
-                self.iMapOffsetX -= 2;
-            }
+        if iPlayerState != 0 || fPlayerMoveDone {
+            self.set_map_offset(g);
         }
 
         if self.iState == -2 || self.iState >= 4 {
-            self.dTeleportStarRadius += if self.iState == 4 || self.iState == 6 { 5.0f32 } else { -5.0f32 };
-            self.dTeleportStarAngle -= 0.15f32;
+            self.dTeleportStarRadius += if self.iState == 4 || self.iState == 6 { vel(5.0) } else { vel(-5.0) };
+            self.dTeleportStarAngle -= vel(0.15);
 
             self.iTeleportStarAnimationTimer += 1;
             if self.iTeleportStarAnimationTimer >= 3 {
@@ -792,9 +770,9 @@ impl UI_ControlTrait for MI_World {
         }
 
         if self.iState == 4 || self.iState == 5 {
-            self.iScreenfade += self.iScreenfadeRate;
+            self.dScreenfade += self.dScreenfadeRate;
 
-            if self.iState == 4 && self.iScreenfade > 255 {
+            if self.iState == 4 && self.dScreenfade > 255.0 {
                 g.g_worldmap.set_player_position(self.iWarpCol, self.iWarpRow);
                 self.set_map_offset(g);
                 self.reposition_map_image(g);
@@ -811,11 +789,11 @@ impl UI_ControlTrait for MI_World {
                 //g_worldmap.DrawMapToSurface(-1, true, map_sprites[1].getSurface(), iMapDrawOffsetCol, iMapDrawOffsetRow, iAnimationFrame);
 
                 self.iState = 5;
-                self.iScreenfade = 255;
-                self.iScreenfadeRate = -8;
-            } else if self.iState == 5 && self.iScreenfade < 0 {
+                self.dScreenfade = 255.0;
+                self.dScreenfadeRate = vel(-8.0);
+            } else if self.iState == 5 && self.dScreenfade < 0.0 {
                 self.iState = -1;
-                self.iScreenfade = 0;
+                self.dScreenfade = 0.0;
             }
         } else if self.iState == 6 {
             if self.dTeleportStarRadius > 150.0f32 {
@@ -936,7 +914,7 @@ impl UI_ControlTrait for MI_World {
         }
 
         if self.iState == 4 || self.iState == 5 {
-            g.rm.sprite(g.rm.menu_shade).setalpha(self.iScreenfade as u8);
+            g.rm.sprite(g.rm.menu_shade).setalpha(self.dScreenfade as u8);
             gp.rm.sprite(gp.rm.menu_shade).draw(g, 0, 0);
         }
     }
@@ -1045,7 +1023,7 @@ impl UI_ControlTrait for MI_World {
                         playerKeys.menu_right_mut().fPressed = true;
                     } else if iNextMove == 4 {
                         self.pressSelectKeys = keysPlayer;
-                        self.iPressSelectTimer = 60;
+                        self.iPressSelectTimer = ticks(60) as i16;
                     }
                 } else {
                     self.iPressSelectTimer -= 1;
@@ -1175,8 +1153,8 @@ impl UI_ControlTrait for MI_World {
 
                         if g.g_worldmap.get_warp_in_player_tile(&mut self.iWarpCol, &mut self.iWarpRow) {
                             self.iState = 4;
-                            self.iScreenfade = 0;
-                            self.iScreenfadeRate = 8;
+                            self.dScreenfade = 0.0;
+                            self.dScreenfadeRate = vel(8.0);
 
                             if_sound_on_play(g, &mut gp.rm.sfx_pipe);
                         }

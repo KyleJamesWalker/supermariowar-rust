@@ -933,7 +933,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                                 g.g_map.musicCategoryID = 0;
                             }
 
-                            ed(gp.get()).g_musiccategorydisplaytimer = 90;
+                            ed(gp.get()).g_musiccategorydisplaytimer = ticks(90) as i16;
                         }
 
                         if key == SDLK_s {
@@ -3505,25 +3505,25 @@ pub fn editor_tiles(g: &mut Game) -> i32 {
                             if ed(gp.get()).view_tileset_y > 0 {
                                 ed(gp.get()).view_tileset_y -= 1;
                                 ed(gp.get()).view_tileset_repeat_direction = 0;
-                                ed(gp.get()).view_tileset_repeat_timer = 30;
+                                ed(gp.get()).view_tileset_repeat_timer = ticks(30) as i16;
                             }
                         } else if sym == SDLK_DOWN {
                             if ed(gp.get()).view_tileset_y < gp.get().g_tilesetmanager.tileset(g, ed(gp.get()).set_tile_tileset as usize).height() as i32 - 15 {
                                 ed(gp.get()).view_tileset_y += 1;
                                 ed(gp.get()).view_tileset_repeat_direction = 1;
-                                ed(gp.get()).view_tileset_repeat_timer = 30;
+                                ed(gp.get()).view_tileset_repeat_timer = ticks(30) as i16;
                             }
                         } else if sym == SDLK_LEFT {
                             if ed(gp.get()).view_tileset_x > 0 {
                                 ed(gp.get()).view_tileset_x -= 1;
                                 ed(gp.get()).view_tileset_repeat_direction = 2;
-                                ed(gp.get()).view_tileset_repeat_timer = 30;
+                                ed(gp.get()).view_tileset_repeat_timer = ticks(30) as i16;
                             }
                         } else if sym == SDLK_RIGHT {
                             if ed(gp.get()).view_tileset_x < gp.get().g_tilesetmanager.tileset(g, ed(gp.get()).set_tile_tileset as usize).width() as i32 - 20 {
                                 ed(gp.get()).view_tileset_x += 1;
                                 ed(gp.get()).view_tileset_repeat_direction = 3;
-                                ed(gp.get()).view_tileset_repeat_timer = 30;
+                                ed(gp.get()).view_tileset_repeat_timer = ticks(30) as i16;
                             }
                         } else {
                             ed(gp.get()).edit_mode = 1; //change to edit mode using tiles
@@ -4141,13 +4141,13 @@ pub fn editor_animation(g: &mut Game) -> i32 {
                         if ed(gp.get()).view_animated_tileset_x > 0 {
                             ed(gp.get()).view_animated_tileset_x -= 1;
                             ed(gp.get()).view_tileset_repeat_direction = 2;
-                            ed(gp.get()).view_tileset_repeat_timer = 30;
+                            ed(gp.get()).view_tileset_repeat_timer = ticks(30) as i16;
                         }
                     } else if sym == SDLK_RIGHT {
                         if ed(gp.get()).view_animated_tileset_x < 12 {
                             ed(gp.get()).view_animated_tileset_x += 1;
                             ed(gp.get()).view_tileset_repeat_direction = 3;
-                            ed(gp.get()).view_tileset_repeat_timer = 30;
+                            ed(gp.get()).view_tileset_repeat_timer = ticks(30) as i16;
                         }
                     }
                 }
@@ -4622,7 +4622,7 @@ pub fn set_platform_to_defaults(g: &mut Game, iPlatform: i16) {
 
 pub fn savecurrentmap(g: &mut Game) -> i32 {
     let mut gp = g.ptr();
-    ed(gp.get()).g_messagedisplaytimer = 60;
+    ed(gp.get()).g_messagedisplaytimer = ticks(60) as i16;
     ed(gp.get()).g_szMessageTitle = "Saved".to_string();
     ed(gp.get()).g_szMessageLine[0] = "Your map has".to_string();
     ed(gp.get()).g_szMessageLine[1] = "been saved.".to_string();

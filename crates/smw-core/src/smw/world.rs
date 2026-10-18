@@ -6,7 +6,7 @@ use crate::game::Game;
 use crate::common::file_io::throw_runtime_error;
 use crate::common::file_list::WorldMusicCategory;
 use crate::common::game_values::if_sound_on_play;
-use crate::common::global_constants::{NUM_POWERUPS, NUM_WORLD_POWERUPS, PREVIEWTILESIZE, THUMBTILESIZE, TILESIZE};
+use crate::common::global_constants::{vel, NUM_POWERUPS, NUM_WORLD_POWERUPS, PREVIEWTILESIZE, THUMBTILESIZE, TILESIZE};
 use crate::common::linfunc::tokenize;
 use crate::common::math::vec2::Vec2s;
 use crate::common::path::strip_path_and_extension;
@@ -150,6 +150,10 @@ pub struct WorldMovingObject {
     pub iAnimationFrame: i16,
     pub iAnimationTimer: i16,
 
+    /// 16 ms steps of the original game owed to `step`, so walking keeps its wall-time speed.
+    pub fStepRemainder: f32,
+    pub iStepsThisTick: i16,
+
     pub iTileSize: i16,
     pub iTileSheet: i16,
 
@@ -191,6 +195,19 @@ impl WorldMovingObject {
     }
 
     pub fn update(&mut self) -> bool {
+        self.fStepRemainder += vel(1.0);
+        self.iStepsThisTick = 0;
+        while self.fStepRemainder >= 1.0 {
+            self.fStepRemainder -= 1.0;
+            self.iStepsThisTick += 1;
+            if self.step() {
+                return true;
+            }
+        }
+        false
+    }
+
+    fn step(&mut self) -> bool {
         self.iAnimationTimer += 1;
         if self.iAnimationTimer > 15 {
             self.iAnimationTimer = 0;
@@ -462,10 +479,13 @@ impl WorldVehicle {
         }
 
         //If we're done moving, start pacing in place
-        if self.fSpritePaces && self.iState == 0 && {
-            self.iPaceTimer += 1;
-            self.iPaceTimer > 1
-        } {
+        for _ in 0..self.iStepsThisTick {
+            if !(self.fSpritePaces && self.iState == 0 && {
+                self.iPaceTimer += 1;
+                self.iPaceTimer > 1
+            }) {
+                continue;
+            }
             self.iPaceTimer = 0;
 
             if self.iDrawDirection != 0 {

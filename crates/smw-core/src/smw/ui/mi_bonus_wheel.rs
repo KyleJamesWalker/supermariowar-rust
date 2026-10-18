@@ -4,7 +4,7 @@ use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
-use crate::common::global_constants::{NUM_POWERUPS, PGFX_JUMPING_R, TWO_PI};
+use crate::common::global_constants::{acc, ticks, vel, NUM_POWERUPS, PGFX_JUMPING_R, TICKS_PER_SECOND, TWO_PI};
 use crate::common::math::trig::{cosf, sinf};
 use crate::common::random_number_generator::RANDOM_INT;
 use crate::common::ui::menu_code::*;
@@ -192,9 +192,9 @@ impl MI_BonusWheel {
         self.iSelectorAnimationCounter = 0;
 
         //Figure out the initial position and speed of the selector
-        self.dSelectionSpeed = (RANDOM_INT(gp.get(), 100) + 200) as f32 * 0.0005f32;
+        self.dSelectionSpeed = vel((RANDOM_INT(gp.get(), 100) + 200) as f32 * 0.0005f32);
         self.dSelectionAngle = RANDOM_INT(gp.get(), NUMBONUSITEMSONWHEEL) as f32 * TWO_PI / NUMBONUSITEMSONWHEEL as f32;
-        self.dSelectionSpeedGoal = (RANDOM_INT(gp.get(), 100) + 200) as f32 * 0.0005f32;
+        self.dSelectionSpeedGoal = vel((RANDOM_INT(gp.get(), 100) + 200) as f32 * 0.0005f32);
         self.iSelectionSpeedTimer = 0;
 
         for iSector in 0..NB {
@@ -222,7 +222,7 @@ impl UI_ControlTrait for MI_BonusWheel {
         if fModify && !self.fPressedSelect {
             self.fPressedSelect = true;
 
-            let dNumWinddownSteps: f32 = self.dSelectionSpeed / 0.0005f32 - 1.0;
+            let dNumWinddownSteps: f32 = self.dSelectionSpeed / acc(0.0005) - 1.0;
             let dWinddownAngle: f32 = self.dSelectionSpeed / 2.0f32 * dNumWinddownSteps;
             let mut dFinalAngle: f32 = self.dSelectionAngle + dWinddownAngle;
 
@@ -256,7 +256,7 @@ impl UI_ControlTrait for MI_BonusWheel {
         if self.iState == 0 {
             self.iDisplayPowerupTimer -= 1;
             if self.iDisplayPowerupTimer <= 0 {
-                self.iDisplayPowerupTimer = 20;
+                self.iDisplayPowerupTimer = ticks(20) as i16;
 
                 let sector = self.dSelectionSector[self.iDisplayPowerupIndex as usize];
                 let iPoofX = (self.m_pos.x as i32 + 152 + (110.0f32 * cosf(sector)) as i16 as i32) as i16;
@@ -275,7 +275,7 @@ impl UI_ControlTrait for MI_BonusWheel {
         } else {
             if !self.fPressedSelect && (self.fCpuControlled || {
                 self.iPressSelectTimer += 1;
-                self.iPressSelectTimer > 620
+                self.iPressSelectTimer > 10 * TICKS_PER_SECOND as i16
             }) {
                 self.modify(g, true);
             }
@@ -303,7 +303,7 @@ impl UI_ControlTrait for MI_BonusWheel {
             if self.iSelectionSpeedTimer > 0 {
                 self.iSelectionSpeedTimer -= 1;
                 if self.iSelectionSpeedTimer <= 0 {
-                    self.dSelectionSpeedGoal = (RANDOM_INT(gp.get(), 100) + 200) as f32 * 0.0005f32;
+                    self.dSelectionSpeedGoal = vel((RANDOM_INT(gp.get(), 100) + 200) as f32 * 0.0005f32);
                     self.iSelectionSpeedTimer = 0;
                 }
             }
@@ -311,18 +311,18 @@ impl UI_ControlTrait for MI_BonusWheel {
             if self.fPressedSelect {
                 self.dSelectionSpeed -= self.dSelectionWinddownSpeed;
             } else if self.dSelectionSpeed < self.dSelectionSpeedGoal {
-                self.dSelectionSpeed += 0.0005f32;
+                self.dSelectionSpeed += acc(0.0005);
 
                 if self.dSelectionSpeed >= self.dSelectionSpeedGoal {
                     self.dSelectionSpeed = self.dSelectionSpeedGoal;
-                    self.iSelectionSpeedTimer = (RANDOM_INT(gp.get(), 60) + 30) as i16;
+                    self.iSelectionSpeedTimer = ticks(RANDOM_INT(gp.get(), 60) + 30) as i16;
                 }
             } else if self.dSelectionSpeed > self.dSelectionSpeedGoal {
-                self.dSelectionSpeed -= 0.0005f32;
+                self.dSelectionSpeed -= acc(0.0005);
 
                 if self.dSelectionSpeed <= self.dSelectionSpeedGoal {
                     self.dSelectionSpeed = self.dSelectionSpeedGoal;
-                    self.iSelectionSpeedTimer = (RANDOM_INT(gp.get(), 60) + 30) as i16;
+                    self.iSelectionSpeedTimer = ticks(RANDOM_INT(gp.get(), 60) + 30) as i16;
                 }
             }
 

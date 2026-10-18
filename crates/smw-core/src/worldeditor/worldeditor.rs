@@ -1364,7 +1364,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                                     g.g_worldmap.iMusicCategory.post_increment();
                                 }
 
-                                ed(gp.get()).g_musiccategorydisplaytimer = 90;
+                                ed(gp.get()).g_musiccategorydisplaytimer = ticks(90) as i16;
                             }
 
                             if key_sym(g) == SDLK_s {
@@ -1405,7 +1405,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                                     updateworldsurface(g);
 
                                     view_repeat_direction = 0;
-                                    view_repeat_timer = 30;
+                                    view_repeat_timer = ticks(30) as i16;
 
                                     iStageDisplay = -1;
                                 }
@@ -1415,7 +1415,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                                     updateworldsurface(g);
 
                                     view_repeat_direction = 1;
-                                    view_repeat_timer = 30;
+                                    view_repeat_timer = ticks(30) as i16;
 
                                     iStageDisplay = -1;
                                 }
@@ -1425,7 +1425,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                                     updateworldsurface(g);
 
                                     view_repeat_direction = 2;
-                                    view_repeat_timer = 30;
+                                    view_repeat_timer = ticks(30) as i16;
 
                                     iStageDisplay = -1;
                                 }
@@ -1435,7 +1435,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                                     updateworldsurface(g);
 
                                     view_repeat_direction = 3;
-                                    view_repeat_timer = 30;
+                                    view_repeat_timer = ticks(30) as i16;
 
                                     iStageDisplay = -1;
                                 }
@@ -4306,7 +4306,7 @@ pub fn savecurrentworld(g: &mut Game) -> i32 {
 
 pub fn SetDisplayMessage(g: &mut Game, iTime: i16, szTitle: &str, szLine1: &str, szLine2: &str, szLine3: &str) {
     let mut gp = g.ptr();
-    ed(gp.get()).g_messagedisplaytimer = iTime;
+    ed(gp.get()).g_messagedisplaytimer = ticks(iTime as i32) as i16;
     ed(gp.get()).g_szMessageTitle = szTitle.to_string();
     ed(gp.get()).g_szMessageLine[0] = szLine1.to_string();
     ed(gp.get()).g_szMessageLine[1] = szLine2.to_string();
