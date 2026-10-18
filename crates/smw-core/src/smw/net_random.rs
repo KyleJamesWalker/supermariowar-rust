@@ -1,11 +1,11 @@
-//! Not in the C++ (docs/PROGRESS.md, Netplay deviations): random outcomes that change a net game.
+//! Not in the C++ (docs/guides/DEVIATIONS.md, Netplay deviations): random outcomes that change a net game.
 //!
 //! Every client of a C++ net game rolls these from its own copy of the shared RNG, so the clients drift
 //! apart as soon as one of them draws a different number of times. Each such site here is an `Ev`: the
 //! site asks `event` first and runs its own code only when `event` returns false, which it does outside
 //! gameplay, during a game's setup (while the clients still draw in step) and inside another event.
 //! Otherwise `event` runs the site through `run` and writes its outcome to the harness dump as a `C`
-//! record (docs/REPLAY.md), so the clients' dumps can be compared.
+//! record (docs/guides/REPLAY.md), so the clients' dumps can be compared.
 //!
 //! The game host runs every event while the RNG records its draws, and sends the event, its arguments and
 //! the draws to the joiners (`NET_G2P_RANDOM_EVENT`). A joiner never runs an event itself: it replays the

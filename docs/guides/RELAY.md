@@ -67,5 +67,5 @@ The `Relay` workflow publishes `ghcr.io/kylejameswalker/supermariowar-rust-relay
 
 ## Limits
 
-- Browser and native clients cannot play together. A native client speaks ENet to `smw_server`, and its game host listens on UDP. `NETPLAY_V2.md` plans one WebRTC transport for both.
+- Browser and native clients cannot play together. A native client speaks ENet to `smw_server`, and its game host listens on UDP. `docs/design/NETPLAY_V2.md` plans one WebRTC transport for both.
 - All game traffic passes through the relay, so its round trip adds to each player's latency.

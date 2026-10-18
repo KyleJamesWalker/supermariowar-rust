@@ -1,4 +1,4 @@
-//! `Ptr`, `Global` and `Aliased`, and the macros that model C++ inheritance (see docs/ARCHITECTURE.md).
+//! `Ptr`, `Global` and `Aliased`, and the macros that model C++ inheritance (see docs/guides/CODE_CONVENTIONS.md).
 
 mod pointers;
 pub use pointers::{Aliased, Global, Owned, Ptr};

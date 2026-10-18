@@ -1,4 +1,4 @@
-//! The game's state as one value (docs/ARCHITECTURE_V2.md, Step 2: globals into a `Game` struct).
+//! The game's state as one value (docs/design/ARCHITECTURE_V2.md, Step 2: globals into a `Game` struct).
 
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::common::gfx::soft_surface::Surface;
@@ -327,7 +327,7 @@ impl Game {
         }
     }
 
-    /// A copy of the running match (docs/HANDLES.md, "What a copy of `Game` shares"). It shares the loaded assets,
+    /// A copy of the running match (docs/design/HANDLES.md, "What a copy of `Game` shares"). It shares the loaded assets,
     /// runs on `services`, draws to its own screen and has no menus or editors. The harness gives it the replay's
     /// input but no outputs.
     pub fn clone_match(&self, services: smw_platform::Services) -> Box<Game> {

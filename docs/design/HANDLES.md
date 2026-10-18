@@ -8,7 +8,7 @@ The port links its objects with `Ptr<T>`, a copyable raw pointer that the C++ tr
 
 ## Background
 
-`docs/ARCHITECTURE.md` (Pointers and ownership) sets the current convention. Non-owning C++ pointers are `Ptr<T>`, owning ones are `Ptr::new_box` plus `delete()`, and every struct reachable through a `Ptr` embeds `Aliased` so rustc emits no `noalias`. Phase 5 removed the global `Game`, so every function now reaches state through `g`. The object graph inside `Game` is still pointers.
+`docs/guides/CODE_CONVENTIONS.md` (Pointers and ownership) sets the current convention. Non-owning C++ pointers are `Ptr<T>`, owning ones are `Ptr::new_box` plus `delete()`, and every struct reachable through a `Ptr` embeds `Aliased` so rustc emits no `noalias`. Phase 5 removed the global `Game`, so every function now reaches state through `g`. The object graph inside `Game` is still pointers.
 
 Counted on the branch of #153, smw-core holds 1,328 `Ptr<...>` uses in 207 files:
 
@@ -23,7 +23,7 @@ Counted on the branch of #153, smw-core holds 1,328 `Ptr<...>` uses in 207 files
 ## Problem
 
 - **Nothing can clone or snapshot `Game`.** A copy of `Game` would share every pointee with the original. Running two games in one process, for parallel replay tests or a rollback netplay prediction, needs a deep copy that pointers cannot give.
-- **Dangling pointers are silent.** The `owner_throw` fix in `PROGRESS.md` (a thrown flag kept pointing at a removed player) is one known case. A stale `Ptr` reads freed memory and does not fail.
+- **Dangling pointers are silent.** The `owner_throw` fix in `docs/guides/DEVIATIONS.md` (a thrown flag kept pointing at a removed player) is one known case. A stale `Ptr` reads freed memory and does not fail.
 - **`unsafe` and `Aliased` stay everywhere.** Nothing checks a dereference, and the `Aliased` marker turns off optimizations the compiler could otherwise make.
 
 ## Proposed design

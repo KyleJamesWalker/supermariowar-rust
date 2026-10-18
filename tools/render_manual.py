@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render docs/GAME_MANUAL.md into the web build's manual page and copy the images it uses.
+"""Render docs/guides/GAME_MANUAL.md into the web build's manual page and copy the images it uses.
 
 Usage: tools/render_manual.py <manual.md> <template.html> <out_dir>
 

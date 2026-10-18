@@ -1,5 +1,5 @@
 //! SDL2 key, scancode, hat, mouse button and event type values: the replay format, `controls.sdl2.bin` and
-//! `options.bin` store them, so every backend uses them (docs/ARCHITECTURE_V2.md, Device events).
+//! `options.bin` store them, so every backend uses them (docs/design/ARCHITECTURE_V2.md, Device events).
 
 #![allow(non_upper_case_globals)]
 

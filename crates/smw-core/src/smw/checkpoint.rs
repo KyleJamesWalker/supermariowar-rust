@@ -1,4 +1,4 @@
-//! Not in the C++: match checkpoints and segment replays (docs/REPLAY.md, "Markers, checkpoints and clips").
+//! Not in the C++: match checkpoints and segment replays (docs/guides/REPLAY.md, "Markers, checkpoints and clips").
 //!
 //! When a recorded match starts, `capture` saves everything the match reads from earlier frames: the
 //! settings, the menu's choices, the RNG, the virtual mixer and the files the match loaded. A segment

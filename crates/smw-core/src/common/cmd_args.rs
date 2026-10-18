@@ -6,7 +6,7 @@ pub struct Args {
     pub show_help: bool,
     pub debug: bool,
     pub data_root: String,
-    /// Not in the C++: `--replay <file>` watches a session recording (see docs/REPLAY.md, "Recordings").
+    /// Not in the C++: `--replay <file>` watches a session recording (see docs/guides/REPLAY.md, "Recordings").
     pub replay: String,
     pub replay_speed: Option<f32>,
     /// `--segment <k>` with `--replay`: watch only match k, started from its checkpoint.

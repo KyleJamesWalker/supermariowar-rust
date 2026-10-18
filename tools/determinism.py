@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Cross-platform determinism check (docs/ARCHITECTURE_V2.md, Parity policy timeline), a CI gate.
+"""Cross-platform determinism check (docs/design/ARCHITECTURE_V2.md, Parity policy timeline), a CI gate.
 
   determinism.py manifest <job> <suite> <out_root> [<suite> <out_root> ...] > manifest.txt
       One line per artifact of every replay under each out_root (a parity.sh, parity_sweep.sh, editor_parity.sh or

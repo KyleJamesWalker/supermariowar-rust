@@ -5129,7 +5129,7 @@ impl Fnv {
     }
 }
 
-/// Replay-harness `E`/`T`/`X`/`P`/`H` records (docs/EDITOR_REPLAY.md).
+/// Replay-harness `E`/`T`/`X`/`P`/`H` records (docs/guides/EDITOR_REPLAY.md).
 pub fn dump_editor_state(g: &mut Game, out: &mut dyn Write) {
     let mut gp = g.ptr();
     let _ = writeln!(

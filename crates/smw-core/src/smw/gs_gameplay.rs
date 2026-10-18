@@ -165,7 +165,7 @@ impl GameplayState {
         s.io(&mut self.spintimer);
     }
 
-    /// Replay-harness `G`/`P`/`T`/`O` records (docs/REPLAY.md).
+    /// Replay-harness `G`/`P`/`T`/`O` records (docs/guides/REPLAY.md).
     pub fn harness_dump(&mut self, g: &mut Game, out: &mut impl Write) -> std::io::Result<()> {
         let gm = g.mode();
         writeln!(out, "G mode={} gameover={} winner={}", gm.gamemode as i32, gm.gameover as i32, gm.winningteam)?;

@@ -41,7 +41,7 @@ pub struct SfxState {
     pub sfx_ticks: fn(&mut Game) -> u32,
     pub sfx_ignore_channel_failure: bool,
     // Not in upstream: a virtual mixer driven by sfx_ticks owns all game-visible sound state in every run, and the
-    // audio service plays the same commands as output only (docs/REPLAY.md, "Sound"). Seeded runs log every
+    // audio service plays the same commands as output only (docs/guides/REPLAY.md, "Sound"). Seeded runs log every
     // command to sfx_events.
     pub sfx_log_events: bool,
     pub sfx_events: Vec<String>,

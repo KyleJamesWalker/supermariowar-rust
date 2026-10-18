@@ -1,4 +1,4 @@
-//! Not in the C++ (docs/PROGRESS.md, Netplay deviations): deaths, scores and the end of a net game.
+//! Not in the C++ (docs/guides/DEVIATIONS.md, Netplay deviations): deaths, scores and the end of a net game.
 //!
 //! Kills, team removals and the score board are `net_random` events: the game host decides them and its
 //! joiners replay them, so a joiner never kills a player or removes a team on its own. At the end of every
@@ -6,7 +6,7 @@
 //! scores only inside the host's events and takes its game over and winner only from the host.
 //!
 //! The harness dump records every death, every change of the team scores and the end of the game as `C`
-//! records (docs/REPLAY.md), so net_game_compare.py can tell whether the clients agree on them.
+//! records (docs/guides/REPLAY.md), so net_game_compare.py can tell whether the clients agree on them.
 
 use crate::game::Game;
 use crate::common::player_kill_styles::KillStyle;

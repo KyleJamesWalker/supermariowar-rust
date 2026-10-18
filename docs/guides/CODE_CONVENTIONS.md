@@ -4,7 +4,7 @@ Rules every agent follows when translating the C++ sources of [Super Mario War](
 
 ## Layout
 
-- The repository is a Cargo workspace: `crates/smw-core` (the game library, crate name `smw`), `crates/smw-globals` (`Ptr`, `Global`, `Aliased`, `impl_base!`), `crates/smw-netplay` (`common_netplay/` and `server/`, shared with `smw_server` and the relay), `crates/smw-platform` (the platform traits, `ARCHITECTURE_V2.md`), and one package per binary in `apps/`.
+- The repository is a Cargo workspace: `crates/smw-core` (the game library, crate name `smw`), `crates/smw-globals` (`Ptr`, `Global`, `Aliased`, `impl_base!`), `crates/smw-netplay` (`common_netplay/` and `server/`, shared with `smw_server` and the relay), `crates/smw-platform` (the platform traits, `docs/design/ARCHITECTURE_V2.md`), and one package per binary in `apps/`.
 - `crates/smw-core/src/common/...` and `crates/smw-core/src/smw/...` mirror the C++ tree one-to-one. One Rust module per C++ `.cpp`/`.h` pair, named by snake-casing the C++ basename: `map.cpp` → `common/map.rs`, `MapReader15xx.cpp` → `common/map/map_reader15xx.rs`, `GSGameplay.cpp` → `smw/gs_gameplay.rs`, `MO_Fireball.cpp` → `smw/objects/moving/mo_fireball.rs`. Exception: `Coins.h` + `Coin.cpp` → `smw/gamemodes/coin.rs`.
 - When a file and a directory share a name (`common/map.cpp` + `common/map/`, `common/gfx.cpp` + `common/gfx/`), the file module declares the directory's children (`common/map.rs` holds `pub mod map_reader;` ...). There is no `mod.rs` for those directories.
 - Every module already exists as a stub (generated); fill it in, do not create parallel files. Every module starts with `//! Port of src/<path>` naming the `.cpp` (or the `.h` if header-only).
@@ -84,4 +84,4 @@ The game is single-threaded. C++ globals are `pub static mut` items with the C++
 - `cargo build` must stay error-free at every commit; warnings are tolerated.
 - Commit only your own paths (`git add <paths> && git commit -m "feat(port): ..."`). If `.git/index.lock` exists, wait and retry. Never push, amend, rebase or stash.
 - Dependencies come from crates.io only; check `Cargo.lock` for private-registry URLs before committing it.
-- Record finished modules in `PROGRESS.md`.
+- Record finished modules in `DEVIATIONS.md`.

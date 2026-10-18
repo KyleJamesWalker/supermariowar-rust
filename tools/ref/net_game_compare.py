@@ -6,7 +6,7 @@ from the host's game state packets, so the two trajectories agree up to a frame 
 interpolation lag. Each player's (fx, fy) track is aligned at the offset with the most exact matches, up to each
 client's game over: after it, a client that ended the match removes players.
 
---spawns also compares the random outcomes both clients recorded (`C` records, Rust only, see docs/REPLAY.md): for each
+--spawns also compares the random outcomes both clients recorded (`C` records, Rust only, see docs/guides/REPLAY.md): for each
 kind, the joiner's records must be the host's, in any order. The joiner may still be missing the host's records from
 the last SPAWN_TAIL gameplay frames. --min KIND=N fails when the host recorded fewer than N of KIND (--min-spawns N
 is --min powerup=N). With --spawns, a game over must also come within GAMEOVER_SLACK gameplay frames on both

@@ -1,5 +1,5 @@
 //! The SDL2 event queue. The core reads and feeds input only through these until phase 3's InputEvent replaces
-//! SDL_Event at this boundary (docs/ARCHITECTURE_V2.md, Normalized input).
+//! SDL_Event at this boundary (docs/design/ARCHITECTURE_V2.md, Normalized input).
 
 use sdl2::sys::{SDL_Event, SDL_EventFilter, SDL_bool};
 use std::ffi::c_void;

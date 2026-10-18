@@ -1,4 +1,4 @@
-//! The boundary between the game and a platform backend (docs/ARCHITECTURE_V2.md, Trait boundaries and
+//! The boundary between the game and a platform backend (docs/design/ARCHITECTURE_V2.md, Trait boundaries and
 //! Normalized input). Nothing implements or calls these yet; phases 2 and 3 move the SDL calls behind them.
 
 use std::path::{Path, PathBuf};

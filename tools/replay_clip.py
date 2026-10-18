@@ -5,7 +5,7 @@ Usage:
   tools/replay_clip.py <recording.txt|.smwrp> --list
   tools/replay_clip.py <recording.txt|.smwrp> --match <k> [-o clip.txt|clip.smwrp]
 
-The recording needs `#@ mark` and `#@ checkpoint` lines (docs/REPLAY.md, "Markers, checkpoints and
+The recording needs `#@ mark` and `#@ checkpoint` lines (docs/guides/REPLAY.md, "Markers, checkpoints and
 clips"). A clip holds the recording's header, match k's markers and checkpoint, its input lines and
 `#@ segment=k`, so `smw --replay clip.txt`, run_rust.sh, web_replay.mjs and replay_video.py play only
 that match, with the same frame numbers and dump as in the full recording.

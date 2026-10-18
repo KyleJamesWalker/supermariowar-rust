@@ -1,4 +1,4 @@
-//! The SDL2 backend (docs/ARCHITECTURE_V2.md): smw-platform's traits over SDL2.
+//! The SDL2 backend (docs/design/ARCHITECTURE_V2.md): smw-platform's traits over SDL2.
 
 use smw_platform::{Clock, Services, Storage};
 use std::path::PathBuf;

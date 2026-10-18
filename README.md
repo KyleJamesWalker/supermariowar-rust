@@ -1,8 +1,8 @@
 # Super Mario War, in Rust
 
-A faithful Rust + rust-sdl2 port of [Super Mario War](https://github.com/mmatyas/supermariowar) (upstream commit [`c7056790`](https://github.com/mmatyas/supermariowar/commit/c7056790ccb485b7309137251167b75fed1482e4)). It covers the game, menus, sound, netplay, the lobby server, and the level and world editors. Given the same scripted input, the Rust build produces the same per-frame game state, sound events and screenshots as the C++ original. `docs/MORNING_REPORT.md` has the verification results.
+A faithful Rust + rust-sdl2 port of [Super Mario War](https://github.com/mmatyas/supermariowar) (upstream commit [`c7056790`](https://github.com/mmatyas/supermariowar/commit/c7056790ccb485b7309137251167b75fed1482e4)). It covers the game, menus, sound, netplay, the lobby server, and the level and world editors. Given the same scripted input, the Rust build produces the same per-frame game state, sound events and screenshots as the C++ original. `docs/archive/MORNING_REPORT.md` has the verification results.
 
-`docs/GAME_MANUAL.md` is the player's manual: menus, controls, all 21 game modes, blocks and items.
+`docs/guides/GAME_MANUAL.md` is the player's manual: menus, controls, all 21 game modes, blocks and items.
 
 ## Downloads
 
@@ -21,7 +21,7 @@ Every CI run also uploads these packages as workflow artifacts (`smw-linux-x86_6
 
 ### Releases
 
-Publishing a GitHub Release runs `.github/workflows/release.yml`. It builds every package with the same `build_*.yml` workflows that CI uses, checks them, and uploads them to the release with `SHA256SUMS`. Pushing a tag alone runs nothing. The web page and the relay image do not follow releases: they deploy from `main`. `docs/RELEASING.md` has the steps, including a dry run that builds the packages without a release.
+Publishing a GitHub Release runs `.github/workflows/release.yml`. It builds every package with the same `build_*.yml` workflows that CI uses, checks them, and uploads them to the release with `SHA256SUMS`. Pushing a tag alone runs nothing. The web page and the relay image do not follow releases: they deploy from `main`. `docs/guides/RELEASING.md` has the steps, including a dry run that builds the packages without a release.
 
 ## Build and run
 
@@ -43,7 +43,7 @@ The repository is a Cargo workspace with one `Cargo.lock` at the root, and every
 | `smw-core` (library `smw`) | `crates/smw-core/` | the game, the editors and the replay harness, mirroring the C++ tree |
 | `smw-globals` | `crates/smw-globals/` | the porting infrastructure: `Ptr`, `Global`, `Aliased` and the C++ inheritance macros |
 | `smw-netplay` | `crates/smw-netplay/` | the netplay protocol and lobby server, shared by the game, `smw_server` and `smw_relay` |
-| `smw-platform` | `crates/smw-platform/` | the platform traits and normalized input events (`docs/ARCHITECTURE_V2.md`) |
+| `smw-platform` | `crates/smw-platform/` | the platform traits and normalized input events (`docs/design/ARCHITECTURE_V2.md`) |
 | `smw`, `leveleditor`, `worldeditor`, `smw_server` | `apps/<name>/` | one package per binary |
 | `smw_relay` | `apps/smw_relay/` | the WebSocket lobby and relay for [browser multiplayer](#browser-multiplayer) |
 
@@ -81,7 +81,7 @@ Gamepads use the browser Gamepad API. On macOS, Firefox misnumbers Xbox Bluetoot
 
 ## Browser multiplayer
 
-Upstream's web build has no netplay. Here the browser build plays online through `smw_relay`, which runs the lobby server and relays game traffic between players over WebSocket. The page connects to `wss://smw-relay.vps.pocketsquirrel.com`, or to the relay a `?relay=ws://...` parameter names. Browser and native players cannot meet yet. `docs/RELAY.md` covers the protocol, settings and deployment.
+Upstream's web build has no netplay. Here the browser build plays online through `smw_relay`, which runs the lobby server and relays game traffic between players over WebSocket. The page connects to `wss://smw-relay.vps.pocketsquirrel.com`, or to the relay a `?relay=ws://...` parameter names. Browser and native players cannot meet yet. `docs/guides/RELAY.md` covers the protocol, settings and deployment.
 
 ```sh
 cargo run --release -p smw_relay -- --port 8080   # then open http://localhost:8000/?relay=ws://localhost:8080
@@ -100,11 +100,11 @@ tools/replay_clip.py <file>.txt --list                  # the session's matches
 tools/replay_clip.py <file>.txt --match 2 -o clip.txt   # match 2 alone, as a clip that plays like any replay
 ```
 
-Each match in a recording is marked and checkpointed, so `--replay <file> --segment <k>` watches match k alone, and a clip shares a single match without the menus before it. `--replay-speed <n>` watches faster. The web page downloads recordings and clips as `.smwrp`, the text gzipped (`gunzip -c f.smwrp` reads it), or as `.txt`; every tool and `--replay` reads either. `docs/REPLAY.md` ("Recordings") has the details. `tools/replay_video.py` renders a replay to an MP4, or two builds side by side (`docs/REPLAY_VIDEO.md`).
+Each match in a recording is marked and checkpointed, so `--replay <file> --segment <k>` watches match k alone, and a clip shares a single match without the menus before it. `--replay-speed <n>` watches faster. The web page downloads recordings and clips as `.smwrp`, the text gzipped (`gunzip -c f.smwrp` reads it), or as `.txt`; every tool and `--replay` reads either. `docs/guides/REPLAY.md` ("Recordings") has the details. `tools/replay_video.py` renders a replay to an MP4, or two builds side by side (`docs/guides/REPLAY_VIDEO.md`).
 
 ## Verifying against the C++ original
 
-The C++ original, plus the replay and state-dump hooks used to compare it with this port, lives in [supermariowar-cpp-reference](https://github.com/KyleJamesWalker/supermariowar-cpp-reference) (branch `harness-latest`; the hooks are also kept here as `tools/cpp-harness.patch` and `tools/editor-harness.patch`). `docs/REPLAY.md` specifies the harness, and `tools/parity.sh`, `tools/parity_sweep.sh` and `tools/editor_parity.sh` run the comparisons. `docs/ARCHITECTURE.md` documents the porting conventions, and `docs/PROGRESS.md` maps each C++ file to its Rust module. `docs/UPSTREAM_BACKLOG.md` tracks C++ bugs and port changes to offer upstream.
+The C++ original, plus the replay and state-dump hooks used to compare it with this port, lives in [supermariowar-cpp-reference](https://github.com/KyleJamesWalker/supermariowar-cpp-reference) (branch `harness-latest`; the hooks are also kept here as `tools/cpp-harness.patch` and `tools/editor-harness.patch`). `docs/guides/REPLAY.md` specifies the harness, and `tools/parity.sh`, `tools/parity_sweep.sh` and `tools/editor_parity.sh` run the comparisons. `docs/guides/CODE_CONVENTIONS.md` documents the porting conventions, and `docs/guides/DEVIATIONS.md` maps each C++ file to its Rust module. `docs/upstream/UPSTREAM_BACKLOG.md` tracks C++ bugs and port changes to offer upstream.
 
 ## CI
 

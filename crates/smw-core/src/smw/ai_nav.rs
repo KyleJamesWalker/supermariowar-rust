@@ -1,4 +1,4 @@
-//! CPU pathfinding (docs/CPU_AI.md, step 8): the tiles a player can stand on, linked by walks, falls, drops through
+//! CPU pathfinding (docs/design/CPU_AI.md, step 8): the tiles a player can stand on, linked by walks, falls, drops through
 //! ledges and jumps. The AI searches it each think and steers along the first link.
 
 use crate::common::game::App;

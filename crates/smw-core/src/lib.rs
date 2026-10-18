@@ -1,4 +1,4 @@
-//! Faithful Rust port of Super Mario War (see docs/ARCHITECTURE.md).
+//! Faithful Rust port of Super Mario War (see docs/guides/CODE_CONVENTIONS.md).
 #![allow(
     non_snake_case,
     non_camel_case_types,

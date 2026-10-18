@@ -1,4 +1,4 @@
-//! Not in upstream: the platform services the game reaches through one context (docs/ARCHITECTURE_V2.md,
+//! Not in upstream: the platform services the game reaches through one context (docs/design/ARCHITECTURE_V2.md,
 //! Threading the context, step 1). Each app picks the backend that provides them.
 
 use crate::game::Game;

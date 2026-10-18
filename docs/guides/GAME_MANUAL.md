@@ -1,4 +1,4 @@
-> The Super Mario War player's manual, copied from upstream [`docs/readme-v1.8.md`](https://github.com/mmatyas/supermariowar/blob/master/docs/readme-v1.8.md) at `5693918f` with its images. Where this port plays differently (gamepad assignment, touch controls, browser multiplayer and netplay sync), `PROGRESS.md` lists the deviations.
+> The Super Mario War player's manual, copied from upstream [`docs/readme-v1.8.md`](https://github.com/mmatyas/supermariowar/blob/master/docs/readme-v1.8.md) at `5693918f` with its images. Where this port plays differently (gamepad assignment, touch controls, browser multiplayer and netplay sync), `DEVIATIONS.md` lists the deviations.
 
 ![](gfx/docs/splash.png)
 
