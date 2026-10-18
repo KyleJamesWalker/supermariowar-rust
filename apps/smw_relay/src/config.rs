@@ -7,7 +7,7 @@ const USAGE: &str = "usage: smw_relay [--port <n>] [--config <lobby config file>
   --healthcheck  GET /healthz on 127.0.0.1:<port> and exit 0 if it answers 200
 
 environment:
-  SMW_RELAY_ALLOWED_ORIGINS  comma-separated page origins allowed to connect, or * for any
+  SMW_RELAY_ALLOWED_ORIGINS  comma-separated page origins allowed to connect, or * for any; native games send none
                              (default: https://www.kylejameswalker.com,http://localhost:8000)
   SMW_RELAY_MAX_CLIENTS      simultaneous WebSocket clients (default 64)";
 
@@ -59,9 +59,10 @@ impl Config {
         if self.allowed_origins.iter().any(|o| o == "*") {
             return true;
         }
+        // Browsers always send Origin; a client without one is a native game, which no web page can impersonate.
         match origin {
             Some(origin) => self.allowed_origins.contains(&normalize_origin(origin)),
-            None => false,
+            None => true,
         }
     }
 }
@@ -97,7 +98,7 @@ mod tests {
         assert!(c.origin_allowed(Some("http://localhost:8000")));
         assert!(!c.origin_allowed(Some("http://localhost:8001")));
         assert!(!c.origin_allowed(Some("https://evil.example")));
-        assert!(!c.origin_allowed(None));
+        assert!(c.origin_allowed(None));
 
         let any = config(" * ");
         assert!(any.origin_allowed(None));
