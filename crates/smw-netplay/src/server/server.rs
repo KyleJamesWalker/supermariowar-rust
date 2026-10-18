@@ -8,7 +8,8 @@ use super::room::Room;
 use super::util::cstr_field;
 use smw::common_netplay::network_interface::{NetPeer, NetworkEventHandler};
 use smw::common_netplay::protocol_definitions::*;
-use smw::common_netplay::protocol_packages::{ClientConnection, JoinRoom, MessageHeader, NewRoom, NewRoomCreated, RoomChatMsg, RoomInfo, ServerInfo};
+use smw::common_netplay::protocol_packages::{ClientConnection, JoinRoom, MatchRoom, MessageHeader, NewRoom, NewRoomCreated, RoomChatMsg, RoomInfo, ServerInfo};
+use super::match_room;
 use smw::globals::Ptr;
 use super::unordered_map::UnorderedMap;
 
@@ -34,6 +35,24 @@ pub struct SMWServer {
     roomCreateID: u32, // temporary
     currentRoomCount: u32,
     rooms: UnorderedMap<u32, Room>,
+
+    pub v2: V2Settings,
+}
+
+/// Where netplay v2 players meet, from `SMW_SIGNAL_URL`, `SMW_TURN_URL` and `SMW_TURN_SECRET`.
+/// Without a signaling URL the lobby sends no `NET_L2P_MATCH_ROOM`.
+#[derive(Clone, Debug, Default)]
+pub struct V2Settings {
+    pub signal_url: String,
+    pub turn_url: String,
+    pub turn_secret: String,
+}
+
+impl V2Settings {
+    pub fn from_env() -> Self {
+        let var = |name: &str| std::env::var(name).unwrap_or_default();
+        V2Settings { signal_url: var("SMW_SIGNAL_URL"), turn_url: var("SMW_TURN_URL"), turn_secret: var("SMW_TURN_SECRET") }
+    }
 }
 
 impl SMWServer {
@@ -47,6 +66,7 @@ impl SMWServer {
             roomCreateID: 1,
             currentRoomCount: 0,
             rooms: UnorderedMap::new(),
+            v2: V2Settings::from_env(),
         }
     }
 
@@ -424,9 +444,34 @@ impl SMWServer {
             return;
         }
 
+        Self::send_match_room(&self.v2, room);
         room.send_start_signal();
         player.lastActivityTime = time_now();
         log(&format!("[info] Room #{} starting.", roomID as i32));
+    }
+
+    /// Gives every player of a starting room the same new signaling room and their own TURN credentials.
+    fn send_match_room(v2: &V2Settings, room: &mut Room) {
+        if v2.signal_url.is_empty() {
+            return;
+        }
+        let id = match_room::new_room_id();
+        let url = format!("{}/{}", v2.signal_url.trim_end_matches('/'), id);
+        let slots: Vec<usize> = (0..4).filter(|&p| !room.players[p].is_null()).collect();
+        let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs());
+        for (index, &slot) in slots.iter().enumerate() {
+            let (username, credential) = if v2.turn_url.is_empty() || v2.turn_secret.is_empty() {
+                (String::new(), String::new())
+            } else {
+                match_room::turn_credentials(&v2.turn_secret, now, &format!("{}-{}", &id[..8], index))
+            };
+            let turn_url = if username.is_empty() { "" } else { v2.turn_url.as_str() };
+            let Some(pkg) = MatchRoom::with(slots.len() as u8, &url, turn_url, &username, &credential) else {
+                log(&format!("[error] Netplay v2 settings too long for NET_L2P_MATCH_ROOM: {url}"));
+                return;
+            };
+            room.players[slot].send_data(pkg.as_bytes());
+        }
     }
 
     fn start_room_if_everyone_ready(&mut self, _playerID: u64) {}
@@ -572,7 +617,7 @@ fn strtol10(s: &[u8]) -> i64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use smw::common_netplay::protocol_packages::{ConnectOk, RoomList};
+    use smw::common_netplay::protocol_packages::{ConnectOk, MatchRoom, RoomList, StartRoom};
     use std::any::Any;
     use std::cell::RefCell;
     use std::rc::Rc;
@@ -729,5 +774,51 @@ mod tests {
         let mut server = server();
         connect(&mut server, 1, "Luigi");
         assert_eq!(assigned_name(&connect(&mut server, 1, "Luigi")), "Luigi");
+    }
+
+    fn start_two_player_room(server: &mut SMWServer) -> (Outbox, Outbox) {
+        let host = connect(server, 1, "Host");
+        send(server, 1, &host, NewRoom::with("Room", "").as_bytes());
+        let created = host.borrow().iter().find(|m| m[2] == NET_RESPONSE_CREATE_OK).cloned().unwrap();
+        let room = NewRoomCreated::from_bytes(&created).roomID;
+        let guest = connect(server, 2, "Guest");
+        send(server, 2, &guest, JoinRoom::with(room, "").as_bytes());
+        codes(&guest);
+        send(server, 1, &host, StartRoom::new().as_bytes());
+        (host, guest)
+    }
+
+    fn match_rooms(outbox: &Outbox) -> Vec<MatchRoom> {
+        outbox.borrow().iter().filter(|m| m[2] == NET_L2P_MATCH_ROOM).map(|m| MatchRoom::from_bytes(m)).collect()
+    }
+
+    #[test]
+    fn a_starting_room_gets_one_signaling_room_and_turn_credentials_per_player() {
+        let mut server = server();
+        server.v2 = V2Settings {
+            signal_url: "wss://example.test/signal/".into(),
+            turn_url: "turn:example.test:3478".into(),
+            turn_secret: "0123abcd".into(),
+        };
+        let (host, guest) = start_two_player_room(&mut server);
+        let (host, guest) = (match_rooms(&host), match_rooms(&guest));
+        assert_eq!((host.len(), guest.len()), (1, 1));
+        let (host, guest) = (host[0], guest[0]);
+        assert_eq!((host.playerCount, guest.playerCount), (2, 2));
+        let url = cstr_field(&host.roomURL);
+        assert_eq!(url, cstr_field(&guest.roomURL));
+        let id = url.strip_prefix("wss://example.test/signal/").unwrap();
+        assert!(id.len() == 32 && id.chars().all(|c| c.is_ascii_hexdigit()));
+        assert_eq!(cstr_field(&host.turnURL), "turn:example.test:3478");
+        assert_ne!(cstr_field(&host.turnUsername), cstr_field(&guest.turnUsername));
+        assert!(!cstr_field(&guest.turnCredential).is_empty());
+    }
+
+    #[test]
+    fn without_a_signaling_url_rooms_start_as_before() {
+        let mut server = server();
+        server.v2 = V2Settings::default();
+        let (host, guest) = start_two_player_room(&mut server);
+        assert!(match_rooms(&host).is_empty() && match_rooms(&guest).is_empty());
     }
 }

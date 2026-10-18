@@ -44,6 +44,7 @@ pub const NET_RESPONSE_WRONG_PASSWORD: u8 = 43;
 pub const NET_G2L_START_ROOM: u8 = 50;
 pub const NET_L2P_GAMEHOST_INFO: u8 = 51;
 pub const NET_L2G_CLIENTS_INFO: u8 = 52;
+pub const NET_L2P_MATCH_ROOM: u8 = 53;
 pub const NET_G2P_SYNC: u8 = 55;
 pub const NET_P2G_SYNC_OK: u8 = 56;
 pub const NET_G2E_GAME_START: u8 = 57;

@@ -74,6 +74,10 @@ The `Relay` workflow publishes two images for `linux/amd64` and `linux/arm64`:
 
 `coturn` relays only to public addresses (`denied-peer-ip` in `turnserver.conf`), so it cannot reach the server's private network.
 
+### Netplay v2 settings
+
+When a room starts, the lobby (`smw_relay` or `smw_server`) sends each of its players `NET_L2P_MATCH_ROOM`. It holds a new random signaling room under `SMW_SIGNAL_URL`, plus TURN credentials for `SMW_TURN_URL`, minted from `SMW_TURN_SECRET` and valid for six hours. Without `SMW_SIGNAL_URL` the lobby sends nothing and rooms start as before. The compose file sets all three for the relay. For now the game only connects the peers and logs the result (`[net] v2:` lines); the match itself still runs over v1.
+
 ## Limits
 
 - Browser and native clients cannot play together. A native client speaks ENet to `smw_server`, and its game host listens on UDP. `docs/design/NETPLAY_V2.md` plans one WebRTC transport for both.

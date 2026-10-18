@@ -8,6 +8,9 @@ services:
     restart: unless-stopped
     environment:
       SMW_RELAY_ALLOWED_ORIGINS: https://www.kylejameswalker.com
+      SMW_SIGNAL_URL: wss://smw-relay.vps.pocketsquirrel.com/signal
+      SMW_TURN_URL: turn:smw-relay.vps.pocketsquirrel.com:3478
+      SMW_TURN_SECRET: ${TURN_SECRET:?set TURN_SECRET in .env}
     networks: [caddy]
 
   smw-signal:

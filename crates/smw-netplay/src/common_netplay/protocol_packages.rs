@@ -337,6 +337,40 @@ impl StartRoom {
     Pre-game packages
 */
 
+/// Where a starting room's players meet for netplay v2: the signaling room URL and the TURN server with credentials.
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct MatchRoom {
+    pub header: MessageHeader,
+    pub playerCount: u8,
+    pub roomURL: [u8; 160],
+    pub turnURL: [u8; 96],
+    pub turnUsername: [u8; 64],
+    pub turnCredential: [u8; 32],
+}
+
+impl MatchRoom {
+    /// None when a value does not fit with its terminating zero.
+    pub fn with(playerCount: u8, roomURL: &str, turnURL: &str, turnUsername: &str, turnCredential: &str) -> Option<Self> {
+        fn put<const N: usize>(field: &mut [u8; N], value: &str) -> Option<()> {
+            (value.len() < N).then(|| field[..value.len()].copy_from_slice(value.as_bytes()))
+        }
+        let mut s = MatchRoom {
+            header: MessageHeader::new(NET_L2P_MATCH_ROOM),
+            playerCount,
+            roomURL: [0; 160],
+            turnURL: [0; 96],
+            turnUsername: [0; 64],
+            turnCredential: [0; 32],
+        };
+        put(&mut s.roomURL, roomURL)?;
+        put(&mut s.turnURL, turnURL)?;
+        put(&mut s.turnUsername, turnUsername)?;
+        put(&mut s.turnCredential, turnCredential)?;
+        Some(s)
+    }
+}
+
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct GameHostInfo {
@@ -391,6 +425,7 @@ crate::net_package!(
     ServerInfo,
     ClientConnection,
     ConnectOk,
+    MatchRoom,
     ClientDisconnection,
     RoomList,
     RoomInfo,
@@ -418,6 +453,7 @@ mod tests {
         assert_eq!((size_of::<ServerInfo>(), offset_of!(ServerInfo, name), offset_of!(ServerInfo, currentPlayerCount), offset_of!(ServerInfo, maxPlayerCount)), (44, 3, 36, 40));
         assert_eq!((size_of::<ClientConnection>(), offset_of!(ClientConnection, playerName)), (19, 3));
         assert_eq!((size_of::<ConnectOk>(), offset_of!(ConnectOk, playerName)), (19, 3));
+        assert_eq!((size_of::<MatchRoom>(), offset_of!(MatchRoom, roomURL), offset_of!(MatchRoom, turnCredential)), (356, 4, 324));
         assert_eq!(size_of::<ClientDisconnection>(), 3);
         assert_eq!(size_of::<RoomList>(), 3);
         assert_eq!(
