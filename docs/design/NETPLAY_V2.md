@@ -1,6 +1,6 @@
 # Netplay v2: rollback over WebRTC
 
-Status: proposed, on the backlog. Decision: rollback, because the RG35XX measurement fits the tick budget (Rollout, steps 1 and 2).
+Status: in progress, rollout step 3. Decision: rollback, because the RG35XX measurement fits the tick budget (Rollout, steps 1 and 2).
 
 ## Summary
 
@@ -28,7 +28,10 @@ Replace host-authoritative netplay with input exchange over one WebRTC transport
 
 Menus, the world map and the screens between games stay on reliable messages. Rollback covers only the match. The match start message carries everything the simulation reads: the seed, the mode settings, the map and the skins (today `NET_G2P_SYNC`, `NET_NOTICE_GAMEMODESETTINGS`, `NET_G2P_MATCH_MAP` and `NET_NOTICE_SKIN_CHANGE`). These move to a reliable data channel.
 
-**Transport.** WebRTC data channels, unreliable and unordered, in browsers and native builds. Peers connect directly through STUN, and fall back to a TURN relay when NAT punching fails. `matchbox` provides one socket API for native and wasm and plugs into GGRS. Its signaling server takes over the lobby role of `smw_relay`. `coturn` is the TURN server.
+**Transport.** WebRTC data channels in browsers and native builds, through `crates/smw-peer`. Each pair of players shares a reliable channel for match setup and an unreliable, unordered one for GGRS. Peers connect directly through STUN, and fall back to a TURN relay when NAT punching fails. `coturn` is the TURN server.
+
+- **Signaling.** A stock `matchbox_server` pairs the peers of a room. Both builds speak its protocol: native builds through `webrtc` (webrtc-rs) and `tokio-tungstenite`, the web build through `web/peer_socket.js`.
+- **Lobby.** `smw_relay` keeps the room list, room names, passwords and player counts. When a room starts, the lobby gives each admitted player a random `matchbox` room ID. Only admitted players learn it, so the ID is the ticket. If that proves too weak, the relay can host `matchbox_signaling` itself and check each connection against the lobby.
 
 **Game work.**
 
@@ -50,10 +53,15 @@ Menus, the world map and the screens between games stay on reliable messages. Ro
 - **Visual snaps.** A misprediction moves a remote player at once. Input delay of one or two ticks reduces how often this happens.
 - **Four players, full mesh.** Each peer talks to every other peer. Uploads stay small because only inputs travel.
 - **TURN hosting.** Players behind strict NATs relay through TURN, which needs a server and bandwidth.
-- **`matchbox` under Emscripten.** The web build targets `wasm32-unknown-emscripten`. The `matchbox` browser socket uses `wasm-bindgen` and `web-sys`, which target `wasm32-unknown-unknown`. Check this first in step 3. If it does not build, the browser opens its data channels through a small JavaScript shim and speaks the same signaling protocol as native `matchbox`.
-- **Lobby features.** `smw_server` and the relay's lobby list rooms, take room names and passwords, and report players. The `matchbox` signaling server only pairs peers that name the same room. Step 3 decides whether our lobby keeps those features and hands each room to signaling, or the signaling server grows them. The saved server list (`servers.toml`) follows that choice.
-- **Library versions.** Pin current `ggrs` and `matchbox` releases in step 3. This plan did not check their versions or their four-player limits.
-- **CPU players.** They run inside each client's deterministic simulation, so they need no network input. Their AI must read only game state.
+- **`matchbox_socket` is not used (resolved in step 3).** Its browser backend does not compile for `wasm32-unknown-emscripten`. Its native backend opens signaling through `async-tls` on rustls 0.21, which carries open advisories and an MPL-licensed root store. `smw-peer` therefore implements the same protocol itself and pins `ggrs` 0.13.0 and `webrtc` 0.17.2. `ggrs` brings two unmaintained crates, `instant` and `bincode` 1, which `deny.toml` ignores.
+- **CPU players.** They run inside each client's deterministic simulation, so they need no network input. Their AI must read only game state. A room needs a setting for CPU slots, because today a room holds human slots only.
+- **Disconnects.** A player who leaves mid-match needs a reliable "leave" message. When GGRS reports a disconnect, the match either continues with idle input or a CPU, or ends with the current scores.
+- **Hidden browser tabs.** Browsers pause `requestAnimationFrame` in a hidden tab, so that peer stops sending and the others stall at the prediction window. A peer reports `visibilitychange`, and the others drop it after a timeout.
+- **Connecting at match start.** Every pair of players must connect before the match starts. Set a deadline, fall back to TURN, and name the player who could not connect.
+- **Pause and exit.** `pausegame` and `exitinggame` live in `game_values`, which `clone_match` copies. Keep them out of the rollback state, and send neutral input while the dialog is open.
+- **Local players.** v1 sends one player per client. GGRS accepts several local players per peer, which allows couch players in an online match.
+- **Recordings.** v1 net recordings log every received packet. v2 records the confirmed inputs of each tick, which also makes a net match an ordinary replay.
+- **Rooms between matches.** v1 hides a started room and breaks it up after the match. v2 returns everyone to the room for the next match.
 
 ## Rollout
 
@@ -67,6 +75,9 @@ Menus, the world map and the screens between games stay on reliable messages. Ro
 
    The tick column is simulation plus draw recording. Rasterizing a shown frame costs about 5 ms more on the RG35XX (`SMW_PERF`). The snapshot is the largest cost there: `clone_match` also copies the screen surface and the display lists, which a rollback snapshot does not need.
 2. **Decide.** Rollback. The RG35XX worst case is about 3 ms snapshot, 5.5 ms re-run and 5 ms drawing, which fits the 16.67 ms tick. A trimmed snapshot widens the margin.
-3. **Transport.** `matchbox` sockets in native and web builds, a signaling server in place of the relay's lobby, and a TURN server in `deploy/`.
+3. **Transport (in progress).** In three PRs:
+   1. `smw-peer`: the peer socket for both builds and its GGRS socket. CI connects two browser pages and a native peer in one room (`tools/web_peer_test.mjs`).
+   2. The lobby hands started rooms to signaling. `matchbox_server` runs in `deploy/`.
+   3. `coturn` in `deploy/`, and TURN credentials for clients.
 4. **GGRS session for matches.** Snapshot and re-run hooks, silent re-runs, and the desync check. A CI test plays a scripted mixed native and browser match under induced latency and packet loss.
 5. **Remove v1.** Delete ENet, the WebSocket game tunnel, NAT punching and the host-authoritative event code. Bump the protocol version.
