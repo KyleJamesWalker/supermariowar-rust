@@ -999,6 +999,7 @@ impl NetClient {
             return;
         }
 
+        gp.rm.forget_menu_skin(playerID as i16);
         if !gp.rm.load_menu_skin_path(g, playerID as i16, Path::new(&path), playerID as i16, false) {
             println!("[warning] Could not load netplay skin of player {}, using default", playerID);
             gp.get().rm.load_menu_skin(g, playerID as i16, gp.get().game_values.skinids[playerID as usize], playerID as i16, false);
