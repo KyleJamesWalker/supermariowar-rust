@@ -79,5 +79,12 @@ Menus, the world map and the screens between games stay on reliable messages. Ro
    1. `smw-peer`: the peer socket for both builds and its GGRS socket. CI connects two browser pages and a native peer in one room (`tools/web_peer_test.mjs`).
    2. The lobby hands started rooms to signaling. `matchbox_server` runs in `deploy/`.
    3. `coturn` in `deploy/`, and TURN credentials for clients.
-4. **GGRS session for matches.** Snapshot and re-run hooks, silent re-runs, and the desync check. A CI test plays a scripted mixed native and browser match under induced latency and packet loss.
+4. **GGRS session for matches (in progress).**
+   1. Rollback engine (`smw/rollback.rs`). `MatchState` holds what a match tick reads and writes: game values, map, objects, players, scores, modes, RNG, the virtual mixer, the gameplay state and the frame counter. It skips the screen surface and the display lists. `advance` runs one tick with given keys and can mute it. `checksum` hashes the harness dump. Every replay's match runs under GGRS's sync test, which loads the state from 7 ticks back and re-runs it on every tick. All 47 replays that reach a match stay in sync for 600 ticks.
+   2. The match runs over a GGRS P2P session on the peer socket, with input delay and a desync log.
+   3. A CI test plays a scripted mixed native and browser match under induced latency and packet loss.
 5. **Remove v1.** Delete ENet, the WebSocket game tunnel, NAT punching and the host-authoritative event code. Bump the protocol version.
+6. **Local play without internet.** "Host on this device" in a native build runs the lobby and the signaling server on a background thread. Players on the same network, whether shared Wi-Fi or one device's hotspot, need no internet, STUN or TURN. Their WebRTC connections use local addresses.
+   - **Discovery.** The host broadcasts a UDP beacon every second with its name, protocol version and lobby port. The Servers menu lists beacons under Nearby, and typing the host's address still works where broadcasts are blocked.
+   - **Limits.** Networks that isolate clients, common on hotel Wi-Fi, need a hotspot instead. Browsers can neither host nor hear beacons. Joining a LAN game from a browser also needs a page served over http, because an https page cannot open `ws://` to a LAN address.
+   - **Firewalls.** macOS and Windows ask once to allow incoming connections.
