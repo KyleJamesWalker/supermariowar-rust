@@ -15,7 +15,7 @@
 //   WEB_DIR    web build (default: dist/web)
 //   NET_GAMES  scenarios (default: every tools/ref/net_game*)
 //   MIXED=1    with WEB_NETPLAY_V2=1: the joiner is the native build (SMW_BIN, default target/release/smw), which
-//              reaches the same relay lobby through a ws:// server entry
+//              reaches the same relay lobby through a ws:// server entry; MIXED=host makes the host native instead
 //   WEB_NETPLAY_V2=1  play each match over netplay v2 (GGRS over WebRTC; the relay needs SMW_SIGNAL_URL) and compare
 //              the pages' per-frame states instead of their dumps
 import { spawn, spawnSync } from 'node:child_process';
@@ -34,7 +34,8 @@ const out = resolve(process.argv[2] ?? join(tmpdir(), 'smw-web-netplay'));
 mkdirSync(out, { recursive: true });
 
 const V2 = process.env.WEB_NETPLAY_V2 === '1';
-const MIXED = process.env.MIXED === '1';
+const MIXED = process.env.MIXED === '1' || process.env.MIXED === 'host';
+const nativeRole = process.env.MIXED === 'host' ? 'host' : 'join';
 if (MIXED && !V2) {
     console.error('MIXED=1 needs WEB_NETPLAY_V2=1');
     process.exit(2);
@@ -259,7 +260,7 @@ const play = async (game) => {
     const v2 = V2 ? { SMW_NETPLAY_V2: '1', SMW_V2_STATE_LOG: '/v2state.log' } : {};
     let native = null;
     for (const r of roles) {
-        if (MIXED && r.role === 'join') {
+        if (MIXED && r.role === nativeRole) {
             native = startNative(r, frames, dir);
             continue;
         }
@@ -318,7 +319,7 @@ const play = async (game) => {
     if (V2) {
         if (native) {
             if (!native.finished) native.child.kill('SIGKILL');
-            writeFileSync(join(dir, 'join.log'), native.consoleLines.join('\n') + '\n');
+            writeFileSync(join(dir, `${native.role}.log`), native.consoleLines.join('\n') + '\n');
         }
         ok &&= compareV2(dir, native ? [...pages, native] : pages);
         for (const page of pages) page.close();
@@ -353,6 +354,7 @@ const startNative = (r, frames, dir) => {
         env: {
             ...process.env, HOME: home, SDL_VIDEODRIVER: 'dummy', SDL_AUDIODRIVER: 'dummy', SMW_SEED: '1', SMW_FRAMES: String(frames),
             SMW_REPLAY: join(dir, `${r.role}.native.txt`), SMW_NO_RECORD: '1', SMW_NETPLAY_V2: '1', SMW_V2_STATE_LOG: join(dir, `${r.role}.v2state.log`),
+            ...(r.map && { SMW_MAP: r.map }), ...(r.netSeed && { SMW_NET_SEED: r.netSeed }),
         },
         stdio: ['ignore', 'pipe', 'pipe'],
         detached: true,
