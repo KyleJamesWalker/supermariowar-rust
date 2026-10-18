@@ -16,6 +16,7 @@ APP_DIR="$(cd "$(dirname "$0")" && pwd)"
 export HOME="$APP_DIR/home"
 export LD_LIBRARY_PATH="$APP_DIR/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export SMW_NO_KEYBOARD=1 SMW_PAD_TRANSLATE=1 SMW_PERF=1
+export SMW_ROLLBACK_BENCH=1
 # export SMW_DEBUG_INPUT=1
 # A comma-separated list SDL tries in order; "dummy" runs silent.
 AUDIO_DRIVER="alsa"
