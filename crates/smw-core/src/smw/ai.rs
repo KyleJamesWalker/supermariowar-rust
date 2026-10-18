@@ -207,7 +207,7 @@ struct StyleRanges {
 fn style_ranges(style: Style) -> StyleRanges {
     match style {
         Style::Balanced => StyleRanges { objective: (3600, 2025), open: (14400, 8100), threat: 14400, back_off: 8100 },
-        Style::Aggressive => StyleRanges { objective: (8100, 4900), open: (22500, 14400), threat: 8100, back_off: 3600 },
+        Style::Aggressive => StyleRanges { objective: (4900, 3600), open: (22500, 14400), threat: 8100, back_off: 3600 },
         Style::Objective => StyleRanges { objective: (1600, 900), open: (14400, 8100), threat: 14400, back_off: 8100 },
         Style::Cautious => StyleRanges { objective: (3600, 2025), open: (10000, 4900), threat: 22500, back_off: 14400 },
     }
