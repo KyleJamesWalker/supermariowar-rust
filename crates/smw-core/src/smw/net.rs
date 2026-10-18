@@ -529,7 +529,7 @@ impl NetClient {
         g.netplay.currentRoom.roomID = pkg.roomID;
         g.netplay.currentRoom.hostPlayerNumber = 0;
         g.netplay.currentRoom.name = g.netplay.newroom_name.clone();
-        g.netplay.currentRoom.playerNames[0] = g.netplay.myPlayerName.clone();
+        g.netplay.currentRoom.playerNames[0] = g.netplay.lobby_name.clone();
         g.netplay.currentRoom.playerNames[1] = "(empty)".to_string();
         g.netplay.currentRoom.playerNames[2] = "(empty)".to_string();
         g.netplay.currentRoom.playerNames[3] = "(empty)".to_string();
@@ -1087,6 +1087,11 @@ impl NetworkEventHandler<Game> for NetClient {
             NET_RESPONSE_SERVER_MOTD => println!("Not implemented: NET_RESPONSE_SERVER_MOTD"),
 
             NET_RESPONSE_CONNECT_OK => {
+                g.netplay.lobby_name = if data.len() >= std::mem::size_of::<pkgs::ConnectOk>() {
+                    cstr_field(&pkgs::ConnectOk::from_bytes(data).playerName)
+                } else {
+                    g.netplay.myPlayerName.clone()
+                };
                 // Not in the C++: the Servers menu moves on only if the skin goes out no earlier than this receive.
                 self.set_as_last_received_message(g, packageType);
                 g.netplay.connectSuccessful = true;
@@ -1734,6 +1739,8 @@ pub struct Networking {
 
     pub client: NetClient,
     pub myPlayerName: String,
+    /// The name the lobby server gave this player: `myPlayerName`, numbered if another player has it.
+    pub lobby_name: String,
 
     pub selectedServerIndex: u16,
     pub savedServers: Vec<ServerAddress>,
@@ -1799,6 +1806,7 @@ impl Networking {
             operationInProgress: false,
             client: NetClient::new(),
             myPlayerName: String::new(),
+            lobby_name: String::new(),
             selectedServerIndex: 0,
             savedServers: Vec::new(),
             roomFilter: String::new(),

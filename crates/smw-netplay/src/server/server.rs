@@ -177,11 +177,24 @@ impl SMWServer {
 
         let package = ClientConnection::from_bytes(data);
 
-        let end = package.playerName.iter().position(|&c| c == 0).unwrap_or(package.playerName.len());
-        player.name = package.playerName[..end].to_vec();
+        player.name = self.unique_name(playerID, cstr_bytes(&package.playerName));
         player.send_connect_ok();
 
         log(&format!("{} : <{}> connected.", player.network_client.as_ref().unwrap().address_as_string(), cstr_field(&package.playerName)));
+    }
+
+    /// The requested name, or the first free "<name> <n>" if another player has it.
+    fn unique_name(&self, playerID: u64, requested: &[u8]) -> Vec<u8> {
+        let base: &[u8] = if requested.is_empty() { b"Player" } else { requested };
+        let taken = |name: &[u8]| self.players.iter().any(|(&id, p)| id != playerID && p.name.eq_ignore_ascii_case(name));
+        if !taken(base) {
+            return base.to_vec();
+        }
+        (2..).map(|n| {
+            let suffix = format!(" {}", n);
+            let keep = base.len().min(NET_MAX_PLAYER_NAME_LENGTH - 1 - suffix.len());
+            [&base[..keep], suffix.as_bytes()].concat()
+        }).find(|name| !taken(name)).unwrap()
     }
 
     fn remove_inactive_players(&mut self) {
@@ -559,7 +572,7 @@ fn strtol10(s: &[u8]) -> i64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use smw::common_netplay::protocol_packages::RoomList;
+    use smw::common_netplay::protocol_packages::{ConnectOk, RoomList};
     use std::any::Any;
     use std::cell::RefCell;
     use std::rc::Rc;
@@ -687,5 +700,34 @@ mod tests {
 
         send(&mut server, 2, &guest, RoomList::new().as_bytes());
         assert_eq!(codes(&guest), [NET_RESPONSE_NO_ROOMS]);
+    }
+
+    fn assigned_name(outbox: &Outbox) -> String {
+        let ok = outbox.borrow().iter().find(|m| m[2] == NET_RESPONSE_CONNECT_OK).cloned().unwrap();
+        cstr_field(&ConnectOk::from_bytes(&ok).playerName)
+    }
+
+    #[test]
+    fn duplicate_names_get_a_number() {
+        let mut server = server();
+        assert_eq!(assigned_name(&connect(&mut server, 1, "Player")), "Player");
+        assert_eq!(assigned_name(&connect(&mut server, 2, "player")), "player 2");
+        assert_eq!(assigned_name(&connect(&mut server, 3, "Player")), "Player 3");
+        assert_eq!(assigned_name(&connect(&mut server, 4, "")), "Player 4");
+        assert_eq!(assigned_name(&connect(&mut server, 5, "Mario")), "Mario");
+    }
+
+    #[test]
+    fn numbered_long_names_still_fit() {
+        let mut server = server();
+        assert_eq!(assigned_name(&connect(&mut server, 1, "ABCDEFGHIJKLMNO")), "ABCDEFGHIJKLMNO");
+        assert_eq!(assigned_name(&connect(&mut server, 2, "ABCDEFGHIJKLMNO")), "ABCDEFGHIJKLM 2");
+    }
+
+    #[test]
+    fn a_reconnect_keeps_its_name() {
+        let mut server = server();
+        connect(&mut server, 1, "Luigi");
+        assert_eq!(assigned_name(&connect(&mut server, 1, "Luigi")), "Luigi");
     }
 }

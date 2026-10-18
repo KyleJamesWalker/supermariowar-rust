@@ -114,6 +114,23 @@ impl ClientConnection {
     }
 }
 
+/// `NET_RESPONSE_CONNECT_OK` with the name the server gave the player, which differs from the requested one when taken.
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct ConnectOk {
+    pub header: MessageHeader,
+    pub playerName: [u8; NET_MAX_PLAYER_NAME_LENGTH],
+}
+
+impl ConnectOk {
+    pub fn with(playerName: &[u8]) -> Self {
+        let mut s = ConnectOk { header: MessageHeader::new(NET_RESPONSE_CONNECT_OK), playerName: [0; NET_MAX_PLAYER_NAME_LENGTH] };
+        let n = playerName.len().min(NET_MAX_PLAYER_NAME_LENGTH - 1);
+        s.playerName[..n].copy_from_slice(&playerName[..n]);
+        s
+    }
+}
+
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct ClientDisconnection {
@@ -373,6 +390,7 @@ crate::net_package!(
     MessageHeader,
     ServerInfo,
     ClientConnection,
+    ConnectOk,
     ClientDisconnection,
     RoomList,
     RoomInfo,
@@ -399,6 +417,7 @@ mod tests {
         assert_eq!(size_of::<MessageHeader>(), 3);
         assert_eq!((size_of::<ServerInfo>(), offset_of!(ServerInfo, name), offset_of!(ServerInfo, currentPlayerCount), offset_of!(ServerInfo, maxPlayerCount)), (44, 3, 36, 40));
         assert_eq!((size_of::<ClientConnection>(), offset_of!(ClientConnection, playerName)), (19, 3));
+        assert_eq!((size_of::<ConnectOk>(), offset_of!(ConnectOk, playerName)), (19, 3));
         assert_eq!(size_of::<ClientDisconnection>(), 3);
         assert_eq!(size_of::<RoomList>(), 3);
         assert_eq!(

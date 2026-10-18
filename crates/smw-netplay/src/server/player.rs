@@ -3,8 +3,7 @@
 use super::blob::Blob;
 use super::clock::{time_now, TimePoint};
 use smw::common_netplay::network_interface::NetPeer;
-use smw::common_netplay::protocol_definitions::NET_RESPONSE_CONNECT_OK;
-use smw::common_netplay::protocol_packages::MessageHeader;
+use smw::common_netplay::protocol_packages::{ConnectOk, MessageHeader};
 
 const SKINPKG_SIZE_LIMIT: usize = 20000; /* bytes in worst case */
 
@@ -129,6 +128,7 @@ impl Player {
     }
 
     pub fn send_connect_ok(&mut self) -> bool {
-        self.send_code(NET_RESPONSE_CONNECT_OK)
+        let msg = ConnectOk::with(&self.name);
+        self.send_data(msg.as_bytes())
     }
 }
