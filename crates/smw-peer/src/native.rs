@@ -23,6 +23,33 @@ use webrtc::peer_connection::RTCPeerConnection;
 
 const KEEP_ALIVE: Duration = Duration::from_secs(10);
 
+/// Test conditions for the unreliable channel: `SMW_PEER_LAG_MS` delays each packet, `SMW_PEER_LOSS` drops that
+/// percentage of them.
+struct Impairment {
+    lag: Duration,
+    loss_percent: u32,
+    seed: std::cell::Cell<u64>,
+}
+
+impl Impairment {
+    fn from_env() -> Impairment {
+        let var = |name: &str| std::env::var(name).ok().and_then(|v| v.parse::<u64>().ok()).unwrap_or(0);
+        Impairment { lag: Duration::from_millis(var("SMW_PEER_LAG_MS")), loss_percent: var("SMW_PEER_LOSS") as u32, seed: std::cell::Cell::new(0x9e37_79b9_7f4a_7c15) }
+    }
+
+    fn drop_next(&self) -> bool {
+        if self.loss_percent == 0 {
+            return false;
+        }
+        let mut x = self.seed.get();
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        self.seed.set(x);
+        (x % 100) < self.loss_percent as u64
+    }
+}
+
 #[derive(Default)]
 struct Shared {
     id: Option<PeerId>,
@@ -218,6 +245,7 @@ async fn run(
     let api = Arc::new(APIBuilder::new().build());
     let mut peers: HashMap<PeerId, Peer> = HashMap::new();
     let mut keep_alive = tokio::time::interval(KEEP_ALIVE);
+    let impairment = Impairment::from_env();
     let mut signaling_open = true;
 
     loop {
@@ -247,8 +275,21 @@ async fn run(
             command = commands.recv() => match command {
                 Some(Command::Send(channel, peer, data)) => {
                     let open = peers.get(&peer).filter(|p| p.connected.load(Ordering::Acquire));
+                    let index = channel;
                     if let Some(channel) = open.and_then(|p| p.channels.get(channel)) {
-                        let _ = channel.send(&Bytes::from(data)).await;
+                        if index != UNRELIABLE {
+                            let _ = channel.send(&Bytes::from(data)).await;
+                        } else if !impairment.drop_next() {
+                            if impairment.lag.is_zero() {
+                                let _ = channel.send(&Bytes::from(data)).await;
+                            } else {
+                                let (channel, lag) = (channel.clone(), impairment.lag);
+                                tokio::spawn(async move {
+                                    tokio::time::sleep(lag).await;
+                                    let _ = channel.send(&Bytes::from(data)).await;
+                                });
+                            }
+                        }
                     }
                 }
                 Some(Command::Close) | None => {
