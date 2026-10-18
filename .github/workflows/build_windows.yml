@@ -46,7 +46,7 @@ jobs:
         run: |
           app="$RUNNER_TEMP/SuperMarioWar"
           mkdir -p "$app"
-          cp target/release/{smw,leveleditor,worldeditor,smw_server}.exe "$app/"
+          cp target/release/{smw,leveleditor,worldeditor}.exe "$app/"
           cp "$SDL"/lib/*.dll "$app/"
           cp -R "$SDL/licenses" "$app/"
           cp -R data "$app/data"

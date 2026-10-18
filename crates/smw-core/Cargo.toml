@@ -36,5 +36,3 @@ smw_relay = { path = "../../apps/smw_relay" }
 socket2 = { version = "0.6", features = ["all"] }
 tungstenite = { version = "0.30", default-features = false, features = ["handshake", "rustls-tls-webpki-roots"] }
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
-enet-sys = "1.0.5"
-smw-netplay = { path = "../smw-netplay", features = ["enet"] }

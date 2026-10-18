@@ -2,16 +2,11 @@
 name = "smw-netplay"
 version = "0.1.0"
 edition.workspace = true
-description = "Super Mario War - the netplay protocol and the lobby server, shared by the game, smw_server and smw_relay"
+description = "Super Mario War - the netplay protocol and the lobby server, shared by the game and smw_relay"
 publish.workspace = true
-
-[features]
-# The ENet transport and the smw_server entry point; the relay and the web build go without.
-enet = ["dep:enet-sys"]
 
 [dependencies]
 smw-globals = { path = "../smw-globals" }
-enet-sys = { version = "1.0.5", optional = true }
 getrandom = "0.3"
 hmac = "0.12"
 sha1 = "0.10"

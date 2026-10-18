@@ -1,22 +1,22 @@
 #!/bin/bash
-# Full-client netplay: two Rust game clients meet on the Rust lobby server through the real menus and play each
+# Full-client netplay: two Rust game clients meet on smw_relay's lobby through the real menus and play each
 # scripted net game. tools/net_v2_test.py runs this and checks the matches.
 # Usage: net_game_run.sh
-# Env: SMW_RUST_BIN (smw), SMW_RUST_SERVER (smw_server), SMW_RUST_DATA,
+# Env: SMW_RUST_BIN (smw), SMW_RELAY_BIN (smw_relay), SMW_RUST_DATA,
 #      NET_GAMES (scenario directories beside this script; default: every net_game*),
 #      NET_GAME_WORK (where the logs go; default: a temporary directory),
 #      HOST_PRESENT_HZ / JOIN_PRESENT_HZ (that client presents at this display rate while ticking at 60, SMW_PRESENT_HZ),
-#      NET_SERVER_ENTRY (the clients' server list entry; default 127.0.0.1, smw_server over ENet),
-#      NET_NO_SERVER=1 (start no smw_server), HOST_ENV (extra VAR=value settings for the host only).
+#      NET_SERVER_ENTRY (the clients' server list entry; default ws://127.0.0.1:12521, the smw_relay this starts),
+#      NET_NO_SERVER=1 (start no smw_relay), HOST_ENV (extra VAR=value settings for the host only).
 # A scenario's host.txt may name a map from net_maps/ (`#@ map=<name>`; each client gets an APFS clone of its data
 # tree with the map added) and a host seed (`#@ net_seed=<n>`, so the game spawns alike every run).
 HERE=$(cd "$(dirname "$0")" && pwd)
 PORT=$(cd "$HERE/../.." && pwd)
 RUST=${SMW_RUST_BIN:-$PORT/target/release/smw}
-SERVER=${SMW_RUST_SERVER:-$PORT/target/release/smw_server}
+RELAY=${SMW_RELAY_BIN:-$PORT/target/release/smw_relay}
 RUST_DATA=${SMW_RUST_DATA:-$PORT/data}
-if [ -z "$SMW_RUST_BIN" ] || [ -z "$SMW_RUST_SERVER" ]; then
-  cargo build --release --quiet --locked --manifest-path "$PORT/Cargo.toml" --bin smw --bin smw_server || exit 2
+if [ -z "$SMW_NO_BUILD" ]; then
+  cargo build --release --quiet --locked --manifest-path "$PORT/Cargo.toml" --bin smw --bin smw_relay || exit 2
 fi
 WORK=${NET_GAME_WORK:-$(mktemp -d)}
 mkdir -p "$WORK"
@@ -48,7 +48,7 @@ client() {
   [ "$role" = join ] && [ -n "${JOIN_PRESENT_HZ:-}" ] && mapenv+=(SMW_PRESENT_HZ="$JOIN_PRESENT_HZ")
   local home=$dir/home-$role
   mkdir -p "$home/Library/Preferences/.smw"
-  printf 'player_name = "%s"\nservers = ["%s"]\n' "$name" "${NET_SERVER_ENTRY:-127.0.0.1}" > "$home/Library/Preferences/.smw/servers.toml"
+  printf 'player_name = "%s"\nservers = ["%s"]\n' "$name" "${NET_SERVER_ENTRY:-ws://127.0.0.1:12521}" > "$home/Library/Preferences/.smw/servers.toml"
   (cd "$data/.." && exec env HOME="$home" SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy SMW_SEED=1 SMW_FRAMES="$(param frames "$game")" "${mapenv[@]}" \
     SMW_REPLAY="$HERE/$game/$role.txt" SMW_DUMP="$dir/$role.dump" "$@" \
     "$RUST" --datadir "$data")
@@ -61,7 +61,7 @@ for game in "${games[@]}"; do
   printf 'port 12521\nname Server\nmaxplayers 10\n' > "$dir/serverconfig"
   spid=
   if [ -z "${NET_NO_SERVER:-}" ]; then
-    (cd "$dir" && exec "$SERVER" serverconfig > server.log 2>&1) & spid=$!
+    (cd "$dir" && exec "$RELAY" --port 12521 --config serverconfig > server.log 2>&1) & spid=$!
   fi
   sleep 0.5
   hdata=$(datadir host "$dir" "$game")

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Netplay v2 matches end to end: the scripted net games of tools/ref/net_game_run.sh with a signaling server, so
+"""Netplay v2 matches end to end: the scripted net games of tools/ref/net_game_run.sh, so
 each match runs under GGRS over WebRTC, with lag and packet loss on the GGRS channel. Both clients log the state they
 checksum at every saved frame (SMW_V2_STATE_LOG); every frame both logged must be identical, every match must start
 its GGRS session, and neither client may report a desync.
@@ -9,9 +9,9 @@ Usage: tools/net_v2_test.py [work_dir]
                    sessions each client must start (default 1)
   SMW_PEER_LAG_MS  delay per GGRS packet (default 60)
   SMW_PEER_LOSS    percent of GGRS packets dropped (default 10)
-  LAN=1            no smw_server and no signaling server: the host runs SMW_LAN_HOST=1 and both clients list
+  LAN=1            no smw_relay: the host runs SMW_LAN_HOST=1 and both clients list
                    ws://127.0.0.1:12523, as players on a network without internet do
-  SMW_RUST_BIN, SIGNAL_BIN  binaries (default: target/release/smw, target/release/examples/signal)
+  SMW_RUST_BIN     the game (default: target/release/smw); net_game_run.sh starts smw_relay
 """
 import os
 import re
@@ -25,7 +25,6 @@ work = Path(sys.argv[1] if len(sys.argv) > 1 else tempfile.mkdtemp(prefix="smw-n
 work.mkdir(parents=True, exist_ok=True)
 games = os.environ.get("NET_GAMES") or " ".join(sorted(p.name for p in (REPO / "tools" / "ref").glob("net_game*") if p.is_dir()))
 smw = Path(os.environ.get("SMW_RUST_BIN", REPO / "target" / "release" / "smw")).resolve()
-signal = Path(os.environ.get("SIGNAL_BIN", REPO / "target" / "release" / "examples" / "signal")).resolve()
 states = work / "states"
 states.mkdir(exist_ok=True)
 
@@ -39,18 +38,6 @@ wrapper.write_text(
 wrapper.chmod(0o755)
 
 lan = os.environ.get("LAN") == "1"
-server = None
-if not lan:
-    server = subprocess.Popen([str(signal)], stdout=subprocess.PIPE, text=True)
-    port = None
-    for line in server.stdout:
-        m = re.match(r"listening (\d+)", line)
-        if m:
-            port = int(m.group(1))
-            break
-    if port is None:
-        sys.exit("the signal example did not start")
-
 env = dict(
     os.environ,
     NET_GAMES=games,
@@ -62,15 +49,8 @@ env = dict(
 )
 if lan:
     env.update(NET_SERVER_ENTRY="ws://127.0.0.1:12523", NET_NO_SERVER="1", HOST_ENV="SMW_LAN_HOST=1")
-else:
-    env["SMW_SIGNAL_URL"] = f"ws://127.0.0.1:{port}"
 
-try:
-    # Its v1 dump comparison does not apply: v2 frames write no harness dump.
-    subprocess.run(["bash", str(REPO / "tools" / "ref" / "net_game_run.sh")], cwd=REPO, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-finally:
-    if server:
-        server.kill()
+subprocess.run(["bash", str(REPO / "tools" / "ref" / "net_game_run.sh")], cwd=REPO, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 def frames(path):

@@ -2,7 +2,7 @@
 
 use std::any::Any;
 
-/// `class NetPeer`. `operator==` compares the underlying ENet peer.
+/// `class NetPeer`. `same_peer` compares the underlying connection.
 pub trait NetPeer: Any {
     fn send(&mut self, data: &[u8]) -> bool;
     fn send_reliable(&mut self, data: &[u8]) -> bool;

@@ -2,29 +2,29 @@
 # Connects the Rust client to the Rust lobby server N times on a clock that advances on every read, and fails if
 # the Servers menu would not move on after any of them (the connect reply must be recorded before the skin is sent).
 # Usage: net_connect_stress.sh [N]   (default 20)
-# Env: SMW_RUST_SERVER (smw_server binary), SMW_RUST_NET (lobby_connect example binary), SMW_DATA_DIR.
+# Env: SMW_RELAY_BIN (smw_relay binary), SMW_RUST_NET (lobby_connect example binary), SMW_DATA_DIR.
 HERE=$(cd "$(dirname "$0")" && pwd)
 PORT=$(cd "$HERE/../.." && pwd)
 DATA=${SMW_DATA_DIR:-$PORT/data}
 N=${1:-20}
-SERVER=${SMW_RUST_SERVER:-}
+SERVER=${SMW_RELAY_BIN:-}
 RUST=${SMW_RUST_NET:-}
 if [ -z "$SERVER" ] || [ -z "$RUST" ]; then
-  cargo build -q --release --locked --manifest-path "$PORT/Cargo.toml" --bin smw_server --example lobby_connect || exit 2
-  SERVER=${SERVER:-$PORT/target/release/smw_server}
+  cargo build -q --release --locked --manifest-path "$PORT/Cargo.toml" --bin smw_relay --example lobby_connect || exit 2
+  SERVER=${SERVER:-$PORT/target/release/smw_relay}
   RUST=${RUST:-$PORT/target/release/examples/lobby_connect}
 fi
 WORK=$(mktemp -d)
 trap 'kill $spid 2>/dev/null; wait $spid 2>/dev/null; rm -rf "${WORK:?}"' EXIT
 printf 'port 12521\nname Server\nmaxplayers 10\n' > "$WORK/serverconfig"
-(cd "$WORK" && exec "$SERVER" serverconfig > server.log 2>&1) & spid=$!
+(cd "$WORK" && exec "$SERVER" --port 12521 --config serverconfig > server.log 2>&1) & spid=$!
 sleep 0.5
 
 fail=0
 for i in $(seq "$N"); do
   mkdir -p "$WORK/home$i"
   HOME=$WORK/home$i SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy SDL_RENDER_DRIVER=software \
-    perl -e 'alarm 20; exec @ARGV' "$RUST" "$DATA" > "$WORK/client$i.log" 2>&1
+    perl -e 'alarm 20; exec @ARGV' "$RUST" "$DATA" ws://127.0.0.1:12521 > "$WORK/client$i.log" 2>&1
   status=$?
   line=$(grep -h '^EV servers menu' "$WORK/client$i.log")
   echo "connect $i: ${line:-no result (exit $status)}"

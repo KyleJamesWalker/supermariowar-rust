@@ -108,7 +108,7 @@ jobs:
 
       - name: Build
         run: |
-          cargo build --release --locked --bin smw --bin smw_server --example lobby_connect
+          cargo build --release --locked --bin smw --bin smw_relay --example lobby_connect
           cargo build --release --locked --package smw-peer --example signal
 
       - name: Lobby connect stress

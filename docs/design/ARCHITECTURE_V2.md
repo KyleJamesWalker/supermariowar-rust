@@ -50,7 +50,6 @@ smw (app: game binary, Android cdylib)
  ├─ smw-sdl2 | smw-sdl3 ── smw-platform     (exactly one, by feature)
  └─ smw-netplay ── smw-globals
 leveleditor, worldeditor (apps) ── smw-core, smw-sdl2 | smw-sdl3
-smw_server (app) ── smw-netplay
 smw_relay (app) ── smw-netplay, tungstenite
 smw-headless ── smw-platform                (tests and the replay runner)
 ```
@@ -60,7 +59,7 @@ smw-headless ── smw-platform                (tests and the replay runner)
 | `smw-globals` | `Ptr`, `Global`, `Aliased`, `impl_base!`, `enum_from_u8!` (today `src/globals/`) | no |
 | `smw-platform` | Traits and plain data: `Video`, `AudioOut`, `Clock`, `Storage`, `InputEvent`, `Keycode`, `PadSlot`, `Frame` | no |
 | `smw-core` | `common/`, `smw/`, the replay harness, checkpoints, virtual mixer, input mapper, touch layout, software surfaces and blitter, image decoding | no (from phase 4) |
-| `smw-netplay` | `common_netplay/`, `server/`, the `file_io` subset the relay uses today through `#[path]`, the ENet and WebSocket network layers | no |
+| `smw-netplay` | `common_netplay/`, `server/`, the `file_io` subset the relay uses today through `#[path]`, the WebSocket network layer | no |
 | `smw-sdl2`, `smw-sdl3` | Window and presentation, audio output, event pump to `InputEvent`, pad mapping, platform paths, Android and Emscripten glue | yes |
 | `smw-headless` | In-memory framebuffer, a sound-command log, a scripted clock, temp-dir storage | no |
 | apps | `main()` per binary: select the backend, build `Services`, run the frame driver | via backend |
@@ -69,7 +68,7 @@ Rules:
 
 - `smw-core` keeps the C++ mirror layout inside the crate (`smw_core::smw::gs_gameplay` mirrors `GSGameplay.cpp`). Upstream sync stays a file-to-file port.
 - The backend is a compile-time choice: `cargo build --bin smw --features sdl3`. The default is `sdl2`. Enabling both features is a `compile_error!`, because the two libraries' symbols collide.
-- Binary names stay `smw`, `leveleditor`, `worldeditor`, `smw_server` and `smw_relay`, so the tools, packaging scripts and docs keep working.
+- Binary names stay `smw`, `leveleditor`, `worldeditor` and `smw_relay`, so the tools, packaging scripts and docs keep working.
 - File moves (`src/` to `crates/smw-core/src/`) happen in one rename-only PR during an agreed merge freeze, because open agent branches touch `src/`, `tools/` and `web/` (see Rollout, phase 1).
 
 ### Trait boundaries

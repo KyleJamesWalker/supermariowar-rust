@@ -32,7 +32,7 @@ git submodule update --init                             # or clone with --recurs
 cargo run --release --bin smw -- --datadir data          # the game
 cargo run --release --bin leveleditor -- --datadir data
 cargo run --release --bin worldeditor -- --datadir data
-cargo run --release --bin smw_server                     # netplay lobby server
+cargo run --release --bin smw_relay                      # netplay lobby server
 cargo test --workspace                                   # unit tests of every crate
 ```
 
@@ -42,10 +42,10 @@ The repository is a Cargo workspace with one `Cargo.lock` at the root, and every
 |---|---|---|
 | `smw-core` (library `smw`) | `crates/smw-core/` | the game, the editors and the replay harness, mirroring the C++ tree |
 | `smw-globals` | `crates/smw-globals/` | the porting infrastructure: `Ptr`, `Global`, `Aliased` and the C++ inheritance macros |
-| `smw-netplay` | `crates/smw-netplay/` | the netplay protocol and lobby server, shared by the game, `smw_server` and `smw_relay` |
+| `smw-netplay` | `crates/smw-netplay/` | the netplay protocol and lobby server, shared by the game and `smw_relay` |
 | `smw-platform` | `crates/smw-platform/` | the platform traits and normalized input events (`docs/design/ARCHITECTURE_V2.md`) |
-| `smw`, `leveleditor`, `worldeditor`, `smw_server` | `apps/<name>/` | one package per binary |
-| `smw_relay` | `apps/smw_relay/` | the WebSocket lobby and relay for [browser multiplayer](#browser-multiplayer) |
+| `smw`, `leveleditor`, `worldeditor` | `apps/<name>/` | one package per binary |
+| `smw_relay` | `apps/smw_relay/` | the netplay lobby and signaling server, over WebSocket |
 
 ## Anbernic (muOS)
 
@@ -79,9 +79,9 @@ On touch screens (`pointer: coarse`) the page shows on-screen controls for playe
 
 Gamepads use the browser Gamepad API. On macOS, Firefox misnumbers Xbox Bluetooth pads (A comes through as button 1), so use Chrome or rebind in Options > Controls.
 
-## Browser multiplayer
+## Online multiplayer
 
-Upstream's web build has no netplay. Here the browser build plays online through `smw_relay`, which runs the lobby server and relays game traffic between players over WebSocket. The page connects to `wss://smw-relay.vps.pocketsquirrel.com`, or to the relay a `?relay=ws://...` parameter names. Browser and native players cannot meet yet. `docs/guides/RELAY.md` covers the protocol, settings and deployment.
+Every build, the browser build included, plays online through `smw_relay`, the lobby and signaling server, over WebSocket. Matches run peer to peer over WebRTC with rollback (GGRS), and browser and native players share rooms. The page connects to `wss://smw-relay.vps.pocketsquirrel.com`, or to the relay a `?relay=ws://...` parameter names. A native game can also host on its own network with "Host on This Device", which needs no internet. `docs/guides/RELAY.md` covers the protocol, settings and deployment.
 
 ```sh
 cargo run --release -p smw_relay -- --port 8080   # then open http://localhost:8000/?relay=ws://localhost:8080

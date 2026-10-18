@@ -3,7 +3,7 @@ use std::env;
 const USAGE: &str = "usage: smw_relay [--port <n>] [--config <lobby config file>] [--healthcheck]
 
   --port         TCP port for WebSocket and /healthz (env SMW_RELAY_PORT, default 8080)
-  --config       lobby server settings, as smw_server's serverconfig (default: serverconfig)
+  --config       lobby server settings file (default: serverconfig)
   --healthcheck  GET /healthz on 127.0.0.1:<port> and exit 0 if it answers 200
 
 environment:

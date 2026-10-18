@@ -1,7 +1,7 @@
 //! Connects to a lobby server on a clock that advances on every read and checks the Servers menu would move on: the
 //! connect reply must be recorded before the skin is sent. Prints one `EV ...` line.
 //!
-//! SDL_VIDEODRIVER=dummy cargo run --example lobby_connect -- <datadir> [server]
+//! SDL_VIDEODRIVER=dummy cargo run --example lobby_connect -- <datadir> [server, default ws://127.0.0.1:12521]
 
 use smw::common::file_list::{FiltersList, GraphicsList, SkinList};
 use smw::common::game::ensure_settings_dir;
@@ -34,7 +34,7 @@ fn main() {
     let mut gp = g.ptr();
     let args: Vec<String> = std::env::args().collect();
     let data = args[1].clone();
-    let server = args.get(2).cloned().unwrap_or_else(|| "127.0.0.1".to_string());
+    let server = args.get(2).cloned().unwrap_or_else(|| "ws://127.0.0.1:12521".to_string());
     smw::services::services(gp.get()).clock = Box::new(TickingClock(Cell::new(0)));
 
     smw::globals::init_globals(gp.get());
