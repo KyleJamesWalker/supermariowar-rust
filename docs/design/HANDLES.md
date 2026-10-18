@@ -1,6 +1,6 @@
 # Typed handles replace the `Ptr` object graph
 
-Status: accepted. This is decision 9 of `ARCHITECTURE_V2.md`, which it left to a separate document.
+Status: done; all six rollout steps have merged, the last in #182. `Ptr` remains where no handle has replaced it. This is decision 9 of `ARCHITECTURE_V2.md`, which it left to a separate document.
 
 ## Summary
 

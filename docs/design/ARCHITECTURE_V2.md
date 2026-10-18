@@ -1,6 +1,6 @@
 # Architecture v2: platform-free core, SDL2 and SDL3 backends
 
-Status: accepted; the decisions are under Risks and decisions. Owner: the port's maintainer. Phase 0 (the Cargo workspace) is PR #23.
+Status: done. Phases 0 to 7 have merged; phase 6 (`smw-sdl3` in CI) was #180 and phase 7 (Rust goldens primary) #167. The text below is the plan as accepted. Decision 7 (netplay) is superseded by `NETPLAY_V2.md`.
 
 ## Summary
 
