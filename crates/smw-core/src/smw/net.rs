@@ -507,12 +507,8 @@ impl NetClient {
         net_record::value_bool(g, "client_restart", || net_layer(gp.get()).client_restart(gp.get()))
     }
 
-    /// The room's WebRTC socket and how many other players it reaches, once all of them connected.
+    /// The room's WebRTC socket, whose peers may still be connecting, and how many other players it will reach.
     pub fn take_peer_socket(&mut self) -> Option<(smw_peer::PeerSocket, usize)> {
-        let ready = self.peer_probe.as_mut().is_some_and(|p| p.all_connected());
-        if !ready {
-            return None;
-        }
         self.peer_probe.take().map(PeerProbe::into_socket)
     }
 

@@ -1,6 +1,6 @@
 //! Netplay v2 matches (docs/design/NETPLAY_V2.md, rollout step 4): every peer restores the host's match start, then
 //! the match runs under a GGRS P2P session over the room's WebRTC connections. Opt in with `SMW_NETPLAY_V2=1` on every
-//! client; without it, or when a peer is missing at the start, the match runs over v1 as before.
+//! client; without it the match runs over v1 as before.
 
 use crate::common::input::COutputControl;
 use crate::game::Game;
@@ -13,6 +13,7 @@ use std::time::{Duration, Instant};
 const MSG_SLOT: u8 = 1;
 const MSG_START_PART: u8 = 2;
 const MSG_READY: u8 = 3;
+const MSG_GO: u8 = 4;
 const PART_BYTES: usize = 16 * 1024;
 const START_DEADLINE: Duration = Duration::from_secs(20);
 const RESEND_TICKS: u64 = 30;
@@ -39,6 +40,7 @@ pub struct V2Match {
     parts: Vec<Option<Vec<u8>>>,
     ready: Vec<PeerId>,
     restored: bool,
+    go: bool,
     phase: Phase,
     targets: Vec<KeySlot>,
     local_device: COutputControl,
@@ -48,8 +50,8 @@ pub struct V2Match {
     desyncs: u32,
 }
 
-/// Called where a match starts (`MenuState::enter_gameplay`, after the checkpoint point). On a v2 client whose peers
-/// all connected, it takes the room's sockets for the match; the host also captures the match start to send.
+/// Called where a match starts (`MenuState::enter_gameplay`, after the checkpoint point). On a v2 client in a room the
+/// lobby handed to WebRTC, it takes the room's socket for the match; the host also captures the match start to send.
 /// True when the caller must not start the match: a joiner starts it from the host's match start instead.
 pub fn match_starting(g: &mut Game) -> bool {
     let mut gp = g.ptr();
@@ -57,7 +59,7 @@ pub fn match_starting(g: &mut Game) -> bool {
         return false;
     }
     let Some((socket, others)) = gp.netplay.client.take_peer_socket() else {
-        println!("[net] v2: not every peer connected; this match runs over v1");
+        println!("[net] v2: the lobby sent no WebRTC room; this match runs over v1");
         return false;
     };
     let host = g.netplay.theHostIsMe;
@@ -73,6 +75,7 @@ pub fn match_starting(g: &mut Game) -> bool {
         parts: Vec::new(),
         ready: Vec::new(),
         restored: host,
+        go: false,
         phase: Phase::Starting,
         targets: Vec::new(),
         local_device: g.game_values.playerInput.outputControls[0],
@@ -170,13 +173,15 @@ impl V2Match {
                         self.ready.push(peer);
                     }
                 }
+                Some(&MSG_GO) if !self.host => self.go = true,
                 _ => {}
             }
         }
         Ok(())
     }
 
-    /// The handshake: slots from everyone, the match start to the joiners, and READY back to the host. False ends it.
+    /// The handshake: slots from everyone, the match start to the joiners, READY back to the host, then the host's GO.
+    /// Every message repeats until GO, since a peer may still be connecting or not yet reading. False ends it.
     fn start_step(&mut self, g: &mut Game) -> bool {
         self.socket.update_peers();
         if let Err(e) = self.receive_reliable(g) {
@@ -195,8 +200,15 @@ impl V2Match {
             }
         }
         let all_slots = self.slots.len() >= self.others;
-        let all_ready = !self.host || self.ready.len() >= self.others;
-        if !(self.restored && all_slots && all_ready) {
+        if !(self.restored && all_slots) {
+            return true;
+        }
+        if self.host {
+            if self.ready.len() < self.others {
+                return true;
+            }
+            self.send_all(&[MSG_GO]);
+        } else if !self.go {
             return true;
         }
         match self.start_session() {

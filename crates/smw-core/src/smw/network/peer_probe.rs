@@ -30,11 +30,6 @@ impl PeerProbe {
         PeerProbe { socket: PeerSocket::connect(&cstr_field(&pkg.roomURL), &ice), others, opened: Instant::now(), reported: false }
     }
 
-    pub fn all_connected(&mut self) -> bool {
-        self.update();
-        self.socket.connected_peers().len() >= self.others
-    }
-
     pub fn into_socket(self) -> (PeerSocket, usize) {
         (self.socket, self.others)
     }
