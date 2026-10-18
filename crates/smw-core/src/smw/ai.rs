@@ -1248,6 +1248,30 @@ fn stomp_lead_jump(g: &mut Game, me: PlayerId, target: PlayerId, wrap: bool) -> 
     (dx.abs() as f32 - lead).abs() <= window.max(PW as f32 / 2.0)
 }
 
+/// The way to step (true for right) to get out from under an opponent falling onto `me`, if one is.
+fn dodge_stomp(g: &mut Game, me: PlayerId) -> Option<bool> {
+    let p = g.player(me);
+    if p.is_invincible() || p.shyguy || p.bobomb {
+        return None;
+    }
+    let (mx, my, team) = (p.ix as i32, p.iy as i32, p.teamID);
+    for i in 0..g.players.len() {
+        let o = g.player(g.players[i]);
+        if g.players[i] == me || o.teamID == team || !o.isready() || o.vely <= 0.0 {
+            continue;
+        }
+        let mut dx = o.ix as i32 - mx;
+        if dx.abs() > App::screenWidth / 2 {
+            dx -= dx.signum() * App::screenWidth;
+        }
+        let gap = my - (o.iy as i32 + PH);
+        if dx.abs() < PW + 8 && (0..96).contains(&gap) {
+            return Some(dx < 0 || (dx == 0 && p.is_facing_right(g)));
+        }
+    }
+    None
+}
+
 fn solid_at(g: &mut Game, tx: i32, ty: i32) -> bool {
     g.g_map.map(tx, ty) & tile_flag_solid as i32 != 0 || !g.map_block(tx as i16, ty as i16).is_null()
 }
@@ -1813,6 +1837,13 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
         }
 
         follow_path(g, this, actionType, playerKeys);
+
+        if g.game_values.cpudifficulty >= 2 {
+            if let Some(right) = dodge_stomp(g, pPlayer) {
+                playerKeys.game_left_mut().fDown = !right;
+                playerKeys.game_right_mut().fDown = right;
+            }
+        }
 
         if let Some(column) = wall_ahead(g, ix32, iy32, playerKeys.game_left().fDown, playerKeys.game_right().fDown) {
             playerKeys.game_jump_mut().fDown = true;
