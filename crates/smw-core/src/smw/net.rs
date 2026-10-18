@@ -20,6 +20,7 @@ use crate::smw::network::file_compressor::FileCompressor;
 use crate::smw::network::net_config_manager::NetConfigManager;
 use crate::smw::network::net_record::{self, PeerInfo, ReplayPeer, Side};
 use crate::smw::network::network_layer::NetworkLayer;
+use crate::smw::network::peer_probe::PeerProbe;
 use crate::smw::network::protocol_game_packages as gpkgs;
 use crate::smw::objectgame::PowerupType;
 use crate::smw::ui::network_list_scroll::MI_NetworkListScroll;
@@ -428,6 +429,8 @@ pub struct NetClient {
     room_list_keep: Option<u32>,
     shown_filter: String,
 
+    peer_probe: Option<PeerProbe>,
+
     pub local_gamehost: NetGameHost,
 
     foreign_lobbyserver: Ptr<dyn NetPeer>,
@@ -454,6 +457,7 @@ impl Clone for NetClient {
             room_list_timer: self.room_list_timer,
             room_list_keep: self.room_list_keep,
             shown_filter: self.shown_filter.clone(),
+            peer_probe: None,
             local_gamehost: self.local_gamehost.clone(),
             foreign_lobbyserver: Ptr::null(),
             foreign_gamehost: Ptr::null(),
@@ -478,6 +482,7 @@ impl NetClient {
             room_list_timer: 0,
             room_list_keep: None,
             shown_filter: String::new(),
+            peer_probe: None,
             local_gamehost: NetGameHost::new(),
             foreign_lobbyserver: Ptr::null(),
             foreign_gamehost: Ptr::null(),
@@ -503,10 +508,14 @@ impl NetClient {
         let mut gp = g.ptr();
         self.local_gamehost.update(g);
         net_record::listen(g, Side::Client, self, |g, handler| net_layer(g).client_listen(g, handler));
+        if let Some(probe) = &mut self.peer_probe {
+            probe.update();
+        }
     }
 
     pub fn stop(&mut self, g: &mut Game) {
         self.local_gamehost.stop(g);
+        self.peer_probe = None;
 
         if g.netplay.connectSuccessful {
             self.send_goodbye(g);
@@ -1351,6 +1360,12 @@ impl NetworkEventHandler<Game> for NetClient {
             NET_RESPONSE_CREATE_OK => self.handle_room_created_message(g, data),
 
             NET_RESPONSE_CREATE_ERROR => self.fail(LobbyError::CreateFailed),
+
+            NET_L2P_MATCH_ROOM => {
+                if !net_record::replaying(g) {
+                    self.peer_probe = Some(PeerProbe::open(&pkgs::MatchRoom::from_bytes(data)));
+                }
+            }
 
             NET_L2P_GAMEHOST_INFO => self.handle_room_start_message(g, client, data),
 
