@@ -220,9 +220,23 @@ pub fn net_load_server_list(g: &mut Game) {
         crate::smw::network::lan_beacon::listen();
     }
     #[cfg(not(target_os = "emscripten"))]
-    if let Some(url) = lan_host() {
+    if std::env::var("SMW_LAN_HOST").is_ok_and(|v| v == "1") {
+        host_on_this_device(g);
+    }
+}
+
+/// Starts this game's own lobby and signaling for its network (the Servers menu's Host on This Device, or
+/// `SMW_LAN_HOST=1`) and selects it. False on a build that cannot host.
+pub fn host_on_this_device(g: &mut Game) -> bool {
+    #[cfg(target_os = "emscripten")]
+    return false;
+    #[cfg(not(target_os = "emscripten"))]
+    {
+        let url = lan_host();
         g.netplay.savedServers.retain(|s| s.hostname != url);
         g.netplay.savedServers.insert(0, ServerAddress { hostname: url });
+        g.netplay.selectedServerIndex = 0;
+        true
     }
 }
 
@@ -254,21 +268,18 @@ pub fn merge_nearby(g: &mut Game) -> bool {
 #[cfg(not(target_os = "emscripten"))]
 pub const LAN_HOST_PORT: u16 = 12523;
 
-/// With `SMW_LAN_HOST=1`, this game runs the lobby and signaling for its network (docs/design/NETPLAY_V2.md, step 6)
-/// and lists itself first. Other players add `ws://<this device's address>:12523`.
+/// Runs the lobby and signaling for this game's network once (docs/design/NETPLAY_V2.md, step 6) and returns its URL
+/// here. Nearby games find it by its beacon, or players add `ws://<this device's address>:12523`.
 #[cfg(not(target_os = "emscripten"))]
-fn lan_host() -> Option<String> {
+fn lan_host() -> String {
     static STARTED: std::sync::Once = std::sync::Once::new();
-    if !std::env::var("SMW_LAN_HOST").is_ok_and(|v| v == "1") {
-        return None;
-    }
     STARTED.call_once(|| {
         smw_relay::run_embedded(LAN_HOST_PORT);
         crate::smw::network::lan_beacon::broadcast(LAN_HOST_PORT);
         let address = crate::smw::network::lan_beacon::local_address().map_or("this device's address".to_string(), |a| a.to_string());
         println!("[net] Hosting on this device: other players add ws://{address}:{LAN_HOST_PORT}");
     });
-    Some(format!("ws://127.0.0.1:{LAN_HOST_PORT}"))
+    format!("ws://127.0.0.1:{LAN_HOST_PORT}")
 }
 
 /****************************
