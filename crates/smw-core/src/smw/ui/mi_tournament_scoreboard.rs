@@ -5,7 +5,7 @@ use crate::game::Game;
 use crate::common::game::App;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::gfxSprite;
-use crate::common::global_constants::{MAX_WORLD_BONUSES_AWARDED, PGFX_STANDING_R, PI, TWO_PI, VELJUMP};
+use crate::common::global_constants::{ticks, vel, MAX_WORLD_BONUSES_AWARDED, PGFX_STANDING_R, PI, TWO_PI, VELJUMP};
 use crate::common::match_types::MatchType;
 use crate::common::math::trig::{cosf, sinf};
 use crate::common::random_number_generator::RANDOM_INT;
@@ -416,10 +416,10 @@ impl MI_TournamentScoreboard {
             //Flash the background of the winning teams
             for iTeam in 0..iNumWinningTeams as usize {
                 let w = iWinningTeams[iTeam] as usize;
-                self.miTeamImages[w].set_animation_speed(20);
+                self.miTeamImages[w].set_animation_speed(ticks(20) as i16);
 
                 if let Some(bg) = self.worldPointsBackground[w].as_mut() {
-                    bg.set_animation_speed(20);
+                    bg.set_animation_speed(ticks(20) as i16);
                 }
             }
         }
@@ -435,10 +435,10 @@ impl MI_TournamentScoreboard {
         if g.game_values.tournament_scores[self.iGameWinner as usize].wins == self.iNumGames {
             self.iTournamentWinner = self.iGameWinner;
             let w = self.iTournamentWinner as usize;
-            self.miTeamImages[w].set_animation_speed(20);
+            self.miTeamImages[w].set_animation_speed(ticks(20) as i16);
 
             if let Some(bg) = self.worldPointsBackground[w].as_mut() {
-                bg.set_animation_speed(20);
+                bg.set_animation_speed(ticks(20) as i16);
             }
         }
 
@@ -453,7 +453,7 @@ impl MI_TournamentScoreboard {
                     self.iSwirlIconGame = iGame;
 
                     let angle = RANDOM_INT(gp.get(), 1000) as f32 * TWO_PI / 1000.0f32;
-                    self.miIconImages[t][g].set_swirl(true, 250.0, angle, 3.0, 0.1);
+                    self.miIconImages[t][g].set_swirl(true, 250.0, angle, vel(3.0), vel(0.1));
                 }
 
                 self.miIconImages[t][g].set_pulse(false);
@@ -508,7 +508,7 @@ impl UI_ControlTrait for MI_TournamentScoreboard {
             //Single tournament winning team
             self.iFireworksCounter -= 1;
             if self.iFireworksCounter < 0 && self.iTournamentWinner >= 0 {
-                self.iFireworksCounter = (RANDOM_INT(gp.get(), 30) + 10) as i16;
+                self.iFireworksCounter = ticks(RANDOM_INT(gp.get(), 30) + 10) as i16;
 
                 let w = self.iTournamentWinner as usize;
                 self.iExplosionCounter -= 1;
@@ -522,7 +522,7 @@ impl UI_ControlTrait for MI_TournamentScoreboard {
                     let iRandY = (RANDOM_INT(gp.get(), 280) + 100) as i16;
 
                     for iBlock in 0..28i16 {
-                        let dVel: f32 = 7.0f32 + ((iBlock % 2) as f32 * 5.0f32);
+                        let dVel: f32 = vel(7.0f32 + ((iBlock % 2) as f32 * 5.0f32));
                         let dVelX = dVel * cosf(dAngle);
                         let dVelY = dVel * sinf(dAngle);
 
@@ -545,7 +545,7 @@ impl UI_ControlTrait for MI_TournamentScoreboard {
 
             self.iWinnerTextCounter -= 1;
             if self.iWinnerTextCounter < 0 {
-                self.iWinnerTextCounter = (RANDOM_INT(gp.get(), 35) + 15) as i16;
+                self.iWinnerTextCounter = ticks(RANDOM_INT(gp.get(), 35) + 15) as i16;
 
                 let mut szWinnerText = String::new();
                 if self.iTournamentWinner == -2 {

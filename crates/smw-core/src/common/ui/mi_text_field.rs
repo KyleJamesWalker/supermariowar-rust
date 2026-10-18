@@ -10,6 +10,7 @@ use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_image::MI_Image;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
+use crate::common::global_constants::ticks;
 use crate::common::keys::{SDL_SCANCODE_LSHIFT, SDL_SCANCODE_RSHIFT};
 
 const NUMBER_KEY_MAP: [i16; 10] = [41, 33, 64, 35, 36, 37, 94, 38, 42, 40];
@@ -92,7 +93,7 @@ impl MI_TextField {
     pub fn new(nspr: SpriteId, x: i16, y: i16, name: &str, width: i16, indent: i16) -> Self {
         let ui_control = UI_Control::new(x, y);
         let mut miModifyCursor = Box::new(MI_Image::new(nspr, ui_control.m_pos.x + indent, ui_control.m_pos.y + 4, 136, 64, 15, 24, 4, 1, 8));
-        miModifyCursor.set_blink(true, 20);
+        miModifyCursor.set_blink(true, ticks(20) as i16);
         miModifyCursor.set_visible(false);
 
         MI_TextField {

@@ -2,7 +2,7 @@
 
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
-use crate::common::global_constants::PREVIEWTILESIZE;
+use crate::common::global_constants::{ticks, PREVIEWTILESIZE};
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
 use crate::smw::world::WorldMap;
@@ -158,7 +158,7 @@ impl UI_ControlTrait for MI_WorldPreviewDisplay {
         let mut fNeedFullRefresh = false;
 
         self.iAnimationTimer += 1;
-        if self.iAnimationTimer > 15 {
+        if self.iAnimationTimer > ticks(15) as i16 {
             self.iAnimationTimer = 0;
             self.iAnimationFrame += PTS;
 
