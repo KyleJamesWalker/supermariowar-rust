@@ -215,6 +215,34 @@ pub fn net_load_server_list(g: &mut Game) {
         g.netplay.savedServers.retain(|s| s.hostname != url);
         g.netplay.savedServers.insert(0, ServerAddress { hostname: url });
     }
+    #[cfg(not(target_os = "emscripten"))]
+    if let Some(url) = lan_host() {
+        g.netplay.savedServers.retain(|s| s.hostname != url);
+        g.netplay.savedServers.insert(0, ServerAddress { hostname: url });
+    }
+}
+
+/// The relay port a game hosting on its own network listens on.
+#[cfg(not(target_os = "emscripten"))]
+pub const LAN_HOST_PORT: u16 = 12523;
+
+/// With `SMW_LAN_HOST=1`, this game runs the lobby and signaling for its network (docs/design/NETPLAY_V2.md, step 6)
+/// and lists itself first. Other players add `ws://<this device's address>:12523`.
+#[cfg(not(target_os = "emscripten"))]
+fn lan_host() -> Option<String> {
+    static STARTED: std::sync::Once = std::sync::Once::new();
+    if !std::env::var("SMW_LAN_HOST").is_ok_and(|v| v == "1") {
+        return None;
+    }
+    STARTED.call_once(|| {
+        smw_relay::run_embedded(LAN_HOST_PORT);
+        let address = std::net::UdpSocket::bind("0.0.0.0:0")
+            .and_then(|s| s.connect("192.0.2.1:9").and_then(|_| s.local_addr()))
+            .map(|a| a.ip().to_string())
+            .unwrap_or_else(|_| "this device's address".to_string());
+        println!("[net] Hosting on this device: other players add ws://{address}:{LAN_HOST_PORT}");
+    });
+    Some(format!("ws://127.0.0.1:{LAN_HOST_PORT}"))
 }
 
 /****************************
@@ -1381,7 +1409,8 @@ impl NetworkEventHandler<Game> for NetClient {
 
             NET_L2P_MATCH_ROOM => {
                 if !net_record::replaying(g) {
-                    self.peer_probe = Some(PeerProbe::open(&pkgs::MatchRoom::from_bytes(data)));
+                    let lobby = g.netplay.savedServers.get(g.netplay.selectedServerIndex as usize).map(|s| s.hostname.clone()).unwrap_or_default();
+                    self.peer_probe = Some(PeerProbe::open(&pkgs::MatchRoom::from_bytes(data), &lobby));
                 }
             }
 

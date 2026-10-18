@@ -7,7 +7,9 @@
 # Env: SMW_RUST_BIN (smw), SMW_RUST_SERVER (smw_server), SMW_RUST_DATA,
 #      NET_GAMES (scenario directories beside this script; default: every net_game*),
 #      NET_GAME_WORK (where the logs go; default: a temporary directory),
-#      HOST_PRESENT_HZ / JOIN_PRESENT_HZ (that client presents at this display rate while ticking at 60, SMW_PRESENT_HZ).
+#      HOST_PRESENT_HZ / JOIN_PRESENT_HZ (that client presents at this display rate while ticking at 60, SMW_PRESENT_HZ),
+#      NET_SERVER_ENTRY (the clients' server list entry; default 127.0.0.1, smw_server over ENet),
+#      NET_NO_SERVER=1 (start no smw_server), HOST_ENV (extra VAR=value settings for the host only).
 # A scenario's host.txt may name a map from net_maps/ (`#@ map=<name>`; each client gets an APFS clone of its data
 # tree with the map added), a host sync seed (`#@ net_seed=<n>`, so the game spawns alike every run) and extra
 # net_game_compare.py arguments (`#@ compare=...`).
@@ -49,7 +51,7 @@ client() {
   [ "$role" = join ] && [ -n "${JOIN_PRESENT_HZ:-}" ] && mapenv+=(SMW_PRESENT_HZ="$JOIN_PRESENT_HZ")
   local home=$dir/home-$role
   mkdir -p "$home/Library/Preferences/.smw"
-  printf 'player_name = "%s"\nservers = ["127.0.0.1"]\n' "$name" > "$home/Library/Preferences/.smw/servers.toml"
+  printf 'player_name = "%s"\nservers = ["%s"]\n' "$name" "${NET_SERVER_ENTRY:-127.0.0.1}" > "$home/Library/Preferences/.smw/servers.toml"
   (cd "$data/.." && exec env HOME="$home" SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy SMW_SEED=1 SMW_FRAMES="$(param frames "$game")" "${mapenv[@]}" \
     SMW_REPLAY="$HERE/$game/$role.txt" SMW_DUMP="$dir/$role.dump" "$@" \
     "$RUST" --datadir "$data")
@@ -60,15 +62,19 @@ for game in "${games[@]}"; do
   dir=$WORK/$game
   mkdir -p "$dir"
   printf 'port 12521\nname Server\nmaxplayers 10\n' > "$dir/serverconfig"
-  (cd "$dir" && exec "$SERVER" serverconfig > server.log 2>&1) & spid=$!
+  spid=
+  if [ -z "${NET_NO_SERVER:-}" ]; then
+    (cd "$dir" && exec "$SERVER" serverconfig > server.log 2>&1) & spid=$!
+  fi
   sleep 0.5
   hdata=$(datadir host "$dir" "$game")
   jdata=$(datadir join "$dir" "$game")
-  client host "$dir" Host "$game" "$hdata" SMW_RECORD_TO="$dir/${game}_host.rec.txt" > "$dir/host.log" 2>&1 & hpid=$!
+  # shellcheck disable=SC2086
+  client host "$dir" Host "$game" "$hdata" SMW_RECORD_TO="$dir/${game}_host.rec.txt" ${HOST_ENV:-} > "$dir/host.log" 2>&1 & hpid=$!
   client join "$dir" Join "$game" "$jdata" SMW_RECORD_TO="$dir/${game}_join.rec.txt" > "$dir/join.log" 2>&1 & jpid=$!
   wait $hpid; hst=$?
   wait $jpid; jst=$?
-  kill $spid 2>/dev/null; wait $spid 2>/dev/null
+  [ -n "$spid" ] && { kill $spid 2>/dev/null; wait $spid 2>/dev/null; }
   echo "== $game: host exit $hst, join exit $jst"
   if ! python3 "$HERE/net_game_compare.py" --spawns $(param compare "$game") "$dir/host.dump" "$dir/join.dump"; then
     fail=1

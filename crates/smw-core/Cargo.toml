@@ -32,6 +32,7 @@ smw-sdl2 = { path = "../smw-sdl2" }
 
 # Native only: the web build plays online through smw_relay (apps/smw_relay).
 [target.'cfg(not(target_os = "emscripten"))'.dependencies]
+smw_relay = { path = "../../apps/smw_relay" }
 tungstenite = { version = "0.30", default-features = false, features = ["handshake", "rustls-tls-webpki-roots"] }
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 enet-sys = "1.0.5"

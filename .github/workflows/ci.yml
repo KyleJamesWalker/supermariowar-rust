@@ -128,6 +128,13 @@ jobs:
           SDL_RENDER_DRIVER: software
         run: timeout 20m tools/net_v2_test.py "$RUNNER_TEMP/net-games-v2"
 
+      - name: Net games hosted on a client, with no server (netplay v2 LAN host)
+        env:
+          SDL_RENDER_DRIVER: software
+          LAN: '1'
+          NET_GAMES: net_game net_game_frenzy net_game_coins
+        run: timeout 10m tools/net_v2_test.py "$RUNNER_TEMP/net-games-lan"
+
       - name: Net games with clients presenting at different rates
         env:
           SDL_RENDER_DRIVER: software
@@ -145,6 +152,7 @@ jobs:
           path: |
             ${{ runner.temp }}/net-games
             ${{ runner.temp }}/net-games-v2
+            ${{ runner.temp }}/net-games-lan
             ${{ runner.temp }}/net-games-mixed-rate
           retention-days: 7
 
