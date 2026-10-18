@@ -1877,7 +1877,7 @@ impl GameState for MenuState {
             }
 
             if g.game_values.screenfadespeed != 0 {
-                g.game_values.screenfade += g.game_values.screenfadespeed;
+                g.game_values.screenfade += g.game_values.screenfade_step();
 
                 if g.game_values.screenfade <= 0 {
                     g.game_values.screenfadespeed = 0;
