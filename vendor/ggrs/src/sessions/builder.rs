@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use instant::Duration;
+use std::time::Duration;
 
 use crate::{
     network::protocol::UdpProtocol, sessions::p2p_session::PlayerRegistry, Config, DesyncDetection,

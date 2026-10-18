@@ -12,7 +12,10 @@ use crate::{
 };
 use tracing::{debug, trace, warn};
 
+#[cfg(not(target_os = "emscripten"))]
 use instant::{Duration, Instant};
+#[cfg(target_os = "emscripten")]
+use std::time::{Duration, Instant};
 use std::collections::vec_deque::Drain;
 use std::collections::VecDeque;
 use std::collections::{BTreeMap, HashMap};
