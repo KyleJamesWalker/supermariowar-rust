@@ -7,6 +7,8 @@
 //   CHROME        Chrome binary (default: the macOS Google Chrome app)
 //   EXAMPLES_DIR  where `cargo build -p smw-peer --examples --release` put signal and echo_peer
 //                 (default: target/release/examples)
+//   SIGNAL_URL    an already running signaling server, e.g. ws://127.0.0.1:3536 for matchbox_server
+//                 (default: start the signal example)
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -50,17 +52,21 @@ const start = (bin, args, log) => {
     return { child, output: () => text };
 };
 
-const signal = start(join(examples, 'signal'), [], 'signal.log');
-const signalPort = await new Promise((ok) => {
-    const poll = setInterval(() => {
-        const m = signal.output().match(/^listening (\d+)$/m);
-        if (m) {
-            clearInterval(poll);
-            ok(Number(m[1]));
-        }
-    }, 20);
-});
-const room = `ws://127.0.0.1:${signalPort}/web-peer-test`;
+let signalUrl = process.env.SIGNAL_URL;
+if (!signalUrl) {
+    const signal = start(join(examples, 'signal'), [], 'signal.log');
+    const port = await new Promise((ok) => {
+        const poll = setInterval(() => {
+            const m = signal.output().match(/^listening (\d+)$/m);
+            if (m) {
+                clearInterval(poll);
+                ok(Number(m[1]));
+            }
+        }, 20);
+    });
+    signalUrl = `ws://127.0.0.1:${port}`;
+}
+const room = `${signalUrl}/web-peer-test-${process.pid}`;
 
 const page = `<!doctype html><meta charset="utf-8"><title>peer test</title>
 <script>window.addToLibrary = (lib) => { window.SMWPeer = lib.$SMWPeer; };</script>
