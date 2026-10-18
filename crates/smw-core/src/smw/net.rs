@@ -198,10 +198,10 @@ pub fn net_load_server_list(g: &mut Game) {
 
     #[cfg(all(not(feature = "no_network"), target_os = "emscripten"))]
     let relay_url = crate::smw::platform::network::websocket::network_layer_websocket::relay_url;
-    // A native game lists the public relay until the player saves servers of their own.
+    // A native game lists the public relay until the player saves servers of their own; replays list what they recorded.
     #[cfg(all(not(feature = "no_network"), not(target_os = "emscripten")))]
     let relay_url = {
-        let empty = g.netplay.savedServers.is_empty();
+        let empty = g.netplay.savedServers.is_empty() && !crate::smw::harness::replaying(g);
         move || empty.then(|| crate::smw::platform::network::websocket::network_layer_websocket::DEFAULT_RELAY_URL.to_string())
     };
     #[cfg(feature = "no_network")]
