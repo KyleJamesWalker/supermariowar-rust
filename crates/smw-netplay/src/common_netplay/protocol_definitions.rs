@@ -1,7 +1,7 @@
 //! Port of src/common_netplay/ProtocolDefinitions.h
 
 pub const NET_PROTOCOL_VERSION_MAJOR: u8 = 0;
-pub const NET_PROTOCOL_VERSION_MINOR: u8 = 8;
+pub const NET_PROTOCOL_VERSION_MINOR: u8 = 9;
 pub const NET_MAX_MESSAGE_SIZE: usize = 128;
 pub const NET_LOBBYSERVER_PORT: u16 = 12521;
 pub const NET_GAMEHOST_PORT: u16 = 12522;
@@ -45,6 +45,7 @@ pub const NET_G2L_START_ROOM: u8 = 50;
 pub const NET_L2P_GAMEHOST_INFO: u8 = 51;
 pub const NET_L2G_CLIENTS_INFO: u8 = 52;
 pub const NET_L2P_MATCH_ROOM: u8 = 53;
+pub const NET_L2P_MATCH_START: u8 = 54;
 pub const NET_G2P_SYNC: u8 = 55;
 pub const NET_P2G_SYNC_OK: u8 = 56;
 pub const NET_G2E_GAME_START: u8 = 57;

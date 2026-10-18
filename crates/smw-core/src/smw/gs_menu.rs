@@ -1059,7 +1059,7 @@ impl MenuState {
         let mut gp = g.ptr();
         // Shortcut to game start
         if g.netplay.active {
-            if g.netplay.client.take_reply(NET_G2E_GAME_START) {
+            if g.netplay.client.take_reply(NET_L2P_MATCH_START) {
                 code = MENU_CODE_NET_ROOM_GO;
             }
         }

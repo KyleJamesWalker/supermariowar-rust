@@ -272,39 +272,13 @@ impl Room {
         }
     }
 
-    pub fn send_start_signal(&mut self) {
-        debug_assert!(self.hostPlayerNumber < 4);
-
-        let mut gamehost = self.players[self.hostPlayerNumber as usize];
-
-        println!("sendStartSignal");
-
-        let (gh_host, gh_ptr) = {
-            let gh_netclient = gamehost.network_client.as_ref().unwrap();
-            (gh_netclient.address_host(), gh_netclient.as_ref() as *const _ as *const u8)
-        };
-        let pkg_to_players = GameHostInfo::new(gh_host);
-
-        println!("  pkg->players: [{}:{}]", { pkg_to_players.host }, NET_GAMEHOST_PORT);
-
-        let mut pkg_to_gh = PlayerInfo::new();
-        let mut playerIndex: u8 = 0;
-        for p in 0..4u8 {
-            if p != self.hostPlayerNumber && !self.players[p as usize].is_null() {
-                let (host, port, ptr) = {
-                    let client = self.players[p as usize].network_client.as_ref().unwrap();
-                    (client.address_host(), client.address_port(), client.as_ref() as *const _ as *const u8)
-                };
-                debug_assert!(ptr != gh_ptr);
-
-                pkg_to_gh.set_player(playerIndex, host, port);
-                self.players[p as usize].send_data(pkg_to_players.as_bytes());
-                playerIndex += 1;
+    pub fn send_match_start(&mut self) {
+        let pkg = MessageHeader::new(NET_L2P_MATCH_START);
+        for p in 0..4 {
+            if !self.players[p].is_null() {
+                self.players[p].send_data(pkg.as_bytes());
             }
         }
-
-        gamehost.send_data(pkg_to_gh.as_bytes());
-
         self.visible = false;
     }
 

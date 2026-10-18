@@ -452,6 +452,20 @@ pub fn reseed_for_match(g: &mut Game) {
     RandomNumberGenerator::generator(gp.get()).reseed(g.netplay.common_random_seed);
 }
 
+/// The host's match: seed, game mode settings and map name.
+fn prepare_match(g: &mut Game) {
+    let mut gp = g.ptr();
+    RandomNumberGenerator::generator(gp.get()).reseed(net_record::value_u32(g, "time", || crate::smw::harness::net_seed().unwrap_or(unsafe { libc_time() } as u32)));
+    if g.netplay.randomize_settings {
+        crate::smw::gs_menu::roll_net_game_mode_settings(g);
+    } else {
+        crate::smw::gs_gameplay::set_game_mode_settings_from_menu(g);
+    }
+    g.netplay.match_map_name = Path::new(&g.netplay.mapfilepath).file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+    g.netplay.match_randomized = g.netplay.randomize_settings;
+    g.netplay.common_random_seed = RANDOM_INT(gp.get(), 32767) as u32;
+}
+
 /// `NET_NOTICE_GAMEMODESETTINGS` with the current game mode's settings.
 fn game_mode_settings_package(g: &mut Game) -> Vec<u8> {
     let mut blob = vec![0u8; std::mem::size_of::<MessageHeader>() + GMS_UNION_SIZE];
@@ -1106,6 +1120,17 @@ impl NetClient {
         }
     }
 
+    /// The lobby starts the room's match. The host decides it here and hands it to the joiners when it enters gameplay
+    /// (`net_v2::match_starting`); joiners wait there for it.
+    fn handle_match_start(&mut self, g: &mut Game) {
+        if g.netplay.theHostIsMe {
+            prepare_match(g);
+        }
+        println!("[net] Game start!");
+        g.netplay.gameRunning = true;
+        self.set_as_last_received_message(g, NET_L2P_MATCH_START);
+    }
+
     pub fn handle_game_start_message(&mut self, g: &mut Game) {
         println!("[net] Game start!");
         g.netplay.gameRunning = true;
@@ -1318,7 +1343,7 @@ impl NetClient {
     pub fn set_as_last_received_message(&mut self, g: &mut Game, packageType: u8) {
         self.lastReceivedMessage.packageType = packageType;
         self.lastReceivedMessage.timestamp = ticks(g);
-        if matches!(packageType, NET_RESPONSE_CONNECT_OK | NET_RESPONSE_JOIN_OK | NET_RESPONSE_CREATE_OK | NET_G2E_GAME_START) {
+        if matches!(packageType, NET_RESPONSE_CONNECT_OK | NET_RESPONSE_JOIN_OK | NET_RESPONSE_CREATE_OK | NET_L2P_MATCH_START) {
             self.lastReply = self.lastReceivedMessage;
             self.deadline = 0;
         }
@@ -1478,6 +1503,8 @@ impl NetworkEventHandler<Game> for NetClient {
                     self.peer_probe = Some(PeerProbe::open(&pkgs::MatchRoom::from_bytes(data), &lobby));
                 }
             }
+
+            NET_L2P_MATCH_START => self.handle_match_start(g),
 
             NET_L2P_GAMEHOST_INFO => self.handle_room_start_message(g, client, data),
 

@@ -472,16 +472,19 @@ impl SMWServer {
             return;
         }
 
-        Self::send_match_room(&self.v2, room);
-        room.send_start_signal();
+        if !Self::send_match_room(&self.v2, room) {
+            log(&format!("[error] Room #{} cannot start: netplay needs SMW_SIGNAL_URL.", roomID as i32));
+            return;
+        }
+        room.send_match_start();
         player.lastActivityTime = time_now();
         log(&format!("[info] Room #{} starting.", roomID as i32));
     }
 
     /// Gives every player of a starting room the same new signaling room and their own TURN credentials.
-    fn send_match_room(v2: &V2Settings, room: &mut Room) {
+    fn send_match_room(v2: &V2Settings, room: &mut Room) -> bool {
         if v2.signal_url.is_empty() {
-            return;
+            return false;
         }
         let id = match_room::new_room_id();
         let url = format!("{}/{}", v2.signal_url.trim_end_matches('/'), id);
@@ -496,10 +499,11 @@ impl SMWServer {
             let turn_url = if username.is_empty() { "" } else { v2.turn_url.as_str() };
             let Some(pkg) = MatchRoom::with(slots.len() as u8, &url, turn_url, &username, &credential) else {
                 log(&format!("[error] Netplay v2 settings too long for NET_L2P_MATCH_ROOM: {url}"));
-                return;
+                return false;
             };
             room.players[slot].send_data(pkg.as_bytes());
         }
+        true
     }
 
     fn start_room_if_everyone_ready(&mut self, _playerID: u64) {}
