@@ -204,7 +204,23 @@ impl GameplayState {
             g.eyecandy[0].eyecandies.len(),
             g.eyecandy[1].eyecandies.len(),
             g.eyecandy[2].eyecandies.len()
-        )
+        )?;
+
+        static DUMP_OBJECTS: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        if *DUMP_OBJECTS.get_or_init(|| std::env::var_os("SMW_DUMP_OBJECTS").is_some_and(|v| !v.is_empty())) {
+            let containers = [&g.noncolcontainer, &g.objectcontainer[0], &g.objectcontainer[1], &g.objectcontainer[2]];
+            for (c, container) in containers.into_iter().enumerate() {
+                for object in container.list() {
+                    let o = object.obj();
+                    writeln!(
+                        out,
+                        "X c={} type={} net={} fx={:.4} fy={:.4} velx={:.4} vely={:.4} state={} dead={}",
+                        c, o.objectType as i32, o.iNetworkID, o.fx as f64, o.fy as f64, o.velx as f64, o.vely as f64, o.state, o.dead as i32
+                    )?;
+                }
+            }
+        }
+        Ok(())
     }
 }
 
