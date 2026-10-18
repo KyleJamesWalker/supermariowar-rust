@@ -14,6 +14,7 @@ on:
       - tools/ref/unordered_map_order.txt
       - Dockerfile
       - .dockerignore
+      - vendor/**
       - deploy/signal/**
       - .github/workflows/relay.yml
       - .github/workflows/build_relay.yml
@@ -29,6 +30,7 @@ on:
       - tools/ref/unordered_map_order.txt
       - Dockerfile
       - .dockerignore
+      - vendor/**
       - deploy/signal/**
       - .github/workflows/relay.yml
       - .github/workflows/build_relay.yml

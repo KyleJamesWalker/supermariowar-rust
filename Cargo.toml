@@ -1,5 +1,6 @@
 [workspace]
 resolver = "2"
+exclude = ["vendor/ggrs"]
 members = [
     "crates/smw-core",
     "crates/smw-globals",
@@ -52,3 +53,7 @@ overflow-checks = false
 
 [profile.test]
 overflow-checks = false
+
+# ggrs 0.13.0 that links under Emscripten (vendor/ggrs/PATCHED.md).
+[patch.crates-io]
+ggrs = { path = "vendor/ggrs" }

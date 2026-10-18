@@ -5,6 +5,7 @@ COPY Cargo.toml Cargo.lock ./
 # Cargo needs every workspace member; only the relay and its crates are built here.
 COPY crates crates
 COPY apps apps
+COPY vendor vendor
 RUN cargo build --release --locked --package smw_relay \
     && mkdir -p /out/srv \
     && cp target/release/smw_relay /out/ \
