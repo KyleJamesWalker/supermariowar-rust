@@ -138,9 +138,7 @@ pub struct Game {
     pub are_paths_initialized: bool,
     /// Indexed by the device number in bindings and replay lines; `None` is an empty slot.
     pub devices: Vec<Option<Device>>,
-    #[cfg(target_os = "emscripten")]
     pub relay: crate::smw::platform::network::websocket::network_layer_websocket::Relay,
-    #[cfg(target_os = "emscripten")]
     pub recv_buffer: [u8; smw_netplay::common_netplay::relay_frame::MAX_MESSAGE_LEN],
     /// What a copy from `clone_match` owns where the original's fields point at shared values.
     match_copy: Option<MatchCopy>,
@@ -319,9 +317,7 @@ impl Game {
             SMW_Root_Data_Dir: String::new(),
             are_paths_initialized: false,
             devices: Vec::new(),
-            #[cfg(target_os = "emscripten")]
             relay: crate::smw::platform::network::websocket::network_layer_websocket::Relay::new(),
-            #[cfg(target_os = "emscripten")]
             recv_buffer: [0; smw_netplay::common_netplay::relay_frame::MAX_MESSAGE_LEN],
             match_copy: None,
         }
@@ -423,9 +419,7 @@ impl Game {
             SMW_Root_Data_Dir: self.SMW_Root_Data_Dir.clone(),
             are_paths_initialized: self.are_paths_initialized,
             devices: self.devices.clone(),
-            #[cfg(target_os = "emscripten")]
             relay: crate::smw::platform::network::websocket::network_layer_websocket::Relay::new(),
-            #[cfg(target_os = "emscripten")]
             recv_buffer: [0; smw_netplay::common_netplay::relay_frame::MAX_MESSAGE_LEN],
             match_copy: Some(MatchCopy { _screen: screen, _musiclist: musiclist }),
         })

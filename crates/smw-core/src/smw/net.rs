@@ -30,7 +30,7 @@ use std::path::Path;
 #[cfg(feature = "no_network")]
 pub type NetworkHandler = crate::smw::platform::network::null::network_layer_null::NetworkLayerNULL;
 #[cfg(all(not(feature = "no_network"), not(target_os = "emscripten")))]
-pub type NetworkHandler = crate::smw::platform::network::enet::network_layer_enet::NetworkLayerENet;
+pub type NetworkHandler = crate::smw::platform::network::dual::NetworkLayerDual;
 #[cfg(all(not(feature = "no_network"), target_os = "emscripten"))]
 pub type NetworkHandler = crate::smw::platform::network::websocket::network_layer_websocket::NetworkLayerWebSocket;
 

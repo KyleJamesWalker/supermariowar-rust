@@ -1,5 +1,6 @@
-//! Not in the C++: the browser's network layer. Each ENet connection becomes a virtual connection to
-//! `smw_relay`, all of them over one WebSocket (web/relay_socket.js, docs/guides/RELAY.md).
+//! The relay network layer: each ENet connection becomes a virtual connection to `smw_relay`, all of them over one
+//! WebSocket (`socket`, docs/guides/RELAY.md). The browser build uses only this; native builds use it for servers
+//! saved as `ws://` or `wss://` URLs.
 
 use crate::game::Game;
 use crate::common_netplay::network_interface::{NetPeer, NetworkEventHandler};
@@ -9,22 +10,13 @@ use crate::globals::{Aliased, Ptr};
 use crate::smw::network::network_layer::NetworkLayer;
 use std::any::Any;
 use std::collections::{BTreeMap, VecDeque};
-use std::ffi::CString;
+use super::socket::{self, CLOSED as WS_CLOSED, CONNECTING as WS_CONNECTING, OPEN as WS_OPEN};
 use std::net::Ipv4Addr;
-use std::os::raw::c_char;
 
+#[cfg(target_os = "emscripten")]
 extern "C" {
-    fn smw_ws_open(url: *const c_char);
-    fn smw_ws_state() -> i32;
-    fn smw_ws_send(data: *const u8, len: usize) -> i32;
-    fn smw_ws_recv(buf: *mut u8, cap: usize) -> i32;
-    fn smw_ws_close();
     fn smw_relay_url_param(buf: *mut u8, cap: usize) -> i32;
 }
-
-const WS_CONNECTING: i32 = 0;
-const WS_OPEN: i32 = 1;
-const WS_CLOSED: i32 = 2;
 
 pub const DEFAULT_RELAY_URL: &str = match option_env!("SMW_RELAY_URL") {
     Some(url) => url,
@@ -32,6 +24,7 @@ pub const DEFAULT_RELAY_URL: &str = match option_env!("SMW_RELAY_URL") {
 };
 
 /// The page's `?relay=` URL, else the build's default; none for an empty `?relay=` (web_replay.mjs).
+#[cfg(target_os = "emscripten")]
 pub fn relay_url() -> Option<String> {
     let mut buf = [0u8; 512];
     let len = unsafe { smw_relay_url_param(buf.as_mut_ptr(), buf.len()) };
@@ -98,10 +91,8 @@ impl Relay {
 impl Relay {
     fn send(&mut self, kind: u8, conn: u16, payload: &[u8]) {
         let message = frame::encode(kind, conn, payload);
-        match unsafe { smw_ws_state() } {
-            WS_OPEN => unsafe {
-                smw_ws_send(message.as_ptr(), message.len());
-            },
+        match socket::state() {
+            WS_OPEN => socket::send(&message),
             WS_CONNECTING => self.outbox.push(message),
             _ => {}
         }
@@ -119,27 +110,26 @@ impl Relay {
     }
 
     fn open(&mut self, url: &str) {
-        let state = unsafe { smw_ws_state() };
+        let state = socket::state();
         if self.url == url && (state == WS_OPEN || state == WS_CONNECTING) {
             return;
         }
         self.drop_all();
         self.url = url.to_string();
         println!("[net] Connecting to relay {}", url);
-        let c_url = CString::new(url).unwrap_or_default();
-        unsafe { smw_ws_open(c_url.as_ptr()) };
+        socket::open(url);
     }
 
     fn close_if_idle(&mut self) {
         if self.conns.is_empty() && !self.listening {
-            unsafe { smw_ws_close() };
+            socket::close();
             self.url.clear();
             self.outbox.clear();
         }
     }
 
     fn connect(&mut self, host: [u8; 4], port: u16) -> bool {
-        let state = unsafe { smw_ws_state() };
+        let state = socket::state();
         if state != WS_OPEN && state != WS_CONNECTING {
             return false;
         }
@@ -170,15 +160,15 @@ impl Relay {
     }
 
     fn pump(&mut self, g: &mut Game) {
-        let state = unsafe { smw_ws_state() };
+        let state = socket::state();
         if state == WS_OPEN {
             for message in std::mem::take(&mut self.outbox) {
-                unsafe { smw_ws_send(message.as_ptr(), message.len()) };
+                socket::send(&message);
             }
         }
 
         loop {
-            let len = unsafe { smw_ws_recv(g.recv_buffer.as_mut_ptr(), MAX_MESSAGE_LEN) };
+            let len = socket::recv(&mut g.recv_buffer);
             if len == -1 {
                 break;
             }
@@ -330,7 +320,7 @@ impl NetworkLayer for NetworkLayerWebSocket {
     fn cleanup(&mut self, g: &mut Game) {
         self.gamehost_shutdown(g);
         self.client_shutdown(g);
-        unsafe { smw_ws_close() };
+        socket::close();
     }
 
     fn client_restart(&mut self, g: &mut Game) -> bool {
@@ -349,15 +339,13 @@ impl NetworkLayer for NetworkLayerWebSocket {
 
     fn gamehost_restart(&mut self, g: &mut Game) -> bool {
         self.gamehost_shutdown(g);
-        unsafe {
-            let state = smw_ws_state();
-            if state != WS_OPEN && state != WS_CONNECTING {
-                eprintln!("[error][net] Could not open game host connection port.");
-                return false;
-            }
-            g.relay.send(LISTEN, 0, &NET_GAMEHOST_PORT.to_be_bytes());
-            g.relay.listening = true;
+        let state = socket::state();
+        if state != WS_OPEN && state != WS_CONNECTING {
+            eprintln!("[error][net] Could not open game host connection port.");
+            return false;
         }
+        g.relay.send(LISTEN, 0, &NET_GAMEHOST_PORT.to_be_bytes());
+        g.relay.listening = true;
         true
     }
 

@@ -2374,6 +2374,7 @@ dependencies = [
  "flate2",
  "ggrs",
  "png",
+ "rustls",
  "sdl2",
  "serde",
  "smw-globals",
@@ -2382,6 +2383,7 @@ dependencies = [
  "smw-platform",
  "smw-sdl2",
  "toml",
+ "tungstenite 0.30.0",
 ]
 
 [[package]]
@@ -2926,6 +2928,7 @@ dependencies = [
  "rustls-pki-types",
  "sha1 0.11.0",
  "thiserror 2.0.21",
+ "webpki-roots 0.26.11",
 ]
 
 [[package]]
