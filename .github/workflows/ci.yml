@@ -107,9 +107,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Build
-        run: |
-          cargo build --release --locked --bin smw --bin smw_relay --example lobby_connect
-          cargo build --release --locked --package smw-peer --example signal
+        run: cargo build --release --locked --bin smw --bin smw_relay --example lobby_connect
 
       - name: Lobby connect stress
         run: tools/ref/net_connect_stress.sh 20
