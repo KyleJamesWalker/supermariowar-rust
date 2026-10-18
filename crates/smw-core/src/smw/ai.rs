@@ -1186,6 +1186,30 @@ const UNREACHABLE_FRAMES: i16 = ticks(90) as i16;
 /// Jumping at a wall this long without getting past it means the wall cannot be jumped.
 const WALL_GIVE_UP_FRAMES: i16 = ticks(45) as i16;
 
+/// Whether jumping now brings `me` down onto `target`'s head: both stand on the same floor, `target` can be stomped,
+/// and the horizontal gap equals the distance `me` closes on it while the jump rises and falls back to head height.
+fn stomp_lead_jump(g: &mut Game, me: PlayerId, target: PlayerId, wrap: bool) -> bool {
+    let (p, t) = (g.player(me), g.player(target));
+    if p.inair || t.inair || p.iy != t.iy || t.is_invincible() || t.bobomb || p.is_invincible() {
+        return false;
+    }
+    let mut dx = t.ix as i32 - p.ix as i32;
+    if wrap {
+        dx -= dx.signum() * App::screenWidth;
+    }
+    let closing = (p.velx - t.velx) * dx.signum() as f32;
+    if closing <= 0.0 {
+        return false;
+    }
+    let jump = if p.velx.abs() > VELMOVING { VELTURBOJUMP } else { VELJUMP };
+    let head = PH as f32;
+    let airtime = (jump + (jump * jump - 2.0 * GRAVITATION * head).max(0.0).sqrt()) / GRAVITATION;
+    let lead = closing * airtime;
+    // The AI thinks every fourth tick, so the window spans what it closes in that time.
+    let window = closing * 4.0;
+    (dx.abs() as f32 - lead).abs() <= window.max(PW as f32 / 2.0)
+}
+
 fn solid_at(g: &mut Game, tx: i32, ty: i32) -> bool {
     g.g_map.map(tx, ty) & tile_flag_solid as i32 != 0 || !g.map_block(tx as i16, ty as i16).is_null()
 }
@@ -1507,6 +1531,9 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                             }
                         }
                     }
+                }
+                if !playerKeys.game_jump().fDown && stomp_lead_jump(g, pPlayer, player, no.playerwrap) {
+                    playerKeys.game_jump_mut().fDown = true;
                 }
             } else if actionType == 1 {
                 //Go for goal
