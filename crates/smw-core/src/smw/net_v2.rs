@@ -51,6 +51,16 @@ pub struct V2Match {
     ticks: u64,
     rollback_ticks: u64,
     desyncs: u32,
+    perf: V2Perf,
+}
+
+/// What a 600-tick window of a match cost, logged with `[net] v2:`.
+#[derive(Default)]
+struct V2Perf {
+    frames: u32,
+    waits: u32,
+    total_us: u64,
+    worst_us: u64,
 }
 
 /// Called where a match starts (`MenuState::enter_gameplay`, after the checkpoint point). On a v2 client in a room the
@@ -87,6 +97,7 @@ pub fn match_starting(g: &mut Game) -> bool {
         ticks: 0,
         rollback_ticks: 0,
         desyncs: 0,
+        perf: V2Perf::default(),
     };
     m.announce();
     println!("[net] v2: starting the match with {} peers ({})", others, if host { "host" } else { "joiner" });
@@ -168,7 +179,13 @@ impl V2Match {
                         let bytes: Vec<u8> = self.parts.iter().flatten().flatten().copied().collect();
                         let mut gp = g.ptr();
                         self.own_config = Some(gp.game_values.config_bytes(g));
+                        let slot = self.my_slot as usize;
+                        let own_skin = g.game_values.skinids[slot];
                         crate::smw::checkpoint::restore_shared(g, bytes)?;
+                        // The host's start holds the host's skin choices; this player's own skin is its choice here.
+                        g.game_values.skinids[slot] = own_skin;
+                        let strip = gp.rm.load_full_skin(g, own_skin, g.game_values.colorids[slot]);
+                        gp.rm.set_strip(gp.rm.spr_player[slot], strip);
                         // The host captured mid-tick; this finishes that tick as its frame_end did there.
                         crate::smw::harness::end_rollback_tick(g);
                         self.restored = true;
@@ -314,9 +331,13 @@ impl V2Match {
                 return true;
             }
         }
+        let started = Instant::now();
         let requests = match session.advance_frame() {
             Ok(requests) => requests,
-            Err(GgrsError::PredictionThreshold) => return true,
+            Err(GgrsError::PredictionThreshold) => {
+                self.perf.waits += 1;
+                return true;
+            }
             Err(e) => {
                 println!("[net] v2: {e}");
                 return false;
@@ -326,9 +347,22 @@ impl V2Match {
         self.rollback_ticks += advances.saturating_sub(1);
         self.ticks += 1;
         if self.ticks % 600 == 0 {
-            println!("[net] v2: {} ticks, {} re-run ticks, {} desyncs", self.ticks, self.rollback_ticks, self.desyncs);
+            let p = std::mem::take(&mut self.perf);
+            println!(
+                "[net] v2: {} ticks, {} re-run ticks, {} desyncs; last 600: GGRS frames avg {:.2} ms, worst {:.2} ms, {} waits for input",
+                self.ticks,
+                self.rollback_ticks,
+                self.desyncs,
+                p.total_us as f64 / p.frames.max(1) as f64 / 1000.0,
+                p.worst_us as f64 / 1000.0,
+                p.waits
+            );
         }
-        let ended = rollback::handle_requests(g, requests, &self.targets, true);
+        let ended = rollback::handle_requests(g, requests, &self.targets, true, DESYNC_INTERVAL as i32);
+        let spent = started.elapsed().as_micros() as u64;
+        self.perf.frames += 1;
+        self.perf.total_us += spent;
+        self.perf.worst_us = self.perf.worst_us.max(spent);
         if ended || g.gsm.currentState != crate::smw::game_state::StateId::Gameplay {
             return false;
         }

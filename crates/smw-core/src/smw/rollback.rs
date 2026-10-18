@@ -164,8 +164,8 @@ pub fn load(g: &mut Game, s: &MatchState) {
 }
 
 /// One match tick with each player's keys in place; slots not listed keep theirs (a CPU player's).
-/// `silent` mutes the tick, for re-runs after a rollback. True when the match ended or restarted.
-pub fn advance(g: &mut Game, keys: &[(KeySlot, Keys)], silent: bool) -> bool {
+/// A `rerun` after a rollback plays no sound and rasterizes nothing. True when the match ended or restarted.
+pub fn advance(g: &mut Game, keys: &[(KeySlot, Keys)], rerun: bool) -> bool {
     let mut gp = g.ptr();
     crate::common::sfx::sfx_virtual_advance(g);
     for &(slot, k) in keys {
@@ -175,15 +175,34 @@ pub fn advance(g: &mut Game, keys: &[(KeySlot, Keys)], silent: bool) -> bool {
         }
     }
     let audible = g.sfx.sfx_audible;
-    if silent {
+    if rerun {
         g.sfx.sfx_audible = false;
     }
     let gameplay = gp.gps.as_mut().expect("rollback::advance outside a match");
-    gameplay.wind(g);
-    let changed = gameplay.simulate(g);
+    let paused = g.netplay.v2_match && shared_pause(g, keys, rerun);
+    if !paused {
+        gameplay.wind(g);
+    }
+    let changed = gameplay.simulate_tick(g, paused, rerun);
     g.sfx.sfx_audible = audible;
     harness::end_rollback_tick(g);
     changed
+}
+
+/// A v2 match's pause: any player's start key toggles it on every peer at the same tick. True while paused.
+fn shared_pause(g: &mut Game, keys: &[(KeySlot, Keys)], silent: bool) -> bool {
+    const START_PRESSED: u16 = 1 << (2 * 6 + 1);
+    let flags = &mut g.game_values.flags;
+    let pressed = keys.iter().any(|(_, k)| k.0 & START_PRESSED != 0);
+    if pressed && !flags.noexit && !g.mode().gameover {
+        let flags = &mut g.game_values.flags;
+        flags.pausegame = !flags.pausegame;
+        if !silent {
+            let mut gp = g.ptr();
+            crate::common::game_values::if_sound_on_play(g, &mut gp.rm.sfx_pause);
+        }
+    }
+    g.game_values.flags.pausegame
 }
 
 /// FNV-1a over the match's harness dump (game mode, players, objects): what a desync check compares.
@@ -210,17 +229,26 @@ impl<A: Clone + PartialEq + Eq + std::hash::Hash + std::fmt::Debug + 'static> gg
     type Address = A;
 }
 
-/// Carries out a session's requests. `slots[p]` is where GGRS player `p`'s keys go.
-pub fn handle_requests<A>(g: &mut Game, requests: Vec<ggrs::GgrsRequest<GgrsConfig<A>>>, slots: &[KeySlot], silent_reruns: bool) -> bool
+/// Carries out a session's requests. `slots[p]` is where GGRS player `p`'s keys go. With `quiet_reruns`, the ticks a
+/// rollback re-runs play no sound and draw nothing; the last tick is the new one and does both. Saved frames carry a
+/// checksum every `checksum_every` frames, the ones GGRS compares.
+pub fn handle_requests<A>(
+    g: &mut Game,
+    requests: Vec<ggrs::GgrsRequest<GgrsConfig<A>>>,
+    slots: &[KeySlot],
+    quiet_reruns: bool,
+    checksum_every: i32,
+) -> bool
 where
     A: Clone + PartialEq + Eq + std::hash::Hash + std::fmt::Debug + 'static,
 {
+    let last_advance = requests.iter().rposition(|r| matches!(r, ggrs::GgrsRequest::AdvanceFrame { .. }));
     let mut rerun = false;
     let mut changed = false;
-    for request in requests {
+    for (index, request) in requests.into_iter().enumerate() {
         match request {
             ggrs::GgrsRequest::SaveGameState { cell, frame } => {
-                let sum = checksum(g);
+                let sum = (frame % checksum_every.max(1) == 0).then(|| checksum(g));
                 if let Ok(path) = std::env::var("SMW_V2_STATE_LOG") {
                     let mut gp = g.ptr();
                     let mut dump = Vec::new();
@@ -229,11 +257,11 @@ where
                     }
                     use std::io::Write;
                     if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(path) {
-                        let _ = writeln!(f, "#F {} hframe={} sum={:x}", frame, harness::frame(g), sum);
+                        let _ = writeln!(f, "#F {} hframe={} sum={:x}", frame, harness::frame(g), sum.unwrap_or(0));
                         let _ = f.write_all(&dump);
                     }
                 }
-                cell.save(frame, Some(save(g)), Some(sum));
+                cell.save(frame, Some(save(g)), sum);
             }
             ggrs::GgrsRequest::LoadGameState { cell, .. } => {
                 load(g, &cell.load().expect("GGRS loads only saved frames"));
@@ -241,7 +269,7 @@ where
             }
             ggrs::GgrsRequest::AdvanceFrame { inputs } => {
                 let keys: Vec<(KeySlot, Keys)> = inputs.iter().enumerate().map(|(player, (k, _status))| (slots[player], *k)).collect();
-                changed |= advance(g, &keys, rerun && silent_reruns);
+                changed |= advance(g, &keys, rerun && quiet_reruns && Some(index) != last_advance);
             }
         }
     }

@@ -332,7 +332,7 @@ fn rollback_mid_match(name: &str, at: Option<u32>, ticks: u32, check: usize) -> 
             }
             match s.advance_frame() {
                 Ok(requests) => {
-                    handle_requests(g, requests, &[KeySlot::Local(0), KeySlot::Local(1), KeySlot::Local(2), KeySlot::Local(3)], true);
+                    handle_requests(g, requests, &[KeySlot::Local(0), KeySlot::Local(1), KeySlot::Local(2), KeySlot::Local(3)], true, 1);
                 }
                 Err(e) => failure = Some(format!("{} at tick {}: {}", name, ran, e)),
             }

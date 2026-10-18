@@ -1669,8 +1669,9 @@ pub fn draw_exit_pause_dialog(g: &mut Game) {
     }
 }
 
+/// A v2 match pauses inside its simulation, from any player's start key (`rollback::advance`), not from one client.
 pub fn is_pause_allowed(g: &mut Game) -> bool {
-    !g.game_values.flags.noexit
+    !g.game_values.flags.noexit && !g.netplay.v2_match
 }
 
 pub fn is_exit_allowed(g: &mut Game) -> bool {
@@ -2674,6 +2675,16 @@ impl GameplayState {
     /// One tick of the match once its input is in place: the world, the end-of-game fade, and drawing, whose code also
     /// advances some animation state. True when the match ended or restarted, which changes the state.
     pub fn simulate(&mut self, g: &mut Game) -> bool {
+        self.simulate_tick(g, false, false)
+    }
+
+    /// `simulate` for rollback: a `paused` tick only draws (a v2 match's shared pause), and an `unseen` one draws
+    /// nothing anyone sees (`draw_tick`).
+    pub fn simulate_tick(&mut self, g: &mut Game, paused: bool, unseen: bool) -> bool {
+        if paused {
+            self.draw_tick(g, unseen);
+            return false;
+        }
         if !g.game_values.flags.swapplayers && g.game_values.screenfade == 0 {
             self.update_countdown_timer(g);
 
@@ -2698,7 +2709,20 @@ impl GameplayState {
             }
         }
 
-        //--------------- draw everything ----------------------
+        self.draw_tick(g, unseen);
+        false
+    }
+
+    /// The tick's drawing. An `unseen` tick, a rollback re-run, still runs the draw code, which also advances some
+    /// animation state, but rasterizes nothing and keeps no frame.
+    fn draw_tick(&mut self, g: &mut Game, unseen: bool) {
+        if unseen {
+            let (state, offsets) = (self.iCountDownState, self.iScoreTextOffset);
+            crate::common::gfx::display_list::begin(g.screen, true);
+            self.draw_everything(g, state, offsets);
+            let _ = crate::common::gfx::display_list::end();
+            return;
+        }
         let (state, offsets) = (self.iCountDownState, self.iScoreTextOffset);
         let check = crate::common::gfx::display_list::check_enabled();
         // The exit dialog is drawn straight onto this frame, so a frame showing it is drawn, not recorded.
@@ -2719,7 +2743,6 @@ impl GameplayState {
             }
             g.main_loop.store_display(draw);
         }
-        false
     }
 }
 
