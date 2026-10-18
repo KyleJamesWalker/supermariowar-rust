@@ -117,4 +117,5 @@ Each PR posts the benchmark before and after, and refreshes the replay goldens t
 - The handles refactor rewrites most of the `Ptr` access in `ai.rs`.
   Starting before it lands means large conflicts, so this work waits for it.
 - The navigation graph treats moving platforms as still for eight thinks at a time. Riding a platform along its path, springs and breakable blocks are open.
+- Note-block super jumps are open. A super jump always rises to its full height (about four tiles off a gray block, six off a red one), so a CPU aiming at a lower ledge overshoots into the ceiling or its spikes. Planning super jumps as longer jump links was mixed in the benchmark on note-block maps.
 - The benchmark needs a stuck metric that does not flag deliberate waiting, such as a CPU guarding a flag. It already stops at game over, so the winner idling on the results screen does not count.
