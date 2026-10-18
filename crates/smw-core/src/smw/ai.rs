@@ -1111,7 +1111,13 @@ fn heads_right(from: i32, to: i32) -> bool {
 /// Steers along the navigation graph when the straight line the action chose is not the path, and gives up on a
 /// target the graph cannot reach.
 fn follow_path(g: &mut Game, this: &mut CPlayerAI, actionType: i16, mut keys: Ptr<COutputControl>) {
-    let Some(target) = path_target(g, this, actionType) else {
+    // Very Easy CPUs steer in straight lines, and Easy ones plan routes only to goals.
+    let planned = match g.game_values.cpudifficulty {
+        0 => false,
+        1 => actionType == 1,
+        _ => true,
+    };
+    let Some(target) = path_target(g, this, actionType).filter(|_| planned) else {
         this.nav_step = None;
         return;
     };
