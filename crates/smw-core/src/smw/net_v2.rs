@@ -279,7 +279,8 @@ impl V2Match {
         builder.start_p2p_session(self.socket.take_ggrs_socket())
     }
 
-    /// Leaves the match for the menu and tells the other peers, who follow once their match is over too.
+    /// Leaves the match for the menu and tells the other peers, who leave too, as everyone does when a player quits a
+    /// local match.
     fn leave(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         self.send_all(&[MSG_LEAVE]);
@@ -308,7 +309,7 @@ impl V2Match {
         }
 
         let others_left = self.socket.receive(RELIABLE).iter().any(|(_, msg)| msg.first() == Some(&MSG_LEAVE));
-        if others_left && g.mode().gameover {
+        if others_left {
             println!("[net] v2: another player ended the match");
             crate::smw::gs_gameplay::clean_up(g);
             g.game_values.appstate = crate::common::game_values::AppState::Menu;
