@@ -65,7 +65,7 @@ impl PlayerTanookiSuit {
         // Become the tanooki
         else if self.can_turn_into_statue(g, player) {
             // set the amount of time you get to remain in statue form
-            self.statue_timer = 123;
+            self.statue_timer = ticks(123) as u16;
 
             // perform tansformation effects
             g.eyecandy[2].emplace(EC_SingleAnimation::new(&gp.rm, 
@@ -78,7 +78,7 @@ impl PlayerTanookiSuit {
             if_sound_on_play(g, &mut gp.rm.sfx_transform);
 
             // Neutralize lateral velocity
-            let tv: f32 = 1.6f32;
+            let tv: f32 = vel(1.6f32);
             if player.velx > tv {
                 player.velx = tv;
             } else if player.velx < -tv {
@@ -115,7 +115,7 @@ impl PlayerTanookiSuit {
 
                 // Slight upward velocity to escape spikes / lava
                 if !player.inair {
-                    player.vely = -8.0 as f32;
+                    player.vely = vel(-8.0);
                 }
 
                 // perform transformation effects
@@ -173,7 +173,7 @@ impl PlayerTanookiSuit {
     }
 
     pub fn is_blinking(&self) -> bool {
-        (self.statue_timer < 50) && (self.statue_timer / 3 % 2 != 0)
+        ((self.statue_timer as i32) < ticks(50)) && (self.statue_timer / 3 % 2 != 0)
     }
 
     pub fn on_pickup(&mut self, g: &mut Game) {

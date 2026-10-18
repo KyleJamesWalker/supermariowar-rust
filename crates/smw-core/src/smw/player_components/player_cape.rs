@@ -4,7 +4,7 @@ use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::game_values::if_sound_on_play;
 use crate::common::gfx::gfx_sprite::ClipEdge;
-use crate::common::global_constants::{PHOFFSET, PWOFFSET};
+use crate::common::global_constants::{PHOFFSET, PWOFFSET, vel};
 use crate::common::player_kill_styles::KillStyle;
 use crate::globals::*;
 use crate::smw::objects::moving::mo_spin_attack::MO_SpinAttack;
@@ -67,7 +67,7 @@ impl PlayerCape {
                     self.iCapeFrameX = player.spin.to_cape_frame_x() as u16;
                     self.iCapeFrameY = 32;
                     self.iCapeYOffset = -8;
-                } else if (!player.inair && player.velx != 0.0f32) || (player.inair && player.vely < 1.0f32) {
+                } else if (!player.inair && player.velx != 0.0f32) || (player.inair && player.vely < vel(1.0f32)) {
                     self.iCapeFrameX += 32;
                     if self.iCapeFrameX > 96 {
                         self.iCapeFrameX = 0;

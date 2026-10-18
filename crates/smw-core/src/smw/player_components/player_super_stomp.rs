@@ -10,7 +10,7 @@ use crate::globals::*;
 use crate::smw::objects::moving::mo_attack_zone::MO_AttackZone;
 use crate::smw::player::CPlayer;
 
-const SSTOMP_STRENGTH_TIMER: u16 = 40;
+const SSTOMP_STRENGTH_TIMER: u16 = ticks(40) as u16;
 
 #[derive(Clone, Default)]
 pub struct PlayerSuperStomp {

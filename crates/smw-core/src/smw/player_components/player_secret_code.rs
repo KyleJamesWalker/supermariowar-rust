@@ -4,9 +4,10 @@ use crate::game::Game;
 use crate::globals::*;
 use crate::smw::objectgame::check_secret;
 use crate::smw::player::CPlayer;
+use crate::common::global_constants::{TICKS_PER_SECOND};
 
 const SECRET_CODE: [u8; 18] = [4, 8, 4, 8, 1, 1, 4, 8, 4, 8, 1, 1, 4, 8, 4, 8, 1, 1];
-const SECRET_CODE_TIME_MAX: u16 = 186;
+const SECRET_CODE_TIME_MAX: u16 = 3 * TICKS_PER_SECOND as u16;
 
 #[derive(Clone, Default)]
 pub struct PlayerSecretCode {

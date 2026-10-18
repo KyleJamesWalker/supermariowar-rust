@@ -3,7 +3,7 @@
 use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
 use crate::common::game_values::if_sound_on_play;
-use crate::common::global_constants::MAXVELY;
+use crate::common::global_constants::{MAXVELY, ticks};
 use crate::common::player_kill_styles::KillStyle;
 use crate::globals::*;
 use crate::smw::player::CPlayer;
@@ -25,13 +25,13 @@ impl PlayerBurnupTimer {
         if player.vely >= MAXVELY {
             if !player.is_invincible() && !player.is_shielded() {
                 self.starttimer += 1;
-                if self.starttimer >= 20 {
+                if self.starttimer as i32 >= ticks(20) {
                     if self.starttimer == 20 {
                         if_sound_on_play(g, &mut gp.rm.sfx_burnup);
                     }
 
                     self.timer += 1;
-                    if self.timer > 80 {
+                    if self.timer as i32 > ticks(80) {
                         player.kill_player_map_hazard(g, true, KillStyle::Environment, false, -1);
                     } else {
                         g.eyecandy[0].emplace(EC_SingleAnimation::new(&gp.rm, 

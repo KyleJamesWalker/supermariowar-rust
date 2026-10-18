@@ -5,6 +5,7 @@ use crate::common::game_mode::game_mode_collection;
 use crate::globals::*;
 use crate::smw::gamemodes::card_collection::CGM_Collection;
 use crate::smw::player::CPlayer;
+use crate::common::global_constants::{ticks};
 
 #[derive(Clone, Default)]
 pub struct PlayerCardCollection {
@@ -27,7 +28,7 @@ impl PlayerCardCollection {
         if g.mode().gamemode == game_mode_collection {
             if self.index > 0 {
                 self.timer += 1;
-                if self.timer >= 32 {
+                if self.timer as i32 >= ticks(32) {
                     self.index = 0;
                     self.timer = 0;
                 }
@@ -40,7 +41,7 @@ impl PlayerCardCollection {
                 self.timer = 0;
             }
 
-            if self.index == 3 && self.timer < 32 {
+            if self.index == 3 && (self.timer as i32) < ticks(32) {
                 self.timer = 0;
                 self.index = 0;
 

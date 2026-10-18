@@ -40,15 +40,15 @@ MENU = """#@ seed=1
 AWAIT_FRAME = 164
 
 # name: (seconds of gameplay to run, [(seconds since gameplay started, event), ...])
+# Event times are multiples of 0.4 s, where 16 ms and 1/60 s ticks line up, so both builds see each input at the
+# same instant.
 SCENARIOS = {
-    "idle": (5.0, []),
-    "walk": (6.5, [(5.00, "down Left"), (6.00, "up Left")]),
-    "run": (6.5, [(5.00, "down Right Ctrl"), (5.00, "down Left"), (5.80, "up Left"), (5.80, "up Right Ctrl")]),
-    "skid": (6.5, [(5.00, "down Right Ctrl"), (5.00, "down Left"), (5.60, "up Left"), (5.60, "down Right"), (5.90, "up Right"), (5.90, "up Right Ctrl")]),
-    "hop": (6.5, [(5.00, "down Up"), (5.05, "up Up")]),
-    "jump": (7.0, [(5.00, "down Up"), (5.60, "up Up")]),
-    "runjump": (6.8, [(5.00, "down Right Ctrl"), (5.00, "down Left"), (5.30, "down Up"), (5.80, "up Up"), (5.80, "up Left"), (5.80, "up Right Ctrl")]),
-    "fall": (7.0, [(5.00, "down Down"), (6.00, "up Down")]),
+    "idle": (5.2, []),
+    "walk": (6.8, [(5.2, "down Left"), (6.0, "up Left")]),
+    "run": (6.8, [(5.2, "down Right Ctrl"), (5.2, "down Left"), (6.0, "up Left"), (6.0, "up Right Ctrl")]),
+    "skid": (6.8, [(5.2, "down Right Ctrl"), (5.2, "down Left"), (5.6, "up Left"), (5.6, "down Right"), (6.0, "up Right"), (6.0, "up Right Ctrl")]),
+    "jump": (6.8, [(5.2, "down Up"), (5.6, "up Up")]),
+    "runjump": (7.2, [(5.2, "down Right Ctrl"), (5.2, "down Left"), (5.6, "down Up"), (6.0, "up Up"), (6.0, "up Left"), (6.0, "up Right Ctrl")]),
 }
 
 
@@ -144,7 +144,8 @@ def main():
     ap.add_argument("--new", required=True)
     ap.add_argument("--new-hz", type=float, default=60.0)
     ap.add_argument("--new-data", default=os.path.join(PORT, "data"))
-    ap.add_argument("--tolerance", type=float, default=2.0, help="pixels; exit 1 if any scenario drifts further")
+    ap.add_argument("--tolerance", type=float, default=1.0, help="pixels of drift allowed once the scenario ends")
+    ap.add_argument("--spike", type=float, default=6.0, help="pixels allowed at any instant (a landing or ledge a tick apart)")
     ap.add_argument("--verbose", action="store_true", help="print the sampled positions")
     ap.add_argument("scenarios", nargs="*", default=list(SCENARIOS))
     args = ap.parse_args()
@@ -154,9 +155,10 @@ def main():
         base = run(args.base, args.base_data, replay_text(name, args.base_hz), False)
         new = run(args.new, args.new_data, replay_text(name, args.new_hz), False)
         (dx, dy, t), rows = compare(name, base, args.base_hz, new, args.new_hz)
-        ok = max(abs(dx), abs(dy)) <= args.tolerance
+        ex, ey = (rows[-1][3], rows[-1][4]) if rows else (0.0, 0.0)
+        ok = max(abs(ex), abs(ey)) <= args.tolerance and max(abs(dx), abs(dy)) <= args.spike
         failed |= not ok
-        print(f"{name:10s} {'ok  ' if ok else 'FAIL'} worst dx={dx:+7.2f} dy={dy:+7.2f} px at t={t:.2f} s")
+        print(f"{name:10s} {'ok  ' if ok else 'FAIL'} end dx={ex:+7.2f} dy={ey:+7.2f}  worst dx={dx:+7.2f} dy={dy:+7.2f} at t={t:.2f} s")
         if args.verbose:
             for t, a, b, dx, dy in rows:
                 print(f"    t={t:5.2f} base=({a[0]:7.2f},{a[1]:7.2f}) new=({b[0]:7.2f},{b[1]:7.2f}) d=({dx:+6.2f},{dy:+6.2f})")

@@ -2,7 +2,7 @@
 
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
-use crate::common::global_constants::PWOFFSET;
+use crate::common::global_constants::{PWOFFSET, TICKS_PER_SECOND, vel};
 use crate::common::player_kill_styles::KillStyle;
 use crate::globals::*;
 use crate::smw::player::CPlayer;
@@ -26,13 +26,12 @@ impl PlayerOutOfArenaTimer {
 
     pub fn update(&mut self, g: &mut Game, player: &mut CPlayer) {
         if player.iy < 0 {
-            if (player.bottom_y() < -1 || (player.bottom_y() <= 1 && player.vely <= 0.8f32))
+            if (player.bottom_y() < -1 || (player.bottom_y() <= 1 && player.vely <= vel(0.8f32)))
                 && g.game_values.outofboundstime > 0
                 && !player.is_invincible()
             {
                 self.timer += 1;
-                if self.timer > 62 {
-                    // 62 = fps
+                if self.timer >= TICKS_PER_SECOND as i16 {
                     self.timer = 0;
 
                     self.displaytimer -= 1;
@@ -51,7 +50,7 @@ impl PlayerOutOfArenaTimer {
         }
 
         if player.top_y() < 0 {
-            if player.bottom_y() < -1 || (player.bottom_y() <= 0 && player.vely <= 1.0f32) {
+            if player.bottom_y() < -1 || (player.bottom_y() <= 0 && player.vely <= vel(1.0f32)) {
                 gp.rm.sprite(gp.rm.spr_abovearrows).draw_src(
                     g,
                     player.left_x() as i32 - PWOFFSET,
