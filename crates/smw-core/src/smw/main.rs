@@ -94,6 +94,11 @@ pub fn frame(g: &mut Game) {
 pub fn step(g: &mut Game) {
     let mut gp = g.ptr();
     assign_hotplugged(g);
+    if crate::smw::net_v2::owns_tick(g) {
+        crate::smw::net_v2::tick(g);
+        harness::end_v2_frame(g);
+        return;
+    }
     harness::frame_start(g);
     GameStateManager::instance(gp.get()).current(gp.get()).get().update(gp.get());
     harness::frame_end(g);
@@ -174,6 +179,11 @@ unsafe fn tick(g: &mut Game) {
     assign_hotplugged(gp.get());
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::touch::flush(g);
+    if crate::smw::net_v2::owns_tick(g) {
+        crate::smw::net_v2::tick(g);
+        harness::end_v2_frame(g);
+        return;
+    }
     harness::frame_start(gp.get());
     phase(5);
     GameStateManager::instance(gp.get()).current(gp.get()).get().update(gp.get());

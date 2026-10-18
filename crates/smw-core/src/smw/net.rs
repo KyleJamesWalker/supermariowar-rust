@@ -430,6 +430,7 @@ pub struct NetClient {
     shown_filter: String,
 
     peer_probe: Option<PeerProbe>,
+    pub v2: Option<Box<crate::smw::net_v2::V2Match>>,
 
     pub local_gamehost: NetGameHost,
 
@@ -458,6 +459,7 @@ impl Clone for NetClient {
             room_list_keep: self.room_list_keep,
             shown_filter: self.shown_filter.clone(),
             peer_probe: None,
+            v2: None,
             local_gamehost: self.local_gamehost.clone(),
             foreign_lobbyserver: Ptr::null(),
             foreign_gamehost: Ptr::null(),
@@ -483,6 +485,7 @@ impl NetClient {
             room_list_keep: None,
             shown_filter: String::new(),
             peer_probe: None,
+            v2: None,
             local_gamehost: NetGameHost::new(),
             foreign_lobbyserver: Ptr::null(),
             foreign_gamehost: Ptr::null(),
@@ -504,6 +507,15 @@ impl NetClient {
         net_record::value_bool(g, "client_restart", || net_layer(gp.get()).client_restart(gp.get()))
     }
 
+    /// The room's WebRTC socket and how many other players it reaches, once all of them connected.
+    pub fn take_peer_socket(&mut self) -> Option<(smw_peer::PeerSocket, usize)> {
+        let ready = self.peer_probe.as_mut().is_some_and(|p| p.all_connected());
+        if !ready {
+            return None;
+        }
+        self.peer_probe.take().map(PeerProbe::into_socket)
+    }
+
     pub fn update(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         self.local_gamehost.update(g);
@@ -516,6 +528,8 @@ impl NetClient {
     pub fn stop(&mut self, g: &mut Game) {
         self.local_gamehost.stop(g);
         self.peer_probe = None;
+        self.v2 = None;
+        g.netplay.v2_match = false;
 
         if g.netplay.connectSuccessful {
             self.send_goodbye(g);
@@ -1971,6 +1985,7 @@ pub struct Networking {
 
     pub client: NetClient,
     pub myPlayerName: String,
+    pub v2_match: bool,
     /// The name the lobby server gave this player: `myPlayerName`, numbered if another player has it.
     pub lobby_name: String,
 
@@ -2029,6 +2044,12 @@ pub struct Networking {
 }
 
 impl Networking {
+    /// An online match that runs the v1 way: the host decides random outcomes and collisions. A v2 match is online
+    /// too, but every peer runs the same simulation, as a local match does.
+    pub fn v1(&self) -> bool {
+        self.active && !self.v2_match
+    }
+
     /// Zero-initialized like the C++ global, plus the member constructors.
     pub fn new() -> Self {
         Networking {
@@ -2040,6 +2061,7 @@ impl Networking {
             operationInProgress: false,
             client: NetClient::new(),
             myPlayerName: String::new(),
+            v2_match: false,
             lobby_name: String::new(),
             selectedServerIndex: 0,
             savedServers: Vec::new(),

@@ -289,7 +289,7 @@ fn clone_frenzy() {
 fn rollback_mid_match(name: &str, at: Option<u32>, ticks: u32, check: usize) -> u32 {
     use smw::common::game_values::AppState;
     use smw::smw::game_state::StateId;
-    use smw::smw::rollback::{handle_requests, GgrsConfig, Keys};
+    use smw::smw::rollback::{handle_requests, GgrsConfig, KeySlot, Keys};
 
     let tools = repo().join("tools");
     let out = std::env::temp_dir().join(format!("smw-headless-{}-rollback-{}", std::process::id(), name));
@@ -332,7 +332,7 @@ fn rollback_mid_match(name: &str, at: Option<u32>, ticks: u32, check: usize) -> 
             }
             match s.advance_frame() {
                 Ok(requests) => {
-                    handle_requests(g, requests, &[0, 1, 2, 3], true);
+                    handle_requests(g, requests, &[KeySlot::Local(0), KeySlot::Local(1), KeySlot::Local(2), KeySlot::Local(3)], true);
                 }
                 Err(e) => failure = Some(format!("{} at tick {}: {}", name, ran, e)),
             }

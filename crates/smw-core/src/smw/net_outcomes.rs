@@ -56,7 +56,7 @@ pub fn begin_game(g: &mut Game) {
 }
 
 pub fn note_death(g: &mut Game, player: i16, style: i32, removed: bool) {
-    if g.netplay.active {
+    if g.netplay.v1() {
         harness::note_net(g, format!("death p={} style={} removed={}", player, style, removed as i32));
     }
 }
@@ -77,7 +77,7 @@ pub fn frame_start(g: &mut Game) {
 
 /// End of a gameplay frame: the host sends changed scores; every client but a deciding host's joiner records them.
 pub fn sample(g: &mut Game) {
-    if !g.netplay.active || g.mode().is_null() {
+    if !g.netplay.v1() || g.mode().is_null() {
         return;
     }
     if g.netplay.theHostIsMe && net_random::in_game(g) {

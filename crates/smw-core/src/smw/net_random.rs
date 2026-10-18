@@ -227,7 +227,7 @@ pub fn end_game(g: &mut Game) {
 /// True when the caller must not run the site's own code: this function ran it, or the game host decides it.
 pub fn event(g: &mut Game, ev: Ev, args: &[i32]) -> bool {
     let mut gp = g.ptr();
-    if !g.netplay.active || !random_state(gp.get()).g_inGame || random_state(gp.get()).g_added.is_some() || RandomNumberGenerator::tape_active(gp.get()) {
+    if !g.netplay.v1() || !random_state(gp.get()).g_inGame || random_state(gp.get()).g_added.is_some() || RandomNumberGenerator::tape_active(gp.get()) {
         return false;
     }
 
@@ -288,13 +288,13 @@ pub fn in_event(g: &mut Game) -> bool {
 
 /// A joiner whose game host decides random outcomes, deaths and scores.
 pub fn host_decides(g: &mut Game) -> bool {
-    g.netplay.active && !g.netplay.theHostIsMe
+    g.netplay.v1() && !g.netplay.theHostIsMe
 }
 
 /// While true, a joiner leaves its hazard timers waiting for the game host's.
 pub fn awaiting_host(g: &mut Game) -> bool {
     let mut gp = g.ptr();
-    g.netplay.active && !g.netplay.theHostIsMe && random_state(gp.get()).g_inGame
+    g.netplay.v1() && !g.netplay.theHostIsMe && random_state(gp.get()).g_inGame
 }
 
 /// Contexts 0 and 1 number untracked objects and setup objects.

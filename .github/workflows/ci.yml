@@ -107,7 +107,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Build
-        run: cargo build --release --locked --bin smw --bin smw_server --example net_interop
+        run: |
+          cargo build --release --locked --bin smw --bin smw_server --example net_interop
+          cargo build --release --locked --package smw-peer --example signal
 
       - name: Lobby connect stress
         run: tools/ref/net_connect_stress.sh 20
@@ -120,6 +122,11 @@ jobs:
           SDL_RENDER_DRIVER: software
           NET_GAME_WORK: ${{ runner.temp }}/net-games
         run: timeout 20m tools/ref/net_game_interop.sh
+
+      - name: Net games over netplay v2 (GGRS over WebRTC, 60 ms lag, 10% loss)
+        env:
+          SDL_RENDER_DRIVER: software
+        run: timeout 20m tools/net_v2_test.py "$RUNNER_TEMP/net-games-v2"
 
       - name: Net games with clients presenting at different rates
         env:
@@ -137,6 +144,7 @@ jobs:
           name: net-game-logs
           path: |
             ${{ runner.temp }}/net-games
+            ${{ runner.temp }}/net-games-v2
             ${{ runner.temp }}/net-games-mixed-rate
           retention-days: 7
 

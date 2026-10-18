@@ -39,6 +39,13 @@ impl Keys {
     }
 }
 
+/// Where a player's keys go: a local input slot, or a remote player's slot (net games' `PlayerKeys`).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum KeySlot {
+    Local(usize),
+    Net(usize),
+}
+
 /// Everything a match tick changes. Loading writes into the live allocations, which other code points into.
 #[derive(Clone)]
 pub struct MatchState {
@@ -156,14 +163,15 @@ pub fn load(g: &mut Game, s: &MatchState) {
     harness::set_frame(g, s.frame);
 }
 
-/// One match tick with `keys[i]` in local input slot `i` (`None` leaves the slot alone, e.g. a CPU player's).
+/// One match tick with each player's keys in place; slots not listed keep theirs (a CPU player's).
 /// `silent` mutes the tick, for re-runs after a rollback. True when the match ended or restarted.
-pub fn advance(g: &mut Game, keys: &[Option<Keys>], silent: bool) -> bool {
+pub fn advance(g: &mut Game, keys: &[(KeySlot, Keys)], silent: bool) -> bool {
     let mut gp = g.ptr();
     crate::common::sfx::sfx_virtual_advance(g);
-    for (slot, k) in keys.iter().enumerate() {
-        if let Some(k) = k {
-            k.apply(&mut g.game_values.playerInput.outputControls[slot]);
+    for &(slot, k) in keys {
+        match slot {
+            KeySlot::Local(i) => k.apply(&mut g.game_values.playerInput.outputControls[i]),
+            KeySlot::Net(i) => k.apply(&mut g.netplay.netPlayerInput.outputControls[i]),
         }
     }
     let audible = g.sfx.sfx_audible;
@@ -202,8 +210,8 @@ impl<A: Clone + PartialEq + Eq + std::hash::Hash + std::fmt::Debug + 'static> gg
     type Address = A;
 }
 
-/// Carries out a session's requests. `slots[p]` is the local input slot of GGRS player `p`.
-pub fn handle_requests<A>(g: &mut Game, requests: Vec<ggrs::GgrsRequest<GgrsConfig<A>>>, slots: &[usize], silent_reruns: bool) -> bool
+/// Carries out a session's requests. `slots[p]` is where GGRS player `p`'s keys go.
+pub fn handle_requests<A>(g: &mut Game, requests: Vec<ggrs::GgrsRequest<GgrsConfig<A>>>, slots: &[KeySlot], silent_reruns: bool) -> bool
 where
     A: Clone + PartialEq + Eq + std::hash::Hash + std::fmt::Debug + 'static,
 {
@@ -213,6 +221,18 @@ where
         match request {
             ggrs::GgrsRequest::SaveGameState { cell, frame } => {
                 let sum = checksum(g);
+                if let Ok(path) = std::env::var("SMW_V2_STATE_LOG") {
+                    let mut gp = g.ptr();
+                    let mut dump = Vec::new();
+                    if let Some(gameplay) = gp.gps.as_mut() {
+                        let _ = gameplay.harness_dump(g, &mut dump);
+                    }
+                    use std::io::Write;
+                    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(path) {
+                        let _ = writeln!(f, "#F {} hframe={} sum={:x}", frame, harness::frame(g), sum);
+                        let _ = f.write_all(&dump);
+                    }
+                }
                 cell.save(frame, Some(save(g)), Some(sum));
             }
             ggrs::GgrsRequest::LoadGameState { cell, .. } => {
@@ -220,10 +240,7 @@ where
                 rerun = true;
             }
             ggrs::GgrsRequest::AdvanceFrame { inputs } => {
-                let mut keys = [None; 4];
-                for (player, (k, _status)) in inputs.iter().enumerate() {
-                    keys[slots[player]] = Some(*k);
-                }
+                let keys: Vec<(KeySlot, Keys)> = inputs.iter().enumerate().map(|(player, (k, _status))| (slots[player], *k)).collect();
                 changed |= advance(g, &keys, rerun && silent_reruns);
             }
         }

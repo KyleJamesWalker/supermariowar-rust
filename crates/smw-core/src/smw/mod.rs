@@ -13,6 +13,7 @@ pub mod perf_log;
 pub mod net;
 pub mod net_outcomes;
 pub mod net_random;
+pub mod net_v2;
 pub mod pad_type;
 #[cfg(not(target_os = "emscripten"))]
 pub mod pad;

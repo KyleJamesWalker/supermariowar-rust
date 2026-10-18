@@ -997,7 +997,9 @@ impl MenuState {
         }
 
         harness::match_checkpoint(g);
-        enter_gameplay_tail(g);
+        if !crate::smw::net_v2::match_starting(g) {
+            enter_gameplay_tail(g);
+        }
     }
 }
 

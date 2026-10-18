@@ -30,6 +30,15 @@ impl PeerProbe {
         PeerProbe { socket: PeerSocket::connect(&cstr_field(&pkg.roomURL), &ice), others, opened: Instant::now(), reported: false }
     }
 
+    pub fn all_connected(&mut self) -> bool {
+        self.update();
+        self.socket.connected_peers().len() >= self.others
+    }
+
+    pub fn into_socket(self) -> (PeerSocket, usize) {
+        (self.socket, self.others)
+    }
+
     pub fn update(&mut self) {
         for (peer, state) in self.socket.update_peers() {
             let elapsed = self.opened.elapsed().as_millis();
@@ -38,9 +47,7 @@ impl PeerProbe {
                 PeerState::Disconnected => println!("[net] v2: peer {:08x} left after {} ms", peer.0 >> 96, elapsed),
             }
         }
-        for channel in [smw_peer::RELIABLE, smw_peer::UNRELIABLE] {
-            self.socket.receive(channel);
-        }
+        self.socket.receive(smw_peer::UNRELIABLE);
         if self.reported {
             return;
         }

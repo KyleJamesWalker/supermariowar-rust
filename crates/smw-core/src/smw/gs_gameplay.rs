@@ -1048,7 +1048,7 @@ pub fn handle_p2p_collisions(g: &mut Game) {
                 assert!(!player2.is_none());
                 if g.player(player2).state > PlayerState::Dead {
                     if coldec_player2player(g, player1, player2) {
-                        if g.netplay.active {
+                        if g.netplay.v1() {
                             gp.netplay.client.local_gamehost.send_p2p_collision_event(g, g.player(player1), g.player(player2));
                         }
 
@@ -2590,7 +2590,7 @@ impl GameplayState {
             g.game_values.cputurn = 0;
         }
 
-        if !g.netplay.active || (g.netplay.active && g.netplay.theHostIsMe) {
+        if !g.netplay.v1() || g.netplay.theHostIsMe {
             handle_p2p_collisions(g);
         }
 
@@ -2658,6 +2658,10 @@ impl GameplayState {
     /// The input phase of a match tick, for a driver that runs `simulate` itself (rollback).
     pub fn gather_input(&mut self, g: &mut Game) {
         self.handle_input(g);
+    }
+
+    pub fn countdown_state(&self) -> i16 {
+        self.iCountDownState
     }
 
     /// Offline matches' wind events, part of the tick's simulation.
