@@ -1,16 +1,15 @@
-# Porting conventions
+# Code conventions
 
-Rules every agent follows when translating the C++ sources of [Super Mario War](https://github.com/mmatyas/supermariowar) (`src/`, read only; the pinned commit is in `README.md`) into this crate. The goal is frame-for-frame identical behavior under differential replay (`REPLAY.md`), so **translate, do not reinterpret**: same names, same order of operations, same numeric types, same quirks and bugs.
+How the code in this repository is written. smw-core started as a line-by-line translation of the C++ [Super Mario War](https://github.com/mmatyas/supermariowar) and keeps its names, file layout and numeric semantics, so upstream changes still port file to file (`docs/upstream/UPSTREAM_SYNC.md`). When porting upstream code, **translate, do not reinterpret**: same names, same order of operations, same numeric types, same quirks. Since phase 7 the Rust build is the reference: a change may alter gameplay if it regenerates the goldens it changes, and deterministic Rust-to-Rust replay (`REPLAY.md`) is the gate.
 
 ## Layout
 
-- The repository is a Cargo workspace: `crates/smw-core` (the game library, crate name `smw`), `crates/smw-globals` (`Ptr`, `Global`, `Aliased`, `impl_base!`), `crates/smw-netplay` (`common_netplay/` and `server/`, shared with `smw_server` and the relay), `crates/smw-platform` (the platform traits, `docs/design/ARCHITECTURE_V2.md`), and one package per binary in `apps/`.
+- The repository is a Cargo workspace. `crates/smw-core` is the game library (crate name `smw`). `crates/smw-globals` holds `Ptr`, `Global`, `Aliased` and `impl_base!`; `crates/smw-netplay` the protocol and lobby code shared with `smw_server` and the relay; `crates/smw-platform` the platform traits and `InputEvent` (`docs/design/ARCHITECTURE_V2.md`). `crates/smw-sdl2` and `crates/smw-sdl3` are the backends, and `crates/smw-headless` an in-memory backend for tests and `smw_replay`. Each binary is a package in `apps/`.
 - `crates/smw-core/src/common/...` and `crates/smw-core/src/smw/...` mirror the C++ tree one-to-one. One Rust module per C++ `.cpp`/`.h` pair, named by snake-casing the C++ basename: `map.cpp` → `common/map.rs`, `MapReader15xx.cpp` → `common/map/map_reader15xx.rs`, `GSGameplay.cpp` → `smw/gs_gameplay.rs`, `MO_Fireball.cpp` → `smw/objects/moving/mo_fireball.rs`. Exception: `Coins.h` + `Coin.cpp` → `smw/gamemodes/coin.rs`.
 - When a file and a directory share a name (`common/map.cpp` + `common/map/`, `common/gfx.cpp` + `common/gfx/`), the file module declares the directory's children (`common/map.rs` holds `pub mod map_reader;` ...). There is no `mod.rs` for those directories.
-- Every module already exists as a stub (generated); fill it in, do not create parallel files. Every module starts with `//! Port of src/<path>` naming the `.cpp` (or the `.h` if header-only).
-- `crates/smw-core/src/lib.rs` is the crate root (so tests and tools can link it); `apps/smw/src/main.rs` only calls `smw::smw::main::main()`.
-- `crates/smw-core/src/globals.rs` re-exports the global-state infrastructure (`Global<T>`, `Ptr<T>`, `Aliased`, from smw-globals) and every C++ global, so code writes `use crate::globals::*;`.
-- Not ported now: `smw/platform/` (ENet), `leveleditor/`, `worldeditor/`, `server/`, `common_netplay/`.
+- A module that ports a C++ file starts with `//! Port of src/<path>` naming the `.cpp` (or the `.h` if header-only). A module with no C++ counterpart says so in its first line.
+- `crates/smw-core/src/lib.rs` is the crate root. `apps/smw/src/main.rs` picks the backend (`smw::services::set_backend`) and calls `smw::smw::main::main()`.
+- `crates/smw-core/src/globals.rs` re-exports the global-state infrastructure (`Global<T>`, `Ptr<T>`, `Aliased`, from smw-globals) and runs the constructors of C++ globals in definition order (`init_globals`).
 
 ## Names
 
@@ -42,19 +41,21 @@ The crate root sets `#![allow(non_snake_case, non_camel_case_types, non_upper_ca
 
 ## Global state
 
-The game is single-threaded. C++ globals are `pub static mut` items with the C++ name, **declared in the Rust module that mirrors the C++ file defining them** (`common/global.rs` for `game_values`, `g_map`, `rm`; `smw/main.rs` for `screen`, `blitdest`, `list_players`, `objectcontainer`...), and re-exported from `globals.rs`. Code touches them inside `unsafe { }`; functions keep their safe signatures and open one `unsafe` block around the body when needed.
+The game is single-threaded. C++ globals are fields of `Game` (`crates/smw-core/src/game.rs`), and functions take `g: &mut Game`, so `game_values.gamemode` in C++ is `g.game_values.gamemode`. Function-local C++ `static`s live in the state struct of the subsystem that owns them (`SfxState`, `PadState`, ...).
 
 | C++ global | Rust |
 |---|---|
-| Scalar, POD array, const-initializable value (`short x_shake = 0;`, `short g_iSwirlSpawnLocations[4][2][25];`) | `pub static mut x_shake: i16 = 0;` |
-| Class instance constructed at startup (`CGameValues game_values;`, `CObjectContainer objectcontainer[3];`) | `pub static mut game_values: Global<CGameValues> = Global::uninit();` initialized by `game_values.init(CGameValues::new())` in `globals::init_globals()` in C++ definition order. `Global<T>` derefs to `T`, so call sites read `game_values.gamemode` exactly like C++. |
-| (trap) `Global<T>` has its own `init(v)`, `is_initialized()`, `as_ptr()`; call a same-named method of `T` as `CGameValues::init(&mut game_values)`. | |
-| Pointer global (`CMap* g_map;`, `CResourceManager* rm;`) | `pub static mut g_map: Ptr<CMap> = Ptr::null();` assigned with `g_map = Ptr::new_box(CMap::new())`; `Ptr<T>` derefs to `T`, so `g_map.map(x, y)` mirrors `g_map->map(x, y)`. |
-| Function-local `static` | `static mut` inside the function, same name |
+| Scalar or POD array (`short x_shake = 0;`) | a plain field |
+| Class instance constructed at startup (`CGameValues game_values;`, `CObjectContainer objectcontainer[3];`) | a `Global<T>` field, initialized by `g.game_values.init(CGameValues::new())` in `globals::init_globals()` in C++ definition order. `Global<T>` derefs to `T`. |
+| (trap) `Global<T>` has its own `init(v)`, `is_initialized()`, `as_ptr()`; call a same-named method of `T` as `CGameValues::init(&mut g.game_values)`. | |
+| Pointer global (`CMap* g_map;`, `CResourceManager* rm;`) | a `Ptr<T>` field assigned with `Ptr::new_box(CMap::new())`; `Ptr<T>` derefs to `T`, so `g.g_map.map(x, y)` mirrors `g_map->map(x, y)`. |
+
+Constructors that draw from the RNG or read files run in C++ order, because a different order changes the `R calls=` record of every dump.
 
 ## Pointers and ownership
 
-- **Non-owning pointers** (`CPlayer* owner`, `IO_Block*`, `CObject*` in lists, `this` passed to another object) are `Ptr<T>` (`globals::Ptr`, a nullable `Copy` raw pointer that derefs to `T`, works for `dyn Trait`, compares by address). `NULL` is `Ptr::null()`, `p == NULL` is `p.is_null()`, `this` is `Ptr::from_mut(self)`. One convention everywhere: never indices, never `Rc`, never references stored in structs.
+- **Handles.** Players, game objects, map blocks, platforms, sprites and menu controls are referred to by typed handles into tables that `Game` owns: `PlayerId`, `ObjectId`, `PlatformId`, `SpriteId`, `ControlId` and `Ctl<T>` (`docs/design/HANDLES.md`). Player and object handles carry a generation, so a stale one finds nothing instead of reading freed memory.
+- **Other non-owning pointers** are `Ptr<T>` (`globals::Ptr`, a nullable `Copy` raw pointer that derefs to `T`, works for `dyn Trait`, compares by address). `NULL` is `Ptr::null()`, `p == NULL` is `p.is_null()`, `this` is `Ptr::from_mut(self)`. Never `Rc`, never references stored in structs.
 - **Owning pointers** that C++ `new`s and `delete`s: `Box<T>` / `Vec<Box<T>>` when nothing else stores a pointer to the object, otherwise `Ptr::new_box(v)` (leaked `Box`) and `p.delete()` at the C++ `delete` site. Objects never move once other code may point at them, so never hold such objects by value in a `Vec<T>`.
 - **Aliasing.** C++ freely mutates an object through a global or another object's pointer while one of its own methods is running. In Rust that violates the `noalias` that `&mut self`/`&self` carry and LLVM *will* miscompile it. Every class struct that is reachable through a `Ptr` or a global therefore embeds `pub _alias: Aliased` (a zero-sized `UnsafeCell<()>` + `PhantomPinned`), which makes the type `!Freeze + !Unpin`; rustc then emits no `noalias` for references to it. Put it in base structs (`CObject`, `CPlayer`, `CMap`, `CGameValues`, `CGameMode`, menu items...); derived structs inherit it through their base field.
 - Never keep a `&mut` to global state alive across a call that may touch the same object through another path; re-derive it from the `Ptr` / global after the call, as the C++ effectively does.
@@ -70,9 +71,7 @@ The game is single-threaded. C++ globals are `pub static mut` items with the C++
 
 ## SDL and graphics
 
-- One global SDL context (owned by the gfx port). Drawing is software: the C++ blits onto the 640x480 `SDL_Surface* screen` / `blitdest`, then presents. The port does the same with `sdl2::sys` FFI on `*mut SDL_Surface` (`SDL_UpperBlit`, `SDL_FillRect`, `SDL_SetColorKey`...), calling the same SDL functions in the same order, so screenshots match pixel for pixel. Safe `sdl2` wrappers are fine for init, window, events and audio.
-- `screen`, `blitdest`, `x_shake`, `y_shake` live in `smw/main.rs` (`pub static mut screen: *mut SDL_Surface`).
-- Until gfx lands, drawing code in non-gfx modules leaves `// TODO(gfx)` at each unported draw call; logic must not depend on it.
+smw-core never calls SDL. It draws on its own surfaces (`common/gfx/soft_surface.rs`), a pure-Rust copy of the SDL2 blit paths the game uses, and hands each finished 640x480 frame to the backend. Video, audio, clock and storage come from `Services`, and input arrives as `InputEvent`s (`docs/design/ARCHITECTURE_V2.md`). The backends own everything SDL: windows, presentation, audio output, the event pump and pad mapping.
 
 ## Data root
 
@@ -80,8 +79,7 @@ The game is single-threaded. C++ globals are `pub static mut` items with the C++
 
 ## Tests and commits
 
-- Unit tests live in `#[cfg(test)] mod tests` at the bottom of the module. Reference values come from compiling the original C++ (clang++) in `tools/`, never from the Rust code itself.
+- Unit tests live in `#[cfg(test)] mod tests` at the bottom of the module. Reference values for ported C++ behaviour come from compiling the original C++ (clang++) in `tools/ref/`, never from the Rust code itself.
 - `cargo build` must stay error-free at every commit; warnings are tolerated.
-- Commit only your own paths (`git add <paths> && git commit -m "feat(port): ..."`). If `.git/index.lock` exists, wait and retry. Never push, amend, rebase or stash.
 - Dependencies come from crates.io only; check `Cargo.lock` for private-registry URLs before committing it.
-- Record finished modules in `DEVIATIONS.md`.
+- A change that alters gameplay regenerates the goldens it changes and lists the replays in its PR (`REPLAY.md`). A deliberate difference from upstream goes in `DEVIATIONS.md`, and the replays it changes in `tools/cpp_divergences.txt`.
