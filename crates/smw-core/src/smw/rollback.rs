@@ -16,6 +16,7 @@ use crate::smw::harness;
 use crate::smw::object_container::CObjectContainer;
 use crate::smw::players::Players;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 /// One player's keys for one tick: `down` at bit 2k and `pressed` at bit 2k+1 for key k.
 #[derive(Clone, Copy, PartialEq, Eq, Default, Debug, Serialize, Deserialize)]
@@ -241,20 +242,8 @@ where
     for (index, request) in requests.into_iter().enumerate() {
         match request {
             ggrs::GgrsRequest::SaveGameState { cell, frame } => {
-                let sum = (frame % checksum_every.max(1) == 0).then(|| checksum(g));
-                if let Ok(path) = std::env::var("SMW_V2_STATE_LOG") {
-                    let mut gp = g.ptr();
-                    let mut dump = Vec::new();
-                    if let Some(gameplay) = gp.gps.as_mut() {
-                        let _ = gameplay.harness_dump(g, &mut dump);
-                    }
-                    use std::io::Write;
-                    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(path) {
-                        let _ = writeln!(f, "#F {} hframe={} sum={:x}", frame, harness::frame(g), sum.unwrap_or(0));
-                        let _ = f.write_all(&dump);
-                    }
-                }
-                cell.save(frame, Some(save(g)), sum);
+                let (state, sum) = logged_save(g, frame, checksum_every);
+                cell.save(frame, Some(state), sum);
             }
             ggrs::GgrsRequest::LoadGameState { cell, .. } => {
                 load(g, &cell.load().expect("GGRS loads only saved frames"));
@@ -267,4 +256,105 @@ where
         }
     }
     changed
+}
+
+/// A GGRS request as a v2 recording keeps it (`#@ v2` lines, docs/guides/REPLAY.md).
+#[derive(Clone, Debug, PartialEq)]
+pub enum Req {
+    Save(i32),
+    Load(i32),
+    Advance(Vec<Keys>),
+}
+
+impl Req {
+    pub fn of<A>(request: &ggrs::GgrsRequest<GgrsConfig<A>>) -> Req
+    where
+        A: Clone + PartialEq + Eq + std::hash::Hash + std::fmt::Debug + 'static,
+    {
+        match request {
+            ggrs::GgrsRequest::SaveGameState { frame, .. } => Req::Save(*frame),
+            ggrs::GgrsRequest::LoadGameState { frame, .. } => Req::Load(*frame),
+            ggrs::GgrsRequest::AdvanceFrame { inputs } => Req::Advance(inputs.iter().map(|(k, _)| *k).collect()),
+        }
+    }
+
+    /// `s<frame>`, `l<frame>` or `a<keys>,<keys>,...` with the keys in hex.
+    pub fn token(&self) -> String {
+        match self {
+            Req::Save(f) => format!("s{f}"),
+            Req::Load(f) => format!("l{f}"),
+            Req::Advance(keys) => format!("a{}", keys.iter().map(|k| format!("{:x}", k.0)).collect::<Vec<_>>().join(",")),
+        }
+    }
+
+    pub fn parse(token: &str) -> Option<Req> {
+        let (kind, rest) = token.split_at_checked(1)?;
+        match kind {
+            "s" => rest.parse().ok().map(Req::Save),
+            "l" => rest.parse().ok().map(Req::Load),
+            "a" => rest.split(',').map(|k| u16::from_str_radix(k, 16).ok().map(Keys)).collect::<Option<Vec<_>>>().map(Req::Advance),
+            _ => None,
+        }
+    }
+}
+
+/// `handle_requests` for recorded requests: the same saves, loads and ticks, with the saved states kept in `saves`.
+pub fn replay_requests(g: &mut Game, requests: &[Req], slots: &[KeySlot], saves: &mut BTreeMap<i32, MatchState>, checksum_every: i32) -> bool {
+    let last_advance = requests.iter().rposition(|r| matches!(r, Req::Advance(_)));
+    let mut rerun = false;
+    let mut changed = false;
+    for (index, request) in requests.iter().enumerate() {
+        match request {
+            Req::Save(frame) => {
+                saves.retain(|&f, _| f > frame - 2 * MAX_SAVED_FRAMES);
+                saves.insert(*frame, logged_save(g, *frame, checksum_every).0);
+            }
+            Req::Load(frame) => {
+                let Some(state) = saves.get(frame) else { harness::fail(format!("the v2 replay loads frame {frame}, which it never saved")) };
+                load(g, state);
+                rerun = true;
+            }
+            Req::Advance(keys) => {
+                let keys: Vec<(KeySlot, Keys)> = slots.iter().copied().zip(keys.iter().copied()).collect();
+                changed |= advance(g, &keys, rerun && Some(index) != last_advance);
+            }
+        }
+    }
+    changed
+}
+
+/// How far back a replay keeps saved states; GGRS never loads one older than its prediction window.
+const MAX_SAVED_FRAMES: i32 = 16;
+
+/// A save for GGRS, with its checksum on every `checksum_every`-th frame, also written to SMW_V2_STATE_LOG.
+fn logged_save(g: &mut Game, frame: i32, checksum_every: i32) -> (MatchState, Option<u128>) {
+    let sum = (frame % checksum_every.max(1) == 0).then(|| checksum(g));
+    if let Ok(path) = std::env::var("SMW_V2_STATE_LOG") {
+        let mut gp = g.ptr();
+        let mut dump = Vec::new();
+        if let Some(gameplay) = gp.gps.as_mut() {
+            let _ = gameplay.harness_dump(g, &mut dump);
+        }
+        use std::io::Write;
+        if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(path) {
+            let _ = writeln!(f, "#F {} hframe={} sum={:x}", frame, harness::frame(g), sum.unwrap_or(0));
+            let _ = f.write_all(&dump);
+        }
+    }
+    (save(g), sum)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn request_tokens_round_trip() {
+        let requests = [Req::Save(-1), Req::Load(462), Req::Advance(vec![Keys(0), Keys(0xa2f0), Keys(0xffff)])];
+        let tokens: Vec<String> = requests.iter().map(Req::token).collect();
+        assert_eq!(tokens, ["s-1", "l462", "a0,a2f0,ffff"]);
+        assert_eq!(tokens.iter().map(|t| Req::parse(t)).collect::<Option<Vec<_>>>().as_deref(), Some(&requests[..]));
+        assert_eq!(Req::parse("w"), None);
+        assert_eq!(Req::parse("ax"), None);
+    }
 }

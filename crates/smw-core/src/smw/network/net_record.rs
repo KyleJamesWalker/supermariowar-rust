@@ -177,6 +177,8 @@ pub struct Replay {
     events: Vec<NetEvent>,
     next: usize,
     values: BTreeMap<String, VecDeque<String>>,
+    /// Each frame of the v2 matches: `#@ v2 frame=<n> <tokens>` (smw/net_v2.rs).
+    v2: VecDeque<(u32, String)>,
 }
 
 #[derive(Clone)]
@@ -217,7 +219,24 @@ pub fn load(g: &mut Game, text: &str, from: u32) {
             values.entry(key).or_default().push_back(value);
         }
     }
-    g.net_record.replay = Some(Replay { events, next: 0, values });
+    let v2 = lines()
+        .filter_map(|l| {
+            let (frame, tokens) = l.strip_prefix("#@ v2 frame=")?.split_once(' ')?;
+            Some((frame.parse().ok()?, tokens.to_string()))
+        })
+        .filter(|(frame, _)| *frame >= from)
+        .collect();
+    g.net_record.replay = Some(Replay { events, next: 0, values, v2 });
+}
+
+/// Whether the replay holds v2 match frames still to play.
+pub fn has_v2(g: &mut Game) -> bool {
+    g.net_record.replay.as_ref().is_some_and(|r| !r.v2.is_empty())
+}
+
+/// The next recorded v2 match frame: the frame it started at and its tokens.
+pub fn next_v2(g: &mut Game) -> Option<(u32, String)> {
+    g.net_record.replay.as_mut()?.v2.pop_front()
 }
 
 /// Whether the network comes from the replay: no connections, and every listener gets the recorded events.

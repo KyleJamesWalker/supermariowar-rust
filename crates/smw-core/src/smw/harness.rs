@@ -583,6 +583,11 @@ pub fn net_ticks(g: &mut Game) -> u32 {
     }
 }
 
+/// Whether a recording is being made.
+pub fn recording(g: &mut Game) -> bool {
+    rec(g).is_some()
+}
+
 /// A `#@` line for the recording, if one is being made.
 pub fn record_line(g: &mut Game, line: &str) {
     if let Some(r) = rec(g) {

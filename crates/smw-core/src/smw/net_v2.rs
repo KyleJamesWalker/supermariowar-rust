@@ -1,9 +1,12 @@
 //! Netplay v2 matches (docs/design/NETPLAY_V2.md, rollout step 4): every peer restores the host's match start, then
-//! the match runs under a GGRS P2P session over the room's WebRTC connections.
+//! the match runs under a GGRS P2P session over the room's WebRTC connections. A recording keeps every frame of the
+//! match as a `#@ v2` line, which a replay plays back without the network (docs/guides/REPLAY.md).
 
 use crate::common::input::COutputControl;
 use crate::game::Game;
-use crate::smw::rollback::{self, GgrsConfig, KeySlot, Keys};
+use crate::smw::harness;
+use crate::smw::network::net_record;
+use crate::smw::rollback::{self, GgrsConfig, KeySlot, Keys, MatchState, Req};
 use ggrs::{GgrsError, GgrsEvent, P2PSession, PlayerType, SessionBuilder, SessionState};
 use smw_peer::{PeerId, PeerSocket, RELIABLE};
 use std::collections::BTreeMap;
@@ -50,6 +53,8 @@ pub struct V2Match {
     rollback_ticks: u64,
     desyncs: u32,
     perf: V2Perf,
+    /// This frame's `#@ v2` tokens, while recording.
+    rec: Option<Vec<String>>,
 }
 
 /// What a 600-tick window of a match cost, logged with `[net] v2:`.
@@ -66,8 +71,23 @@ struct V2Perf {
 /// True when the caller must not start the match: a joiner starts it from the host's match start instead.
 pub fn match_starting(g: &mut Game) -> bool {
     let mut gp = g.ptr();
-    if !g.netplay.active || crate::smw::network::net_record::replaying(g) {
+    if !g.netplay.active {
         return false;
+    }
+    if net_record::replaying(g) {
+        if !net_record::has_v2(g) {
+            return false;
+        }
+        let host = g.netplay.theHostIsMe;
+        g.netplay.v2_match = true;
+        gp.netplay.client.v2_replay = Some(Box::new(V2Replay {
+            my_slot: g.netplay.remotePlayerNumber as u8,
+            own_config: None,
+            targets: Vec::new(),
+            local_device: g.game_values.playerInput.outputControls[0],
+            saves: BTreeMap::new(),
+        }));
+        return !host;
     }
     let Some((socket, others)) = gp.netplay.client.take_peer_socket() else {
         println!("[net] v2: the lobby sent no WebRTC room");
@@ -97,6 +117,7 @@ pub fn match_starting(g: &mut Game) -> bool {
         rollback_ticks: 0,
         desyncs: 0,
         perf: V2Perf::default(),
+        rec: None,
     };
     m.announce();
     println!("[net] v2: starting the match with {} peers ({})", others, if host { "host" } else { "joiner" });
@@ -105,20 +126,173 @@ pub fn match_starting(g: &mut Game) -> bool {
 }
 
 pub fn owns_tick(g: &mut Game) -> bool {
-    g.netplay.client.v2.is_some()
+    g.netplay.client.v2.is_some() || g.netplay.client.v2_replay.is_some()
 }
 
 /// One frame of a v2 match: the start handshake, then input, GGRS and the ticks it asks for.
 pub fn tick(g: &mut Game) {
     let (mut gp, mut mp) = (g.ptr(), g.ptr());
+    let frame = harness::frame(g);
+    if g.netplay.client.v2_replay.is_some() {
+        return replay_tick(g, frame);
+    }
     gp.netplay.client.update(g);
     let Some(m) = mp.netplay.client.v2.as_mut() else { return };
+    m.rec = harness::recording(g).then(Vec::new);
     let keep = match m.phase {
         Phase::Starting => m.start_step(g) || m.abandon(g),
         Phase::Running(_) => m.run_step(g),
     };
+    if let Some(mut tokens) = m.rec.take() {
+        if !keep && !tokens.iter().any(|t| t.starts_with('e')) {
+            tokens.push("eF".to_string());
+        }
+        let tokens = if tokens.is_empty() { "w".to_string() } else { tokens.join(" ") };
+        harness::record_line(g, &format!("#@ v2 frame={frame} {tokens}"));
+    }
     if !keep {
         finish(g);
+    }
+}
+
+/// Restores the host's match start on a joiner and returns the joiner's own settings, which the match replaces.
+fn restore_start(g: &mut Game, my_slot: u8, bytes: Vec<u8>) -> Result<(Vec<u8>, Vec<u8>), String> {
+    let mut gp = g.ptr();
+    let own_config = gp.game_values.config_bytes(g);
+    let slot = my_slot as usize;
+    let own_skin = g.game_values.skinids[slot];
+    crate::smw::checkpoint::restore_shared(g, bytes)?;
+    // The host's start holds the host's skin choices; this player's own skin is its choice here.
+    g.game_values.skinids[slot] = own_skin;
+    let strip = gp.rm.load_full_skin(g, own_skin, g.game_values.colorids[slot]);
+    gp.rm.set_strip(gp.rm.spr_player[slot], strip);
+    // The host captured mid-tick; this finishes that tick as its frame_end did there.
+    harness::end_rollback_tick(g);
+    println!("[net] v2: restored the host's match start");
+    Ok(own_config)
+}
+
+/// The player's input for a running match's frame, and its exit and pause dialog. True when the player left.
+fn local_input(g: &mut Game, local_device: &mut COutputControl) -> bool {
+    let mut gp = g.ptr();
+    harness::frame_start_input(g);
+    g.game_values.playerInput.outputControls[0] = *local_device;
+    let gameplay = gp.gps.as_mut().expect("a v2 match outside gameplay");
+    gameplay.gather_input(g);
+    *local_device = g.game_values.playerInput.outputControls[0];
+    crate::smw::gs_gameplay::update_exit_pause_dialog(g, gameplay.countdown_state())
+}
+
+/// The end of a running match's frame: the pause or exit dialog, and the music.
+fn draw_dialogs(g: &mut Game) {
+    if g.game_values.flags.pausegame || g.game_values.flags.exitinggame {
+        crate::smw::gs_gameplay::draw_exit_pause_dialog(g);
+    }
+    crate::smw::gs_gameplay::play_music(g);
+}
+
+/// Back to the menu, telling the lobby; a match that did not start (`abandon`) also cleans up its gameplay.
+fn to_menu(g: &mut Game, abandoned: bool) {
+    let mut gp = g.ptr();
+    if abandoned {
+        crate::smw::gs_gameplay::clean_up(g);
+        g.game_values.appstate = crate::common::game_values::AppState::Menu;
+    }
+    gp.netplay.client.send_leave_game_message(g);
+    crate::smw::game_state::GameStateManager::instance(g).change_state_to(gp.get(), crate::smw::game_state::StateId::Menu);
+}
+
+/// A v2 match in a replay: each frame does what the recording's `#@ v2` line says the live frame did.
+pub struct V2Replay {
+    my_slot: u8,
+    own_config: Option<(Vec<u8>, Vec<u8>)>,
+    targets: Vec<KeySlot>,
+    local_device: COutputControl,
+    saves: BTreeMap<i32, MatchState>,
+}
+
+fn replay_tick(g: &mut Game, frame: u32) {
+    let (mut gp, mut mp) = (g.ptr(), g.ptr());
+    gp.netplay.client.update(g);
+    let Some(r) = mp.netplay.client.v2_replay.as_mut() else { return };
+    let Some((at, tokens)) = net_record::next_v2(g) else { harness::fail(format!("the replay has no v2 match frame {frame}")) };
+    if at != frame {
+        harness::fail(format!("the replay's next v2 match frame is {at}, not {frame}"));
+    }
+    let mut requests = Vec::new();
+    let mut ended = false;
+    for token in tokens.split(' ') {
+        if let Some(request) = Req::parse(token) {
+            requests.push(request);
+            continue;
+        }
+        if !requests.is_empty() {
+            rollback::replay_requests(g, &std::mem::take(&mut requests), &r.targets, &mut r.saves, DESYNC_INTERVAL as i32);
+        }
+        match token.split_at(1) {
+            ("w", _) => {}
+            ("r", data) => {
+                let Some(bytes) = harness::base64_decode(data).and_then(|z| crate::smw::network::file_compressor::inflate(&z)) else {
+                    harness::fail(format!("the replay's v2 match start at frame {frame} is damaged"));
+                };
+                match restore_start(g, r.my_slot, bytes) {
+                    Ok(own) => r.own_config = Some(own),
+                    Err(e) => harness::fail(format!("the replay's v2 match start: {e}")),
+                }
+                r.local_device = g.game_values.playerInput.outputControls[0];
+            }
+            ("t", slots) => r.targets = slots.split(',').filter_map(parse_slot).collect(),
+            ("i", _) => {
+                local_input(g, &mut r.local_device);
+            }
+            ("d", _) => draw_dialogs(g),
+            ("e", kind) => {
+                match kind {
+                    "A" => to_menu(g, true),
+                    "L" => to_menu(g, false),
+                    _ => {}
+                }
+                ended = true;
+            }
+            _ => harness::fail(format!("the replay's v2 match frame {frame} has an unknown token {token}")),
+        }
+    }
+    if !requests.is_empty() {
+        rollback::replay_requests(g, &requests, &r.targets, &mut r.saves, DESYNC_INTERVAL as i32);
+    }
+    if ended {
+        g.netplay.v2_match = false;
+        if let Some(r) = g.netplay.client.v2_replay.take() {
+            if let Some((options, controls)) = r.own_config {
+                gp.game_values.read_config_bytes(g, options, controls);
+            }
+        }
+        println!("[net] v2: replayed match over");
+    }
+}
+
+/// Adds a token to this frame's `#@ v2` line, while recording.
+fn note(rec: &mut Option<Vec<String>>, token: String) {
+    if let Some(tokens) = rec {
+        tokens.push(token);
+    }
+}
+
+/// `L<input slot>` or `N<net slot>`, as `#@ v2` lines write the session's players.
+fn slot_token(slot: &KeySlot) -> String {
+    match slot {
+        KeySlot::Local(i) => format!("L{i}"),
+        KeySlot::Net(i) => format!("N{i}"),
+    }
+}
+
+fn parse_slot(token: &str) -> Option<KeySlot> {
+    let (kind, n) = token.split_at_checked(1)?;
+    let n = n.parse().ok()?;
+    match kind {
+        "L" => Some(KeySlot::Local(n)),
+        "N" => Some(KeySlot::Net(n)),
+        _ => None,
     }
 }
 
@@ -176,22 +350,15 @@ impl V2Match {
                     }
                     if !self.restored && self.parts.iter().all(Option::is_some) {
                         let bytes: Vec<u8> = self.parts.iter().flatten().flatten().copied().collect();
-                        let mut gp = g.ptr();
-                        self.own_config = Some(gp.game_values.config_bytes(g));
-                        let slot = self.my_slot as usize;
-                        let own_skin = g.game_values.skinids[slot];
-                        crate::smw::checkpoint::restore_shared(g, bytes)?;
-                        // The host's start holds the host's skin choices; this player's own skin is its choice here.
-                        g.game_values.skinids[slot] = own_skin;
-                        let strip = gp.rm.load_full_skin(g, own_skin, g.game_values.colorids[slot]);
-                        gp.rm.set_strip(gp.rm.spr_player[slot], strip);
-                        // The host captured mid-tick; this finishes that tick as its frame_end did there.
-                        crate::smw::harness::end_rollback_tick(g);
+                        if self.rec.is_some() {
+                            let data = harness::base64_encode(&crate::smw::network::file_compressor::deflate(&bytes));
+                            note(&mut self.rec, format!("r{data}"));
+                        }
+                        self.own_config = Some(restore_start(g, self.my_slot, bytes)?);
                         self.restored = true;
                         self.local_device = g.game_values.playerInput.outputControls[0];
                         let ready = [MSG_READY];
                         self.send_all(&ready);
-                        println!("[net] v2: restored the host's match start");
                     }
                 }
                 Some(&MSG_READY) if self.host => {
@@ -240,6 +407,8 @@ impl V2Match {
         match self.start_session() {
             Ok(session) => {
                 println!("[net] v2: GGRS session started in {} ms", self.opened.elapsed().as_millis());
+                let slots = self.targets.iter().map(slot_token).collect::<Vec<_>>().join(",");
+                note(&mut self.rec, format!("t{slots}"));
                 self.ticks = 0;
                 self.phase = Phase::Running(Box::new(session));
                 true
@@ -278,17 +447,16 @@ impl V2Match {
     /// Leaves the match for the menu and tells the other peers, who leave too, as everyone does when a player quits a
     /// local match.
     fn leave(&mut self, g: &mut Game) {
-        let mut gp = g.ptr();
         self.send_all(&[MSG_LEAVE]);
-        gp.netplay.client.send_leave_game_message(g);
-        crate::smw::game_state::GameStateManager::instance(g).change_state_to(gp.get(), crate::smw::game_state::StateId::Menu);
+        note(&mut self.rec, "eL".to_string());
+        to_menu(g, false);
     }
 
     /// A match that could not start ends for this player, who goes back to the room. False, for `tick`.
     fn abandon(&mut self, g: &mut Game) -> bool {
-        crate::smw::gs_gameplay::clean_up(g);
-        g.game_values.appstate = crate::common::game_values::AppState::Menu;
-        self.leave(g);
+        self.send_all(&[MSG_LEAVE]);
+        note(&mut self.rec, "eA".to_string());
+        to_menu(g, true);
         false
     }
 
@@ -318,12 +486,8 @@ impl V2Match {
             return self.abandon(g);
         }
 
-        crate::smw::harness::frame_start_input(g);
-        g.game_values.playerInput.outputControls[0] = self.local_device;
-        let gameplay = gp.gps.as_mut().expect("a v2 match outside gameplay");
-        gameplay.gather_input(g);
-        self.local_device = g.game_values.playerInput.outputControls[0];
-        if crate::smw::gs_gameplay::update_exit_pause_dialog(g, gameplay.countdown_state()) {
+        note(&mut self.rec, "i".to_string());
+        if local_input(g, &mut self.local_device) {
             self.leave(g);
             return false;
         }
@@ -353,6 +517,11 @@ impl V2Match {
                 return false;
             }
         };
+        if self.rec.is_some() {
+            for request in &requests {
+                note(&mut self.rec, Req::of(request).token());
+            }
+        }
         let advances = requests.iter().filter(|r| matches!(r, ggrs::GgrsRequest::AdvanceFrame { .. })).count() as u64;
         self.rollback_ticks += advances.saturating_sub(1);
         self.ticks += 1;
@@ -376,10 +545,8 @@ impl V2Match {
         if ended || g.gsm.currentState != crate::smw::game_state::StateId::Gameplay {
             return false;
         }
-        if g.game_values.flags.pausegame || g.game_values.flags.exitinggame {
-            crate::smw::gs_gameplay::draw_exit_pause_dialog(g);
-        }
-        crate::smw::gs_gameplay::play_music(g);
+        note(&mut self.rec, "d".to_string());
+        draw_dialogs(g);
         true
     }
 }

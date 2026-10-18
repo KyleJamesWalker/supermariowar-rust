@@ -434,6 +434,7 @@ pub struct NetClient {
 
     peer_probe: Option<PeerProbe>,
     pub v2: Option<Box<crate::smw::net_v2::V2Match>>,
+    pub v2_replay: Option<Box<crate::smw::net_v2::V2Replay>>,
 
     foreign_lobbyserver: Ptr<dyn NetPeer>,
 
@@ -460,6 +461,7 @@ impl Clone for NetClient {
             shown_filter: self.shown_filter.clone(),
             peer_probe: None,
             v2: None,
+            v2_replay: None,
             foreign_lobbyserver: Ptr::null(),
             uiRoomList: self.uiRoomList,
             _alias: Aliased::new(),
@@ -484,6 +486,7 @@ impl NetClient {
             shown_filter: String::new(),
             peer_probe: None,
             v2: None,
+            v2_replay: None,
             foreign_lobbyserver: Ptr::null(),
             uiRoomList: Default::default(),
             _alias: Aliased::new(),
@@ -515,6 +518,7 @@ impl NetClient {
     pub fn stop(&mut self, g: &mut Game) {
         self.peer_probe = None;
         self.v2 = None;
+        self.v2_replay = None;
         g.netplay.v2_match = false;
 
         if g.netplay.connectSuccessful {

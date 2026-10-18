@@ -115,7 +115,7 @@ jobs:
       - name: Live recording round trip
         run: SMW_NO_BUILD=1 tools/live_roundtrip.sh tools/replays/text_shift.txt tools/replays/menu_nav.txt tools/replays/start_classic.txt
 
-      - name: Net games over netplay v2 (GGRS over WebRTC, 60 ms lag, 10% loss)
+      - name: Net games over netplay v2 (GGRS over WebRTC, 60 ms lag, 10% loss), recorded and replayed offline
         env:
           SDL_RENDER_DRIVER: software
         run: timeout 20m tools/net_v2_test.py "$RUNNER_TEMP/net-games-v2"
