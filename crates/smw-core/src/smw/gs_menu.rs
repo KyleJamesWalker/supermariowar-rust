@@ -1514,6 +1514,7 @@ impl MenuState {
                 if !g.netplay.mychatmessage.is_empty() {
                     let message = g.netplay.mychatmessage.clone();
                     gp.netplay.client.send_chat_message(g, &message);
+                    self.mNetRoomMenu.chat_sent(g);
                 } else {
                     code = MENU_CODE_TO_NET_ROOM_MENU;
                 }

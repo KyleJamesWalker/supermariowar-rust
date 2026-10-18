@@ -125,6 +125,11 @@ impl UI_NetRoomMenu {
         this
     }
 
+    /// Empties the message field once its message went out.
+    pub fn chat_sent(&mut self, g: &mut Game) {
+        g.ctl(self.miNetRoomMessageField).clear();
+    }
+
     pub fn refresh(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         let name = g.netplay.currentRoom.name.clone();

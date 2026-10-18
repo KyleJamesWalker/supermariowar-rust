@@ -713,6 +713,7 @@ impl NetClient {
         println!("room created!");
         let pkg = pkgs::NewRoomCreated::from_bytes(data);
 
+        g.netplay.chat.clear();
         g.netplay.currentRoom.roomID = pkg.roomID;
         g.netplay.currentRoom.hostPlayerNumber = 0;
         g.netplay.currentRoom.name = g.netplay.newroom_name.clone();
@@ -756,6 +757,7 @@ impl NetClient {
 
     pub fn send_leave_room_message(&mut self, g: &mut Game) {
         self.local_gamehost.stop(g);
+        g.netplay.chat.clear();
 
         let msg = pkgs::LeaveRoom::new();
         self.send_message_to_lobby_server(g, msg.as_bytes());
@@ -869,9 +871,15 @@ impl NetClient {
     }
 
     fn handle_room_chat_message(&mut self, g: &mut Game, data: &[u8]) {
+        const KEEP: usize = 50;
         let pkg = pkgs::RoomChatMsg::from_bytes(data);
-
-        println!("Not implemented: [net] {}: {}", g.netplay.currentRoom.playerNames[pkg.senderNum as usize], cstr_field(&pkg.message));
+        let Some(sender) = g.netplay.currentRoom.playerNames.get(pkg.senderNum as usize).cloned() else { return };
+        let message = cstr_field(&pkg.message);
+        println!("[net] chat {}: {}", sender, message);
+        g.netplay.chat.push((sender, message));
+        if g.netplay.chat.len() > KEEP {
+            g.netplay.chat.remove(0);
+        }
     }
 
     pub fn send_skin_change(&mut self, g: &mut Game) {
@@ -1326,7 +1334,7 @@ impl NetworkEventHandler<Game> for NetClient {
             }
 
             NET_RESPONSE_JOIN_OK => {
-                println!("Not implemented: [net] Joined to room.");
+                g.netplay.chat.clear();
                 g.netplay.joinSuccessful = true;
                 g.netplay.theHostIsMe = false;
             }
@@ -1977,6 +1985,8 @@ pub struct Networking {
     pub newroom_name: String,
     pub newroom_password: String,
     pub mychatmessage: String,
+    /// The current room's chat, oldest first, as (sender, message).
+    pub chat: Vec<(String, String)>,
     pub mapfilepath: String,
 
     pub theHostIsMe: bool,
@@ -2040,6 +2050,7 @@ impl Networking {
             newroom_name: String::new(),
             newroom_password: String::new(),
             mychatmessage: String::new(),
+            chat: Vec::new(),
             mapfilepath: String::new(),
             theHostIsMe: false,
             remotePlayerNumber: 0,
