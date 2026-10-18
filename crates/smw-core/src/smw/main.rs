@@ -435,6 +435,9 @@ fn assign_hotplugged(g: &mut Game) {
     if *pending && !playing {
         *pending = false;
         assign_inputs(g);
+        if gp.get().ms.is_some() {
+            crate::smw::gs_menu::MenuState::instance(g).players_changed(g);
+        }
     }
 }
 
