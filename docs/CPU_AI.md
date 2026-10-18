@@ -77,6 +77,7 @@ The steps run from most payoff per effort to least.
    A fleeing CPU (the chicken, a player near the tagged one, any CPU facing an invincible opponent) steps to the neighbouring tile farthest from the threat, and when cornered jumps over it.
    Focusing untagged players on the tagged one in Tag left them pinned in corners, so Tag keeps the nearest-player target.
    In Star mode the holder of the star worth keeping counts at half distance and the holder of the star to pass on is avoided; before, a CPU without the star that picked a player to attack stood still.
+   A CPU fires its weapon when an opponent stands where the shot would reach (`weapon_lined_up`): turbo fires once per press, so a CPU that already fired lets go of turbo to fire again. In Classic, Frag and Time Limit, a CPU with no powerup goes for the nearest full powerup block within 160 px.
 7. **Target spreading**.
    A target that another CPU already chases scores lower.
    The current leader scores higher.
