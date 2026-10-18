@@ -1615,7 +1615,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                         playerKeys.game_down_mut().fDown = true;
                     }
 
-                    if !g.player(pPlayer).superstomp.is_in_super_stomp_state() {
+                    if g.player(pPlayer).inair && !g.player(pPlayer).superstomp.is_in_super_stomp_state() {
                         //If the player has the tanooki or shoe, then try to super stomp on them
                         if g.player(pPlayer).tanookisuit.is_on() || g.player(pPlayer).kuriboshoe.is_on() {
                             playerKeys.game_down_mut().fDown = true;
@@ -1770,7 +1770,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                         playerKeys.game_down_mut().fDown = true;
                     }
 
-                    if !g.player(pPlayer).superstomp.is_in_super_stomp_state() {
+                    if g.player(pPlayer).inair && !g.player(pPlayer).superstomp.is_in_super_stomp_state() {
                         //If the player has the tanooki or shoe, then try to super stomp on them
                         if g.player(pPlayer).tanookisuit.is_on() || g.player(pPlayer).kuriboshoe.is_on() {
                             playerKeys.game_down_mut().fDown = true;
