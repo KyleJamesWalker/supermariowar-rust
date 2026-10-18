@@ -2524,9 +2524,7 @@ impl GameplayState {
 
     /// Offline matches' wind events, part of the tick's simulation.
     pub fn wind(&mut self, g: &mut Game) {
-        if !g.netplay.active {
-            check_wind_event(g, &mut self.iWindTimer, &mut self.dNextWind);
-        }
+        check_wind_event(g, &mut self.iWindTimer, &mut self.dNextWind);
     }
 
     /// One tick of the match once its input is in place: the world, the end-of-game fade, and drawing, whose code also
