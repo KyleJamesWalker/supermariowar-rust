@@ -2382,6 +2382,7 @@ dependencies = [
  "smw-peer",
  "smw-platform",
  "smw-sdl2",
+ "smw_relay",
  "toml",
  "tungstenite 0.30.0",
 ]
@@ -2465,6 +2466,8 @@ dependencies = [
 name = "smw_relay"
 version = "0.1.0"
 dependencies = [
+ "getrandom 0.3.4",
+ "serde_json",
  "smw-netplay",
  "tungstenite 0.30.0",
 ]

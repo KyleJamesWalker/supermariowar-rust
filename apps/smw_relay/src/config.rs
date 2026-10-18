@@ -21,6 +21,9 @@ pub struct Config {
     pub allowed_origins: Vec<String>,
     pub max_clients: usize,
     pub max_connections_per_client: usize,
+    /// The lobby's `SMW_SIGNAL_URL` when set here; `/signal` means this relay's own signaling.
+    pub signal_url: Option<String>,
+    pub log_file: bool,
 }
 
 impl Config {
@@ -32,6 +35,8 @@ impl Config {
             allowed_origins: parse_origins(&env::var("SMW_RELAY_ALLOWED_ORIGINS").unwrap_or_else(|_| DEFAULT_ORIGINS.to_string())),
             max_clients: 64,
             max_connections_per_client: 8,
+            signal_url: None,
+            log_file: true,
         };
         if let Ok(port) = env::var("SMW_RELAY_PORT") {
             config.port = port.parse().map_err(|_| format!("SMW_RELAY_PORT: not a port: {port}"))?;
@@ -53,6 +58,19 @@ impl Config {
             }
         }
         Ok(config)
+    }
+
+    pub fn embedded(port: u16) -> Config {
+        Config {
+            port,
+            lobby_config: String::new(),
+            healthcheck: false,
+            allowed_origins: vec!["*".to_string()],
+            max_clients: 16,
+            max_connections_per_client: 8,
+            signal_url: Some("/signal".to_string()),
+            log_file: false,
+        }
     }
 
     pub fn origin_allowed(&self, origin: Option<&str>) -> bool {
@@ -87,6 +105,8 @@ mod tests {
             allowed_origins: parse_origins(origins),
             max_clients: 1,
             max_connections_per_client: 1,
+            signal_url: None,
+            log_file: true,
         }
     }
 

@@ -1,26 +1,6 @@
-//! `smw_relay`: the netplay lobby server plus a connection switch, both over WebSocket, so the browser
-//! build can play online. See docs/guides/RELAY.md.
+//! `smw_relay`: see the library (src/lib.rs) and docs/guides/RELAY.md.
 
-#![allow(non_snake_case, non_camel_case_types, non_upper_case_globals, static_mut_refs, dead_code)]
-
-extern crate smw_netplay as smw;
-
-use smw::server;
-
-mod config;
-mod lobby;
-mod switch;
-mod websocket;
-
-use config::Config;
-use lobby::{LobbyIo, RelayNetworkLayer};
-use server::server::{set_net_layer, SMWServer};
-use std::cell::RefCell;
-use std::rc::Rc;
-use std::sync::mpsc::{self, RecvTimeoutError};
-use std::time::Duration;
-use switch::Switch;
-use websocket::Event;
+use smw_relay::Config;
 
 fn main() {
     let config = match Config::from_args_and_env() {
@@ -31,49 +11,14 @@ fn main() {
         }
     };
     if config.healthcheck {
-        std::process::exit(if websocket::healthcheck(config.port) { 0 } else { 1 });
+        std::process::exit(if smw_relay::healthcheck(config.port) { 0 } else { 1 });
     }
     exit_on_signal();
 
     println!("SMW relay");
-    let (events_tx, events) = mpsc::channel();
-    if let Err(error) = websocket::serve(&config, events_tx) {
-        eprintln!("[error] Could not listen on port {}: {}", config.port, error);
+    if let Err(message) = smw_relay::run(&config) {
+        eprintln!("[error] {message}");
         std::process::exit(1);
-    }
-
-    let io = Rc::new(RefCell::new(LobbyIo::default()));
-    set_net_layer(Box::new(RelayNetworkLayer::new(io.clone())));
-    let mut lobby = SMWServer::new();
-    if !lobby.init(&config.lobby_config) {
-        std::process::exit(1);
-    }
-    let mut switch = Switch::new(io, config.max_connections_per_client);
-
-    println!("Ready! Port {}, allowed origins: {}", config.port, config.allowed_origins.join(", "));
-
-    let mut running = true;
-    loop {
-        match events.recv_timeout(Duration::from_millis(100)) {
-            Ok(event) => {
-                handle(&mut switch, event);
-                while let Ok(event) = events.try_recv() {
-                    handle(&mut switch, event);
-                }
-            }
-            Err(RecvTimeoutError::Timeout) => {}
-            Err(RecvTimeoutError::Disconnected) => break,
-        }
-        lobby.update(&mut running);
-        switch.apply_lobby_disconnects();
-    }
-}
-
-fn handle(switch: &mut Switch, event: Event) {
-    match event {
-        Event::Open { id, outbox } => switch.open(id, outbox.into_sink()),
-        Event::Message { id, data } => switch.receive(id, &data),
-        Event::Closed { id } => switch.close(id),
     }
 }
 

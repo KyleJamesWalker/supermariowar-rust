@@ -74,6 +74,11 @@ impl SMWServer {
         if !log_init() {
             return false;
         }
+        self.init_without_log_file(config_path)
+    }
+
+    /// `init` that logs to stdout only, for a lobby inside a game, whose working directory may not be writable.
+    pub fn init_without_log_file(&mut self, config_path: &str) -> bool {
         log_silently("-- Server started --");
 
         self.read_config(config_path);

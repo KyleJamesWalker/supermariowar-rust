@@ -71,6 +71,11 @@ fn handle_connection(mut stream: TcpStream, id: ClientId, config: &Config, activ
 
     let Some((head, head_len)) = peek_request_head(&stream) else { return };
     let (path, upgrade) = parse_request_head(&head);
+    if let Some(room) = path.strip_prefix("/signal/").filter(|r| upgrade && !r.is_empty()) {
+        let room = room.split('?').next().unwrap_or_default().to_string();
+        crate::signal::run(stream, room, config);
+        return;
+    }
     if !upgrade || path == "/healthz" {
         let mut consumed = vec![0; head_len];
         let _ = stream.read_exact(&mut consumed);
