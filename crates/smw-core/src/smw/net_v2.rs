@@ -21,6 +21,9 @@ const RESEND_TICKS: u64 = 30;
 const INPUT_DELAY: usize = 2;
 const MAX_PREDICTION: usize = 8;
 const DESYNC_INTERVAL: u32 = 30;
+/// A peer is dropped for good after this much silence; GGRS's 2 s default is shorter than a Wi-Fi mesh's node hop.
+const DISCONNECT_TIMEOUT: Duration = Duration::from_secs(10);
+const INTERRUPTED_AFTER: Duration = Duration::from_secs(1);
 
 pub fn enabled() -> bool {
     std::env::var("SMW_NETPLAY_V2").is_ok_and(|v| v == "1")
@@ -261,7 +264,9 @@ impl V2Match {
             .with_input_delay(INPUT_DELAY)
             .with_max_prediction_window(MAX_PREDICTION)
             .with_fps(crate::common::global_constants::TICKS_PER_SECOND as usize)?
-            .with_desync_detection_mode(ggrs::DesyncDetection::On { interval: DESYNC_INTERVAL });
+            .with_desync_detection_mode(ggrs::DesyncDetection::On { interval: DESYNC_INTERVAL })
+            .with_disconnect_timeout(DISCONNECT_TIMEOUT)
+            .with_disconnect_notify_delay(INTERRUPTED_AFTER);
         self.targets.clear();
         for (handle, (slot, peer)) in players.iter().enumerate() {
             let player = match peer {
@@ -294,7 +299,10 @@ impl V2Match {
                     println!("[net] v2: desync at frame {frame} with {:08x}: {local_checksum:x} vs {remote_checksum:x}", addr.0 >> 96);
                 }
                 GgrsEvent::Disconnected { addr } => println!("[net] v2: peer {:08x} disconnected", addr.0 >> 96),
-                GgrsEvent::NetworkInterrupted { addr, .. } => println!("[net] v2: peer {:08x} interrupted", addr.0 >> 96),
+                GgrsEvent::NetworkInterrupted { addr, disconnect_timeout } => {
+                    println!("[net] v2: peer {:08x} silent; dropped in {} ms unless it returns", addr.0 >> 96, disconnect_timeout)
+                }
+                GgrsEvent::NetworkResumed { addr } => println!("[net] v2: peer {:08x} back", addr.0 >> 96),
                 _ => {}
             }
         }
