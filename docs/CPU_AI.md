@@ -1,6 +1,6 @@
 # CPU AI overhaul
 
-Status: steps 1 to 3, 7 and 8 are done, and steps 4 and 6 have a first cut (2026-10-17). Steps 5 and 9 remain.
+Status: steps 1 to 3, 5, 7 and 8 are done, and steps 4, 6 and 9 have a first cut (2026-10-18).
 
 ## Summary
 
@@ -69,12 +69,14 @@ The steps run from most payoff per effort to least.
 5. **Height advantage**.
    The score rewards positions above an opponent and penalizes positions below a non-invincible one.
    Weighting target choice by height (below at three quarters, above at five quarters) was mixed in the benchmark, so this needs positioning rather than target choice.
+   Done as positioning: a CPU on the ground jumps when the horizontal gap to its target equals the distance it closes while its jump carries its feet up to the target's head and back down (`stomp_lead_jump`), and it steps out from under an opponent falling onto it (`dodge_stomp`). Both need Moderate or harder.
 6. **Per-mode behaviors**.
    Flag defense, Chicken and Tag evasion, Jail rescue, and Race checkpoints get explicit behaviors, not only target filters.
    First cut: a flag carrier ignores stomps and nearby players and runs home, and other CPUs count a flag carrier's distance at half.
    Thwomps and podobos count their vertical distance at a quarter, so one anywhere in the CPU's column is near, and the CPU runs sideways out of the column instead of ducking or jumping.
    A fleeing CPU (the chicken, a player near the tagged one, any CPU facing an invincible opponent) steps to the neighbouring tile farthest from the threat, and when cornered jumps over it.
    Focusing untagged players on the tagged one in Tag left them pinned in corners, so Tag keeps the nearest-player target.
+   In Star mode the holder of the star worth keeping counts at half distance and the holder of the star to pass on is avoided; before, a CPU without the star that picked a player to attack stood still.
 7. **Target spreading**.
    A target that another CPU already chases scores lower.
    The current leader scores higher.
@@ -84,10 +86,12 @@ The steps run from most payoff per effort to least.
    Steer along the path, not straight at the target.
    Done in `ai_nav.rs`: the tiles a player can stand on, linked by walks, falls, drops through solid-on-top ledges, jumps of up to three tiles up and four across, screen wraps and pipes, searched cheapest-first on each think.
    Goals always follow the path. Chasing a player, or a goal a player carries, the AI follows it only once the straight line is blocked or the target is three rows away, because the straight line wins fights.
-   The graph has no moving platforms, springs or breakable blocks, so an unreachable route keeps the straight-line steering, and step 3's wall jump stays as a fallback.
+   Moving platforms count as tiles where they are when the graph is built, and the graph is rebuilt every eight thinks on maps that have them.
+   The graph has no springs or breakable blocks, so an unreachable route keeps the straight-line steering, and step 3's wall jump stays as a fallback.
 9. **Skill-based difficulty and personalities**.
    Difficulty sets planning depth, jump precision, and objective focus.
    Personalities (aggressive, objective, cautious) are weight presets for step 4.
+   First cut: each CPU draws a style at match start from the game RNG (balanced, aggressive, objective or cautious), which sets the distances that pull it off its goal, the threat distance it runs from, and how close an opponent above it must be before it backs away (`style_ranges`). Very Easy CPUs steer in straight lines, Easy ones plan routes only to goals, and the lead jump and stomp dodge need Moderate or harder.
 
 All randomness stays on the game RNG, and no logic depends on wall-clock time or hash map iteration order.
 
@@ -111,5 +115,5 @@ Each PR posts the benchmark before and after, and refreshes the replay goldens t
 
 - The handles refactor rewrites most of the `Ptr` access in `ai.rs`.
   Starting before it lands means large conflicts, so this work waits for it.
-- The navigation graph must handle moving platforms and breakable blocks. The design for these is open.
+- The navigation graph treats moving platforms as still for eight thinks at a time. Riding a platform along its path, springs and breakable blocks are open.
 - The benchmark needs a stuck metric that does not flag deliberate waiting, such as a CPU guarding a flag. It already stops at game over, so the winner idling on the results screen does not count.
