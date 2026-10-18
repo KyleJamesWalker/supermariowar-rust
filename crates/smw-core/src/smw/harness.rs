@@ -569,6 +569,18 @@ pub fn frame(g: &mut Game) -> u32 {
     h(gp.get()).frame
 }
 
+/// For rollback: the frame counter is match state, since the virtual sound clock runs on it.
+pub fn set_frame(g: &mut Game, frame: u32) {
+    h(g).frame = frame;
+}
+
+/// The part of `frame_end` a rollback tick needs: no dump, recording or screenshots.
+pub fn end_rollback_tick(g: &mut Game) {
+    g.sfx.sfx_events.clear();
+    h(g).spawn_events.clear();
+    h(g).frame += 1;
+}
+
 /// The clock net code decides by: frame-based in seeded runs, so a replay reads the recorded session's times.
 pub fn net_ticks(g: &mut Game) -> u32 {
     let mut gp = g.ptr();
@@ -606,14 +618,22 @@ pub fn forced_map(g: &mut Game) -> Option<&'static str> {
 }
 
 pub fn frame_start(g: &mut Game) {
-    let mut gp = g.ptr();
     #[cfg(not(target_os = "emscripten"))]
-    crate::smw::pad::debug_frame(g, h(gp.get()).frame);
+    {
+        let frame = h(g).frame;
+        crate::smw::pad::debug_frame(g, frame);
+    }
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::pad::phase(2);
     sfx::sfx_virtual_advance(g);
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::pad::phase(3);
+    frame_start_input(g);
+}
+
+/// `frame_start` without the sound clock: records the frame and feeds the replay's input due now.
+pub fn frame_start_input(g: &mut Game) {
+    let mut gp = g.ptr();
     record_frame_start(g, h(gp.get()).frame);
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::pad::phase(4);

@@ -2654,6 +2654,71 @@ impl GameplayState {
     }
 }
 
+impl GameplayState {
+    /// The input phase of a match tick, for a driver that runs `simulate` itself (rollback).
+    pub fn gather_input(&mut self, g: &mut Game) {
+        self.handle_input(g);
+    }
+
+    /// Offline matches' wind events, part of the tick's simulation.
+    pub fn wind(&mut self, g: &mut Game) {
+        if !g.netplay.active {
+            check_wind_event(g, &mut self.iWindTimer, &mut self.dNextWind);
+        }
+    }
+
+    /// One tick of the match once its input is in place: the world, the end-of-game fade, and drawing, whose code also
+    /// advances some animation state. True when the match ended or restarted, which changes the state.
+    pub fn simulate(&mut self, g: &mut Game) -> bool {
+        if !g.game_values.flags.swapplayers && g.game_values.screenfade == 0 {
+            self.update_countdown_timer(g);
+
+            //Make updates to background stuff (animate map while countdown is counting)
+            if self.iCountDownState > COUNTDOWN_START_INDEX {
+                animate_during_countdown(g);
+            } else {
+                self.update_world(g);
+            }
+        }
+        update_playerswap(g);
+        crate::smw::net_outcomes::sample(g);
+        network_broadcast_game_state(g);
+
+        if g.game_values.screenfade == 255 {
+            if g.game_values.appstate == AppState::StartGame {
+                start_gameplay(g);
+                return true;
+            } else if g.game_values.appstate == AppState::EndGame {
+                end_gameplay(g);
+                return true;
+            }
+        }
+
+        //--------------- draw everything ----------------------
+        let (state, offsets) = (self.iCountDownState, self.iScoreTextOffset);
+        let check = crate::common::gfx::display_list::check_enabled();
+        // The exit dialog is drawn straight onto this frame, so a frame showing it is drawn, not recorded.
+        let dialog = g.game_values.flags.pausegame || g.game_values.flags.exitinggame;
+        let interpolate = g.main_loop.interpolate && !dialog;
+        let record = interpolate || check;
+        if record {
+            let record_only = interpolate && !check && !crate::smw::harness::replaying(g);
+            crate::common::gfx::display_list::begin(g.screen, record_only);
+        }
+        self.draw_everything(g, state, offsets);
+        if record {
+            let draw = crate::common::gfx::display_list::end();
+            if check {
+                if let Err((pixels, area)) = unsafe { crate::common::gfx::display_list::check(&*g.screen, &draw) } {
+                    println!("[display list] frame {}: {} pixels differ in {:?}", crate::smw::harness::frame(g), pixels, area);
+                }
+            }
+            g.main_loop.store_display(draw);
+        }
+        false
+    }
+}
+
 impl GameState for GameplayState {
     fn on_enter_state(&mut self, g: &mut Game) {
         crate::services::services(g).video.show_cursor(false);
@@ -2698,52 +2763,8 @@ impl GameState for GameplayState {
             return;
         }
 
-        if should_update(g) {
-            if !g.game_values.flags.swapplayers && g.game_values.screenfade == 0 {
-                self.update_countdown_timer(g);
-
-                //Make updates to background stuff (animate map while countdown is counting)
-                if self.iCountDownState > COUNTDOWN_START_INDEX {
-                    animate_during_countdown(g);
-                } else {
-                    self.update_world(g);
-                }
-            }
-            update_playerswap(g);
-            crate::smw::net_outcomes::sample(g);
-            network_broadcast_game_state(g);
-
-            if g.game_values.screenfade == 255 {
-                if g.game_values.appstate == AppState::StartGame {
-                    start_gameplay(g);
-                    return;
-                } else if g.game_values.appstate == AppState::EndGame {
-                    end_gameplay(g);
-                    return;
-                }
-            }
-
-            //--------------- draw everything ----------------------
-            let (state, offsets) = (self.iCountDownState, self.iScoreTextOffset);
-            let check = crate::common::gfx::display_list::check_enabled();
-            // The exit dialog is drawn straight onto this frame, so a frame showing it is drawn, not recorded.
-            let dialog = g.game_values.flags.pausegame || g.game_values.flags.exitinggame;
-            let interpolate = g.main_loop.interpolate && !dialog;
-            let record = interpolate || check;
-            if record {
-                let record_only = interpolate && !check && !crate::smw::harness::replaying(g);
-                crate::common::gfx::display_list::begin(g.screen, record_only);
-            }
-            self.draw_everything(g, state, offsets);
-            if record {
-                let draw = crate::common::gfx::display_list::end();
-                if check {
-                    if let Err((pixels, area)) = unsafe { crate::common::gfx::display_list::check(&*g.screen, &draw) } {
-                        println!("[display list] frame {}: {} pixels differ in {:?}", crate::smw::harness::frame(g), pixels, area);
-                    }
-                }
-                g.main_loop.store_display(draw);
-            }
+        if should_update(g) && self.simulate(g) {
+            return;
         }
 
         if g.game_values.flags.pausegame || g.game_values.flags.exitinggame {
