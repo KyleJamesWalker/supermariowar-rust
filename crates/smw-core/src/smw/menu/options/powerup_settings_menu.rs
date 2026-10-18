@@ -15,18 +15,18 @@ use crate::smw::ui::mi_stored_powerup_reset_button::MI_StoredPowerupResetButton;
 
 const RESPAWN_TIMES: &[(&str, i16)] = &[
     ("Off", 0),
-    ("5 Seconds", 310),
-    ("10 Seconds", 620),
-    ("15 Seconds", 930),
-    ("20 Seconds", 1240),
-    ("25 Seconds", 1550),
-    ("30 Seconds", 1860),
-    ("35 Seconds", 2170),
-    ("40 Seconds", 2480),
-    ("45 Seconds", 2790),
-    ("50 Seconds", 3100),
-    ("55 Seconds", 3410),
-    ("60 Seconds", 3720),
+    ("5 Seconds", 300),
+    ("10 Seconds", 600),
+    ("15 Seconds", 900),
+    ("20 Seconds", 1200),
+    ("25 Seconds", 1500),
+    ("30 Seconds", 1800),
+    ("35 Seconds", 2100),
+    ("40 Seconds", 2400),
+    ("45 Seconds", 2700),
+    ("50 Seconds", 3000),
+    ("55 Seconds", 3300),
+    ("60 Seconds", 3600),
 ];
 
 /*

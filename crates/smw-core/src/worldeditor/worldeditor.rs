@@ -369,14 +369,8 @@ const SDL_BUTTON_RMASK: u32 = 1 << (SDL_BUTTON_RIGHT - 1);
 /// The end-of-frame wait every editor loop does; the reference harness `#define`s `SDL_Delay` to this.
 fn frame_wait(g: &mut Game, framestart: i32) {
     let mut gp = g.ptr();
-    let mut delay: i32 = WAITTIME - (crate::services::ticks(gp.get()) as i32 - framestart);
-    if delay < 0 {
-        delay = 0;
-    } else if delay > WAITTIME {
-        delay = WAITTIME;
-    }
-
-    editor_harness::frame_delay(g, delay as u32);
+    let delay = ms_to_next_tick(framestart as u32, crate::services::ticks(gp.get()));
+    editor_harness::frame_delay(g, delay);
 }
 
 fn tile(g: &mut Game, iCol: i16, iRow: i16) -> &'static mut WorldMapTile {

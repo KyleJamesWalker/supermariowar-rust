@@ -4492,14 +4492,8 @@ pub fn dialog(g: &mut Game, title: &str, instructions: &str, input: &mut String,
             }
         }
 
-        let mut delay = WAITTIME - (crate::services::ticks(gp.get()) as i32 - framestart);
-        if delay < 0 {
-            delay = 0;
-        } else if delay > WAITTIME {
-            delay = WAITTIME;
-        }
-
-        editor_harness::frame_delay(g, delay as u32);
+        let delay = ms_to_next_tick(framestart as u32, crate::services::ticks(gp.get()));
+        editor_harness::frame_delay(g, delay);
     }
 }
 

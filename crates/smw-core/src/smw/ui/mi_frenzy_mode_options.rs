@@ -84,15 +84,15 @@ impl MI_FrenzyModeOptions {
 
         this.miRateField = Ctl::new(MI_SelectField::<i16>::new(spr_selectfield, 120, 80, "Rate", 400, 180), g);
         g.ctl(this.miRateField).add("Instant", 0);
-        g.ctl(this.miRateField).add("1 Second", 62);
-        g.ctl(this.miRateField).add("2 Seconds", 124);
-        g.ctl(this.miRateField).add("3 Seconds", 186);
-        g.ctl(this.miRateField).add("5 Seconds", 310);
-        g.ctl(this.miRateField).add_random("10 Seconds", 620, false);
-        g.ctl(this.miRateField).add_random("15 Seconds", 930, false);
-        g.ctl(this.miRateField).add_random("20 Seconds", 1240, false);
-        g.ctl(this.miRateField).add_random("25 Seconds", 1550, false);
-        g.ctl(this.miRateField).add_random("30 Seconds", 1860, false);
+        g.ctl(this.miRateField).add("1 Second", 60);
+        g.ctl(this.miRateField).add("2 Seconds", 120);
+        g.ctl(this.miRateField).add("3 Seconds", 180);
+        g.ctl(this.miRateField).add("5 Seconds", 300);
+        g.ctl(this.miRateField).add_random("10 Seconds", 600, false);
+        g.ctl(this.miRateField).add_random("15 Seconds", 900, false);
+        g.ctl(this.miRateField).add_random("20 Seconds", 1200, false);
+        g.ctl(this.miRateField).add_random("25 Seconds", 1500, false);
+        g.ctl(this.miRateField).add_random("30 Seconds", 1800, false);
         g.ctl(this.miRateField).set_output_ptr(&mut g.game_values.gamemodemenusettings.frenzy.rate as *mut i16);
         g.ctl(this.miRateField).set_current_value(g.game_values.gamemodemenusettings.frenzy.rate);
 
