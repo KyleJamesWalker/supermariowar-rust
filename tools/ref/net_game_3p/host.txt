@@ -38,6 +38,7 @@
 250 down Return
 252 up Return
 570 await net_room
+570 await net_room_3p
 570 down Up
 572 up Up
 580 down Return

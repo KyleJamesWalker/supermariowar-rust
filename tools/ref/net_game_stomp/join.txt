@@ -15,6 +15,7 @@
 80 down Return
 82 up Return
 400 await net_lobby
+400 await net_lobby_rooms
 400 down Down
 402 up Down
 410 down Down

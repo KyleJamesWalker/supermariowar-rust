@@ -69,6 +69,7 @@
 330 down Return
 332 up Return
 620 await net_room
+620 await net_room_2p
 620 down Up
 622 up Up
 630 down Return

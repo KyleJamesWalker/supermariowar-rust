@@ -38,6 +38,7 @@
 250 down Return
 252 up Return
 420 await net_room
+420 await net_room_2p
 420 down Up
 422 up Up
 430 down Return
@@ -51,6 +52,7 @@
 740 down Return
 742 up Return
 800 await net_room
+800 await net_room_2p
 820 down Up
 822 up Up
 830 down Up
@@ -73,6 +75,7 @@
 900 down Return
 902 up Return
 910 await net_room
+910 await net_room_2p
 920 down Up
 922 up Up
 930 down Return
