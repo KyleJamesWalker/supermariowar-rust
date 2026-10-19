@@ -47,26 +47,21 @@ The browser build connects to `wss://smw-relay.vps.pocketsquirrel.com` unless th
 
 ## Deploy
 
-The `Relay` workflow publishes two images for `linux/amd64` and `linux/arm64`:
-
-- `ghcr.io/kylejameswalker/supermariowar-rust-relay`: the relay.
-- `ghcr.io/kylejameswalker/supermariowar-rust-signal`: `matchbox_server` 0.14.0, the netplay v2 signaling server (`deploy/signal/Dockerfile`).
-
-`deploy/` holds a compose file that runs both behind Caddy, plus `coturn` for netplay v2 players whose NAT blocks a direct connection.
+The `Relay` workflow publishes `ghcr.io/kylejameswalker/supermariowar-rust-relay` for `linux/amd64` and `linux/arm64`. `deploy/` holds a compose file that runs it behind Caddy, plus `coturn` for players whose NAT blocks a direct WebRTC connection.
 
 1. Point a DNS `A` (or `AAAA`) record for `smw-relay.vps.pocketsquirrel.com` at the server.
 2. On the server, create the shared network: `docker network create caddy`.
 3. Copy `deploy/docker-compose.yml`, `deploy/Caddyfile` and `deploy/turnserver.conf` to one directory. If Caddy already runs on the `caddy` network, add the Caddyfile's site block to its config and remove the `caddy` service.
 4. Create a `.env` file there with `TURN_SECRET=<hex>`, for example from `openssl rand -hex 32`. Use hex only: the coturn image evaluates its arguments in a shell. The lobby needs the same secret to issue TURN credentials.
 5. Open TCP and UDP port 3478 and UDP ports 49160-49259 for `coturn`. It uses host networking.
-6. Run `docker compose up -d`. Caddy gets the certificate and proxies `/signal/*` to `smw-signal:3536` and everything else to `smw-relay:8080`.
+6. Run `docker compose up -d`. Caddy gets the certificate and proxies everything to `smw-relay:8080`.
 7. Check that `curl https://smw-relay.vps.pocketsquirrel.com/healthz` returns `ok`. A WebSocket client can join `wss://smw-relay.vps.pocketsquirrel.com/signal/<room>`, for example `SIGNAL_URL=wss://smw-relay.vps.pocketsquirrel.com/signal node tools/web_peer_test.mjs`.
 
 `coturn` relays only to public addresses (`denied-peer-ip` in `turnserver.conf`), so it cannot reach the server's private network.
 
 ### Netplay v2 settings
 
-When a room starts, the lobby sends each of its players `NET_L2P_MATCH_ROOM`. It holds a new random signaling room under `SMW_SIGNAL_URL`, plus TURN credentials for `SMW_TURN_URL`, minted from `SMW_TURN_SECRET` and valid for six hours. Then it sends every player `NET_L2P_MATCH_START`, and the match runs over WebRTC under GGRS (`docs/design/NETPLAY_V2.md`). Without `SMW_SIGNAL_URL`, the relay uses its own signaling on `/signal`. The compose file sets all three for the relay.
+When a room starts, the lobby sends each of its players `NET_L2P_MATCH_ROOM`. It holds a new random signaling room under `SMW_SIGNAL_URL`, plus TURN credentials for `SMW_TURN_URL`, minted from `SMW_TURN_SECRET` and valid for six hours. Then it sends every player `NET_L2P_MATCH_START`, and the match runs over WebRTC under GGRS (`docs/design/NETPLAY_V2.md`). Without `SMW_SIGNAL_URL`, the relay uses its own signaling on `/signal`, and players reach it through the same URL as the lobby. The compose file sets the TURN settings and leaves `SMW_SIGNAL_URL` unset.
 
 ## Limits
 

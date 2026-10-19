@@ -43,7 +43,18 @@ fi
 	echo "=== game"
 } >"$APP_DIR/log.txt" 2>&1
 
+# A clocked-down CPU slows the match for every netplay peer; hold full speed while the game runs.
+CPU=/sys/devices/system/cpu/cpu0/cpufreq
+OLD_GOVERNOR="$(cat "$CPU/scaling_governor" 2>/dev/null)"
+echo performance >"$CPU/scaling_governor" 2>/dev/null
+echo "[cpu] governor $OLD_GOVERNOR -> $(cat "$CPU/scaling_governor" 2>/dev/null)" >>"$APP_DIR/log.txt"
+(while sleep 10; do echo "[cpu] $(cat "$CPU/scaling_cur_freq" 2>/dev/null) kHz, $(cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null) mC"; done) >>"$APP_DIR/log.txt" 2>&1 &
+CPU_LOG=$!
+
 ./smw --datadir "$APP_DIR/data" >>"$APP_DIR/log.txt" 2>&1
+
+kill "$CPU_LOG" 2>/dev/null
+[ -n "$OLD_GOVERNOR" ] && echo "$OLD_GOVERNOR" >"$CPU/scaling_governor" 2>/dev/null
 
 SCREEN_TYPE="internal"
 [ "$(GET_VAR config boot/device_mode)" = "1" ] && SCREEN_TYPE="external"

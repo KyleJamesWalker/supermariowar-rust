@@ -1,5 +1,4 @@
-# smw_relay and the netplay v2 signaling server behind Caddy, which terminates TLS and proxies both WebSockets
-# (see Caddyfile and docs/guides/RELAY.md).
+# smw_relay, the lobby and signaling server, behind Caddy, which terminates TLS (see Caddyfile and docs/guides/RELAY.md).
 # Both join the external `caddy` network: docker network create caddy
 # If Caddy already runs on that network, drop the caddy service and add the site block to its Caddyfile.
 services:
@@ -8,14 +7,8 @@ services:
     restart: unless-stopped
     environment:
       SMW_RELAY_ALLOWED_ORIGINS: https://www.kylejameswalker.com
-      SMW_SIGNAL_URL: wss://smw-relay.vps.pocketsquirrel.com/signal
       SMW_TURN_URL: turn:smw-relay.vps.pocketsquirrel.com:3478
       SMW_TURN_SECRET: ${TURN_SECRET:?set TURN_SECRET in .env}
-    networks: [caddy]
-
-  smw-signal:
-    image: ghcr.io/kylejameswalker/supermariowar-rust-signal:latest
-    restart: unless-stopped
     networks: [caddy]
 
   # TURN for players whose NAT blocks a direct WebRTC connection. Needs TURN_SECRET (hex) in .env.
