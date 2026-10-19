@@ -5,6 +5,7 @@ use crate::game::Game;
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_button::MI_Button;
 use crate::common::ui::mi_image::MI_Image;
+use crate::common::ui::mi_text::MI_Text;
 use crate::common::uicontrol::{TextAlign};
 use crate::common::uimenu::UI_Menu;
 use crate::globals::*;
@@ -19,6 +20,7 @@ pub struct UI_MainMenu {
 
     miSMWTitle: Ctl<MI_Image>,
     miSMWVersion: Ctl<MI_Image>,
+    miBuildVersion: Ctl<MI_Text>,
 
     miMainStartButton: Ctl<MI_Button>,
     miQuickGameButton: Ctl<MI_Button>,
@@ -62,7 +64,10 @@ impl UI_MainMenu {
             1,
             0,
         ), g);
-        // miSMWVersionText = new MI_Text("Beta 2", 630, 45, 0, 2, 2);
+        this.miBuildVersion = Ctl::new(MI_Text::new(g, build_version(), 628, 45, 0, false, TextAlign::RIGHT), g);
+        // Replays hide it so screenshots match goldens whatever build plays them.
+        let replaying = crate::smw::harness::replaying(g);
+        g.ctl(this.miBuildVersion).set_visible(!replaying);
 
         this.miMainStartButton = Ctl::new(MI_Button::new(g, selectfield, 120, 210, "Start", 310, TextAlign::LEFT), g);
         g.ctl(this.miMainStartButton).set_code(MENU_CODE_TO_MATCH_SELECTION_MENU);
@@ -108,10 +113,20 @@ impl UI_MainMenu {
         #[cfg(not(target_os = "emscripten"))]
         this.set_cancel_code(MENU_CODE_EXIT_APPLICATION);
 
-        let (title, version) = (this.miSMWTitle.id(), this.miSMWVersion.id());
+        let (title, version, build) = (this.miSMWTitle.id(), this.miSMWVersion.id(), this.miBuildVersion.id());
         this.add_non_control(title);
         this.add_non_control(version);
+        this.add_non_control(build);
 
         this
+    }
+}
+
+/// The release tag, else the short commit, that CI built this binary from.
+fn build_version() -> &'static str {
+    match (option_env!("SMW_VERSION"), option_env!("SMW_COMMIT")) {
+        (Some(tag), _) if !tag.is_empty() => tag,
+        (_, Some(sha)) if sha.len() >= 7 => &sha[..7],
+        _ => "dev",
     }
 }
