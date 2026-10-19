@@ -53,6 +53,8 @@ pub struct V2Match {
     ticks: u64,
     rollback_ticks: u64,
     desyncs: u32,
+    /// Remote players GGRS dropped for good.
+    gone: usize,
     perf: V2Perf,
     /// This frame's `#@ v2` tokens, while recording.
     rec: Option<Vec<String>>,
@@ -111,6 +113,7 @@ pub fn match_starting(g: &mut Game) -> bool {
         ticks: 0,
         rollback_ticks: 0,
         desyncs: 0,
+        gone: 0,
         perf: V2Perf::default(),
         rec: None,
     };
@@ -340,6 +343,8 @@ fn finish(g: &mut Game) {
             "[net] v2: match over after {} ticks, {} re-run ticks, {} desyncs",
             m.ticks, m.rollback_ticks, m.desyncs
         );
+        // Dropping the socket now could lose the LEAVE this frame sent; it closes a little later.
+        gp.netplay.client.linger(m.socket);
     }
 }
 
@@ -485,7 +490,8 @@ impl V2Match {
         to_menu(g, false);
     }
 
-    /// A match that could not start ends for this player, who goes back to the room. False, for `tick`.
+    /// A match that could not start, or that every other player left, ends for this player, who goes back to the room.
+    /// False, for `tick`.
     fn abandon(&mut self, g: &mut Game) -> bool {
         self.send_all(&[MSG_LEAVE]);
         note(&mut self.rec, "eA".to_string());
@@ -504,7 +510,10 @@ impl V2Match {
                     self.desyncs += 1;
                     println!("[net] v2: desync at frame {frame} with {:08x}: {local_checksum:x} vs {remote_checksum:x}", addr.0 >> 96);
                 }
-                GgrsEvent::Disconnected { addr } => println!("[net] v2: peer {:08x} disconnected", addr.0 >> 96),
+                GgrsEvent::Disconnected { addr } => {
+                    self.gone += 1;
+                    println!("[net] v2: peer {:08x} disconnected", addr.0 >> 96);
+                }
                 GgrsEvent::NetworkInterrupted { addr, disconnect_timeout } => {
                     println!("[net] v2: peer {:08x} silent; dropped in {} ms unless it returns", addr.0 >> 96, disconnect_timeout)
                 }
@@ -516,6 +525,10 @@ impl V2Match {
         let others_left = self.socket.receive(RELIABLE).iter().any(|(_, msg)| msg.first() == Some(&MSG_LEAVE));
         if others_left {
             println!("[net] v2: another player ended the match");
+            return self.abandon(g);
+        }
+        if self.gone >= self.others {
+            println!("[net] v2: every other player is gone");
             return self.abandon(g);
         }
 

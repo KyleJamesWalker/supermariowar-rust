@@ -315,6 +315,8 @@ fn net_layer<'a>(g: &mut Game) -> &'a mut NetworkHandler {
     g.networkHandler.as_ptr().get()
 }
 
+/// How long a finished match's socket stays open.
+const LINGER_FRAMES: u32 = 2 * TICKS_PER_SECOND;
 /// How long the Servers menu waits for the lobby to accept the connection.
 const CONNECT_DEADLINE_FRAMES: u32 = 8 * TICKS_PER_SECOND;
 /// How long the lobby menus wait for the server to answer a join or create request.
@@ -435,6 +437,8 @@ pub struct NetClient {
     peer_probe: Option<PeerProbe>,
     pub v2: Option<Box<crate::smw::net_v2::V2Match>>,
     pub v2_replay: Option<Box<crate::smw::net_v2::V2Replay>>,
+    /// A finished match's socket, kept open until this frame count so its last messages go out.
+    lingering: Option<(smw_peer::PeerSocket, u32)>,
 
     foreign_lobbyserver: Ptr<dyn NetPeer>,
 
@@ -462,6 +466,7 @@ impl Clone for NetClient {
             peer_probe: None,
             v2: None,
             v2_replay: None,
+            lingering: None,
             foreign_lobbyserver: Ptr::null(),
             uiRoomList: self.uiRoomList,
             _alias: Aliased::new(),
@@ -487,6 +492,7 @@ impl NetClient {
             peer_probe: None,
             v2: None,
             v2_replay: None,
+            lingering: None,
             foreign_lobbyserver: Ptr::null(),
             uiRoomList: Default::default(),
             _alias: Aliased::new(),
@@ -507,7 +513,18 @@ impl NetClient {
         self.peer_probe.take().map(PeerProbe::into_socket)
     }
 
+    pub fn linger(&mut self, socket: smw_peer::PeerSocket) {
+        self.lingering = Some((socket, LINGER_FRAMES));
+    }
+
     pub fn update(&mut self, g: &mut Game) {
+        if let Some((socket, frames)) = &mut self.lingering {
+            socket.update_peers();
+            *frames -= 1;
+            if *frames == 0 {
+                self.lingering = None;
+            }
+        }
         let mut gp = g.ptr();
         net_record::listen(g, Side::Client, self, |g, handler| net_layer(g).client_listen(g, handler));
         if let Some(probe) = &mut self.peer_probe {
@@ -519,6 +536,7 @@ impl NetClient {
         self.peer_probe = None;
         self.v2 = None;
         self.v2_replay = None;
+        self.lingering = None;
         g.netplay.v2_match = false;
 
         if g.netplay.connectSuccessful {
