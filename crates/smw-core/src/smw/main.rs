@@ -100,7 +100,9 @@ pub fn step(g: &mut Game) {
         return;
     }
     harness::frame_start(g);
-    GameStateManager::instance(gp.get()).current(gp.get()).get().update(gp.get());
+    if !crate::smw::quit_dialog::update(g) {
+        GameStateManager::instance(gp.get()).current(gp.get()).get().update(gp.get());
+    }
     harness::frame_end(g);
 }
 
@@ -186,7 +188,9 @@ unsafe fn tick(g: &mut Game) {
     }
     harness::frame_start(gp.get());
     phase(5);
-    GameStateManager::instance(gp.get()).current(gp.get()).get().update(gp.get());
+    if !crate::smw::quit_dialog::update(g) {
+        GameStateManager::instance(gp.get()).current(gp.get()).get().update(gp.get());
+    }
     phase(6);
     harness::frame_end(gp.get());
 }

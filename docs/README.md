@@ -23,7 +23,7 @@ Start with `guides/` for how things work today. `design/` holds design docs with
 | `design/HANDLES.md`: typed handles replace the `Ptr` object graph | done |
 | `design/PADS_AND_RECORDER.md`: pads and the recorder move into the backend | done |
 | `design/CPU_AI.md`: CPU AI overhaul | in progress |
-| `design/NETPLAY_V2.md`: rollback over WebRTC | proposed |
+| `design/NETPLAY_V2.md`: rollback over WebRTC | done |
 
 ## Upstream
 

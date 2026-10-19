@@ -31,6 +31,8 @@ pub enum Route {
 #[derive(Clone)]
 pub struct NavGraph {
     standable: Vec<bool>,
+    /// Standable only on a moving platform, where it was when the graph was built.
+    carried: Vec<bool>,
     edges: Vec<Vec<(u16, Move)>>,
 }
 
@@ -41,27 +43,38 @@ fn idx(x: i32, y: i32) -> usize {
     (y * W + x) as usize
 }
 
-impl NavGraph {
-    pub fn build(g: &Game) -> Self {
-        // Moving platforms count as tiles where they are now, so the graph only holds until they move on.
-        let mut platform = vec![0i32; (W * H) as usize];
-        for &id in &g.g_map.platforms {
-            let p = g.g_map.platform(id);
-            if p.fDead {
-                continue;
-            }
-            for col in 0..p.iTileWidth {
-                for row in 0..p.iTileHeight {
-                    let f = tile_to_flags(p.tile_type_at(col as usize, row as usize)) as i32;
-                    let px = (p.fx - p.iHalfWidth as f32) as i32 + col as i32 * TILESIZE + TILESIZE / 2;
-                    let py = (p.fy - p.iHalfHeight as f32) as i32 + row as i32 * TILESIZE + TILESIZE / 2;
-                    let (cx, cy) = (px.rem_euclid(App::screenWidth) / TILESIZE, py.div_euclid(TILESIZE));
-                    if (0..H).contains(&cy) {
-                        platform[idx(cx, cy)] |= f;
-                    }
+/// The tile flags of the live moving platforms, by the cell each of their tiles covers now.
+fn platform_flags(g: &Game) -> Vec<i32> {
+    let mut platform = vec![0i32; (W * H) as usize];
+    for &id in &g.g_map.platforms {
+        let p = g.g_map.platform(id);
+        if p.fDead {
+            continue;
+        }
+        for col in 0..p.iTileWidth {
+            for row in 0..p.iTileHeight {
+                let f = tile_to_flags(p.tile_type_at(col as usize, row as usize)) as i32;
+                let px = (p.fx - p.iHalfWidth as f32) as i32 + col as i32 * TILESIZE + TILESIZE / 2;
+                let py = (p.fy - p.iHalfHeight as f32) as i32 + row as i32 * TILESIZE + TILESIZE / 2;
+                let (cx, cy) = (px.rem_euclid(App::screenWidth) / TILESIZE, py.div_euclid(TILESIZE));
+                if (0..H).contains(&cy) {
+                    platform[idx(cx, cy)] |= f;
                 }
             }
         }
+    }
+    platform
+}
+
+/// Whether a moving platform is under tile (`x`, `y`) now.
+pub fn platform_under(g: &Game, x: i32, y: i32) -> bool {
+    (0..W).contains(&x) && (0..H - 1).contains(&y) && platform_flags(g)[idx(x, y + 1)] & (tile_flag_solid | tile_flag_solid_on_top) as i32 != 0
+}
+
+impl NavGraph {
+    pub fn build(g: &Game) -> Self {
+        // Moving platforms count as tiles where they are now, so the graph only holds until they move on.
+        let platform = platform_flags(g);
         let flags = |x: i32, y: i32| g.g_map.map(x, y) | platform[idx(x, y)];
         let solid = |x: i32, y: i32| {
             if y < 0 {
@@ -80,10 +93,15 @@ impl NavGraph {
             let stand = below & (tile_flag_solid | tile_flag_solid_on_top) as i32 != 0 || !g.map_block(x as i16, (y + 1) as i16).is_null();
             stand && below & (tile_flag_death_on_top | tile_flag_super_or_player_death_top) as i32 == 0
         };
+        let fixed = |x: i32, y: i32| {
+            y + 1 < H && (g.g_map.map(x, y + 1) & (tile_flag_solid | tile_flag_solid_on_top) as i32 != 0 || !g.map_block(x as i16, (y + 1) as i16).is_null())
+        };
         let mut standable = vec![false; (W * H) as usize];
+        let mut carried = vec![false; (W * H) as usize];
         for y in 0..H {
             for x in 0..W {
                 standable[idx(x, y)] = !solid(x, y) && support(x, y);
+                carried[idx(x, y)] = standable[idx(x, y)] && !fixed(x, y);
             }
         }
         let stand = |x: i32, y: i32| (0..W).contains(&x) && (0..H).contains(&y) && standable[idx(x, y)];
@@ -178,7 +196,7 @@ impl NavGraph {
                 }
             }
         }
-        NavGraph { standable, edges }
+        NavGraph { standable, carried, edges }
     }
 
     /// The link out of `from` that lands farthest from `threat`, counting the screen edge as wrapping, if it gains
@@ -202,6 +220,11 @@ impl NavGraph {
         let cx = (x + HALFPW).rem_euclid(App::screenWidth) / TILESIZE;
         let cy = ((y + PH - 1).max(0) / TILESIZE).min(H - 1);
         (cy..H).find(|&ny| self.standable[idx(cx, ny)]).map(|ny| (cx, ny))
+    }
+
+    /// Whether (`x`, `y`) stood on a moving platform when the graph was built.
+    pub fn is_carried(&self, x: i32, y: i32) -> bool {
+        self.carried[idx(x, y)]
     }
 
     /// The first link of the cheapest path from `from` to `to`.

@@ -1633,27 +1633,34 @@ pub fn draw_exit_pause_dialog(g: &mut Game) {
     }
 
     if g.game_values.flags.exitinggame {
-        let sw = App::screenWidth as f32;
-        let sh = App::screenHeight as f32;
-        gp.rm.sprite(gp.rm.spr_dialog).draw(g, (sw * 0.35f32) as i32, (sh * 0.37f32) as i32);
-        gp.rm.menu_font_large.draw_centered(g, (sw * 0.5f32) as i32, (sh * 0.46f32 - (g.rm.menu_font_large.get_height() >> 1) as f32) as i32, "Exit Game");
-
-        draw_rect(g, &gp.rm.sprite(gp.rm.spr_dialogbutton), (sw * 0.37f32) as i32, (sh * 0.52f32) as i32, 0, if gp.game_values.flags.exityes { 34 } else { 0 }, 80, 34);
-        draw_rect(g, &gp.rm.sprite(gp.rm.spr_dialogbutton), (sw * 0.51f32) as i32, (sh * 0.52f32) as i32, 0, if gp.game_values.flags.exityes { 0 } else { 34 }, 80, 34);
-
-        gp.rm.menu_font_large.draw(
-            g,
-            (sw * 0.43f32 - (gp.rm.menu_font_large.get_width("Yes") >> 1) as f32) as i32,
-            (sh * 0.56f32 - (gp.rm.menu_font_large.get_height() >> 1) as f32) as i32,
-            "Yes",
-        );
-        gp.rm.menu_font_large.draw(
-            g,
-            (sw * 0.57f32 - (gp.rm.menu_font_large.get_width("No") >> 1) as f32) as i32,
-            (sh * 0.56f32 - (gp.rm.menu_font_large.get_height() >> 1) as f32) as i32,
-            "No",
-        );
+        let title = if g.input.quit_dialog.is_some() { "Quit Game" } else { "Exit Game" };
+        draw_yes_no_dialog(g, title, g.game_values.flags.exityes);
     }
+}
+
+/// The exit dialog's box: `title` over Yes and No buttons, with `yes` selected or not.
+pub fn draw_yes_no_dialog(g: &mut Game, title: &str, yes: bool) {
+    let mut gp = g.ptr();
+    let sw = App::screenWidth as f32;
+    let sh = App::screenHeight as f32;
+    gp.rm.sprite(gp.rm.spr_dialog).draw(g, (sw * 0.35f32) as i32, (sh * 0.37f32) as i32);
+    gp.rm.menu_font_large.draw_centered(g, (sw * 0.5f32) as i32, (sh * 0.46f32 - (g.rm.menu_font_large.get_height() >> 1) as f32) as i32, title);
+
+    draw_rect(g, &gp.rm.sprite(gp.rm.spr_dialogbutton), (sw * 0.37f32) as i32, (sh * 0.52f32) as i32, 0, if yes { 34 } else { 0 }, 80, 34);
+    draw_rect(g, &gp.rm.sprite(gp.rm.spr_dialogbutton), (sw * 0.51f32) as i32, (sh * 0.52f32) as i32, 0, if yes { 0 } else { 34 }, 80, 34);
+
+    gp.rm.menu_font_large.draw(
+        g,
+        (sw * 0.43f32 - (gp.rm.menu_font_large.get_width("Yes") >> 1) as f32) as i32,
+        (sh * 0.56f32 - (gp.rm.menu_font_large.get_height() >> 1) as f32) as i32,
+        "Yes",
+    );
+    gp.rm.menu_font_large.draw(
+        g,
+        (sw * 0.57f32 - (gp.rm.menu_font_large.get_width("No") >> 1) as f32) as i32,
+        (sh * 0.56f32 - (gp.rm.menu_font_large.get_height() >> 1) as f32) as i32,
+        "No",
+    );
 }
 
 /// A v2 match pauses inside its simulation, from any player's start key (`rollback::advance`), not from one client.
@@ -2100,6 +2107,14 @@ pub fn update_exit_pause_dialog(g: &mut Game, iCountDownState: i16) -> bool {
             }
         }
 
+        if g.input.quit_dialog.is_some() && !g.game_values.flags.exitinggame {
+            g.rm.sprite(g.rm.menu_shade).setalpha(App::menuTransparency as u8);
+            gp.rm.sprite(gp.rm.menu_shade).draw(g, 0, 0);
+            g.game_values.flags.exitinggame = true;
+            g.game_values.flags.exityes = false;
+            g.game_values.playerInput.reset_keys();
+        }
+
         for iPlayer in 0..4usize {
             let playerKeys: Ptr<COutputControl> = Ptr::from_mut(&mut g.game_values.playerInput.outputControls[iPlayer]);
 
@@ -2136,6 +2151,7 @@ pub fn update_exit_pause_dialog(g: &mut Game, iCountDownState: i16) -> bool {
                     g.rm.sprite(g.rm.menu_shade).setalpha(App::menuTransparency as u8);
                     gp.rm.sprite(gp.rm.menu_shade).draw(g, 0, 0);
                     g.game_values.flags.exitinggame = true;
+                    g.input.quit_dialog = None;
 
                     //Reset the keys each time we switch from menu to game and back
                     g.game_values.playerInput.reset_keys();
@@ -2151,7 +2167,11 @@ pub fn update_exit_pause_dialog(g: &mut Game, iCountDownState: i16) -> bool {
                 }
 
                 if playerKeys.menu_select().fPressed {
-                    if g.game_values.flags.exityes {
+                    if g.game_values.flags.exityes && g.input.quit_dialog.take().is_some() {
+                        g.game_values.flags.exitinggame = false;
+                        g.game_values.flags.exityes = false;
+                        crate::smw::input::push_ready(g, smw_platform::Input { timestamp: 0, event: InputEvent::Quit });
+                    } else if g.game_values.flags.exityes {
                         clean_up(g);
                         g.game_values.flags.exitinggame = false;
                         g.game_values.flags.exityes = false;
@@ -2159,6 +2179,7 @@ pub fn update_exit_pause_dialog(g: &mut Game, iCountDownState: i16) -> bool {
                         return true;
                     } else {
                         g.game_values.flags.exitinggame = false;
+                        g.input.quit_dialog = None;
 
                         //Reset the keys each time we switch from menu to game and back
                         g.game_values.playerInput.reset_keys();
@@ -2328,6 +2349,9 @@ impl GameplayState {
                 clean_up(g);
                 g.game_values.appstate = AppState::Quit;
                 return;
+            } else if input.event == InputEvent::QuitRequest {
+                g.input.quit_dialog.get_or_insert(false);
+                continue;
             } else if let InputEvent::Key { key, mods, down: true, .. } = input.event {
                 let sym = key.0;
                 if (mods as u32) & (KMOD_LALT as u32 | KMOD_RALT as u32) != 0 {

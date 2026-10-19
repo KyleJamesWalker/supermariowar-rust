@@ -71,6 +71,7 @@ fn events_survive_the_queue() {
         InputEvent::PadHat { pad: PadSlot(2), hat: 0, value: 4 },
         InputEvent::Text("Mario".into()),
         InputEvent::Tap { x: 12, y: 34 },
+        InputEvent::QuitRequest,
         InputEvent::Quit,
     ];
     for event in &inputs {

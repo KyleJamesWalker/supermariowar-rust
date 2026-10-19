@@ -334,8 +334,9 @@ unsafe fn translate_button(p: &mut Pad, event: &mut SDL_Event) -> bool {
         }
         Some(Target::Quit) => {
             if down {
-                event.type_ = SDL_QUIT as u32;
-                event.quit.timestamp = b.timestamp;
+                event.type_ = SDL_USEREVENT as u32;
+                event.user.timestamp = b.timestamp;
+                event.user.code = crate::input::QUIT_REQUEST_CODE;
             }
             down
         }
@@ -563,7 +564,7 @@ mod tests {
         assert_eq!(as_button(run(&mut p, axis(4, -32767))), Some((8, false)));
         assert_eq!(as_button(run(&mut p, axis(5, 32767))), Some((9, true)));
         let quit = run(&mut p, button(5, true)).unwrap();
-        assert_eq!(unsafe { quit.type_ }, SDL_QUIT as u32);
+        assert_eq!(crate::input::from_sdl(&quit).event, smw_platform::InputEvent::QuitRequest);
         assert!(run(&mut p, button(5, false)).is_none());
     }
 

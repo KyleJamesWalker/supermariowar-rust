@@ -115,6 +115,7 @@ impl PadState {
             InputEvent::GamepadAxis { pad, axis, value } => format!("caxis which {} axis {} value {}", pad.0, axis, value),
             InputEvent::Key { key, scancode, down, .. } => format!("key {} sym {} scancode {}", if *down { "down" } else { "up" }, key.0, scancode),
             InputEvent::Quit => String::from("quit"),
+            InputEvent::QuitRequest => String::from("quit request"),
             _ => return,
         };
         self.logged[stage] += 1;
@@ -125,7 +126,7 @@ impl PadState {
 fn translate_button(p: &mut Pad, button: u8, down: bool) -> Option<InputEvent> {
     let pad = PadSlot(p.instance as i32);
     if button == GUIDE {
-        return down.then_some(InputEvent::Quit);
+        return down.then_some(InputEvent::QuitRequest);
     }
     if (DPAD_UP..DPAD_UP + 4).contains(&button) {
         let bit = DPAD_BITS[(button - DPAD_UP) as usize];
@@ -378,7 +379,7 @@ mod tests {
         assert_eq!(run(&mut st, axis(4, 30000)), None);
         assert_eq!(run(&mut st, axis(4, 0)), pad_button(8, false));
         assert_eq!(run(&mut st, axis(5, 20000)), pad_button(9, true));
-        assert_eq!(run(&mut st, button(GUIDE, true)), Some(InputEvent::Quit));
+        assert_eq!(run(&mut st, button(GUIDE, true)), Some(InputEvent::QuitRequest));
         assert_eq!(run(&mut st, button(GUIDE, false)), None);
         assert_eq!(run(&mut st, button(15, true)), None, "misc buttons are dropped");
     }
