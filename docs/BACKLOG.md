@@ -20,3 +20,7 @@ Steps 4, 6 and 9 of `design/CPU_AI.md` have a first cut. Still open from its Ris
 ## Maintenance
 
 - `soft_surface::color_key_with_blend_matches_sdl` aborted once on a misaligned SDL surface pointer under a full workspace test run; it passed 40 of 40 runs alone.
+
+## Parked
+
+- Upgrade `webrtc` past 0.17.2: 0.21 turns methods `smw-peer` awaits into synchronous calls, so it needs a port (57 compile errors on the bump). `.github/dependabot.yml` ignores its minor and major updates until then; remove that entry when this starts. The upgrade also drops the second `sha1` (0.10) that `dtls` 0.17 pulls in.

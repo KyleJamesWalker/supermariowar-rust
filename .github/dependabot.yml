@@ -7,6 +7,11 @@ updates:
     groups:
       cargo:
         update-types: [minor, patch]
+      rustcrypto:
+        patterns: [hmac, sha1, digest]
+    ignore:
+      - dependency-name: webrtc
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
 
   - package-ecosystem: github-actions
     directories:
