@@ -37,8 +37,8 @@ fn rows(life: &Lifetime) -> Vec<(String, String)> {
         ("Kills".to_string(), life.total("kills").to_string()),
         ("Deaths".to_string(), life.total("deaths").to_string()),
         ("Suicides".to_string(), life.total("suicides").to_string()),
-        ("Double kills".to_string(), life.total("double_kills").to_string()),
-        ("Triple kills".to_string(), life.total("triple_kills").to_string()),
+        ("Air doubles".to_string(), life.total("air_doubles").to_string()),
+        ("Air triples".to_string(), life.total("air_triples").to_string()),
         ("Jumps".to_string(), life.total("jumps").to_string()),
         ("Air time".to_string(), clock(life.total("air_ticks"))),
         ("Star time".to_string(), clock(life.total("star_ticks"))),
@@ -46,8 +46,8 @@ fn rows(life: &Lifetime) -> Vec<(String, String)> {
         ("Most kills in a match".to_string(), life.best_of("kills_in_match").to_string()),
         ("Longest kill streak".to_string(), life.best_of("kill_streak").to_string()),
         ("Longest life".to_string(), clock(life.best_of("survival_ticks"))),
-        ("Most double kills in a match".to_string(), life.best_of("double_kills_in_match").to_string()),
-        ("Most triple kills in a match".to_string(), life.best_of("triple_kills_in_match").to_string()),
+        ("Most air doubles in a match".to_string(), life.best_of("air_doubles_in_match").to_string()),
+        ("Most air triples in a match".to_string(), life.best_of("air_triples_in_match").to_string()),
     ];
     let favourite = |table: &std::collections::BTreeMap<String, (u64, u64)>| {
         table.iter().max_by_key(|(name, (played, _))| (*played, std::cmp::Reverse((*name).clone()))).map(|(name, (p, w))| format!("{name} ({w}/{p})"))

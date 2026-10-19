@@ -34,8 +34,8 @@ pub struct PlayerStats {
     pub alive_ticks: u32,
     pub best_alive_ticks: u32,
     pub air_chain: u16,
-    pub double_kills: u16,
-    pub triple_kills: u16,
+    pub air_doubles: u16,
+    pub air_triples: u16,
 }
 
 impl PlayerStats {
@@ -47,10 +47,10 @@ impl PlayerStats {
         }
         self.air_chain += 1;
         match self.air_chain {
-            2 => self.double_kills += 1,
+            2 => self.air_doubles += 1,
             3 => {
-                self.double_kills -= 1;
-                self.triple_kills += 1;
+                self.air_doubles -= 1;
+                self.air_triples += 1;
             }
             _ => {}
         }
@@ -76,8 +76,8 @@ impl PlayerStats {
         alive_ticks: 0,
         best_alive_ticks: 0,
         air_chain: 0,
-        double_kills: 0,
-        triple_kills: 0,
+        air_doubles: 0,
+        air_triples: 0,
     };
 }
 
@@ -300,13 +300,13 @@ impl Lifetime {
         self.add("air_ticks", s.air_ticks as u64);
         self.add("distance", s.distance as u64);
         self.add("star_ticks", s.star_ticks as u64);
-        self.add("double_kills", s.double_kills as u64);
-        self.add("triple_kills", s.triple_kills as u64);
+        self.add("air_doubles", s.air_doubles as u64);
+        self.add("air_triples", s.air_triples as u64);
         self.best("kills_in_match", s.kills as u64);
         self.best("kill_streak", s.best_streak as u64);
         self.best("survival_ticks", s.best_alive_ticks as u64);
-        self.best("double_kills_in_match", s.double_kills as u64);
-        self.best("triple_kills_in_match", s.triple_kills as u64);
+        self.best("air_doubles_in_match", s.air_doubles as u64);
+        self.best("air_triples_in_match", s.air_triples as u64);
         for (table, key) in [(&mut self.modes, mode), (&mut self.maps, map)] {
             let e = table.entry(key.to_string()).or_default();
             e.0 += 1;
@@ -398,8 +398,8 @@ pub fn draw_page(g: &mut Game) {
         ("Deaths", |s| s.deaths.to_string()),
         ("Suicides", |s| s.suicides.to_string()),
         ("Best streak", |s| s.best_streak.to_string()),
-        ("Double kills", |s| s.double_kills.to_string()),
-        ("Triple kills", |s| s.triple_kills.to_string()),
+        ("Air doubles", |s| s.air_doubles.to_string()),
+        ("Air triples", |s| s.air_triples.to_string()),
         ("Longest life", |s| clock(s.best_alive_ticks as u64)),
         ("Jumps", |s| s.jumps.to_string()),
         ("Air time", |s| clock(s.air_ticks as u64)),
@@ -476,17 +476,17 @@ mod tests {
         let mut s = PlayerStats::ZERO;
         s.chain_kill(true);
         s.chain_kill(true);
-        assert_eq!((s.double_kills, s.triple_kills), (1, 0));
+        assert_eq!((s.air_doubles, s.air_triples), (1, 0));
         s.chain_kill(true);
         s.chain_kill(true);
-        assert_eq!((s.double_kills, s.triple_kills), (0, 1));
+        assert_eq!((s.air_doubles, s.air_triples), (0, 1));
         s.air_chain = 0;
         s.chain_kill(true);
         s.chain_kill(false);
         s.chain_kill(true);
-        assert_eq!((s.double_kills, s.triple_kills), (0, 1));
+        assert_eq!((s.air_doubles, s.air_triples), (0, 1));
         s.chain_kill(true);
-        assert_eq!((s.double_kills, s.triple_kills), (1, 1));
+        assert_eq!((s.air_doubles, s.air_triples), (1, 1));
     }
 
     #[test]
