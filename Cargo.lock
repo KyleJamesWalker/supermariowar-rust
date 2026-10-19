@@ -212,6 +212,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "bincode"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fd6a120d2e16b3e1b4a24bd70f23b12d3e16b81f113364a26935f8db7245452d"
+
+[[package]]
 name = "bitfield-rle"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -909,7 +915,7 @@ dependencies = [
 name = "ggrs"
 version = "0.13.0"
 dependencies = [
- "bincode",
+ "bincode 1.3.3",
  "bitfield-rle",
  "instant",
  "js-sys",
@@ -2339,7 +2345,7 @@ dependencies = [
 name = "smw-peer"
 version = "0.1.0"
 dependencies = [
- "bincode",
+ "bincode 3.0.0",
  "bytes",
  "futures-util",
  "ggrs",
