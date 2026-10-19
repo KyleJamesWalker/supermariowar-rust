@@ -14,8 +14,9 @@ Work we intend to do but have not started, newest ideas last in each section. Bu
 
 Steps 4, 6 and 9 of `design/CPU_AI.md` have a first cut. Still open from its Risks and open questions:
 
-- Moving platforms in the navigation graph: it treats them as still for eight thinks. Riding a platform along its path, springs and breakable blocks are not planned.
-- Note-block super jumps: they always rise to full height, so CPUs aiming at a lower ledge overshoot. Planning them as longer jump links was mixed in the benchmark.
+- Riding a moving platform along its path: the navigation graph sees a platform only where it is. Planning rides along the whole path was mixed in the benchmark.
+- Springs and breakable blocks in the navigation graph.
+- Note-block super jumps: they always rise to full height, so CPUs aiming at a lower ledge overshoot. Planning them as longer jump links, and letting go of jump above a lower target, were both mixed in the benchmark.
 
 ## Maintenance
 

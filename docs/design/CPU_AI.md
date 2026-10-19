@@ -88,6 +88,7 @@ The steps run from most payoff per effort to least.
    Done in `ai_nav.rs`: the tiles a player can stand on, linked by walks, falls, drops through solid-on-top ledges, jumps of up to three tiles up and four across, screen wraps and pipes, searched cheapest-first on each think.
    Goals always follow the path. Chasing a player, or a goal a player carries, the AI follows it only once the straight line is blocked or the target is three rows away, because the straight line wins fights.
    Moving platforms count as tiles where they are when the graph is built, and the graph is rebuilt every eight thinks on maps that have them.
+   A CPU whose next step lands on a tile only a moving platform held waits until the platform is back under it.
    The graph has no springs or breakable blocks, so an unreachable route keeps the straight-line steering, and step 3's wall jump stays as a fallback.
 9. **Skill-based difficulty and personalities**.
    Difficulty sets planning depth, jump precision, and objective focus.
@@ -116,6 +117,7 @@ Each PR posts the benchmark before and after, and refreshes the replay goldens t
 
 - The handles refactor rewrites most of the `Ptr` access in `ai.rs`.
   Starting before it lands means large conflicts, so this work waits for it.
-- The navigation graph treats moving platforms as still for eight thinks at a time. Riding a platform along its path, springs and breakable blocks are open.
-- Note-block super jumps are open. A super jump always rises to its full height (about four tiles off a gray block, six off a red one), so a CPU aiming at a lower ledge overshoots into the ceiling or its spikes. Planning super jumps as longer jump links was mixed in the benchmark on note-block maps.
+- Riding a moving platform along its path is open. Counting every tile along a platform's path as ground, with standing still as a ride link, was mixed in the benchmark: CPUs waited longer for platforms and scored less.
+- Springs and breakable blocks are not in the graph. Rebuilding the graph when a block breaks, and jump links through breakable blocks, were neutral in the benchmark.
+- Note-block super jumps are open. A super jump always rises to its full height (about four tiles off a gray block, six off a red one), so a CPU aiming at a lower ledge overshoots into the ceiling or its spikes. Planning super jumps as longer jump links was mixed in the benchmark on note-block maps. Letting go of jump on the block when the target is lower helped on note-block maps but left CPUs bouncing in place on others, such as `cristomarquez_valley`.
 - The benchmark needs a stuck metric that does not flag deliberate waiting, such as a CPU guarding a flag. It already stops at game over, so the winner idling on the results screen does not count.
