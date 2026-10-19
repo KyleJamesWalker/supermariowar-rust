@@ -278,6 +278,7 @@ pub struct CGameConfig {
     pub tournamentcontrolstyle: TournamentControlStyle, //ID for the player selected control style
     pub wandfreezetime: i16,
     pub toplayer: bool,
+    pub stats: crate::smw::stats::MatchStats,
     pub teamcolors: bool,
     pub sound: bool,
     pub startgamecountdown: bool,
@@ -438,6 +439,7 @@ impl CGameConfig {
             tournamentcontrolstyle: TournamentControlStyle::default(),
             wandfreezetime: 0,
             toplayer: false,
+            stats: crate::smw::stats::MatchStats::new(),
             teamcolors: false,
             sound: false,
             startgamecountdown: false,

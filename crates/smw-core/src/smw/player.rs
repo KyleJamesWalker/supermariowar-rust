@@ -321,6 +321,7 @@ pub fn player_killed_player(g: &mut Game, iKiller: i16, mut killed: PlayerId, de
         let iKillType = g.mode().get().playerkilledself(g, killed, style);
 
         if PlayerKillType::Normal == iKillType || (fForce && PlayerKillType::NonKill == iKillType) {
+            crate::smw::stats::suicide(g, killed, style);
             g.player(killed).die(g, PlayerDeathStyle::Jump, false, fKillCarriedItem);
         }
 
@@ -1254,6 +1255,7 @@ impl CPlayer {
 
         self.powerupused = Some(PowerupType::from_u8(g.game_values.gamepowerups[self.globalID as usize] as u8));
         g.game_values.gamepowerups[self.globalID as usize] = -1;
+        crate::smw::stats::item_used(g, self.this());
 
         self.powerupradius = 100.0;
         self.powerupangle = RANDOM_INT(gp.get(), 1000) as f32 * 0.00628f32;
@@ -1908,6 +1910,7 @@ impl CPlayer {
         }
 
         self.inair = true;
+        crate::smw::stats::jump(g, self.this());
 
         //Need to help the player off the platform otherwise it will collide with them again
         if !self.platform.is_none() {
@@ -1922,6 +1925,9 @@ impl CPlayer {
 
     pub fn die(&mut self, g: &mut Game, deathStyle: PlayerDeathStyle, fTeamRemoved: bool, fKillCarriedItem: bool) {
         let mut gp = g.ptr();
+        if !fTeamRemoved {
+            crate::smw::stats::death(g, self.this());
+        }
         let mut rm = g.rm;
         if !fTeamRemoved {
         }
@@ -2208,6 +2214,7 @@ impl CPlayer {
         }
 
         if PlayerKillType::Normal == iKillType || (fForce && PlayerKillType::NonKill == iKillType) {
+            crate::smw::stats::kill(g, killer, killed, style);
             g.player(killed).die(g, deathstyle, false, fKillCarriedItem);
         }
 
@@ -2937,6 +2944,7 @@ impl CPlayer {
                     self.inair = false;
                     self.extrajumps = 0;
                     self.killsinrowinair = 0;
+                    crate::smw::stats::touched(g, self.globalID);
                 }
             }
 
@@ -2983,6 +2991,7 @@ impl CPlayer {
                 self.inair = false;
                 self.extrajumps = 0;
                 self.killsinrowinair = 0;
+                crate::smw::stats::touched(g, self.globalID);
             }
 
             self.platform = PlatformId::NONE;
@@ -3258,6 +3267,7 @@ impl CPlayer {
             if_sound_on_play(g, &mut gp.rm.sfx_stun);
             return;
         }
+        crate::smw::stats::powerup(g, self.this());
 
         if iPowerup == 0 {
             if self.bobomb {
@@ -3385,6 +3395,7 @@ impl CPlayer {
         }
 
         g.game_values.gamepowerups[self.globalID as usize] = iPowerup;
+        crate::smw::stats::item_stored(g, self.this());
         if_sound_on_play(g, &mut gp.rm.sfx_storepowerup);
     }
 

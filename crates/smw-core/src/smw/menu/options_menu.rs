@@ -29,6 +29,7 @@ pub struct UI_OptionsMenu {
     pub miEyeCandyOptionsMenuButton: Ctl<MI_Button>,
     pub miSoundOptionsMenuButton: Ctl<MI_Button>,
     pub miGenerateMapThumbsButton: Ctl<MI_Button>,
+    pub miStatsButton: Ctl<MI_Button>,
 
     pub miOptionsMenuBackButton: Ctl<MI_Button>,
 
@@ -84,6 +85,9 @@ impl UI_OptionsMenu {
         this.miGenerateMapThumbsButton = Ctl::new(MI_Button::new(g, spr_selectfield, 120, 400, "Refresh Maps", 400, TextAlign::CENTER), g);
         g.ctl(this.miGenerateMapThumbsButton).set_code(MENU_CODE_SAVE_ALL_MAP_THUMBNAILS);
 
+        this.miStatsButton = Ctl::new(MI_Button::new(g, spr_selectfield, 120, 440, "Stats", 400, TextAlign::CENTER), g);
+        g.ctl(this.miStatsButton).set_code(MENU_CODE_TO_STATS_MENU);
+
         this.miOptionsMenuBackButton = Ctl::new(MI_Button::new(g, spr_selectfield, 544, 432, "Back", 80, TextAlign::CENTER), g);
         g.ctl(this.miOptionsMenuBackButton).set_code(MENU_CODE_TO_MAIN_MENU);
 
@@ -116,6 +120,7 @@ impl UI_OptionsMenu {
         let eyecandy = this.miEyeCandyOptionsMenuButton.id();
         let sound = this.miSoundOptionsMenuButton.id();
         let thumbs = this.miGenerateMapThumbsButton.id();
+        let stats = this.miStatsButton.id();
         let back = this.miOptionsMenuBackButton.id();
         let null = ControlId::NONE;
 
@@ -128,9 +133,10 @@ impl UI_OptionsMenu {
         this.add_control(g, graphics, limits, eyecandy, null, back);
         this.add_control(g, eyecandy, graphics, sound, null, back);
         this.add_control(g, sound, eyecandy, thumbs, null, back);
-        this.add_control(g, thumbs, sound, back, null, back);
+        this.add_control(g, thumbs, sound, stats, null, back);
+        this.add_control(g, stats, thumbs, gameplay, null, back);
 
-        this.add_control(g, back, thumbs, gameplay, thumbs, null);
+        this.add_control(g, back, stats, gameplay, stats, null);
 
         let c = this.miOptionsMenuLeftHeaderBar.id();
         this.add_non_control(c);

@@ -601,6 +601,8 @@ impl MovingPlatform {
                         g.player(player).vely = GRAVITATION;
                         g.player(player).inair = false;
                         g.player(player).killsinrowinair = 0;
+                        let gid = g.player(player).globalID;
+                        crate::smw::stats::touched(g, gid);
                         g.player(player).extrajumps = 0;
                     }
 
@@ -638,6 +640,8 @@ impl MovingPlatform {
                         g.player(player).vely = GRAVITATION;
                         g.player(player).inair = false;
                         g.player(player).killsinrowinair = 0;
+                        let gid = g.player(player).globalID;
+                        crate::smw::stats::touched(g, gid);
                         g.player(player).extrajumps = 0;
 
                         if ((t1 & tile_flag_ice) != 0 && ((t2 & tile_flag_ice) != 0 || t2 == tile_flag_nonsolid || t2 == tile_flag_gap))

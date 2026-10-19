@@ -24,6 +24,7 @@ Start with `guides/` for how things work today. `design/` holds design docs with
 | `design/PADS_AND_RECORDER.md`: pads and the recorder move into the backend | done |
 | `design/CPU_AI.md`: CPU AI overhaul | in progress |
 | `design/NETPLAY_V2.md`: rollback over WebRTC | done |
+| `design/GAMEPLAY_STATS.md`: match and lifetime stats | first cut |
 
 ## Upstream
 

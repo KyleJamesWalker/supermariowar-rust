@@ -193,6 +193,9 @@ fn draw_dialogs(g: &mut Game) {
     if g.game_values.flags.pausegame || g.game_values.flags.exitinggame {
         crate::smw::gs_gameplay::draw_exit_pause_dialog(g);
     }
+    if g.main_loop.stats_page {
+        crate::smw::stats::draw_page(g);
+    }
     crate::smw::gs_gameplay::play_music(g);
 }
 

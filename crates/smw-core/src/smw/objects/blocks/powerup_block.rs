@@ -332,6 +332,7 @@ pub fn b_powerup_block_hitbottom_player<T: B_PowerupBlockTrait + ?Sized>(g: &mut
 
         if this.pb().state == 0 {
             if_sound_on_play(g, &mut gp.rm.sfx_bump);
+            crate::smw::stats::item_box(g, player);
 
             let b = this.pb_mut();
             b.iBumpPlayerID = g.player(player).globalID;

@@ -486,6 +486,8 @@ pub struct MainLoopState {
     display_fresh: bool,
     /// Frames the current screen has waited for an all-CPU game to continue (smw/auto_advance.rs).
     pub(crate) auto_advance: u16,
+    /// The after-match stats page is up (smw/stats.rs).
+    pub(crate) stats_page: bool,
 }
 
 impl MainLoopState {
@@ -515,6 +517,7 @@ impl MainLoopState {
             fps_counts: (0, 0),
             fps_shown: (0, 0),
             auto_advance: 0,
+            stats_page: false,
         }
     }
 }

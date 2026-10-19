@@ -7,7 +7,6 @@ Work we intend to do but have not started, newest ideas last in each section. Bu
 | Item | Notes |
 |---|---|
 | Split built-in controller (muOS) | Two players on one handheld: a Controls option "Built-in controller: single / split". Player 1 gets the D-pad, L1 jump, L2 run and Select item; player 2 gets Y/A/B as left/right/down, X jump, R1 run and R2 item; Start is shared. An optional `--split-pad` flag for the launcher. |
-| Gameplay stats | Scope not decided. Open questions: which stats (stomps, deaths, kills by weapon, items used, mode objectives), per match or lifetime, where they show (scoreboard, a menu screen), and whether they persist. They must stay out of the simulated state, or be derived from replays, so goldens do not change. |
 
 ## CPU AI
 

@@ -1,0 +1,46 @@
+# Options > Stats shows the lifetime totals; Reset Stats asks first, and No keeps them.
+#@ seed=1
+#@ frames=400
+#@ shots=290,340,390
+10 down Return
+12 up Return
+40 down Down
+42 up Down
+52 down Down
+54 up Down
+64 down Down
+66 up Down
+76 down Right
+78 up Right
+88 down Left
+90 up Left
+100 down Down
+102 up Down
+112 down Up
+114 up Up
+124 down Up
+126 up Up
+136 down Up
+138 up Up
+148 down Right
+150 up Right
+160 down Left
+162 up Left
+172 down Down
+174 up Down
+184 down Down
+186 up Down
+196 down Return
+198 up Return
+230 down Up
+232 up Up
+242 down Up
+244 up Up
+254 down Return
+256 up Return
+300 down Left
+302 up Left
+312 down Return
+314 up Return
+360 down Return
+362 up Return

@@ -287,6 +287,12 @@ fn clone_frenzy() {
 /// Netplay v2 rollback (docs/design/NETPLAY_V2.md): from frame `at`, the match runs under GGRS's sync test, which
 /// loads the state from `check` ticks back and re-runs them every tick and fails on any checksum difference.
 fn rollback_mid_match(name: &str, at: Option<u32>, ticks: u32, check: usize) -> u32 {
+    stats_after(name, at, ticks, Some(check)).0
+}
+
+/// Runs `ticks` ticks of the match from frame `at`, under the sync test with `check`, or plainly without it, and
+/// returns how many ran and the match stats at the end.
+fn stats_after(name: &str, at: Option<u32>, ticks: u32, check: Option<usize>) -> (u32, smw::smw::stats::MatchStats) {
     use smw::common::game_values::AppState;
     use smw::smw::game_state::StateId;
     use smw::smw::rollback::{handle_requests, GgrsConfig, KeySlot, Keys};
@@ -296,6 +302,8 @@ fn rollback_mid_match(name: &str, at: Option<u32>, ticks: u32, check: usize) -> 
     let mut ran = 0;
     let mut failure = None;
     let mut in_match = 0;
+    let mut stats = smw::smw::stats::MatchStats::new();
+    let mut plain = false;
     sandboxed(&tools.join("replays").join(format!("{}.txt", name)), &out, None, |argv, services| {
         let g = smw::game::Game::create();
         g.services = Some(services);
@@ -305,6 +313,14 @@ fn rollback_mid_match(name: &str, at: Option<u32>, ticks: u32, check: usize) -> 
         smw::smw::main::gameloop_start(g);
         let mut session: Option<ggrs::SyncTestSession<GgrsConfig<usize>>> = None;
         while g.game_values.appstate != AppState::Quit && ran < ticks && failure.is_none() {
+            if plain {
+                if g.gsm.currentState != StateId::Gameplay {
+                    break;
+                }
+                smw::smw::main::frame(g);
+                ran += 1;
+                continue;
+            }
             let Some(s) = session.as_mut().filter(|_| g.gsm.currentState == StateId::Gameplay) else {
                 in_match = if g.gsm.currentState == StateId::Gameplay { in_match + 1 } else { 0 };
                 let start = match at {
@@ -314,6 +330,10 @@ fn rollback_mid_match(name: &str, at: Option<u32>, ticks: u32, check: usize) -> 
                 if start {
                     let frame = smw::smw::harness::frame(g);
                     assert_eq!(g.gsm.currentState, StateId::Gameplay, "{}: frame {} is not in a match", name, frame);
+                    let Some(check) = check else {
+                        plain = true;
+                        continue;
+                    };
                     let builder = ggrs::SessionBuilder::<GgrsConfig<usize>>::new().with_num_players(4).unwrap().with_check_distance(check);
                     session = Some(builder.start_synctest_session().unwrap());
                     continue;
@@ -338,6 +358,7 @@ fn rollback_mid_match(name: &str, at: Option<u32>, ticks: u32, check: usize) -> 
             }
             ran += 1;
         }
+        stats = g.game_values.stats;
         smw::smw::main::shutdown(g);
     });
     let _ = std::fs::remove_dir_all(&out);
@@ -345,7 +366,17 @@ fn rollback_mid_match(name: &str, at: Option<u32>, ticks: u32, check: usize) -> 
         panic!("{}", failure);
     }
     assert!(ran == 0 || ran >= ticks.min(300), "{}: only {} ticks under rollback", name, ran);
-    ran
+    (ran, stats)
+}
+
+/// Rolled-back ticks must not count twice: the sync test's re-runs leave the same stats as a plain run.
+#[test]
+fn rollback_keeps_match_stats() {
+    let (ran, rolled) = stats_after("cpu_ctf", Some(1500), 400, Some(7));
+    let (plain_ran, plain) = stats_after("cpu_ctf", Some(1500), 400, None);
+    assert_eq!((ran, plain_ran), (400, 400));
+    assert!(plain.players.iter().any(|p| p.jumps > 0 && p.alive_ticks > 0), "no stats counted");
+    assert_eq!(rolled, plain);
 }
 
 #[test]
