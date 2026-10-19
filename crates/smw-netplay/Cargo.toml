@@ -9,5 +9,5 @@ publish.workspace = true
 smw-globals = { path = "../smw-globals" }
 getrandom = "0.3"
 hmac = "0.12"
-sha1 = "0.10"
+sha1 = "0.11"
 base64 = "0.22"
