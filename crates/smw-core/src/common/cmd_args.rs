@@ -11,8 +11,6 @@ pub struct Args {
     pub replay_speed: Option<f32>,
     /// `--segment <k>` with `--replay`: watch only match k, started from its checkpoint.
     pub segment: Option<u32>,
-    /// `--split-pad`: two players share the built-in controller (`smw/split_pad.rs`).
-    pub split_pad: bool,
 }
 
 /// `--debug`: a console of its own when the game was not started from one.
@@ -99,7 +97,6 @@ pub fn print_help(title: &str, version: &str) {
     println!("      --replay <FILE>     Watches a session recording");
     println!("      --replay-speed <N>  Playback speed multiplier for --replay");
     println!("      --segment <K>       With --replay: watch only match K of the recording");
-    println!("      --split-pad         Splits the built-in controller between players 1 and 2");
 }
 
 pub fn parse_args(argv: &[String]) -> Args {
@@ -112,11 +109,6 @@ pub fn parse_args(argv: &[String]) -> Args {
             result.success = true;
             result.show_help = true;
             return result;
-        }
-        if arg == "--split-pad" {
-            result.split_pad = true;
-            i += 1;
-            continue;
         }
         if arg == "--debug" {
             result.debug = true;

@@ -13,19 +13,11 @@ pub struct InputQueue {
     ready: VecDeque<Input>,
     /// The Guide button's quit dialog while it is open: whether Yes is selected.
     pub quit_dialog: Option<bool>,
-    #[cfg(not(target_os = "emscripten"))]
-    pub split: crate::smw::split_pad::SplitPad,
 }
 
 impl InputQueue {
     pub const fn new() -> Self {
-        InputQueue {
-            touch: VecDeque::new(),
-            ready: VecDeque::new(),
-            quit_dialog: None,
-            #[cfg(not(target_os = "emscripten"))]
-            split: crate::smw::split_pad::SplitPad::new(),
-        }
+        InputQueue { touch: VecDeque::new(), ready: VecDeque::new(), quit_dialog: None }
     }
 }
 
@@ -76,8 +68,6 @@ fn take_live(g: &mut Game) -> Option<Input> {
         if !crate::smw::touch::filter(g, &input) {
             continue;
         }
-        #[cfg(not(target_os = "emscripten"))]
-        let Some(input) = crate::smw::split_pad::filter(g, input) else { continue };
         return Some(input);
     }
     g.input.touch.pop_front()
