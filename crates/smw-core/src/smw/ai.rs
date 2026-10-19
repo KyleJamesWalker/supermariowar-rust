@@ -2,7 +2,7 @@
 
 use crate::smw::object_container::ObjectId;
 use crate::common::map::{WARP_DOWN, WARP_LEFT, WARP_RIGHT};
-use crate::smw::ai_nav::{Move, NavGraph, Route};
+use crate::smw::ai_nav::{platform_under, Move, NavGraph, Route};
 use crate::smw::objects::blocks::powerup_block::B_PowerupBlock;
 use crate::smw::players::PlayerId;
 use crate::game::Game;
@@ -1205,8 +1205,14 @@ fn follow_path(g: &mut Game, this: &mut CPlayerAI, actionType: i16, mut keys: Pt
     }
     match nav.route(me, to) {
         Route::Here => {}
-        // The graph has no moving platforms or springs, so an unreachable target keeps the straight-line steering.
+        // The graph has no springs or breakable blocks, so an unreachable target keeps the straight-line steering.
         Route::Unreachable => {}
+        // The platform that held the next tile has moved on: wait for it rather than step into the gap.
+        Route::Step { x, y, .. } if nav.is_carried(x, y) && !platform_under(g, x, y) => {
+            keys.game_left_mut().fDown = false;
+            keys.game_right_mut().fDown = false;
+            keys.game_jump_mut().fDown = false;
+        }
         Route::Step { how: Move::Warp { dir, x }, .. } => {
             let centre = ix + HALFPW;
             let aligned = (centre - x).abs() <= 4;
