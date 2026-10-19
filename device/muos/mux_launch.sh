@@ -17,8 +17,6 @@ export HOME="$APP_DIR/home"
 export LD_LIBRARY_PATH="$APP_DIR/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export SMW_NO_KEYBOARD=1 SMW_PAD_TRANSLATE=1 SMW_PERF=1
 # export SMW_DEBUG_INPUT=1
-# 1 splits the built-in controls between players 1 and 2 (--split-pad).
-SPLIT_PAD=0
 # A comma-separated list SDL tries in order; "dummy" runs silent.
 AUDIO_DRIVER="alsa"
 export SDL_AUDIODRIVER="$AUDIO_DRIVER"
@@ -53,9 +51,7 @@ echo "[cpu] governor $OLD_GOVERNOR -> $(cat "$CPU/scaling_governor" 2>/dev/null)
 (while sleep 10; do echo "[cpu] $(cat "$CPU/scaling_cur_freq" 2>/dev/null) kHz, $(cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null) mC"; done) >>"$APP_DIR/log.txt" 2>&1 &
 CPU_LOG=$!
 
-SMW_ARGS=""
-[ "$SPLIT_PAD" = "1" ] && SMW_ARGS="--split-pad"
-./smw --datadir "$APP_DIR/data" $SMW_ARGS >>"$APP_DIR/log.txt" 2>&1
+./smw --datadir "$APP_DIR/data" >>"$APP_DIR/log.txt" 2>&1
 
 kill "$CPU_LOG" 2>/dev/null
 [ -n "$OLD_GOVERNOR" ] && echo "$OLD_GOVERNOR" >"$CPU/scaling_governor" 2>/dev/null

@@ -442,7 +442,7 @@ fn assign_hotplugged(g: &mut Game) {
         *pending |= added;
     }
     #[cfg(not(target_os = "emscripten"))]
-    if crate::smw::pad::hotplug(g) | crate::smw::split_pad::update(g) {
+    if crate::smw::pad::hotplug(g) {
         *pending = true;
     }
     let playing = GameStateManager::instance(g).currentState == crate::smw::game_state::StateId::Gameplay;
@@ -657,10 +657,6 @@ pub fn run_with(argv: Vec<String>, services: Option<smw_platform::Services>) {
     if !cmd.replay.is_empty() {
         harness::prepare_watch(g, &cmd.replay, cmd.replay_speed, cmd.segment);
     }
-    #[cfg(not(target_os = "emscripten"))]
-    {
-        g.input.split.forced = cmd.split_pad;
-    }
 
     // C++ catches `const char*`, `std::string`, `std::exception` and `...` around main_game().
     let mut gp = g.ptr();
@@ -727,8 +723,6 @@ pub fn startup(g: &mut Game) {
         create_gamemodes(g);
 
         gp.game_values.read_binary_config(g);
-        #[cfg(not(target_os = "emscripten"))]
-        crate::smw::split_pad::init(g);
         assign_inputs(g);
 
         //Assign the powerup weights to the selected preset

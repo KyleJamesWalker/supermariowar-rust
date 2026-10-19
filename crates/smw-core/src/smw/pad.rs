@@ -71,7 +71,7 @@ pub fn devices_changed() {
 }
 
 /// The first empty slot in `devices`, growing it by one when every slot is taken.
-pub(crate) fn free_index(g: &mut Game) -> Option<usize> {
+fn free_index(g: &mut Game) -> Option<usize> {
     let count = g.devices.len();
     if let Some(i) = (0..count).find(|&i| g.devices[i].is_none()) {
         return Some(i);

@@ -43,13 +43,9 @@ Text fields, such as your name and a room name under **Multiplayer**, open an on
 
 Y, the shoulder buttons and the triggers are free to bind under **Controls** in the main menu. `docs/guides/GAME_MANUAL.md` covers the menus and modes.
 
-### Two players on one handheld
-
-**Controls > Built-in Controller: Split** gives the built-in controls to two players. Player 1 keeps the D-pad and gets L1 jump, L2 run and Select item. Player 2 gets Y, A and B as left, right and down, X jump, R1 run and R2 item. Start pauses for both. In menus, player 1's L1 chooses and L2 goes back. The setting is saved; set `SPLIT_PAD=1` in `mux_launch.sh` to start every session split.
-
 With one controller, the other players that were human become **Bot** at launch, so a match starts against the computer. Set them to **None** in the main menu's **Players** row for fewer opponents. Each extra controller (a USB or Bluetooth pad) joins as the next human player.
 
-To quit, press **Menu** or choose **Exit** on the main menu. B on the main menu also quits, as Back does there in the original game, so press A to start. Settings are saved on the way out.
+To quit, press **Menu** and choose **Yes**, or choose **Exit** on the main menu. B on the main menu also quits, as Back does there in the original game, so press A to start. Settings are saved on the way out.
 
 ## Launcher settings
 
@@ -57,9 +53,8 @@ To quit, press **Menu** or choose **Exit** on the main menu. B on the main menu 
 
 | Variable | Effect |
 |---|---|
-| `SMW_PAD_TRANSLATE=1` | Reads every pad SDL has a controller mapping for (muOS provides one for the built-in controls) through that mapping, in the button layout above. Mapped pads get players first; Menu quits. |
+| `SMW_PAD_TRANSLATE=1` | Reads every pad SDL has a controller mapping for (muOS provides one for the built-in controls) through that mapping, in the button layout above. Mapped pads get players first. Menu asks, then quits. |
 | `SMW_NO_KEYBOARD=1` | Leaves the keyboard out of the launch-time player assignment and turns the players without a pad that were human into bots. |
-| `SPLIT_PAD=1` | Passes `--split-pad`, which splits the built-in controls between players 1 and 2 for the session whatever the Controls setting. Off by default. |
 | `SMW_PERF=1` | Logs to `log.txt` every 300 frames (about 5 s) how long a frame's update and drawing and its present take on average, the share of the 16 ms frame budget, the worst frame and how many went over budget. The first report includes loading. |
 
 Other builds set neither, so desktop pads keep their raw button numbering there.
