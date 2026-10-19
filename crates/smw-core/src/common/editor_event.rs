@@ -46,7 +46,7 @@ impl EditorEvent {
                 MouseEvent::Button { down, .. } => if *down { SDL_MOUSEBUTTONDOWN } else { SDL_MOUSEBUTTONUP },
                 MouseEvent::Wheel { .. } => SDL_MOUSEWHEEL,
             },
-            InputEvent::Quit => SDL_QUIT,
+            InputEvent::Quit | InputEvent::QuitRequest => SDL_QUIT,
             InputEvent::Tap { .. } => SDL_USEREVENT,
             InputEvent::Other(t) => *t,
         }

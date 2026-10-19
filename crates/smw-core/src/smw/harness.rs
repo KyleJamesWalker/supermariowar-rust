@@ -33,6 +33,8 @@ enum EventKind {
     JoyButton,
     JoyHat,
     Tap,
+    /// `<frame> quitrequest`: a controller's Guide button.
+    QuitRequest,
     /// `<frame> await <name>`: later events wait until that menu or state is current.
     Await,
 }
@@ -264,7 +266,12 @@ fn load_events(g: &mut Game, path: &str) -> Vec<ReplayEvent> {
             h(gp.get()).devices.push((frame, device, dir == "jadd"));
             continue;
         }
-        if dir == "await" {
+        if dir == "quitrequest" {
+            if !rest.trim().is_empty() {
+                fail(format!("{}:{}: expected '<frame> quitrequest'", path, lineno));
+            }
+            ev.kind = EventKind::QuitRequest;
+        } else if dir == "await" {
             ev.kind = EventKind::Await;
             ev.keyName = rest.trim().to_string();
             if ev.keyName.is_empty() {
@@ -364,6 +371,7 @@ fn input_for(g: &mut Game, ev: &ReplayEvent) -> InputEvent {
         EventKind::JoyButton => InputEvent::PadButton { pad, button: ev.index as u8, down: ev.value != 0 },
         EventKind::JoyHat => InputEvent::PadHat { pad, hat: ev.index as u8, value: ev.value as u8 },
         EventKind::Tap => InputEvent::Tap { x: ev.index as i16, y: ev.value as i16 },
+        EventKind::QuitRequest => InputEvent::QuitRequest,
         EventKind::Await => InputEvent::Other(0),
     }
 }
@@ -964,6 +972,10 @@ fn to_replay_event(g: &mut Game, input: &Input, frame: u32) -> Option<ReplayEven
         InputEvent::PadAxis { pad, axis, value } => (pad.0, EventKind::JoyAxis, axis as i32, value as i32),
         InputEvent::PadHat { pad, hat, value } => (pad.0, EventKind::JoyHat, hat as i32, value as i32),
         InputEvent::PadButton { pad, button, down } => (pad.0, EventKind::JoyButton, button as i32, down as i32),
+        InputEvent::QuitRequest => {
+            ev.kind = EventKind::QuitRequest;
+            return Some(ev);
+        }
         _ => return None,
     };
     ev.device = device_index(g, which)?;
@@ -993,6 +1005,7 @@ fn line_for(ev: &ReplayEvent) -> String {
         EventKind::JoyButton => format!("{} jbutton {} {} {}", ev.frame, ev.device, ev.index, ev.value),
         EventKind::JoyHat => format!("{} jhat {} {} {}", ev.frame, ev.device, ev.index, ev.value),
         EventKind::Tap => format!("{} tap {} {}", ev.frame, ev.index, ev.value),
+        EventKind::QuitRequest => format!("{} quitrequest", ev.frame),
         EventKind::Await => format!("{} await {}", ev.frame, ev.keyName),
     }
 }

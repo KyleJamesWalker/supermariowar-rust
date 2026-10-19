@@ -1,0 +1,31 @@
+# The Guide button asks before quitting: No in the main menu, No in a match, then Yes in the match quits.
+#@ seed=1
+#@ frames=900
+#@ shots=45,610,700,790
+10 down Return
+12 up Return
+40 quitrequest
+60 down Return
+62 up Return
+90 down Return
+92 up Return
+110 down Return
+112 up Return
+130 down E
+132 up E
+160 down Return
+162 up Return
+190 down Return
+192 up Return
+220 down Return
+222 up Return
+600 quitrequest
+630 down Return
+632 up Return
+660 down Right
+700 up Right
+760 quitrequest
+780 down Left
+782 up Left
+800 down Return
+802 up Return

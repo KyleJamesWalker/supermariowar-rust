@@ -6,8 +6,9 @@ use sdl3_sys::everything::*;
 use smw_platform::{DeviceChange, Input, InputEvent, Keycode, MouseEvent, PadSlot, TouchPhase};
 use std::ffi::{c_char, CStr, CString};
 
-/// The `SDL_EVENT_USER` code that carries an `InputEvent::Tap`, as smw-sdl2's.
+/// The `SDL_EVENT_USER` codes that carry an `InputEvent::Tap` and an `InputEvent::QuitRequest`, as smw-sdl2's.
 const TAP_CODE: i32 = 0x5441;
+const QUIT_REQUEST_CODE: i32 = 0x5152;
 const SCANCODE_MASK: i32 = 1 << 30;
 
 /// SDL2 scancodes of the consumer keys and the SDL3 scancode for each, where SDL3 has one. The rest of the two
@@ -152,6 +153,8 @@ pub fn from_sdl(e: &SDL_Event) -> Input {
                 which: b.which.0,
                 event: MouseEvent::Button { button: b.button, down: b.down, clicks: b.clicks, x: b.x.floor() as i32, y: b.y.floor() as i32 },
             }
+        } else if is(e, SDL_EVENT_USER) && e.user.code == QUIT_REQUEST_CODE {
+            InputEvent::QuitRequest
         } else if is(e, SDL_EVENT_USER) && e.user.code == TAP_CODE {
             InputEvent::Tap { x: e.user.data1 as isize as i16, y: e.user.data2 as isize as i16 }
         } else if is(e, SDL_EVENT_MOUSE_WHEEL) {
@@ -193,6 +196,9 @@ pub fn to_sdl(input: &Input, texts: &mut TextArena) -> SDL_Event {
     let timestamp = input.timestamp as u64 * 1_000_000;
     match &input.event {
         InputEvent::Quit => e.quit = SDL_QuitEvent { r#type: SDL_EVENT_QUIT, timestamp, ..Default::default() },
+        InputEvent::QuitRequest => {
+            e.user = SDL_UserEvent { r#type: SDL_EVENT_USER.0, timestamp, code: QUIT_REQUEST_CODE, ..Default::default() }
+        }
         &InputEvent::Key { key, scancode, mods, down, repeat, window } => {
             e.key = SDL_KeyboardEvent {
                 r#type: if down { SDL_EVENT_KEY_DOWN } else { SDL_EVENT_KEY_UP },
@@ -327,6 +333,7 @@ mod tests {
     fn every_kind_round_trips() {
         let pad = PadSlot(3);
         round_trip(InputEvent::Quit);
+        round_trip(InputEvent::QuitRequest);
         round_trip(InputEvent::Key { key: Keycode(97), scancode: 4, mods: 0x40, down: true, repeat: false, window: 1 });
         round_trip(InputEvent::Key { key: Keycode(SCANCODE_MASK | 82), scancode: 82, mods: 0, down: false, repeat: true, window: 1 });
         round_trip(InputEvent::Key { key: Keycode(SCANCODE_MASK | 258), scancode: 258, mods: 0, down: true, repeat: false, window: 1 });

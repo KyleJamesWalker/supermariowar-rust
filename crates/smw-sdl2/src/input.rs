@@ -45,8 +45,9 @@ fn raw_finger(f: &SDL_TouchFingerEvent) -> Option<RawFinger> {
     raw.pop_front()
 }
 
-/// The `SDL_USEREVENT` code that carries an `InputEvent::Tap`.
+/// The `SDL_USEREVENT` codes that carry an `InputEvent::Tap` and an `InputEvent::QuitRequest`.
 const TAP_CODE: i32 = 0x5441;
+pub(crate) const QUIT_REQUEST_CODE: i32 = 0x5152;
 
 fn state(down: bool) -> u8 {
     (if down { SDL_PRESSED } else { SDL_RELEASED }) as u8
@@ -121,6 +122,8 @@ pub fn from_sdl(e: &SDL_Event) -> Input {
                 which: b.which,
                 event: MouseEvent::Button { button: b.button, down: is(SDL_MOUSEBUTTONDOWN), clicks: b.clicks, x: b.x, y: b.y },
             }
+        } else if is(SDL_USEREVENT) && e.user.code == QUIT_REQUEST_CODE {
+            InputEvent::QuitRequest
         } else if is(SDL_USEREVENT) && e.user.code == TAP_CODE {
             InputEvent::Tap { x: e.user.data1 as isize as i16, y: e.user.data2 as isize as i16 }
         } else if is(SDL_MOUSEWHEEL) {
@@ -138,6 +141,10 @@ pub fn to_sdl(input: &Input) -> SDL_Event {
         let mut e: SDL_Event = std::mem::zeroed();
         match &input.event {
             InputEvent::Quit => e.type_ = SDL_QUIT as u32,
+            InputEvent::QuitRequest => {
+                e.user.type_ = SDL_USEREVENT as u32;
+                e.user.code = QUIT_REQUEST_CODE;
+            }
             &InputEvent::Key { key, scancode, mods, down, repeat, window } => {
                 e.key.type_ = (if down { SDL_KEYDOWN } else { SDL_KEYUP }) as u32;
                 e.key.windowID = window;
@@ -270,6 +277,7 @@ mod tests {
             round_trip(InputEvent::Mouse { window: 1, which: 0, event: MouseEvent::Button { button: 3, down, clicks: 2, x: 115, y: -4 } });
         }
         round_trip(InputEvent::Quit);
+        round_trip(InputEvent::QuitRequest);
         round_trip(InputEvent::PadAxis { pad, axis: 5, value: -32768 });
         round_trip(InputEvent::PadHat { pad, hat: 0, value: 9 });
         round_trip(InputEvent::GamepadAxis { pad, axis: 2, value: 32767 });
