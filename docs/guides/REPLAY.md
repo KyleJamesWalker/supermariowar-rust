@@ -87,7 +87,7 @@ When the replay has joystick lines, `harness::init` attaches `max(dev) + 1` virt
 
 `<frame> quitrequest` (Rust only) is a controller's Guide button: it opens the Quit Game dialog, whose Yes quits as closing the window does.
 
-`<frame> await <name>` (Rust only) holds every later line until `<name>` is or has been current since the previous `await`: a game state (`menu`, `gameplay`, ...) or, in the menu, a menu as the dump names it (`main`, `net_lobby`, `mode_settings`, ...). Later lines and `#@ frames` move by the frames it waited. The net game scripts use it so a key press lands on the right menu however long the lobby takes. A recording never contains it: the recorder writes the frames the events actually played at.
+`<frame> await <name>` (Rust only) holds every later line until `<name>` is or has been current since the previous `await`: a game state (`menu`, `gameplay`, ...) or, in the menu, a menu as the dump names it (`main`, `net_lobby`, `mode_settings`, ...). Later lines and `#@ frames` move by the frames it waited. The net game scripts use it so a key press lands on the right menu however long the lobby takes. `net_lobby_rooms` is the lobby once its room list has an entry, so a joiner waits for the host's room. `net_room_2p` to `net_room_4p` are the room once it holds that many players, so a host starts only with everyone in. A recording never contains it: the recorder writes the frames the events actually played at.
 
 `#@ touch=1` (Rust only) marks a session recorded with Android's touch controls, which change how `assign_inputs` gives out players (`android/README.md`, Touch controls); a replay of it assigns them the same way. The touch controls themselves record as ordinary key lines.
 
