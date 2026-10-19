@@ -15,7 +15,6 @@ use crate::common::random_number_generator::{RANDOM_BOOL, RANDOM_INT};
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::chase::CGM_Chase;
-use crate::smw::net_random::{self, Ev};
 use crate::smw::objects::overmap::over_map_object::{io_over_map_object_draw, IO_OverMapObject, IO_OverMapObjectTrait};
 use crate::smw::player::CPlayer;
 
@@ -35,14 +34,6 @@ pub struct OMO_Phanto {
     pub iSpeedTimer: i16,
 }
 impl_base!(OMO_Phanto => io_over_map_object: IO_OverMapObject);
-
-pub fn net_return(g: &mut Game, mut obj: Ptr<dyn crate::common::object_base::CObjectTrait>) {
-    if !obj.is_null() {
-        if let Some(o) = obj.as_any().downcast_mut::<OMO_Phanto>() {
-            o.return_offscreen(g);
-        }
-    }
-}
 
 impl OMO_Phanto {
     pub fn change_speed(&mut self, g: &mut Game) {
@@ -107,7 +98,7 @@ impl CObjectTrait for OMO_Phanto {
         }
 
         self.iSpeedTimer += 1;
-        if self.iSpeedTimer as i32 > TICKS_PER_SECOND as i32 && !net_random::object_event(g, Ev::Wander, &net_random::wander_args(self.iNetworkID, self.fx, self.fy, 0.0)) {
+        if self.iSpeedTimer as i32 > TICKS_PER_SECOND as i32 {
             self.change_speed(g);
         }
 
@@ -173,9 +164,7 @@ impl CObjectTrait for OMO_Phanto {
                     self.velx = 0.0f32;
 
                     // Randomly position phanto off screen
-                    if !net_random::object_event(g, Ev::PhantoReturn, &[self.iNetworkID]) {
-                        self.return_offscreen(g);
-                    }
+                    self.return_offscreen(g);
                 }
             }
         }

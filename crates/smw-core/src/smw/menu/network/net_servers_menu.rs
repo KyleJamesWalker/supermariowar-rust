@@ -21,6 +21,7 @@ pub struct UI_NetServersMenu {
     miNetServersSelectedHostText: Ctl<MI_Text>,
     miNetServersConnectButton: Ctl<MI_Button>,
     miNetServersAddRemoveButton: Ctl<MI_Button>,
+    miNetServersHostButton: Ctl<MI_Button>,
     miNetServersNicknameField: Ctl<MI_TextField>,
     miNetServersBackButton: Ctl<MI_Button>,
 
@@ -86,6 +87,9 @@ impl UI_NetServersMenu {
         this.miNetServersAddRemoveButton = Ctl::new(MI_Button::new(g, selectfield, 70, 280, "Add / Remove Server", 640 - 2 * 70, TextAlign::CENTER), g);
         g.ctl(this.miNetServersAddRemoveButton).set_code(MENU_CODE_TO_NET_ADDREMOVE_SERVER_MENU);
 
+        this.miNetServersHostButton = Ctl::new(MI_Button::new(g, selectfield, 70, 320, "Host on This Device", 640 - 2 * 70, TextAlign::CENTER), g);
+        g.ctl(this.miNetServersHostButton).set_code(MENU_CODE_NET_HOST_LAN);
+
         this.miNetServersConnectingDialogImage = Ctl::new(MI_Image::new(g.rm.spr_dialog, 224, 176, 0, 0, 192, 128, 1, 1, 0), g);
         this.miNetServersConnectingDialogText = Ctl::new(MI_HeaderText::new(g, "Connecting...", 640 / 2, 240 - 12), g);
 
@@ -105,8 +109,10 @@ impl UI_NetServersMenu {
         let t = this.miNetServersSelectedHostText.id();
         this.add_non_control(t);
         this.add_control(g, connect, select, addremove, null, null);
-        this.add_control(g, addremove, connect, back, null, null);
-        this.add_control(g, back, addremove, nick, null, null);
+        let host = this.miNetServersHostButton.id();
+        this.add_control(g, addremove, connect, host, null, null);
+        this.add_control(g, host, addremove, back, null, null);
+        this.add_control(g, back, host, nick, null, null);
 
         let (l, r, h) = (this.miNetServersLeftHeaderBar.id(), this.miNetServersRightHeaderBar.id(), this.miNetServersHeaderText.id());
         this.add_non_control(l);
@@ -136,7 +142,8 @@ impl UI_NetServersMenu {
         g.ctl(self.miNetServersScroll).clear();
         for iServer in 0..g.netplay.savedServers.len() {
             let host = g.netplay.savedServers[iServer].hostname.clone();
-            g.ctl(self.miNetServersScroll).add(&host, "");
+            let tag = if g.netplay.nearby.contains(&host) { "LAN" } else { "" };
+            g.ctl(self.miNetServersScroll).add(&host, tag);
         }
 
         if !g.netplay.savedServers.is_empty() {

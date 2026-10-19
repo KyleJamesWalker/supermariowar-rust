@@ -12,7 +12,6 @@ use crate::common::random_number_generator::{RANDOM_BOOL, RANDOM_INT};
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::classic::{cgm_classic_init, cgm_classic_playerextraguy, cgm_classic_playerkilledplayer, cgm_classic_playerkilledself, CGM_Classic};
-use crate::smw::net_random::{self, Ev};
 use crate::smw::objects::moving::mo_podobo::MO_Podobo;
 use crate::smw::objects::overmap::wo_bowser_fire::OMO_BowserFire;
 use crate::smw::objects::overmap::wo_thwomp::OMO_Thwomp;
@@ -96,12 +95,6 @@ impl CGM_Survival {
     }
 }
 
-pub fn net_spawn_enemy(g: &mut Game) {
-    if let Some(this) = g.mode().get().as_any().downcast_mut::<CGM_Survival>() {
-        this.spawn_enemy(g);
-    }
-}
-
 impl CGameModeTrait for CGM_Survival {
     crate::impl_cgamemode_plumbing!();
 
@@ -130,7 +123,7 @@ impl CGameModeTrait for CGM_Survival {
         }
 
         self.timer -= 1;
-        if self.timer <= 0 && !net_random::event(g, Ev::SurvivalEnemy, &[]) {
+        if self.timer <= 0 {
             self.spawn_enemy(g);
         }
     }

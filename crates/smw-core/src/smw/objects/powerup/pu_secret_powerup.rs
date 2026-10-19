@@ -44,9 +44,6 @@ impl PU_SecretPowerup {
 
     pub fn place(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        if crate::smw::net_random::place_event(g, self.iNetworkID, 0) {
-            return;
-        }
 
         let mut ix = self.ix;
         let mut iy = self.iy;

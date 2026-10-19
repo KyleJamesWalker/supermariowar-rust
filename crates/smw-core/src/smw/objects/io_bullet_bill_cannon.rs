@@ -49,7 +49,7 @@ impl CObjectTrait for IO_BulletBillCannon {
 
     fn update(&mut self, g: &mut Game) {
         self.m_timer -= 1;
-        if self.m_timer <= 0 && !crate::smw::net_random::object_event(g, crate::smw::net_random::Ev::HazardTimer, &[self.iNetworkID]) {
+        if self.m_timer <= 0 {
             self.fire(g);
         }
     }

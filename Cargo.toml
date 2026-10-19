@@ -1,9 +1,11 @@
 [workspace]
 resolver = "2"
+exclude = ["vendor/ggrs"]
 members = [
     "crates/smw-core",
     "crates/smw-globals",
     "crates/smw-netplay",
+    "crates/smw-peer",
     "crates/smw-platform",
     "crates/smw-sdl2",
     "crates/smw-headless",
@@ -12,23 +14,22 @@ members = [
     "apps/smw3",
     "apps/leveleditor",
     "apps/worldeditor",
-    "apps/smw_server",
     "apps/smw_replay",
     "apps/smw_relay",
 ]
-# Commands without -p build the game, the editors and smw_server, as before; the relay builds on its own.
 default-members = [
     "crates/smw-core",
     "crates/smw-globals",
     "crates/smw-netplay",
+    "crates/smw-peer",
     "crates/smw-platform",
     "crates/smw-sdl2",
     "crates/smw-headless",
     "apps/smw",
     "apps/leveleditor",
     "apps/worldeditor",
-    "apps/smw_server",
     "apps/smw_replay",
+    "apps/smw_relay",
 ]
 
 [workspace.package]
@@ -50,3 +51,7 @@ overflow-checks = false
 
 [profile.test]
 overflow-checks = false
+
+# ggrs 0.13.0 that links under Emscripten (vendor/ggrs/PATCHED.md).
+[patch.crates-io]
+ggrs = { path = "vendor/ggrs" }

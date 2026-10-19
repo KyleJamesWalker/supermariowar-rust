@@ -8,7 +8,7 @@ set -euo pipefail
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 out="$repo/target/android"
 project="$out/project"
-api=21
+api=24
 abis=("${@:-arm64-v8a}")
 
 : "${ANDROID_HOME:?ANDROID_HOME must point at the Android SDK}"

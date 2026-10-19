@@ -1,30 +1,19 @@
-//! Not in the C++: the browser's network layer. Each ENet connection becomes a virtual connection to
-//! `smw_relay`, all of them over one WebSocket (web/relay_socket.js, docs/guides/RELAY.md).
+//! The network layer of every build: the lobby connection is a virtual connection to `smw_relay` over one WebSocket
+//! (`socket`, docs/guides/RELAY.md).
 
 use crate::game::Game;
 use crate::common_netplay::network_interface::{NetPeer, NetworkEventHandler};
-use crate::common_netplay::protocol_definitions::NET_GAMEHOST_PORT;
 use crate::common_netplay::relay_frame::{self as frame, *};
 use crate::globals::{Aliased, Ptr};
 use crate::smw::network::network_layer::NetworkLayer;
 use std::any::Any;
 use std::collections::{BTreeMap, VecDeque};
-use std::ffi::CString;
-use std::net::Ipv4Addr;
-use std::os::raw::c_char;
+use super::socket::{self, CLOSED as WS_CLOSED, CONNECTING as WS_CONNECTING, OPEN as WS_OPEN};
 
+#[cfg(target_os = "emscripten")]
 extern "C" {
-    fn smw_ws_open(url: *const c_char);
-    fn smw_ws_state() -> i32;
-    fn smw_ws_send(data: *const u8, len: usize) -> i32;
-    fn smw_ws_recv(buf: *mut u8, cap: usize) -> i32;
-    fn smw_ws_close();
     fn smw_relay_url_param(buf: *mut u8, cap: usize) -> i32;
 }
-
-const WS_CONNECTING: i32 = 0;
-const WS_OPEN: i32 = 1;
-const WS_CLOSED: i32 = 2;
 
 pub const DEFAULT_RELAY_URL: &str = match option_env!("SMW_RELAY_URL") {
     Some(url) => url,
@@ -32,6 +21,7 @@ pub const DEFAULT_RELAY_URL: &str = match option_env!("SMW_RELAY_URL") {
 };
 
 /// The page's `?relay=` URL, else the build's default; none for an empty `?relay=` (web_replay.mjs).
+#[cfg(target_os = "emscripten")]
 pub fn relay_url() -> Option<String> {
     let mut buf = [0u8; 512];
     let len = unsafe { smw_relay_url_param(buf.as_mut_ptr(), buf.len()) };
@@ -51,15 +41,8 @@ fn url_for_server(hostname: &str) -> String {
     }
 }
 
-#[derive(Clone, Copy, PartialEq)]
-enum Side {
-    Client,
-    GameHost,
-}
-
 #[derive(Clone, Copy)]
 pub struct Conn {
-    side: Side,
     host: [u8; 4],
     port: u16,
     open: bool,
@@ -76,9 +59,7 @@ pub struct Relay {
     url: String,
     outbox: Vec<Vec<u8>>,
     conns: BTreeMap<u16, Conn>,
-    client_events: VecDeque<Event>,
-    gamehost_events: VecDeque<Event>,
-    listening: bool,
+    events: VecDeque<Event>,
 }
 
 impl Relay {
@@ -88,9 +69,7 @@ impl Relay {
             url: String::new(),
             outbox: Vec::new(),
             conns: BTreeMap::new(),
-            client_events: VecDeque::new(),
-            gamehost_events: VecDeque::new(),
-            listening: false,
+            events: VecDeque::new(),
         }
     }
 }
@@ -98,10 +77,8 @@ impl Relay {
 impl Relay {
     fn send(&mut self, kind: u8, conn: u16, payload: &[u8]) {
         let message = frame::encode(kind, conn, payload);
-        match unsafe { smw_ws_state() } {
-            WS_OPEN => unsafe {
-                smw_ws_send(message.as_ptr(), message.len());
-            },
+        match socket::state() {
+            WS_OPEN => socket::send(&message),
             WS_CONNECTING => self.outbox.push(message),
             _ => {}
         }
@@ -111,74 +88,64 @@ impl Relay {
         NetPeerWebSocket { relay: Ptr::from_mut(self), conn, host: c.host, port: c.port }
     }
 
-    fn events(&mut self, side: Side) -> &mut VecDeque<Event> {
-        match side {
-            Side::Client => &mut self.client_events,
-            Side::GameHost => &mut self.gamehost_events,
-        }
-    }
-
     fn open(&mut self, url: &str) {
-        let state = unsafe { smw_ws_state() };
+        let state = socket::state();
         if self.url == url && (state == WS_OPEN || state == WS_CONNECTING) {
             return;
         }
         self.drop_all();
         self.url = url.to_string();
         println!("[net] Connecting to relay {}", url);
-        let c_url = CString::new(url).unwrap_or_default();
-        unsafe { smw_ws_open(c_url.as_ptr()) };
+        socket::open(url);
     }
 
     fn close_if_idle(&mut self) {
-        if self.conns.is_empty() && !self.listening {
-            unsafe { smw_ws_close() };
+        if self.conns.is_empty() {
+            socket::close();
             self.url.clear();
             self.outbox.clear();
         }
     }
 
     fn connect(&mut self, host: [u8; 4], port: u16) -> bool {
-        let state = unsafe { smw_ws_state() };
+        let state = socket::state();
         if state != WS_OPEN && state != WS_CONNECTING {
             return false;
         }
-        let Some(conn) = (1..INCOMING_CONN).find(|c| !self.conns.contains_key(c)) else {
+        let Some(conn) = (1..=u16::MAX).find(|c| !self.conns.contains_key(c)) else {
             return false;
         };
-        self.conns.insert(conn, Conn { side: Side::Client, host, port, open: false });
+        self.conns.insert(conn, Conn { host, port, open: false });
         self.send(CONNECT, conn, &frame::encode_address(host, port));
         true
     }
 
-    fn close_side(&mut self, side: Side) {
-        let closing: Vec<u16> = self.conns.iter().filter(|(_, c)| c.side == side).map(|(&id, _)| id).collect();
-        for conn in closing {
-            self.conns.remove(&conn);
+    fn close_all(&mut self) {
+        for conn in std::mem::take(&mut self.conns).into_keys() {
             self.send(DISCONNECT, conn, &[]);
         }
-        self.events(side).clear();
+        self.events.clear();
     }
 
-    /// Every connection ends, as when ENet's peers time out.
+    /// Every connection ends, as when the relay goes away.
     fn drop_all(&mut self) {
         for (conn, c) in std::mem::take(&mut self.conns) {
             let peer = self.peer(conn, &c);
-            self.events(c.side).push_back(Event::Disconnect(peer));
+            self.events.push_back(Event::Disconnect(peer));
         }
         self.outbox.clear();
     }
 
     fn pump(&mut self, g: &mut Game) {
-        let state = unsafe { smw_ws_state() };
+        let state = socket::state();
         if state == WS_OPEN {
             for message in std::mem::take(&mut self.outbox) {
-                unsafe { smw_ws_send(message.as_ptr(), message.len()) };
+                socket::send(&message);
             }
         }
 
         loop {
-            let len = unsafe { smw_ws_recv(g.recv_buffer.as_mut_ptr(), MAX_MESSAGE_LEN) };
+            let len = socket::recv(&mut g.recv_buffer);
             if len == -1 {
                 break;
             }
@@ -208,31 +175,22 @@ impl Relay {
                         c.open = true;
                         let c = *c;
                         let peer = self.peer(conn, &c);
-                        self.events(c.side).push_back(Event::Connect(peer));
+                        self.events.push_back(Event::Connect(peer));
                     }
                 }
             }
-            INCOMING => match frame::decode_address(payload) {
-                Some((host, port)) if self.listening && conn >= INCOMING_CONN && !self.conns.contains_key(&conn) => {
-                    let c = Conn { side: Side::GameHost, host, port, open: true };
-                    self.conns.insert(conn, c);
-                    let peer = self.peer(conn, &c);
-                    self.gamehost_events.push_back(Event::Connect(peer));
-                }
-                _ => self.send(DISCONNECT, conn, &[]),
-            },
             DATA => {
                 if let Some(c) = self.conns.get(&conn).copied() {
                     if c.open {
                         let peer = self.peer(conn, &c);
-                        self.events(c.side).push_back(Event::Receive(peer, payload.to_vec()));
+                        self.events.push_back(Event::Receive(peer, payload.to_vec()));
                     }
                 }
             }
             REFUSED | DISCONNECT => {
                 if let Some(c) = self.conns.remove(&conn) {
                     let peer = self.peer(conn, &c);
-                    self.events(c.side).push_back(Event::Disconnect(peer));
+                    self.events.push_back(Event::Disconnect(peer));
                 }
             }
             _ => {}
@@ -240,13 +198,10 @@ impl Relay {
     }
 }
 
-fn listen(g: &mut Game, side: Side, handler: &mut dyn NetworkEventHandler<Game>) {
+fn listen(g: &mut Game, handler: &mut dyn NetworkEventHandler<Game>) {
     let mut gp = g.ptr();
-    // NetClient polls its game host first: a player's INCOMING must wait for the lobby's CLIENTS_INFO before it.
-    if side == Side::Client {
-        gp.relay.pump(g);
-    }
-    while let Some(event) = g.relay.events(side).pop_front() {
+    gp.relay.pump(g);
+    while let Some(event) = g.relay.events.pop_front() {
         match event {
             Event::Connect(peer) => handler.on_connect(g, Box::new(peer)),
             Event::Receive(mut peer, data) => handler.on_receive(g, &mut peer, &data),
@@ -328,9 +283,8 @@ impl NetworkLayer for NetworkLayerWebSocket {
     }
 
     fn cleanup(&mut self, g: &mut Game) {
-        self.gamehost_shutdown(g);
         self.client_shutdown(g);
-        unsafe { smw_ws_close() };
+        socket::close();
     }
 
     fn client_restart(&mut self, g: &mut Game) -> bool {
@@ -339,38 +293,11 @@ impl NetworkLayer for NetworkLayerWebSocket {
     }
 
     fn client_listen(&mut self, g: &mut Game, handler: &mut dyn NetworkEventHandler<Game>) {
-        listen(g, Side::Client, handler);
+        listen(g, handler);
     }
 
     fn client_shutdown(&mut self, g: &mut Game) {
-        g.relay.close_side(Side::Client);
-        g.relay.close_if_idle();
-    }
-
-    fn gamehost_restart(&mut self, g: &mut Game) -> bool {
-        self.gamehost_shutdown(g);
-        unsafe {
-            let state = smw_ws_state();
-            if state != WS_OPEN && state != WS_CONNECTING {
-                eprintln!("[error][net] Could not open game host connection port.");
-                return false;
-            }
-            g.relay.send(LISTEN, 0, &NET_GAMEHOST_PORT.to_be_bytes());
-            g.relay.listening = true;
-        }
-        true
-    }
-
-    fn gamehost_listen(&mut self, g: &mut Game, handler: &mut dyn NetworkEventHandler<Game>) {
-        listen(g, Side::GameHost, handler);
-    }
-
-    fn gamehost_shutdown(&mut self, g: &mut Game) {
-        if g.relay.listening {
-            g.relay.send(UNLISTEN, 0, &NET_GAMEHOST_PORT.to_be_bytes());
-            g.relay.listening = false;
-        }
-        g.relay.close_side(Side::GameHost);
+        g.relay.close_all();
         g.relay.close_if_idle();
     }
 
@@ -379,16 +306,4 @@ impl NetworkLayer for NetworkLayerWebSocket {
         g.relay.connect([0; 4], port)
     }
 
-    fn connect_to_foreign_game_host(&mut self, g: &mut Game, hostname: &str, port: u16) -> bool {
-        let Ok(address) = hostname.parse::<Ipv4Addr>() else {
-            println!("[net] Could not initiate connection to this address.");
-            return false;
-        };
-        g.relay.connect(address.octets(), port)
-    }
-
-    /// The relay connects players; there is no NAT to open.
-    fn nat_punch(&mut self, _g: &mut Game, _host: u32, _port: u16) -> bool {
-        true
-    }
 }

@@ -22,8 +22,10 @@ use std::path::Path;
 
 const MAGIC: &[u8; 4] = b"SMWC";
 const VERSION: u8 = 1;
-/// An online match's checkpoint: the net state (smw/net.rs) comes first, then version 1's fields.
-const ONLINE_VERSION: u8 = 2;
+/// Netplay v2's match start: the map file, then version 1's fields. Each peer keeps its own net state.
+const SHARED_VERSION: u8 = 3;
+/// Where a peer keeps the map of a shared checkpoint, in its settings directory.
+const SHARED_MAP: &str = "net_v2.map";
 
 /// One routine both saves and loads each value, so the two directions cannot drift apart.
 pub struct Snap {
@@ -239,13 +241,51 @@ pub fn unsupported_reason(g: &mut Game) -> Option<&'static str> {
 
 /// The checkpoint at the current point of `MenuState::enter_gameplay`.
 pub fn capture(g: &mut Game) -> Vec<u8> {
-    let mut gp = g.ptr();
-    let online = gp.netplay.active;
     let mut s = Snap::saver();
     s.put(MAGIC);
-    s.put(&[if online { ONLINE_VERSION } else { VERSION }]);
-    walk(g, &mut s, online);
+    s.put(&[VERSION]);
+    walk(g, &mut s);
     s.buf
+}
+
+/// The match start every netplay v2 peer restores, so all their simulations begin alike: an offline checkpoint plus
+/// the map file, which a peer may not have.
+pub fn capture_shared(g: &mut Game) -> Vec<u8> {
+    let mut s = Snap::saver();
+    s.put(MAGIC);
+    s.put(&[SHARED_VERSION]);
+    let source = data_path(g, &g.match_map.clone());
+    let mut map = std::fs::read(&source).unwrap_or_default();
+    s.io(&mut map);
+    let mut frame = crate::smw::harness::frame(g);
+    s.io(&mut frame);
+    let shared = crate::common::path::get_home_directory(g) + SHARED_MAP;
+    let played = std::mem::replace(&mut g.match_map, shared);
+    walk(g, &mut s);
+    g.match_map = played;
+    s.buf
+}
+
+/// Restores `capture_shared`'s bytes and starts the match, leaving this peer's netplay state as it is.
+pub fn restore_shared(g: &mut Game, bytes: Vec<u8>) -> Result<(), String> {
+    if bytes.len() < 5 || &bytes[..4] != MAGIC || bytes[4] != SHARED_VERSION {
+        return Err("not a netplay v2 match start".to_string());
+    }
+    let mut s = Snap::loader(bytes);
+    s.pos = 5;
+    let mut map: Vec<u8> = Vec::new();
+    s.io(&mut map);
+    let mut frame = 0u32;
+    s.io(&mut frame);
+    crate::smw::harness::set_frame(g, frame);
+    let path = crate::common::path::get_home_directory(g) + SHARED_MAP;
+    std::fs::write(&path, &map).map_err(|e| format!("cannot write {path}: {e}"))?;
+    walk(g, &mut s);
+    if s.damaged || s.pos != s.buf.len() {
+        return Err("the match start is damaged".to_string());
+    }
+    enter_gameplay_tail(g);
+    Ok(())
 }
 
 /// Restores a checkpoint after `load_game_data` and the menu's init, then starts the match.
@@ -253,13 +293,12 @@ pub fn restore(g: &mut Game, bytes: Vec<u8>) -> Result<(), String> {
     if bytes.len() < 5 || &bytes[..4] != MAGIC {
         return Err("not a checkpoint".to_string());
     }
-    if bytes[4] != VERSION && bytes[4] != ONLINE_VERSION {
-        return Err(format!("checkpoint version {} (this build reads {} and {})", bytes[4], VERSION, ONLINE_VERSION));
+    if bytes[4] != VERSION {
+        return Err(format!("checkpoint version {} (this build reads {})", bytes[4], VERSION));
     }
-    let online = bytes[4] == ONLINE_VERSION;
     let mut s = Snap::loader(bytes);
     s.pos = 5;
-    walk(g, &mut s, online);
+    walk(g, &mut s);
     if s.damaged || s.pos != s.buf.len() {
         return Err("checkpoint is damaged".to_string());
     }
@@ -268,14 +307,10 @@ pub fn restore(g: &mut Game, bytes: Vec<u8>) -> Result<(), String> {
 }
 
 /// Saves or restores every part of the checkpoint, in the order a restore must apply them.
-fn walk(g: &mut Game, s: &mut Snap, online: bool) {
+fn walk(g: &mut Game, s: &mut Snap) {
         let mut gp = g.ptr();
     unsafe {
         let gv = &mut *gp.get().game_values;
-        if online {
-            crate::smw::net::checkpoint(g, s);
-        }
-
         // Settings, as options.bin and controls.sdl2.bin would hold them now.
         let (mut options, mut controls) = if s.load { (Vec::new(), Vec::new()) } else { gv.config_bytes(g) };
         s.io(&mut options);
@@ -617,6 +652,7 @@ impl GameState for SegmentState {
             eprintln!("[harness] {}", e);
             std::process::exit(2);
         }
+        crate::smw::net_v2::segment_started(g);
     }
 }
 

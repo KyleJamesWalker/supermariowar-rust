@@ -596,27 +596,6 @@ impl CO_Shell {
     }
 }
 
-/// `net_random::Ev::ShellDeath`: the shell the game host rolled for, else the one the same player holds.
-pub fn net_shell_death(g: &mut Game, obj: Ptr<dyn CObjectTrait>, holder: i32) {
-    let mut shell = obj;
-    if shell.is_null() {
-        for &o in g.objectcontainer[1].list() {
-            let mut o = o;
-            if let Some(s) = o.as_any().downcast_mut::<CO_Shell>() {
-                if s.state == 3 && !s.owner.is_none() && g.player(s.owner).globalID as i32 == holder {
-                    shell = o;
-                    break;
-                }
-            }
-        }
-    }
-    if !shell.is_null() {
-        if let Some(s) = shell.as_any().downcast_mut::<CO_Shell>() {
-            s.maybe_die(g);
-        }
-    }
-}
-
 impl IO_MovingObjectTrait for CO_Shell {
     crate::impl_io_moving_object_plumbing!();
     fn as_carried_object(&mut self) -> Option<&mut dyn MO_CarriedObjectTrait> {
@@ -628,9 +607,7 @@ impl IO_MovingObjectTrait for CO_Shell {
             self.die(g);
         } else if !self.fDieOnHoldingPlayerCollision && self.state == 3 {
             let holder = if self.owner.is_none() { -1 } else { g.player(self.owner).globalID as i32 };
-            if !crate::smw::net_random::event(g, crate::smw::net_random::Ev::ShellDeath, &[self.iNetworkID, holder]) {
-                self.maybe_die(g);
-            }
+            self.maybe_die(g);
         }
     }
 

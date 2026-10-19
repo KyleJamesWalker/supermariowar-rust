@@ -45,5 +45,14 @@ impl UI_ControlTrait for MI_ChatMessageBox {
         gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, x + w - 16, y, &Rect { x: 496, y: 0, w: 16, h: n * 32 + 32 });
         gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, x, y + n * 32 + 32, &Rect { x: 0, y: 464, w: w - 16, h: 16 });
         gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, x + w - 16, y + n * 32 + 32, &Rect { x: 496, y: 464, w: 16, h: 16 });
+
+        let font = &gp.rm.menu_font_small;
+        let line = font.get_height().max(1);
+        let lines = ((n * 32 + 16) / line).max(1) as usize;
+        let shown = g.netplay.chat.len().saturating_sub(lines);
+        let messages: Vec<String> = g.netplay.chat[shown..].iter().map(|(name, text)| format!("{name}: {text}")).collect();
+        for (i, message) in messages.iter().enumerate() {
+            font.draw_chop_right(g, x + 16, y + 16 + i as i32 * line, w - 32, message);
+        }
     }
 }

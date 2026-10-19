@@ -10,8 +10,10 @@ fn emscripten_link_args() {
     let data = repo.join("data");
     let fullscreen = repo.join("web/fullscreen.js");
     let relay_socket = repo.join("web/relay_socket.js");
+    let peer_socket = repo.join("web/peer_socket.js");
     println!("cargo:rerun-if-changed={}", fullscreen.display());
     println!("cargo:rerun-if-changed={}", relay_socket.display());
+    println!("cargo:rerun-if-changed={}", peer_socket.display());
     println!("cargo:rerun-if-env-changed=SMW_RELAY_URL");
     for arg in [
         "-sUSE_SDL=2",
@@ -32,6 +34,9 @@ fn emscripten_link_args() {
         // Not in upstream: the WebSocket to smw_relay for netplay (src/smw/platform/network/websocket).
         "--js-library",
         &relay_socket.display().to_string(),
+        // The WebRTC peers for netplay v2 (crates/smw-peer).
+        "--js-library",
+        &peer_socket.display().to_string(),
         "--preload-file",
         &format!("{}@data", data.display()),
         "--exclude-file",

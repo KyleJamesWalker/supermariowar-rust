@@ -1,3 +1,8 @@
 smw-relay.vps.pocketsquirrel.com {
-	reverse_proxy smw-relay:8080
+	handle_path /signal/* {
+		reverse_proxy smw-signal:3536
+	}
+	handle {
+		reverse_proxy smw-relay:8080
+	}
 }

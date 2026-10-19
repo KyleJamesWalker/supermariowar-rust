@@ -14,7 +14,6 @@ use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::{self as gm, remove_players_but_team, setup_score_board, show_score_board};
 
-use crate::smw::net_random::{self, Ev};
 use crate::smw::objects::moving::mo_collection_card::MO_CollectionCard;
 use crate::smw::player::CPlayer;
 use std::any::Any;
@@ -41,9 +40,7 @@ impl CGM_Collection {
     pub fn release_card(&mut self, g: &mut Game, mut player: PlayerId) {
         if g.player(player).score(g).subscore[0] > 0 {
             let pos = Vec2s::new((g.player(player).center_x() as i32 - 16) as i16, (g.player(player).center_y() as i32 - 16) as i16);
-            if !net_random::event(g, Ev::ReleaseCard, &[g.player(player).globalID as i32, pos.x as i32, pos.y as i32]) {
-                self.drop_card(g, player, pos);
-            }
+            self.drop_card(g, player, pos);
         }
     }
 
@@ -83,18 +80,6 @@ fn spawn_card(g: &mut Game) {
     gp.get().objectcontainer[1].add(g, obj);
 }
 
-pub fn net_spawn_card(g: &mut Game) {
-    spawn_card(g);
-}
-
-pub fn net_release_card(g: &mut Game, mut player: PlayerId, x: i16, y: i16) {
-    if let Some(this) = g.mode().get().as_any().downcast_mut::<CGM_Collection>() {
-        if !player.is_none() && g.player(player).score(g).subscore[0] > 0 {
-            this.drop_card(g, player, Vec2s::new(x, y));
-        }
-    }
-}
-
 impl CGameModeTrait for CGM_Collection {
     fn gm(&self) -> &CGameMode {
         &self.cgame_mode
@@ -129,7 +114,7 @@ impl CGameModeTrait for CGM_Collection {
                 iPowerupQuantity = g.players.len().wrapping_add(iPowerupQuantity as usize).wrapping_sub(7) as i16;
             }
 
-            if g.objectcontainer[1].count_moving_types(movingobject_collectioncard) < iPowerupQuantity as usize && !net_random::event(g, Ev::CollectionCard, &[]) {
+            if g.objectcontainer[1].count_moving_types(movingobject_collectioncard) < iPowerupQuantity as usize {
                 spawn_card(g);
             }
         }

@@ -16,7 +16,6 @@ use crate::common::random_number_generator::RANDOM_INT;
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::race::CGM_Race;
-use crate::smw::net_random::{self, Ev};
 use crate::smw::objects::overmap::over_map_object::{io_over_map_object_update, IO_OverMapObject, IO_OverMapObjectTrait};
 use crate::smw::player::CPlayer;
 
@@ -163,7 +162,7 @@ impl CObjectTrait for OMO_RaceGoal {
 
     fn update(&mut self, g: &mut Game) {
         self.anglechangetimer -= 1;
-        if self.anglechangetimer <= 0 && !net_random::object_event(g, Ev::Wander, &net_random::wander_args(self.iNetworkID, self.fx, self.fy, self.angle)) {
+        if self.anglechangetimer <= 0 {
             self.change_angle(g);
         }
 

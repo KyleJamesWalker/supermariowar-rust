@@ -12,7 +12,6 @@ use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::frag::{cgm_frag_check_winner, cgm_frag_playerextraguy, cgm_frag_playerkilledplayer, cgm_frag_playerkilledself, CGM_Frag};
 use crate::smw::gamemodes::game_mode::*;
-use crate::smw::net_random::{self, Ev};
 use crate::smw::objectgame::PowerupType;
 use crate::smw::objects::moving::mo_frenzy_card::MO_FrenzyCard;
 use crate::smw::player::CPlayer;
@@ -100,12 +99,6 @@ fn spawn_card(g: &mut Game, this: &mut CGM_Frenzy) {
     gp.get().objectcontainer[1].add(g, obj);
 }
 
-pub fn net_spawn_card(g: &mut Game) {
-    if let Some(this) = g.mode().get().as_any().downcast_mut::<CGM_Frenzy>() {
-        spawn_card(g, this);
-    }
-}
-
 pub fn cgm_frenzy_think(g: &mut Game, this: &mut CGM_Frenzy) {
     if this.gameover {
         this.displayplayertext(g);
@@ -129,7 +122,7 @@ pub fn cgm_frenzy_think(g: &mut Game, this: &mut CGM_Frenzy) {
                 iPowerupQuantity = (g.players.len() as i32 + iPowerupQuantity as i32 - 7) as i16;
             }
 
-            if g.objectcontainer[1].count_types(object_frenzycard) < iPowerupQuantity as isize as usize && !net_random::event(g, Ev::FrenzyCard, &[]) {
+            if g.objectcontainer[1].count_types(object_frenzycard) < iPowerupQuantity as isize as usize {
                 spawn_card(g, this);
             }
         }

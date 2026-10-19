@@ -629,6 +629,11 @@ impl CResourceManager {
         self.load_menu_skin_path(g, playerID, &path, colorID, fLoadBothDirections)
     }
 
+    /// Makes the next `load_menu_skin_path` for `playerID` read its file again: a netplay skin keeps its path.
+    pub fn forget_menu_skin(&mut self, playerID: i16) {
+        self.loaded_player_sprites[playerID as usize] = LoadedSpriteInfo::default();
+    }
+
     pub fn load_menu_skin_path(&mut self, g: &mut Game, playerID: i16, path: &Path, colorID: i16, fLoadBothDirections: bool) -> bool {
         let p = playerID as usize;
         let new_info = LoadedSpriteInfo { path: path.to_path_buf(), colorScheme: colorID };

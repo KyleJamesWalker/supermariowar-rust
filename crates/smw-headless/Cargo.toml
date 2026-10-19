@@ -12,3 +12,4 @@ smw-platform = { path = "../smw-platform" }
 smw-core = { path = "../smw-core" }
 flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
 png = "0.18.1"
+ggrs = "=0.13.0"

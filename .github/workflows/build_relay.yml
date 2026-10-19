@@ -18,9 +18,6 @@ permissions:
   contents: read
   packages: write
 
-env:
-  IMAGE: ghcr.io/kylejameswalker/supermariowar-rust-relay
-
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -33,7 +30,16 @@ jobs:
 
   image:
     needs: test
+    strategy:
+      matrix:
+        include:
+          - image: ghcr.io/kylejameswalker/supermariowar-rust-relay
+            context: .
+          - image: ghcr.io/kylejameswalker/supermariowar-rust-signal
+            context: deploy/signal
     runs-on: ubuntu-latest
+    env:
+      IMAGE: ${{ matrix.image }}
     steps:
       - uses: actions/checkout@v7
       # mirror.gcr.io serves Docker Hub images without its anonymous pull limit.
@@ -63,9 +69,9 @@ jobs:
 
       - uses: docker/build-push-action@v7
         with:
-          context: .
+          context: ${{ matrix.context }}
           platforms: linux/amd64,linux/arm64
           push: ${{ inputs.push }}
           tags: ${{ steps.tags.outputs.list }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}

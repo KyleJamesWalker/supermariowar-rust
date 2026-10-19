@@ -18,7 +18,6 @@ use crate::common::player_kill_types::PlayerKillType;
 use crate::common::random_number_generator::RANDOM_INT;
 use crate::globals::Ptr;
 use crate::impl_base;
-use crate::smw::net_random::{self, Ev};
 use crate::smw::objectgame::createpowerup;
 use crate::smw::objects::blocks::io_block::*;
 use crate::smw::objects::carriable::co_throw_box::CO_ThrowBox;
@@ -190,9 +189,7 @@ pub fn b_powerup_block_update<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, thi
 
             let (col, row) = (this.pb().col, this.pb().row);
             let args = [col as i32, row as i32, side as i32, pos.x as i32, pos.y as i32];
-            if !net_random::event(g, Ev::Block, &args) {
-                b_powerup_block_release(g, this, pos, side);
-            }
+            b_powerup_block_release(g, this, pos, side);
 
             if_sound_on_play(g, &mut gp.rm.sfx_sprout);
         } else if state == 3 {
@@ -239,23 +236,6 @@ fn b_powerup_block_release<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: 
     };
 
     createpowerup(g, iType, pos, side, true);
-}
-
-/// `net_random::Ev::Block`: the block at `col`, `row` releases its powerup at the game host's spot and side.
-pub fn net_release(g: &mut Game, col: i16, row: i16, pos: Vec2s, side: bool) {
-    if col < 0 || row < 0 || col as i32 >= MAPWIDTH || row as i32 >= MAPHEIGHT {
-        return;
-    }
-    let mut block = g.map_block(col, row);
-    if block.is_null() {
-        return;
-    }
-    let any = block.as_any();
-    if let Some(b) = any.downcast_mut::<B_PowerupBlock>() {
-        b_powerup_block_release(g, b, pos, side);
-    } else if let Some(b) = any.downcast_mut::<crate::smw::objects::blocks::view_block::B_ViewBlock>() {
-        b_powerup_block_release(g, b, pos, side);
-    }
 }
 
 /// Whether a joiner can release the game host's powerup now: not while its own copy of the block still bounces.

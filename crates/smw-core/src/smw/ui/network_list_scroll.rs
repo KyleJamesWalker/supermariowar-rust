@@ -140,6 +140,23 @@ impl MI_NetworkListScroll {
         true
     }
 
+    /// Replaces the items, then selects `selected` as if the player had scrolled to it.
+    pub fn replace_items(&mut self, items: &[(String, String)], selected: usize) {
+        let active = self.iSelectedLine != -1;
+        self.clear();
+        for (left, right) in items {
+            self.add(left, right);
+        }
+        self.iSelectedLine = 0;
+        for _ in 0..selected {
+            self.move_next();
+        }
+        if !active {
+            self.iSelectedLineBackup = self.iSelectedLine;
+            self.iSelectedLine = -1;
+        }
+    }
+
     pub fn remote_index(&mut self, index: *mut u16) {
         self.iRemoteIndex = index;
     }

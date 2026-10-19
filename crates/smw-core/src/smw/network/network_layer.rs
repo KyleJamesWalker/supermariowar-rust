@@ -13,11 +13,5 @@ pub trait NetworkLayer {
     fn client_listen(&mut self, g: &mut Game, handler: &mut dyn NetworkEventHandler<Game>);
     fn client_shutdown(&mut self, g: &mut Game);
 
-    fn gamehost_restart(&mut self, g: &mut Game) -> bool;
-    fn gamehost_listen(&mut self, g: &mut Game, handler: &mut dyn NetworkEventHandler<Game>);
-    fn gamehost_shutdown(&mut self, g: &mut Game);
-
     fn connect_to_lobby_server(&mut self, g: &mut Game, hostname: &str, port: u16) -> bool;
-    fn connect_to_foreign_game_host(&mut self, g: &mut Game, hostname: &str, port: u16) -> bool;
-    fn nat_punch(&mut self, g: &mut Game, host: u32, port: u16) -> bool;
 }

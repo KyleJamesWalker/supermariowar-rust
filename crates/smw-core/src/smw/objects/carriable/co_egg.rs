@@ -91,9 +91,6 @@ impl CO_Egg {
 
     pub fn place_egg(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        if crate::smw::net_random::place_event(g, self.iNetworkID, 0) {
-            return;
-        }
 
         self.relocatetimer = 0;
         if g.game_values.gamemodesettings.egg.explode > 0 {

@@ -83,7 +83,6 @@ pub struct Harness {
     seen: Vec<&'static str>,
     rec: Option<Recorder>,
     segment: Option<Segment>,
-    spawn_events: Vec<String>,
     /// The keyboard as the replayed key events left it; pushed events do not update SDL's own state.
     replay_keys: [u8; crate::common::keys::SDL_NUM_SCANCODES],
     watch_home: Option<std::path::PathBuf>,
@@ -120,7 +119,6 @@ impl Harness {
             frame: self.frame,
             audible: false,
             speed: self.speed,
-            spawn_events: self.spawn_events.clone(),
             replay_keys: self.replay_keys,
             watch_home: self.watch_home.clone(),
             #[cfg(target_os = "emscripten")]
@@ -159,7 +157,6 @@ impl Harness {
             seen: Vec::new(),
             rec: None,
             segment: None,
-            spawn_events: Vec::new(),
             replay_keys: [0; crate::common::keys::SDL_NUM_SCANCODES],
             watch_home: None,
             #[cfg(target_os = "emscripten")]
@@ -404,18 +401,6 @@ pub fn keyboard_state(g: &mut Game) -> *const u8 {
     }
 }
 
-/// Net games only (not in the C++ harness): a `C` line, compared across clients.
-pub fn note_net(g: &mut Game, line: String) {
-    let mut gp = g.ptr();
-    if gp.netplay.active && h(gp.get()).dump.is_some() {
-        h(gp.get()).spawn_events.push(format!("C {}", line));
-    }
-}
-
-pub fn note_powerup_spawn(g: &mut Game, iType: i16, x: i16, y: i16) {
-    note_net(g, format!("powerup type={} x={} y={}", iType, x, y));
-}
-
 fn dump_frame(g: &mut Game, out: &mut impl Write) -> std::io::Result<()> {
     let mut gp = g.ptr();
     let state = state_name(g);
@@ -428,7 +413,7 @@ fn dump_frame(g: &mut Game, out: &mut impl Write) -> std::io::Result<()> {
         GameplayState::instance(g).harness_dump(g, out)?;
     }
 
-    for line in gp.sfx.sfx_events.iter().chain(h(gp.get()).spawn_events.iter()) {
+    for line in gp.sfx.sfx_events.iter() {
         writeln!(out, "{}", line)?;
     }
 
@@ -569,6 +554,28 @@ pub fn frame(g: &mut Game) -> u32 {
     h(gp.get()).frame
 }
 
+/// For rollback: the frame counter is match state, since the virtual sound clock runs on it.
+pub fn set_frame(g: &mut Game, frame: u32) {
+    h(g).frame = frame;
+}
+
+/// The end of a frame a v2 match ran: its ticks moved the frame counter already, so only the markers and SMW_FRAMES
+/// apply.
+pub fn end_v2_frame(g: &mut Game) {
+    let frame = h(g).frame;
+    record_markers(g, frame);
+    if h(g).maxFrames >= 0 && h(g).frame as i64 >= h(g).maxFrames + h(g).shift as i64 {
+        g.game_values.appstate = AppState::Quit;
+        h(g).dump = None;
+    }
+}
+
+/// The part of `frame_end` a rollback tick needs: no dump, recording or screenshots.
+pub fn end_rollback_tick(g: &mut Game) {
+    g.sfx.sfx_events.clear();
+    h(g).frame += 1;
+}
+
 /// The clock net code decides by: frame-based in seeded runs, so a replay reads the recorded session's times.
 pub fn net_ticks(g: &mut Game) -> u32 {
     let mut gp = g.ptr();
@@ -577,6 +584,11 @@ pub fn net_ticks(g: &mut Game) -> u32 {
     } else {
         crate::services::ticks(gp.get())
     }
+}
+
+/// Whether a recording is being made.
+pub fn recording(g: &mut Game) -> bool {
+    rec(g).is_some()
 }
 
 /// A `#@` line for the recording, if one is being made.
@@ -606,14 +618,22 @@ pub fn forced_map(g: &mut Game) -> Option<&'static str> {
 }
 
 pub fn frame_start(g: &mut Game) {
-    let mut gp = g.ptr();
     #[cfg(not(target_os = "emscripten"))]
-    crate::smw::pad::debug_frame(g, h(gp.get()).frame);
+    {
+        let frame = h(g).frame;
+        crate::smw::pad::debug_frame(g, frame);
+    }
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::pad::phase(2);
     sfx::sfx_virtual_advance(g);
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::pad::phase(3);
+    frame_start_input(g);
+}
+
+/// `frame_start` without the sound clock: records the frame and feeds the replay's input due now.
+pub fn frame_start_input(g: &mut Game) {
+    let mut gp = g.ptr();
     record_frame_start(g, h(gp.get()).frame);
     #[cfg(not(target_os = "emscripten"))]
     crate::smw::pad::phase(4);
@@ -714,7 +734,6 @@ pub fn frame_end(g: &mut Game) {
         h(gp.get()).dump = Some(out);
     }
     g.sfx.sfx_events.clear();
-    h(gp.get()).spawn_events.clear();
     record_markers(g, h(gp.get()).frame);
 
     let f = h(gp.get()).frame;

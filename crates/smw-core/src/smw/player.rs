@@ -35,7 +35,6 @@ use crate::smw::gamemodes::shy_guy_tag::CGM_ShyGuyTag;
 use crate::smw::gamemodes::star::CGM_Star;
 use crate::smw::gamemodes::tag::CGM_Tag;
 use crate::smw::gs_gameplay::swap_players;
-use crate::smw::net_random::{self, Ev};
 use crate::smw::objectgame::{check_secret, PowerupType};
 use crate::smw::objects::carriable::co_bomb::CO_Bomb;
 use crate::smw::objects::carriable::co_kuribo_shoe::CO_KuriboShoe;
@@ -268,8 +267,6 @@ pub struct CPlayer {
 
     pub sSpotlight: SpotlightId,
 
-    pub net_waitingForPowerupTrigger: bool,
-
     pub _alias: Aliased,
 }
 
@@ -280,7 +277,7 @@ fn b(v: i32) -> bool {
 
 impl CScore {
     pub fn adjust_score(&mut self, g: &mut Game, iValue: i16) {
-        if g.mode().gameover || crate::smw::net_outcomes::score_locked(g) {
+        if g.mode().gameover {
             return;
         }
 
@@ -312,15 +309,7 @@ pub fn should_update_sprite(g: &mut Game) -> bool {
     !g.game_values.flags.pausegame && !g.game_values.flags.exitinggame && !g.game_values.flags.swapplayers
 }
 
-pub fn player_killed_player(g: &mut Game, iKiller: i16, killed: PlayerId, deathstyle: PlayerDeathStyle, style: KillStyle, fForce: bool, fKillCarriedItem: bool) -> PlayerKillType {
-    let args = [0, iKiller as i32, g.player(killed).globalID as i32, deathstyle as i32, style as i32, fForce as i32, fKillCarriedItem as i32, -1];
-    if let Some(result) = crate::smw::net_outcomes::kill(g, &args) {
-        return result;
-    }
-    player_killed_player_now(g, iKiller, killed, deathstyle, style, fForce, fKillCarriedItem)
-}
-
-pub fn player_killed_player_now(g: &mut Game, iKiller: i16, mut killed: PlayerId, deathstyle: PlayerDeathStyle, style: KillStyle, fForce: bool, fKillCarriedItem: bool) -> PlayerKillType {
+pub fn player_killed_player(g: &mut Game, iKiller: i16, mut killed: PlayerId, deathstyle: PlayerDeathStyle, style: KillStyle, fForce: bool, fKillCarriedItem: bool) -> PlayerKillType {
         let mut gp = g.ptr();
     let mut killer = get_player_from_global_id(g, iKiller);
 
@@ -398,7 +387,6 @@ impl CPlayer {
             spawntext: ticks(20) as i16, // set it to 20 so there is an immediate text spawned upon winning
             iSuicideCreditPlayerID: -1,
             iSuicideCreditTimer: 0,
-            net_waitingForPowerupTrigger: false,
 
             collisions: PlayerCollisions::new(),
             awardeffects: PlayerAwardEffects::new(),
@@ -794,13 +782,11 @@ impl CPlayer {
         if *self.respawncounter(g) <= 0 {
             *self.respawncounter(g) = 0;
 
-            if !net_random::event(g, Ev::Respawn, &[self.globalID as i32]) {
-                self.net_respawn(g);
-            }
+            self.respawn(g);
         }
     }
 
-    pub fn net_respawn(&mut self, g: &mut Game) {
+    pub fn respawn(&mut self, g: &mut Game) {
         if self.find_spawn_point(g) {
             //Make sure spawn point isn't inside a tile
             let this = self.this();
@@ -830,7 +816,7 @@ impl CPlayer {
         }
     }
 
-    pub fn net_podobo_rain(&mut self, g: &mut Game) {
+    pub fn podobo_rain(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         let mut rm = g.rm;
         let numPodobos = (RANDOM_INT(gp.get(), 6) + 10) as i16;
@@ -852,7 +838,7 @@ impl CPlayer {
         if_sound_on_play(g, &mut gp.rm.sfx_thunder);
     }
 
-    pub fn net_throw_boomerang(&mut self, g: &mut Game, ix: i32, iy: i32, facingRight: bool) {
+    pub fn throw_boomerang(&mut self, g: &mut Game, ix: i32, iy: i32, facingRight: bool) {
         let mut gp = g.ptr();
         let obj = Ptr::new_box(MO_Boomerang::new(
             g,
@@ -873,7 +859,7 @@ impl CPlayer {
         }
     }
 
-    pub fn net_throw_bomb(&mut self, g: &mut Game, ix: i32, iy: i32, facingRight: bool) {
+    pub fn throw_bomb(&mut self, g: &mut Game, ix: i32, iy: i32, facingRight: bool) {
         let mut gp = g.ptr();
         let mut rm = g.rm;
         let this = self.this();
@@ -910,11 +896,6 @@ impl CPlayer {
 
     pub fn is_entering_warp(&self) -> bool {
         matches!(self.state, PlayerState::EnteringWarpUp | PlayerState::EnteringWarpRight | PlayerState::EnteringWarpDown | PlayerState::EnteringWarpLeft)
-    }
-
-    pub fn net_choose_warp_exit(&mut self, g: &mut Game) {
-        let this = self.this();
-        self.warpstatus.choose_warp_exit(g, g.player(this));
     }
 
     pub fn update_respawning(&mut self, g: &mut Game) {
@@ -1063,9 +1044,7 @@ impl CPlayer {
                 self.set_powerup(g, 5);
             }
             PowerupType::Podobo => {
-                if !net_random::event(g, Ev::PodoboRain, &[self.globalID as i32]) {
-                    self.net_podobo_rain(g);
-                }
+                self.podobo_rain(g);
             }
             PowerupType::Bomb => {
                 self.powerup = -1;
@@ -1092,10 +1071,6 @@ impl CPlayer {
 
         self.powerupradius -= vel(g.game_values.storedpowerupdelay as f32 / 2.0f32);
         self.powerupangle += vel(0.05f32);
-
-        if g.netplay.active && self.net_waitingForPowerupTrigger {
-            return;
-        }
 
         if self.powerupradius < 0.0 {
             self.trigger_powerup(g);
@@ -1281,28 +1256,11 @@ impl CPlayer {
         g.game_values.gamepowerups[self.globalID as usize] = -1;
 
         self.powerupradius = 100.0;
-        if g.netplay.active {
-            self.powerupangle = 0.0;
-        } else {
-            self.powerupangle = RANDOM_INT(gp.get(), 1000) as f32 * 0.00628f32;
-        }
+        self.powerupangle = RANDOM_INT(gp.get(), 1000) as f32 * 0.00628f32;
 
         if_sound_on_play(g, &mut gp.rm.sfx_storedpowerupsound);
 
         // only the locally controlled player should be able to send requests
-        if g.netplay.active && self.globalID == g.netplay.remotePlayerNumber as i16 {
-            if g.netplay.theHostIsMe {
-                // this happens when the game host player triggers a powerup
-                gp.netplay.client.local_gamehost.send_powerup_start_by_gh(g);
-
-                // otherwise, when a remote client presses the trigger button,
-                // it sends a powerup trigger request, so we don't have to handle
-                // this on the host side here
-            } else {
-                self.net_waitingForPowerupTrigger = true;
-                gp.netplay.client.send_powerup_request(g);
-            }
-        }
     }
 
     pub fn use_special_powerup(&mut self, g: &mut Game) {
@@ -1727,9 +1685,7 @@ impl CPlayer {
             }
         } else if PlayerAction::Boomerang == self.action {
             let args = [self.globalID as i32, ix, iy, self.is_facing_right(g) as i32];
-            if g.game_values.boomerangstyle != BoomerangStyle::Random || !net_random::event(g, Ev::Boomerang, &args) {
-                self.net_throw_boomerang(g, ix, iy, self.is_facing_right(gp.get()));
-            }
+            self.throw_boomerang(g, ix, iy, self.is_facing_right(gp.get()));
         } else if PlayerAction::Iceblast == self.action {
             if self.is_facing_right(g) {
                 let obj = Ptr::new_box(MO_IceBlast::new(
@@ -1763,9 +1719,7 @@ impl CPlayer {
                 self.decrease_projectile_limit(g);
             }
         } else if PlayerAction::Bomb == self.action {
-            if !net_random::event(g, Ev::Bomb, &[self.globalID as i32, ix, iy, self.is_facing_right(gp.get()) as i32]) {
-                self.net_throw_bomb(g, ix, iy, self.is_facing_right(gp.get()));
-            }
+            self.throw_bomb(g, ix, iy, self.is_facing_right(gp.get()));
         } else if PlayerAction::SpinCape == self.action {
             self.cape.spin(g, g.player(this));
         } else if PlayerAction::SpinTail == self.action {
@@ -1970,7 +1924,6 @@ impl CPlayer {
         let mut gp = g.ptr();
         let mut rm = g.rm;
         if !fTeamRemoved {
-            crate::smw::net_outcomes::note_death(g, self.globalID, deathStyle as i32, false);
         }
         let ix = self.ix as i32;
         let iy = self.iy as i32;
@@ -2209,15 +2162,7 @@ impl CPlayer {
         self.awardeffects.add_kills_in_row_in_air_award(g, g.player(this));
     }
 
-    pub fn killed_player(&mut self, g: &mut Game, killed: PlayerId, deathstyle: PlayerDeathStyle, style: KillStyle, fForce: bool, fKillCarriedItem: bool) -> PlayerKillType {
-        let args = [1, self.globalID as i32, g.player(killed).globalID as i32, deathstyle as i32, style as i32, fForce as i32, fKillCarriedItem as i32, -1];
-        if let Some(result) = crate::smw::net_outcomes::kill(g, &args) {
-            return result;
-        }
-        self.killed_player_now(g, killed, deathstyle, style, fForce, fKillCarriedItem)
-    }
-
-    pub fn killed_player_now(&mut self, g: &mut Game, mut killed: PlayerId, mut deathstyle: PlayerDeathStyle, style: KillStyle, fForce: bool, fKillCarriedItem: bool) -> PlayerKillType {
+    pub fn killed_player(&mut self, g: &mut Game, mut killed: PlayerId, mut deathstyle: PlayerDeathStyle, style: KillStyle, fForce: bool, fKillCarriedItem: bool) -> PlayerKillType {
         let mut gp = g.ptr();
         let mut killer = self.this();
 
@@ -2718,26 +2663,18 @@ impl CPlayer {
                 return;
             }
 
-            if g.netplay.active && g.netplay.theHostIsMe {
-                g.netplay.client.local_gamehost.prepare_map_collision_event(self);
-            }
-
             let mut collisionresult = true;
 
             if fTopBlockSolid {
                 // collide with top block
-                collisionresult &= topblock.get().collide_player_dir(g, this, counter_direction, if g.netplay.active { g.netplay.theHostIsMe || g.netplay.allowMapCollisionEvent } else { true });
+                collisionresult &= topblock.get().collide_player_dir(g, this, counter_direction, true);
                 self.flipsidesifneeded();
             }
 
             if fBottomBlockSolid {
                 // then bottom
-                collisionresult &= bottomblock.get().collide_player_dir(g, this, counter_direction, if g.netplay.active { g.netplay.theHostIsMe || g.netplay.allowMapCollisionEvent } else { true });
+                collisionresult &= bottomblock.get().collide_player_dir(g, this, counter_direction, true);
                 self.flipsidesifneeded();
-            }
-
-            if g.netplay.active && g.netplay.theHostIsMe && collisionresult {
-                gp.netplay.client.local_gamehost.send_map_collision_event(g);
             }
         } else if superDeathTileBehind || (deathTileBehind && !self.is_invincible() && !self.is_shielded() && !self.shyguy) {
             if PlayerKillType::NonKill != self.kill_player_map_hazard(g, superDeathTileBehind, KillStyle::Environment, false, -1) {
@@ -2800,17 +2737,9 @@ impl CPlayer {
         }
 
         if !centerblock.is_null() && !centerblock.get().is_transparent() {
-            if g.netplay.active && g.netplay.theHostIsMe {
-                g.netplay.client.local_gamehost.prepare_map_collision_event(self);
-            }
-
-            if !centerblock.get().collide_player_dir(g, this, 0, if g.netplay.active { g.netplay.theHostIsMe || g.netplay.allowMapCollisionEvent } else { true }) {
+            if !centerblock.get().collide_player_dir(g, this, 0, true) {
                 if self.iVerticalPlatformCollision == 2 && !centerblock.get().is_hidden() {
                     self.kill_player_map_hazard(g, true, KillStyle::Environment, true, self.iPlatformCollisionPlayerId);
-                }
-
-                if g.netplay.active && g.netplay.theHostIsMe {
-                    gp.netplay.client.local_gamehost.send_map_collision_event(g);
                 }
 
                 return;
@@ -2848,17 +2777,9 @@ impl CPlayer {
             //then left
             let useBehavior = alignedBlockX == txl || rightblock.is_null() || rightblock.get().is_transparent() || rightblock.get().is_hidden();
 
-            if g.netplay.active && g.netplay.theHostIsMe {
-                g.netplay.client.local_gamehost.prepare_map_collision_event(self);
-            }
-
-            if !leftblock.get().collide_player_dir(g, this, 0, if g.netplay.active { (g.netplay.theHostIsMe || g.netplay.allowMapCollisionEvent) && useBehavior } else { useBehavior }) {
+            if !leftblock.get().collide_player_dir(g, this, 0, useBehavior) {
                 if self.iVerticalPlatformCollision == 2 && !leftblock.get().is_hidden() {
                     self.kill_player_map_hazard(g, true, KillStyle::Environment, true, self.iPlatformCollisionPlayerId);
-                }
-
-                if g.netplay.active && g.netplay.theHostIsMe {
-                    gp.netplay.client.local_gamehost.send_map_collision_event(g);
                 }
 
                 return;
@@ -2869,17 +2790,9 @@ impl CPlayer {
             //then right
             let useBehavior = alignedBlockX == txr || leftblock.is_null() || leftblock.get().is_transparent() || leftblock.get().is_hidden();
 
-            if g.netplay.active && g.netplay.theHostIsMe {
-                g.netplay.client.local_gamehost.prepare_map_collision_event(self);
-            }
-
-            if !rightblock.get().collide_player_dir(g, this, 0, if g.netplay.active { (g.netplay.theHostIsMe || g.netplay.allowMapCollisionEvent) && useBehavior } else { useBehavior }) {
+            if !rightblock.get().collide_player_dir(g, this, 0, useBehavior) {
                 if self.iVerticalPlatformCollision == 2 && !rightblock.get().is_hidden() {
                     self.kill_player_map_hazard(g, true, KillStyle::Environment, true, self.iPlatformCollisionPlayerId);
-                }
-
-                if g.netplay.active && g.netplay.theHostIsMe {
-                    gp.netplay.client.local_gamehost.send_map_collision_event(g);
                 }
 
                 return;
@@ -2949,18 +2862,11 @@ impl CPlayer {
 
         if fLeftBlockSolid || fRightBlockSolid {
             let mut collisionresult = true;
-            if g.netplay.active && g.netplay.theHostIsMe {
-                g.netplay.client.local_gamehost.prepare_map_collision_event(self);
-            }
 
             if fLeftBlockSolid {
                 //collide with left block
                 let useBehavior = alignedBlockX == txl || rightblock.is_null() || rightblock.get().is_transparent() || rightblock.get().is_hidden();
-                collisionresult &= leftblock.get().collide_player_dir(g, this, 2, if g.netplay.active { (g.netplay.theHostIsMe || g.netplay.allowMapCollisionEvent) && useBehavior } else { useBehavior });
-
-                if g.netplay.active && g.netplay.theHostIsMe && collisionresult {
-                    gp.netplay.client.local_gamehost.send_map_collision_event(g);
-                }
+                collisionresult &= leftblock.get().collide_player_dir(g, this, 2, useBehavior);
 
                 //If player was bumped and killed then return
                 if self.state != PlayerState::Ready {
@@ -2971,11 +2877,7 @@ impl CPlayer {
             if fRightBlockSolid {
                 //then right
                 let useBehavior = alignedBlockX == txr || leftblock.is_null() || leftblock.get().is_transparent() || leftblock.get().is_hidden();
-                collisionresult &= rightblock.get().collide_player_dir(g, this, 2, if g.netplay.active { (g.netplay.theHostIsMe || g.netplay.allowMapCollisionEvent) && useBehavior } else { useBehavior });
-
-                if g.netplay.active && g.netplay.theHostIsMe && collisionresult {
-                    gp.netplay.client.local_gamehost.send_map_collision_event(g);
-                }
+                collisionresult &= rightblock.get().collide_player_dir(g, this, 2, useBehavior);
 
                 //If player was bumped and killed then return
                 if self.state != PlayerState::Ready {
@@ -3221,16 +3123,7 @@ impl CPlayer {
         }
     }
 
-    //iPlayerIdCredit is passed in if this platform was triggered by another player and crushed this player (e.g. donut block)
     pub fn kill_player_map_hazard(&mut self, g: &mut Game, fForce: bool, style: KillStyle, fKillCarriedItem: bool, iPlayerIdCredit: i16) -> PlayerKillType {
-        let args = [2, self.globalID as i32, -1, 0, style as i32, fForce as i32, fKillCarriedItem as i32, iPlayerIdCredit as i32];
-        if let Some(result) = crate::smw::net_outcomes::kill(g, &args) {
-            return result;
-        }
-        self.kill_player_map_hazard_now(g, fForce, style, fKillCarriedItem, iPlayerIdCredit)
-    }
-
-    pub fn kill_player_map_hazard_now(&mut self, g: &mut Game, fForce: bool, style: KillStyle, fKillCarriedItem: bool, iPlayerIdCredit: i16) -> PlayerKillType {
         let mut gp = g.ptr();
         let this = self.this();
         if iPlayerIdCredit >= 0 || self.iSuicideCreditPlayerID >= 0 {

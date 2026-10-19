@@ -30,8 +30,6 @@ use crate::smw::harness::Harness;
 use crate::smw::main::MainLoopState;
 use crate::smw::net::{NetworkHandler, Networking};
 use crate::smw::network::net_record::NetRecordState;
-use crate::smw::net_outcomes::NetOutcomesState;
-use crate::smw::net_random::NetRandomState;
 use crate::smw::object_container::CObjectContainer;
 #[cfg(not(target_os = "emscripten"))]
 use crate::smw::pad::PadState;
@@ -89,8 +87,6 @@ pub struct Game {
     pub networkHandler: Global<NetworkHandler>,
     pub netplay: Global<Networking>,
     pub backup_playercontrol: [i16; 4],
-    pub net_outcomes: NetOutcomesState,
-    pub net_random: NetRandomState,
     pub x_shake: i16,
     pub y_shake: i16,
     pub shakeleft: bool,
@@ -99,10 +95,6 @@ pub struct Game {
     pub spotlightManager: Global<SpotlightManager>,
     pub g_iWinningPlayer: i16,
     pub g_iCurrentDrawIndex: i16,
-    /// Not in the C++ (whose `iNetworkID` is unused): while nonzero, new objects get `context << 16 | n`, so a net
-    /// game's clients give the objects an event makes the same IDs (smw/net_random.rs).
-    pub g_networkIDContext: u32,
-    pub g_networkIDCount: u32,
     /// The file a match loaded, relative to the data directory so a checkpoint works with any data root.
     pub match_map: String,
     /// Whether the menu press that opened a text field came from a keyboard key; set by `UI_Menu`.
@@ -138,9 +130,7 @@ pub struct Game {
     pub are_paths_initialized: bool,
     /// Indexed by the device number in bindings and replay lines; `None` is an empty slot.
     pub devices: Vec<Option<Device>>,
-    #[cfg(target_os = "emscripten")]
     pub relay: crate::smw::platform::network::websocket::network_layer_websocket::Relay,
-    #[cfg(target_os = "emscripten")]
     pub recv_buffer: [u8; smw_netplay::common_netplay::relay_frame::MAX_MESSAGE_LEN],
     /// What a copy from `clone_match` owns where the original's fields point at shared values.
     match_copy: Option<MatchCopy>,
@@ -278,8 +268,6 @@ impl Game {
             networkHandler: Global::uninit(),
             netplay: Global::uninit(),
             backup_playercontrol: [0; 4],
-            net_outcomes: NetOutcomesState::new(),
-            net_random: NetRandomState::new(),
             x_shake: 0,
             y_shake: 0,
             shakeleft: false,
@@ -287,8 +275,6 @@ impl Game {
             spotlightManager: Global::uninit(),
             g_iWinningPlayer: 0,
             g_iCurrentDrawIndex: 0,
-            g_networkIDContext: 0,
-            g_networkIDCount: 0,
             match_map: String::new(),
             text_field_opened_by_key: false,
             g_worldmap: Global::uninit(),
@@ -319,9 +305,7 @@ impl Game {
             SMW_Root_Data_Dir: String::new(),
             are_paths_initialized: false,
             devices: Vec::new(),
-            #[cfg(target_os = "emscripten")]
             relay: crate::smw::platform::network::websocket::network_layer_websocket::Relay::new(),
-            #[cfg(target_os = "emscripten")]
             recv_buffer: [0; smw_netplay::common_netplay::relay_frame::MAX_MESSAGE_LEN],
             match_copy: None,
         }
@@ -382,8 +366,6 @@ impl Game {
             networkHandler,
             netplay: self.netplay.clone(),
             backup_playercontrol: self.backup_playercontrol,
-            net_outcomes: self.net_outcomes.clone(),
-            net_random: self.net_random.clone(),
             x_shake: self.x_shake,
             y_shake: self.y_shake,
             shakeleft: self.shakeleft,
@@ -391,8 +373,6 @@ impl Game {
             spotlightManager: self.spotlightManager.clone(),
             g_iWinningPlayer: self.g_iWinningPlayer,
             g_iCurrentDrawIndex: self.g_iCurrentDrawIndex,
-            g_networkIDContext: self.g_networkIDContext,
-            g_networkIDCount: self.g_networkIDCount,
             match_map: self.match_map.clone(),
             text_field_opened_by_key: false,
             g_worldmap: self.g_worldmap.clone(),
@@ -423,9 +403,7 @@ impl Game {
             SMW_Root_Data_Dir: self.SMW_Root_Data_Dir.clone(),
             are_paths_initialized: self.are_paths_initialized,
             devices: self.devices.clone(),
-            #[cfg(target_os = "emscripten")]
             relay: crate::smw::platform::network::websocket::network_layer_websocket::Relay::new(),
-            #[cfg(target_os = "emscripten")]
             recv_buffer: [0; smw_netplay::common_netplay::relay_frame::MAX_MESSAGE_LEN],
             match_copy: Some(MatchCopy { _screen: screen, _musiclist: musiclist }),
         })

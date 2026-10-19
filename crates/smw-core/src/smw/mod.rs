@@ -11,8 +11,7 @@ pub mod input;
 pub mod main;
 pub mod perf_log;
 pub mod net;
-pub mod net_outcomes;
-pub mod net_random;
+pub mod net_v2;
 pub mod pad_type;
 #[cfg(not(target_os = "emscripten"))]
 pub mod pad;
@@ -30,5 +29,6 @@ pub mod menu;
 pub mod network;
 pub mod objects;
 pub mod player_components;
+pub mod rollback;
 pub mod ui;
 pub mod checkpoint;

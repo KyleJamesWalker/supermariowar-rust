@@ -12,7 +12,6 @@ use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::*;
 
-use crate::smw::net_random::{self, Ev};
 use crate::smw::player::CPlayer;
 
 #[derive(Clone)]
@@ -101,7 +100,7 @@ impl CGameModeTrait for CGM_Tag {
         if self.gameover {
             self.displayplayertext(g);
         } else {
-            if self.m_tagged.is_none() && !net_random::event(g, Ev::TagReassign, &[]) {
+            if self.m_tagged.is_none() {
                 self.reassign(g);
             }
             if self.m_tagged.is_none() {
@@ -237,17 +236,3 @@ fn tag_mode(g: &mut Game) -> Option<&'static mut CGM_Tag> {
     gp.mode().get().as_any().downcast_mut::<CGM_Tag>()
 }
 
-pub fn net_reassign(g: &mut Game) {
-    if let Some(this) = tag_mode(g) {
-        if this.m_tagged.is_none() {
-            this.reassign(g);
-        }
-    }
-}
-
-pub fn net_state(g: &mut Game) -> String {
-    match tag_mode(g) {
-        Some(this) if !this.m_tagged.is_none() => format!("tagged{}", g.player(this.m_tagged).globalID),
-        _ => "tagged-".to_string(),
-    }
-}

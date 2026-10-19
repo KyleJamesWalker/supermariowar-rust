@@ -104,6 +104,8 @@ pub const MENU_CODE_NET_SERVERLIST_EXIT: MenuCodeEnum = 98;
 pub const MENU_CODE_NET_CONNECT_IN_PROGRESS: MenuCodeEnum = 99;
 pub const MENU_CODE_NET_CONNECT_ABORT: MenuCodeEnum = 100;
 pub const MENU_CODE_TO_NET_ADDREMOVE_SERVER_MENU: MenuCodeEnum = 101;
+pub const MENU_CODE_NET_ROOM_SETTINGS: MenuCodeEnum = 120;
+pub const MENU_CODE_NET_HOST_LAN: MenuCodeEnum = 119;
 pub const MENU_CODE_NET_ADDREMOVE_SERVER_ON_ADD_BTN: MenuCodeEnum = 102;
 pub const MENU_CODE_NET_ADDREMOVE_SERVER_ON_EDIT_BTN: MenuCodeEnum = 103;
 pub const MENU_CODE_NET_ADDREMOVE_SERVER_ON_DELETE_BTN: MenuCodeEnum = 104;
@@ -120,6 +122,7 @@ pub const MENU_CODE_TO_NET_NEW_ROOM_CREATE_ABORT: MenuCodeEnum = 114;
 pub const MENU_CODE_NET_CHAT_SEND: MenuCodeEnum = 115;
 pub const MENU_CODE_TO_NET_ROOM_START_IN_PROGRESS: MenuCodeEnum = 116;
 pub const MENU_CODE_NET_ROOM_GO: MenuCodeEnum = 117;
+pub const MENU_CODE_NET_JOIN_ROOM_PASSWORD_OK: MenuCodeEnum = 118;
 
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]

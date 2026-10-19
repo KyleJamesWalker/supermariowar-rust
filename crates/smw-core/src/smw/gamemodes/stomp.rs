@@ -10,7 +10,6 @@ use crate::common::random_number_generator::{RANDOM_BOOL, RANDOM_INT};
 use crate::globals::*;
 use crate::impl_base;
 use crate::smw::gamemodes::game_mode::*;
-use crate::smw::net_random::{self, Ev};
 use crate::smw::objects::moving::mo_cheep_cheep::MO_CheepCheep;
 use crate::smw::objects::walkingenemy::we_buzzy_beetle::MO_BuzzyBeetle;
 use crate::smw::objects::walkingenemy::we_goomba::MO_Goomba;
@@ -97,12 +96,6 @@ impl CGM_Stomp {
     }
 }
 
-pub fn net_spawn_enemy(g: &mut Game) {
-    if let Some(this) = g.mode().get().as_any().downcast_mut::<CGM_Stomp>() {
-        this.spawn_enemy(g);
-    }
-}
-
 impl CGameModeTrait for CGM_Stomp {
     crate::impl_cgamemode_plumbing!();
 
@@ -132,7 +125,7 @@ impl CGameModeTrait for CGM_Stomp {
         if !self.gameover {
             //Randomly spawn enemies
             self.spawntimer -= 1;
-            if self.spawntimer <= 0 && !net_random::event(g, Ev::StompEnemy, &[]) {
+            if self.spawntimer <= 0 {
                 self.spawn_enemy(g);
             }
         }

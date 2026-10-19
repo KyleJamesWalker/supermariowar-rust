@@ -1,0 +1,36 @@
+#@ seed=1
+#@ frames=1300
+10 down Return
+12 await main
+12 up Return
+30 down Down
+32 up Down
+40 down Down
+42 up Down
+50 down Return
+52 await net_servers
+52 up Return
+70 down Down
+72 up Down
+80 down Return
+82 up Return
+360 await net_lobby
+360 down Down
+362 up Down
+370 down Down
+372 up Down
+380 down Return
+382 up Return
+400 down Left
+402 up Left
+410 down Return
+412 up Return
+540 await gameplay
+680 down Left
+740 up Left
+760 down Up
+764 up Up
+820 down Right
+920 up Right
+940 down Up
+944 up Up

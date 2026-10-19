@@ -28,9 +28,6 @@ impl CScore {
     }
 
     pub fn set_score(&mut self, g: &mut Game, iValue: i16) {
-        if crate::smw::net_outcomes::score_locked(g) {
-            return;
-        }
         self.score = iValue;
         self.set_digit_counters();
     }

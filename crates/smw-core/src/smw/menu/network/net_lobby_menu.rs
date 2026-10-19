@@ -6,9 +6,9 @@ use crate::common::ui::mi_button::MI_Button;
 use crate::common::ui::mi_image::MI_Image;
 use crate::common::ui::mi_text::{MI_HeaderText, MI_Text};
 use crate::common::ui::mi_text_field::MI_TextField;
-use crate::common::uicontrol::{TextAlign};
+use crate::common::uicontrol::{TextAlign, UI_ControlTrait};
 use crate::common::uimenu::UI_Menu;
-use crate::common_netplay::protocol_definitions::NET_MAX_ROOM_NAME_LENGTH;
+use crate::common_netplay::protocol_definitions::{NET_MAX_ROOM_NAME_LENGTH, NET_MAX_ROOM_PASSWORD_LENGTH};
 use crate::globals::Ptr;
 use crate::smw::ui::network_list_scroll::MI_NetworkListScroll;
 
@@ -24,6 +24,13 @@ pub struct UI_NetLobbyMenu {
 
     miNetLobbyJoiningDialogImage: Ctl<MI_Image>,
     miNetLobbyJoiningDialogText: Ctl<MI_Text>,
+
+    miNetLobbyPasswordTitle: Ctl<MI_Text>,
+    miNetLobbyPasswordField: Ctl<MI_TextField>,
+    miNetLobbyPasswordOK: Ctl<MI_Button>,
+    miNetLobbyPasswordCancel: Ctl<MI_Button>,
+    passwordData: String,
+    passwordRoomID: u32,
 
     miNetLobbyLeftHeaderBar: Ctl<MI_Image>,
     miNetLobbyRightHeaderBar: Ctl<MI_Image>,
@@ -71,6 +78,16 @@ impl UI_NetLobbyMenu {
         g.ctl(this.miNetLobbyJoiningDialogImage).set_visible(false);
         g.ctl(this.miNetLobbyJoiningDialogText).set_visible(false);
 
+        this.miNetLobbyPasswordTitle = Ctl::new(MI_Text::new(g, "Room password:", 320 + 20, 250, 0, true, TextAlign::LEFT), g);
+        this.miNetLobbyPasswordField = Ctl::new(MI_TextField::new(plain, 320 + 20, 280, "Password", 320 - 30, 120), g);
+        let data = &mut this.passwordData as *mut String;
+        g.ctl(this.miNetLobbyPasswordField).set_data(g, unsafe { &mut *data }, NET_MAX_ROOM_PASSWORD_LENGTH as i16);
+        this.miNetLobbyPasswordOK = Ctl::new(MI_Button::new(g, selectfield, 320 + 20, 320, "Join", 140, TextAlign::CENTER), g);
+        g.ctl(this.miNetLobbyPasswordOK).set_code(MENU_CODE_NET_JOIN_ROOM_PASSWORD_OK);
+        this.miNetLobbyPasswordCancel = Ctl::new(MI_Button::new(g, selectfield, 320 + 170, 320, "Cancel", 140, TextAlign::CENTER), g);
+        g.ctl(this.miNetLobbyPasswordCancel).set_code(MENU_CODE_NET_JOIN_ROOM_ABORT);
+        this.show_password_dialog(g, false);
+
         this.miNetLobbyLeftHeaderBar = Ctl::new(MI_Image::new(plain, 0, 0, 0, 0, 320, 32, 1, 1, 0), g);
         this.miNetLobbyRightHeaderBar = Ctl::new(MI_Image::new(plain, 320, 0, 192, 0, 320, 32, 1, 1, 0), g);
         this.miNetLobbyHeaderText = Ctl::new(MI_HeaderText::new(g, "Multiplayer Lobby Menu", 320, 5), g);
@@ -92,6 +109,13 @@ impl UI_NetLobbyMenu {
         this.add_non_control(di);
         this.add_non_control(dt);
 
+        let title = this.miNetLobbyPasswordTitle.id();
+        this.add_non_control(title);
+        let (field, ok, cancel) = (this.miNetLobbyPasswordField.id(), this.miNetLobbyPasswordOK.id(), this.miNetLobbyPasswordCancel.id());
+        this.add_control(g, field, ok, ok, null, null);
+        this.add_control(g, ok, field, field, cancel, cancel);
+        this.add_control(g, cancel, field, field, ok, ok);
+
         let (l, r, h) = (this.miNetLobbyLeftHeaderBar.id(), this.miNetLobbyRightHeaderBar.id(), this.miNetLobbyHeaderText.id());
         this.add_non_control(l);
         this.add_non_control(r);
@@ -102,9 +126,50 @@ impl UI_NetLobbyMenu {
         this
     }
 
+    fn show_password_dialog(&mut self, g: &mut Game, visible: bool) {
+        g.ctl(self.miNetLobbyPasswordTitle).set_visible(visible);
+        g.ctl(self.miNetLobbyPasswordField).set_visible(visible);
+        g.ctl(self.miNetLobbyPasswordOK).set_visible(visible);
+        g.ctl(self.miNetLobbyPasswordCancel).set_visible(visible);
+    }
+
+    /// Joins the selected room, asking for its password first if it has one.
     pub fn join_in_progress(&mut self, g: &mut Game) {
+        let Some(room) = g.netplay.currentRooms.get(g.netplay.selectedRoomIndex as usize) else { return };
+        if room.passwordRequired {
+            self.passwordRoomID = room.roomID;
+            self.passwordData.clear();
+            g.ctl(self.miNetLobbyPasswordField).refresh(g);
+            self.show_password_dialog(g, true);
+            let f = self.miNetLobbyPasswordField.id();
+            self.set_initial_focus(g, f);
+            self.set_cancel_code(MENU_CODE_NET_JOIN_ROOM_ABORT);
+            self.reset_menu(g);
+            return;
+        }
+        self.send_join(g, "");
+    }
+
+    pub fn join_with_password(&mut self, g: &mut Game) {
+        self.show_password_dialog(g, false);
+        let password = std::mem::take(&mut self.passwordData);
+        g.ctl(self.miNetLobbyPasswordField).refresh(g);
+        match g.netplay.currentRooms.iter().position(|r| r.roomID == self.passwordRoomID) {
+            Some(index) => {
+                g.netplay.selectedRoomIndex = index as u16;
+                self.send_join(g, &password);
+            }
+            None => self.restore(g),
+        }
+    }
+
+    fn send_join(&mut self, g: &mut Game, password: &str) {
         let mut gp = g.ptr();
-        gp.netplay.client.send_join_room_message(g);
+        if g.netplay.currentRooms.get(g.netplay.selectedRoomIndex as usize).is_none() {
+            self.restore(g);
+            return;
+        }
+        gp.netplay.client.send_join_room_message(g, password);
         g.netplay.operationInProgress = true;
 
         g.ctl(self.miNetLobbyJoiningDialogImage).set_visible(true);
@@ -125,6 +190,7 @@ impl UI_NetLobbyMenu {
         let mut gp = g.ptr();
         g.ctl(self.miNetLobbyJoiningDialogImage).set_visible(false);
         g.ctl(self.miNetLobbyJoiningDialogText).set_visible(false);
+        self.show_password_dialog(g, false);
 
         let b = self.miNetLobbyNewRoomButton.id();
         self.set_initial_focus(gp.get(), b);

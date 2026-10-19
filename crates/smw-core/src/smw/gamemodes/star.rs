@@ -16,7 +16,6 @@ use crate::impl_base;
 use crate::smw::gamemodes::game_mode::*;
 use crate::smw::gamemodes::time_limit::{cgm_timelimit_init, CGM_TimeLimit};
 
-use crate::smw::net_random::{self, Ev};
 use crate::smw::objects::carriable::co_star::CO_Star;
 use crate::smw::objects::moving::mo_carried_object::MO_CarriedObjectTrait;
 use crate::smw::player::CPlayer;
@@ -412,32 +411,6 @@ fn star_mode(g: &mut Game) -> Option<&'static mut CGM_Star> {
     gp.mode().get().as_any().downcast_mut::<CGM_Star>()
 }
 
-pub fn net_reassign(g: &mut Game) {
-    if let Some(this) = star_mode(g) {
-        if star_needs_reassign(g, this) {
-            reassign(g, this);
-        }
-    }
-}
-
-pub fn net_timeout(g: &mut Game) {
-    if let Some(this) = star_mode(g) {
-        if !star_needs_reassign(g, this) {
-            time_out(g, this);
-        }
-    }
-}
-
-pub fn net_state(g: &mut Game) -> String {
-    match star_mode(g) {
-        Some(this) => {
-            let ids: Vec<String> = this.starPlayer.iter().map(|p| if p.is_none() { "-".to_string() } else { g.player(*p).globalID.to_string() }).collect();
-            format!("mode{} stars{}", this.iCurrentModeType as i32, ids.join(","))
-        }
-        None => String::new(),
-    }
-}
-
 /// Replay-harness `T` record (docs/guides/REPLAY.md).
 pub fn harness_record(g: &mut Game) -> Option<String> {
     star_mode(g).map(|this| {
@@ -454,7 +427,7 @@ pub fn cgm_star_think(g: &mut Game, this: &mut CGM_Star) {
     }
 
     //Make sure there is a star player(s)
-    if star_needs_reassign(g, this) && !net_random::event(g, Ev::StarReassign, &[]) {
+    if star_needs_reassign(g, this) {
         reassign(g, this);
     }
 
@@ -465,7 +438,7 @@ pub fn cgm_star_think(g: &mut Game, this: &mut CGM_Star) {
     }
 
     //If the game time ran out, somebody needs to die and scores changed
-    if iTime == 0 && !net_random::event(g, Ev::StarTimeout, &[]) {
+    if iTime == 0 {
         time_out(g, this);
     }
 }
