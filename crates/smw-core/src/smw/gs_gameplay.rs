@@ -1166,6 +1166,10 @@ impl GameplayState {
                 }
             }
 
+            if g.main_loop.stats_page {
+                return;
+            }
+
             //big end game scoreboard (sorted)
             if g.game_values.flags.showscoreboard {
                 let gameovertext: String;

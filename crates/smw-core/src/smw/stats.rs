@@ -359,7 +359,7 @@ pub fn clock(ticks: u64) -> String {
 /// The after-match page: per-player stats and who killed whom.
 pub fn draw_page(g: &mut Game) {
     let mut gp = g.ptr();
-    g.rm.sprite(g.rm.menu_shade).setalpha(255);
+    g.rm.sprite(g.rm.menu_shade).setalpha(160);
     gp.rm.sprite(gp.rm.menu_shade).draw(g, 0, 0);
     let large = &gp.rm.menu_font_large;
     let small = &gp.rm.menu_font_small;
