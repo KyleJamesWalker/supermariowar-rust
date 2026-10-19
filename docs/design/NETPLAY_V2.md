@@ -1,6 +1,6 @@
 # Netplay v2: rollback over WebRTC
 
-Status: in progress, rollout step 3. Decision: rollback, because the RG35XX measurement fits the tick budget (Rollout, steps 1 and 2).
+Status: done, released in v0.2.0 (Rollout, steps 1 to 6). Decision: rollback, because the RG35XX measurement fits the tick budget (Rollout, steps 1 and 2). Background and Problem describe netplay v1, which step 5 removed.
 
 ## Summary
 
@@ -31,7 +31,7 @@ Menus, the world map and the screens between games stay on reliable messages. Ro
 **Transport.** WebRTC data channels in browsers and native builds, through `crates/smw-peer`. Each pair of players shares a reliable channel for match setup and an unreliable, unordered one for GGRS. Peers connect directly through STUN, and fall back to a TURN relay when NAT punching fails. `coturn` is the TURN server.
 
 - **Signaling.** `smw_relay` pairs the peers of a room on `/signal/<room>`, speaking the `matchbox_server` protocol (`apps/smw_relay/src/signal.rs`); a stock `matchbox_server` works too. Both builds speak that protocol: native builds through `webrtc` (webrtc-rs) and `tokio-tungstenite`, the web build through `web/peer_socket.js`.
-- **Lobby.** `smw_relay` keeps the room list, room names, passwords and player counts. When a room starts, the lobby gives each admitted player a random `matchbox` room ID. Only admitted players learn it, so the ID is the ticket. If that proves too weak, the relay can host `matchbox_signaling` itself and check each connection against the lobby.
+- **Lobby.** `smw_relay` keeps the room list, room names, passwords and player counts. When a room starts, the lobby gives each admitted player a random `matchbox` room ID. Only admitted players learn it, so the ID is the ticket. If that proves too weak, the relay's own signaling can check each connection against the lobby.
 
 **Game work.**
 
@@ -75,16 +75,16 @@ Menus, the world map and the screens between games stay on reliable messages. Ro
 
    The tick column is simulation plus draw recording. Rasterizing a shown frame costs about 5 ms more on the RG35XX (`SMW_PERF`). The snapshot is the largest cost there: `clone_match` also copies the screen surface and the display lists, which a rollback snapshot does not need.
 2. **Decide.** Rollback. The RG35XX worst case is about 3 ms snapshot, 5.5 ms re-run and 5 ms drawing, which fits the 16.67 ms tick. A trimmed snapshot widens the margin.
-3. **Transport (in progress).** In three PRs:
+3. **Transport (done).** In three PRs:
    1. `smw-peer`: the peer socket for both builds and its GGRS socket. CI connects two browser pages and a native peer in one room (`tools/web_peer_test.mjs`).
-   2. The lobby hands started rooms to signaling: its own `/signal`, or the server `SMW_SIGNAL_URL` names.
+   2. The lobby hands started rooms to signaling: by default the relay's own `/signal`, or the server `SMW_SIGNAL_URL` names.
    3. `coturn` in `deploy/`, and TURN credentials for clients.
-4. **GGRS session for matches (in progress).**
+4. **GGRS session for matches (done).**
    1. Rollback engine (`smw/rollback.rs`). `MatchState` holds what a match tick reads and writes: game values, map, objects, players, scores, modes, RNG, the virtual mixer, the gameplay state and the frame counter. It skips the screen surface and the display lists. `advance` runs one tick with given keys and can mute it. `checksum` hashes the harness dump. Every replay's match runs under GGRS's sync test, which loads the state from 7 ticks back and re-runs it on every tick. All 47 replays that reach a match stay in sync for 600 ticks.
    2. The match runs over a GGRS P2P session on the peer socket (`smw/net_v2.rs`). At match start the host captures a shared checkpoint: the offline checkpoint plus the map file and the frame counter. It sends that over the reliable channel, and every joiner restores it. Every peer runs the code a local match runs. Input delay is 2 ticks, the prediction window 8, and GGRS compares checksums every 30 frames. `tools/net_v2_test.py` plays every scripted net game this way with 60 ms lag and 10% loss and checks that host and joiner states are identical on every frame.
-   3. Native and browser players together. A native build reaches the relay's lobby through a `ws://` or `wss://` server entry (`platform/network/dual.rs`, with the relay layer's WebSocket on a background thread). `MIXED=1 tools/web_netplay_test.mjs` plays every scripted net game with a browser host and a native joiner; all 8 pass.
+   3. Native and browser players together. A native build reaches the relay's lobby through a `ws://` or `wss://` server entry (`smw/platform/network/websocket/`, with the relay layer's WebSocket on a background thread). `MIXED=1 tools/web_netplay_test.mjs` plays every scripted net game with a browser host and a native joiner; all 8 pass.
 5. **Remove v1 (done).** The lobby starts a match with `NET_L2P_MATCH_START` (protocol 0.9). The game host connection, its start sync, NAT punching, the host-authoritative event code (`net_random`, `net_outcomes`), ENet, `smw_server` and the relay's game tunnel are gone; every build reaches the lobby over WebSocket.
-6. **Local play without internet.** "Host on this device" in a native build runs the lobby and the signaling server on a background thread. Players on the same network, whether shared Wi-Fi or one device's hotspot, need no internet, STUN or TURN. Their WebRTC connections use local addresses.
-   - **Discovery.** The host broadcasts a UDP beacon every second with its name, protocol version and lobby port. The Servers menu lists beacons under Nearby, and typing the host's address still works where broadcasts are blocked.
+6. **Local play without internet (done).** "Host on This Device" in a native build runs the lobby and the signaling server on a background thread. Players on the same network, whether shared Wi-Fi or one device's hotspot, need no internet, STUN or TURN. Their WebRTC connections use local addresses.
+   - **Discovery.** The host sends a UDP beacon every second, by multicast and broadcast, with its protocol version and lobby port (`smw/network/lan_beacon.rs`). The Servers menu puts the hosts it hears at the top of the list, tagged LAN, and typing the host's address still works where broadcasts are blocked.
    - **Limits.** Networks that isolate clients, common on hotel Wi-Fi, need a hotspot instead. Browsers can neither host nor hear beacons. Joining a LAN game from a browser also needs a page served over http, because an https page cannot open `ws://` to a LAN address.
    - **Firewalls.** macOS and Windows ask once to allow incoming connections.
