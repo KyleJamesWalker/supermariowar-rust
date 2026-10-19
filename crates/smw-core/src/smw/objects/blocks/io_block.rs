@@ -99,6 +99,8 @@ pub fn io_block_hittop_player<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mu
         g.player(player).inair = false;
         g.player(player).fallthrough = false;
         g.player(player).killsinrowinair = 0;
+        let gid = g.player(player).globalID;
+        crate::smw::stats::touched(g, gid);
         g.player(player).extrajumps = 0;
         g.player(player).vely = GRAVITATION;
     }

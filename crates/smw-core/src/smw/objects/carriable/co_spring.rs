@@ -79,6 +79,8 @@ pub fn co_spring_hittop<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T, 
     g.player(player).inair = false;
     g.player(player).fallthrough = false;
     g.player(player).killsinrowinair = 0;
+    let gid = g.player(player).globalID;
+    crate::smw::stats::touched(g, gid);
     g.player(player).extrajumps = 0;
 
     g.player(player).superjumptimer = 4;

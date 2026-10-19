@@ -2944,6 +2944,7 @@ impl CPlayer {
                     self.inair = false;
                     self.extrajumps = 0;
                     self.killsinrowinair = 0;
+                    crate::smw::stats::touched(g, self.globalID);
                 }
             }
 
@@ -2990,6 +2991,7 @@ impl CPlayer {
                 self.inair = false;
                 self.extrajumps = 0;
                 self.killsinrowinair = 0;
+                crate::smw::stats::touched(g, self.globalID);
             }
 
             self.platform = PlatformId::NONE;

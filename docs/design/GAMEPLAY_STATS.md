@@ -12,10 +12,10 @@ Per player slot, per match (`smw/stats.rs`, `PlayerStats`):
 | Head-to-head | kills of each other slot, per match only |
 | Items | powerups collected, items stored and used, item boxes bumped |
 | Movement | jumps, distance run, time in the air, star time |
-| Streaks | longest kill streak, longest life, triple kills |
+| Streaks | longest kill streak, longest life, double and triple kills |
 | Mode | the mode's own score at game over (flags, coins, tag time and so on, as the scoreboard counts them) |
 
-A triple kill is three kills of other players with no landing between the first and the third. Each landing resets the count; a fourth and fifth kill in the same jump start the next one.
+Double and triple kills count kills of other players in one airtime: any kill credited to a player while it is in the air, projectiles included. Each airtime counts once, at its highest tier: two kills make a double, three or more a triple and no double. Landing on ground, a platform, a spring, a throw block or an on/off block ends the airtime, at the same points that reset the game's own air combo (`killsinrowinair`), and so does dying. A kill made on the ground ends it too. The on-screen Double Kill and Triple Kill awards are different: they count kills without dying.
 
 The hooks sit where the game already decides each event: `CPlayer::killed_player` and `player_killed_player` (kills and suicides, only when the victim dies), `CPlayer::die` (deaths), `CPlayer::jump`, `set_powerup`, `set_stored_powerup`, `try_releasing_powerup`, the powerup block's bump, and one `stats::tick` per simulation tick after the players move.
 

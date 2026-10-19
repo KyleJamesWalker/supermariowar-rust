@@ -34,10 +34,28 @@ pub struct PlayerStats {
     pub alive_ticks: u32,
     pub best_alive_ticks: u32,
     pub air_chain: u16,
+    pub double_kills: u16,
     pub triple_kills: u16,
 }
 
 impl PlayerStats {
+    /// Kills in one airtime count once, at the highest tier: 2 a double, 3 or more a triple.
+    fn chain_kill(&mut self, inair: bool) {
+        if !inair {
+            self.air_chain = 0;
+            return;
+        }
+        self.air_chain += 1;
+        match self.air_chain {
+            2 => self.double_kills += 1,
+            3 => {
+                self.double_kills -= 1;
+                self.triple_kills += 1;
+            }
+            _ => {}
+        }
+    }
+
     const ZERO: Self = PlayerStats {
         kills: 0,
         deaths: 0,
@@ -58,6 +76,7 @@ impl PlayerStats {
         alive_ticks: 0,
         best_alive_ticks: 0,
         air_chain: 0,
+        double_kills: 0,
         triple_kills: 0,
     };
 }
@@ -94,9 +113,10 @@ pub fn reset(g: &mut Game) {
     g.game_values.stats = MatchStats::new();
 }
 
-/// `killer` killed `killed`, another player. Three kills with no landing between them make a triple kill.
+/// `killer` killed `killed`, another player. Kills in one airtime count once, as a double (2) or a triple (3 or more).
 pub fn kill(g: &mut Game, killer: PlayerId, killed: PlayerId, style: KillStyle) {
     let victim = slot(g, killed);
+    let inair = g.player(killer).inair;
     with(g, killer, |s| {
         s.kills += 1;
         s.kills_by[style as usize] += 1;
@@ -105,10 +125,7 @@ pub fn kill(g: &mut Game, killer: PlayerId, killed: PlayerId, style: KillStyle) 
         }
         s.streak += 1;
         s.best_streak = s.best_streak.max(s.streak);
-        s.air_chain += 1;
-        if s.air_chain % 3 == 0 {
-            s.triple_kills += 1;
-        }
+        s.chain_kill(inair);
     });
     with(g, killed, |s| s.deaths_by[style as usize] += 1);
 }
@@ -125,7 +142,15 @@ pub fn death(g: &mut Game, killed: PlayerId) {
         s.deaths += 1;
         s.streak = 0;
         s.alive_ticks = 0;
+        s.air_chain = 0;
     });
+}
+
+/// The player with `global_id` touched ground, a platform, a spring or a block, which ends its airtime.
+pub fn touched(g: &mut Game, global_id: i16) {
+    if (0..4).contains(&global_id) {
+        g.game_values.stats.players[global_id as usize].air_chain = 0;
+    }
 }
 
 pub fn jump(g: &mut Game, id: PlayerId) {
@@ -275,10 +300,12 @@ impl Lifetime {
         self.add("air_ticks", s.air_ticks as u64);
         self.add("distance", s.distance as u64);
         self.add("star_ticks", s.star_ticks as u64);
+        self.add("double_kills", s.double_kills as u64);
         self.add("triple_kills", s.triple_kills as u64);
         self.best("kills_in_match", s.kills as u64);
         self.best("kill_streak", s.best_streak as u64);
         self.best("survival_ticks", s.best_alive_ticks as u64);
+        self.best("double_kills_in_match", s.double_kills as u64);
         self.best("triple_kills_in_match", s.triple_kills as u64);
         for (table, key) in [(&mut self.modes, mode), (&mut self.maps, map)] {
             let e = table.entry(key.to_string()).or_default();
@@ -366,11 +393,12 @@ pub fn draw_page(g: &mut Game) {
     large.draw_centered(g, 320, 12, "Match Stats");
     let slots: Vec<usize> = (0..4).filter(|&s| g.game_values.playercontrol[s] > 0).collect();
     type Row = (&'static str, fn(&PlayerStats) -> String);
-    let rows: [Row; 13] = [
+    let rows: [Row; 14] = [
         ("Kills", |s| s.kills.to_string()),
         ("Deaths", |s| s.deaths.to_string()),
         ("Suicides", |s| s.suicides.to_string()),
         ("Best streak", |s| s.best_streak.to_string()),
+        ("Double kills", |s| s.double_kills.to_string()),
         ("Triple kills", |s| s.triple_kills.to_string()),
         ("Longest life", |s| clock(s.best_alive_ticks as u64)),
         ("Jumps", |s| s.jumps.to_string()),
@@ -441,6 +469,24 @@ mod tests {
         assert_eq!(life.modes["Classic"], (2, 1));
         assert_eq!(life.maps["Rubber Room"], (1, 0));
         assert_eq!(Lifetime::parse(&life.to_text()), life);
+    }
+
+    #[test]
+    fn an_airtime_counts_once_at_its_highest_tier() {
+        let mut s = PlayerStats::ZERO;
+        s.chain_kill(true);
+        s.chain_kill(true);
+        assert_eq!((s.double_kills, s.triple_kills), (1, 0));
+        s.chain_kill(true);
+        s.chain_kill(true);
+        assert_eq!((s.double_kills, s.triple_kills), (0, 1));
+        s.air_chain = 0;
+        s.chain_kill(true);
+        s.chain_kill(false);
+        s.chain_kill(true);
+        assert_eq!((s.double_kills, s.triple_kills), (0, 1));
+        s.chain_kill(true);
+        assert_eq!((s.double_kills, s.triple_kills), (1, 1));
     }
 
     #[test]
