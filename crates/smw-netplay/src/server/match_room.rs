@@ -2,7 +2,7 @@
 //! signaling room ID, which only admitted players learn, and short-lived TURN credentials.
 
 use base64::Engine;
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 
 /// TURN credentials stay valid this long after the room starts.
 pub const TURN_CREDENTIAL_SECONDS: u64 = 6 * 60 * 60;
