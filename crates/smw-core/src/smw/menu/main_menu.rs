@@ -65,6 +65,9 @@ impl UI_MainMenu {
             0,
         ), g);
         this.miBuildVersion = Ctl::new(MI_Text::new(g, build_version(), 628, 45, 0, false, TextAlign::RIGHT), g);
+        // Replays hide it so screenshots match goldens whatever build plays them.
+        let replaying = crate::smw::harness::replaying(g);
+        g.ctl(this.miBuildVersion).set_visible(!replaying);
 
         this.miMainStartButton = Ctl::new(MI_Button::new(g, selectfield, 120, 210, "Start", 310, TextAlign::LEFT), g);
         g.ctl(this.miMainStartButton).set_code(MENU_CODE_TO_MATCH_SELECTION_MENU);
