@@ -37,7 +37,7 @@ The built-in controls are player 1's gamepad. The game reads them through muOS's
 | X | Use the stored item | Random choice |
 | Start | Pause | Scroll fast |
 | Select | Exit the match (asks first) | |
-| Menu | Quit the game | Quit the game |
+| Menu | Quit the game (asks first) | Quit the game (asks first) |
 
 Text fields, such as your name and a room name under **Multiplayer**, open an on-screen keyboard: the D-pad moves, A presses a key (Shift, Space, Del and Done are on the bottom row), and B erases a character, or leaves an empty field.
 
@@ -45,7 +45,7 @@ Y, the shoulder buttons and the triggers are free to bind under **Controls** in 
 
 With one controller, the other players that were human become **Bot** at launch, so a match starts against the computer. Set them to **None** in the main menu's **Players** row for fewer opponents. Each extra controller (a USB or Bluetooth pad) joins as the next human player.
 
-To quit, press **Menu** or choose **Exit** on the main menu. B on the main menu also quits, as Back does there in the original game, so press A to start. Settings are saved on the way out.
+To quit, press **Menu** and choose **Yes**, or choose **Exit** on the main menu. B on the main menu also quits, as Back does there in the original game, so press A to start. Settings are saved on the way out.
 
 ## Launcher settings
 
@@ -53,7 +53,7 @@ To quit, press **Menu** or choose **Exit** on the main menu. B on the main menu 
 
 | Variable | Effect |
 |---|---|
-| `SMW_PAD_TRANSLATE=1` | Reads every pad SDL has a controller mapping for (muOS provides one for the built-in controls) through that mapping, in the button layout above. Mapped pads get players first; Menu quits. |
+| `SMW_PAD_TRANSLATE=1` | Reads every pad SDL has a controller mapping for (muOS provides one for the built-in controls) through that mapping, in the button layout above. Mapped pads get players first. Menu asks, then quits. |
 | `SMW_NO_KEYBOARD=1` | Leaves the keyboard out of the launch-time player assignment and turns the players without a pad that were human into bots. |
 | `SMW_PERF=1` | Logs to `log.txt` every 300 frames (about 5 s) how long a frame's update and drawing and its present take on average, the share of the 16 ms frame budget, the worst frame and how many went over budget. The first report includes loading. |
 
