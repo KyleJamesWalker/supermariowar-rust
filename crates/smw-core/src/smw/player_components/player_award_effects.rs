@@ -24,11 +24,11 @@ const awardtexts: [STextAward; PAWARD_LAST as usize] = [
     STextAward { name: "Double Kill", large: false },
     STextAward { name: "Triple Kill", large: false },
     STextAward { name: "Killing Spree", large: false },
-    STextAward { name: "Killing Spree x 2", large: false },
-    STextAward { name: "Killing Spree x 3", large: false },
+    STextAward { name: "Killing Spree+", large: false },
+    STextAward { name: "Killing Spree++", large: false },
     STextAward { name: "Dominating", large: true },
-    STextAward { name: "Dominating x 2", large: true },
-    STextAward { name: "Dominating x 3", large: true },
+    STextAward { name: "Dominating+", large: true },
+    STextAward { name: "Dominating++", large: true },
     STextAward { name: "Unstoppable!", large: true },
 ];
 
