@@ -5,6 +5,7 @@
 use crate::common::input::COutputControl;
 use crate::game::Game;
 use crate::smw::harness;
+use crate::smw::player::PlayerKeys;
 use crate::smw::network::net_record;
 use crate::smw::rollback::{self, GgrsConfig, KeySlot, Keys, MatchState, Req};
 use ggrs::{GgrsError, GgrsEvent, P2PSession, PlayerType, SessionBuilder, SessionState};
@@ -80,13 +81,7 @@ pub fn match_starting(g: &mut Game) -> bool {
         }
         let host = g.netplay.theHostIsMe;
         g.netplay.v2_match = true;
-        gp.netplay.client.v2_replay = Some(Box::new(V2Replay {
-            my_slot: g.netplay.remotePlayerNumber as u8,
-            own_config: None,
-            targets: Vec::new(),
-            local_device: g.game_values.playerInput.outputControls[0],
-            saves: BTreeMap::new(),
-        }));
+        start_replay(g);
         return !host;
     }
     let Some((socket, others)) = gp.netplay.client.take_peer_socket() else {
@@ -204,11 +199,29 @@ fn to_menu(g: &mut Game, abandoned: bool) {
 
 /// A v2 match in a replay: each frame does what the recording's `#@ v2` line says the live frame did.
 pub struct V2Replay {
-    my_slot: u8,
     own_config: Option<(Vec<u8>, Vec<u8>)>,
     targets: Vec<KeySlot>,
     local_device: COutputControl,
     saves: BTreeMap<i32, MatchState>,
+}
+
+fn start_replay(g: &mut Game) {
+    let mut gp = g.ptr();
+    g.netplay.v2_match = true;
+    gp.netplay.client.v2_replay = Some(Box::new(V2Replay {
+        own_config: None,
+        targets: Vec::new(),
+        local_device: g.game_values.playerInput.outputControls[0],
+        saves: BTreeMap::new(),
+    }));
+}
+
+/// A segment replay of a net match (`--segment`, the web page's Clip) restored the match's checkpoint; the
+/// recording's `#@ v2` lines play the rest, a joiner's starting with the host's match start.
+pub fn segment_started(g: &mut Game) {
+    if g.game_values.matchtype == crate::common::match_types::MatchType::NetGame && net_record::has_v2(g) {
+        start_replay(g);
+    }
 }
 
 fn replay_tick(g: &mut Game, frame: u32) {
@@ -232,16 +245,36 @@ fn replay_tick(g: &mut Game, frame: u32) {
         match token.split_at(1) {
             ("w", _) => {}
             ("r", data) => {
-                let Some(bytes) = harness::base64_decode(data).and_then(|z| crate::smw::network::file_compressor::inflate(&z)) else {
+                let start = data.split_once('.').and_then(|(slot, data)| {
+                    let bytes = harness::base64_decode(data).and_then(|z| crate::smw::network::file_compressor::inflate(&z))?;
+                    Some((slot.parse::<u8>().ok()?, bytes))
+                });
+                let Some((slot, bytes)) = start else {
                     harness::fail(format!("the replay's v2 match start at frame {frame} is damaged"));
                 };
-                match restore_start(g, r.my_slot, bytes) {
+                if !g.netplay.active {
+                    // A segment replay set up the joiner's own match, which the live joiner skipped for the host's.
+                    crate::smw::gs_gameplay::clean_up(g);
+                }
+                match restore_start(g, slot, bytes) {
                     Ok(own) => r.own_config = Some(own),
                     Err(e) => harness::fail(format!("the replay's v2 match start: {e}")),
                 }
                 r.local_device = g.game_values.playerInput.outputControls[0];
             }
-            ("t", slots) => r.targets = slots.split(',').filter_map(parse_slot).collect(),
+            ("t", data) => {
+                let Some((my_slot, slots)) = data.split_once(':').and_then(|(m, s)| Some((m.parse::<i16>().ok()?, s))) else {
+                    harness::fail(format!("the replay's v2 session at frame {frame} is damaged"));
+                };
+                r.targets = slots.split(',').filter_map(parse_slot).collect();
+                if !g.netplay.active {
+                    // A segment replay made its players as a local match's; they read their keys as the net game's did.
+                    for i in 0..g.players.len() {
+                        let player = g.player(g.players[i]);
+                        player.playerKeys = if player.globalID == my_slot { PlayerKeys::Local(0) } else { PlayerKeys::Net(player.globalID as u8) };
+                    }
+                }
+            }
             ("i", _) => {
                 local_input(g, &mut r.local_device);
             }
@@ -352,7 +385,7 @@ impl V2Match {
                         let bytes: Vec<u8> = self.parts.iter().flatten().flatten().copied().collect();
                         if self.rec.is_some() {
                             let data = harness::base64_encode(&crate::smw::network::file_compressor::deflate(&bytes));
-                            note(&mut self.rec, format!("r{data}"));
+                            note(&mut self.rec, format!("r{}.{data}", self.my_slot));
                         }
                         self.own_config = Some(restore_start(g, self.my_slot, bytes)?);
                         self.restored = true;
@@ -408,7 +441,7 @@ impl V2Match {
             Ok(session) => {
                 println!("[net] v2: GGRS session started in {} ms", self.opened.elapsed().as_millis());
                 let slots = self.targets.iter().map(slot_token).collect::<Vec<_>>().join(",");
-                note(&mut self.rec, format!("t{slots}"));
+                note(&mut self.rec, format!("t{}:{slots}", self.my_slot));
                 self.ticks = 0;
                 self.phase = Phase::Running(Box::new(session));
                 true

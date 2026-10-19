@@ -652,6 +652,7 @@ impl GameState for SegmentState {
             eprintln!("[harness] {}", e);
             std::process::exit(2);
         }
+        crate::smw::net_v2::segment_started(g);
     }
 }
 

@@ -559,8 +559,11 @@ pub fn set_frame(g: &mut Game, frame: u32) {
     h(g).frame = frame;
 }
 
-/// The end of a frame a v2 match ran: its ticks moved the frame counter already, so only SMW_FRAMES applies.
+/// The end of a frame a v2 match ran: its ticks moved the frame counter already, so only the markers and SMW_FRAMES
+/// apply.
 pub fn end_v2_frame(g: &mut Game) {
+    let frame = h(g).frame;
+    record_markers(g, frame);
     if h(g).maxFrames >= 0 && h(g).frame as i64 >= h(g).maxFrames + h(g).shift as i64 {
         g.game_values.appstate = AppState::Quit;
         h(g).dump = None;

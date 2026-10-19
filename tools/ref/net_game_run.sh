@@ -1,7 +1,8 @@
 #!/bin/bash
 # Full-client netplay: two Rust game clients meet on smw_relay's lobby through the real menus and play each
 # scripted net game. Each client records its session (SMW_RECORD_TO), which then replays offline, with no relay, writing
-# its v2 state log to <game>/<role>.replay.v2state.log. tools/net_v2_test.py runs this and checks the matches.
+# its v2 state log to <game>/<role>.replay.v2state.log, and its match 1 replays from its checkpoint (SMW_SEGMENT=1) to
+# <game>/<role>.segment.v2state.log. tools/net_v2_test.py runs this and checks the matches.
 # Usage: net_game_run.sh
 # Env: SMW_RUST_BIN (smw), SMW_RELAY_BIN (smw_relay), SMW_RUST_DATA,
 #      NET_GAMES (scenario directories beside this script; default: every net_game*),
@@ -80,6 +81,8 @@ for game in "${games[@]}"; do
     mv "$dir/home-$role" "$dir/home-$role.live"
     client $role "$dir" $name "$game" "$data" SMW_NOLIMIT=1 SMW_REPLAY="$dir/$role.rec.txt" SMW_DUMP="$dir/$role.replay.dump" \
       SMW_FRAMES="$(sed -n 's/^#@ frames=//p' "$dir/$role.rec.txt")" SMW_V2_STATE_LOG="$dir/$role.replay.v2state.log" > "$dir/$role.replay.log" 2>&1
+    client $role "$dir" $name "$game" "$data" SMW_NOLIMIT=1 SMW_REPLAY="$dir/$role.rec.txt" SMW_SEGMENT=1 SMW_DUMP="$dir/$role.segment.dump" \
+      SMW_FRAMES="$(sed -n 's/^#@ frames=//p' "$dir/$role.rec.txt")" SMW_V2_STATE_LOG="$dir/$role.segment.v2state.log" > "$dir/$role.segment.log" 2>&1
   done
   rm -rf "${dir:?}/host/data" "${dir:?}/join/data"
 done

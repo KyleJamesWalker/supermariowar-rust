@@ -3,7 +3,8 @@
 each match runs under GGRS over WebRTC, with lag and packet loss on the GGRS channel. Both clients log the state they
 checksum at every saved frame (SMW_V2_STATE_LOG); every frame both logged must be identical, every match must start
 its GGRS session, and neither client may report a desync. Each client's recording then replays offline, and its replay
-must log the same states, save for save, and write the same dump.
+must log the same states, save for save, and write the same dump; its match 1, replayed from its checkpoint, must log
+the live states' beginning.
 
 Usage: tools/net_v2_test.py [work_dir]
   NET_GAMES        scenarios (default: every tools/ref/net_game*); a scenario's `matches` file sets how many GGRS
@@ -102,6 +103,11 @@ for game in games.split():
                 a, b = live.read_text(errors="replace").splitlines(), replay.read_text(errors="replace").splitlines()
                 at = next((i for i, (x, y) in enumerate(zip(a, b)) if x != y), min(len(a), len(b)))
                 problems.append(f"{role}'s offline replay logs other states from line {at + 1}")
+            segment = work / game / f"{role}.segment.v2state.log"
+            if not segment.exists() or segment.stat().st_size == 0:
+                problems.append(f"{role}'s match 1 segment logged no states")
+            elif not live.read_bytes().startswith(segment.read_bytes()):
+                problems.append(f"{role}'s match 1 segment logs other states")
             dumps = [work / game / f"{role}{kind}.dump" for kind in ("", ".replay")]
             if all(d.exists() for d in dumps) and dumps[0].read_bytes() != dumps[1].read_bytes():
                 problems.append(f"{role}'s offline replay writes another dump")

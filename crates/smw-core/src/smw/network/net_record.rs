@@ -212,21 +212,27 @@ pub fn load(g: &mut Game, text: &str, from: u32) {
     if !lines().any(|l| l == "#@ netrec=1") {
         return;
     }
-    let events = lines().filter_map(NetEvent::parse).filter(|e| e.frame >= from).collect();
-    let mut values: BTreeMap<String, VecDeque<String>> = BTreeMap::new();
-    for (frame, key, value) in lines().filter_map(parse_value) {
-        if frame >= from {
-            values.entry(key).or_default().push_back(value);
-        }
-    }
-    let v2 = lines()
-        .filter_map(|l| {
-            let (frame, tokens) = l.strip_prefix("#@ v2 frame=")?.split_once(' ')?;
-            Some((frame.parse().ok()?, tokens.to_string()))
+    // From the first line at or after `from` on, whatever its frame: a joiner's v2 match start sets the frame back.
+    let first = lines()
+        .position(|l| {
+            let frame = NetEvent::parse(l).map(|e| e.frame).or_else(|| parse_value(l).map(|v| v.0)).or_else(|| parse_v2(l).map(|v| v.0));
+            frame.is_some_and(|f| f >= from)
         })
-        .filter(|(frame, _)| *frame >= from)
-        .collect();
+        .unwrap_or(usize::MAX);
+    let lines = || lines().skip(first);
+    let events = lines().filter_map(NetEvent::parse).collect();
+    let mut values: BTreeMap<String, VecDeque<String>> = BTreeMap::new();
+    for (_, key, value) in lines().filter_map(parse_value) {
+        values.entry(key).or_default().push_back(value);
+    }
+    let v2 = lines().filter_map(parse_v2).collect();
     g.net_record.replay = Some(Replay { events, next: 0, values, v2 });
+}
+
+/// `#@ v2 frame=<n> <tokens>`.
+fn parse_v2(line: &str) -> Option<(u32, String)> {
+    let (frame, tokens) = line.strip_prefix("#@ v2 frame=")?.split_once(' ')?;
+    Some((frame.parse().ok()?, tokens.to_string()))
 }
 
 /// Whether the replay holds v2 match frames still to play.
