@@ -1,6 +1,6 @@
 #!/bin/bash
 # Full-client netplay: two Rust game clients meet on smw_relay's lobby through the real menus and play each
-# scripted net game. Each client records its session (SMW_RECORD_TO), which then replays offline, with no relay, writing
+# scripted net game, with a second joiner where the scenario has a join2.txt. Each client records its session (SMW_RECORD_TO), which then replays offline, with no relay, writing
 # its v2 state log to <game>/<role>.replay.v2state.log, and its match 1 replays from its checkpoint (SMW_SEGMENT=1) to
 # <game>/<role>.segment.v2state.log. tools/net_v2_test.py runs this and checks the matches.
 # Usage: net_game_run.sh
@@ -51,7 +51,7 @@ client() {
   local home=$dir/home-$role
   mkdir -p "$home/Library/Preferences/.smw"
   printf 'player_name = "%s"\nservers = ["%s"]\n' "$name" "${NET_SERVER_ENTRY:-ws://127.0.0.1:12521}" > "$home/Library/Preferences/.smw/servers.toml"
-  (cd "$data/.." && exec env HOME="$home" SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy SMW_SEED=1 SMW_FRAMES="$(param frames "$game")" "${mapenv[@]}" \
+  (cd "$data/.." && exec env HOME="$home" SMW_LAN_DISCOVERY=0 SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy SMW_SEED=1 SMW_FRAMES="$(param frames "$game")" "${mapenv[@]}" \
     SMW_REPLAY="$HERE/$game/$role.txt" SMW_DUMP="$dir/$role.dump" "$@" \
     "$RUST" --datadir "$data")
 }
@@ -71,20 +71,28 @@ for game in "${games[@]}"; do
   # shellcheck disable=SC2086
   client host "$dir" Host "$game" "$hdata" SMW_RECORD_TO="$dir/host.rec.txt" ${HOST_ENV:-} > "$dir/host.log" 2>&1 & hpid=$!
   client join "$dir" Join "$game" "$jdata" SMW_RECORD_TO="$dir/join.rec.txt" > "$dir/join.log" 2>&1 & jpid=$!
+  roles="host join"
+  j2st=0
+  if [ -f "$HERE/$game/join2.txt" ]; then
+    roles="host join join2"
+    j2data=$(datadir join2 "$dir" "$game")
+    client join2 "$dir" Join2 "$game" "$j2data" SMW_RECORD_TO="$dir/join2.rec.txt" > "$dir/join2.log" 2>&1 & j2pid=$!
+  fi
   wait $hpid; hst=$?
   wait $jpid; jst=$?
+  [ -n "${j2pid:-}" ] && { wait $j2pid; j2st=$?; j2pid=; }
   [ -n "$spid" ] && { kill $spid 2>/dev/null; wait $spid 2>/dev/null; }
-  echo "== $game: host exit $hst, join exit $jst"
-  [ $hst -eq 0 ] && [ $jst -eq 0 ] || fail=1
-  for role in host join; do
-    data=$hdata name=Host; [ $role = join ] && data=$jdata name=Join
+  echo "== $game: host exit $hst, join exit $jst, join2 exit $j2st"
+  [ $hst -eq 0 ] && [ $jst -eq 0 ] && [ $j2st -eq 0 ] || fail=1
+  for role in $roles; do
+    case $role in host) data=$hdata name=Host ;; join) data=$jdata name=Join ;; *) data=$j2data name=Join2 ;; esac
     mv "$dir/home-$role" "$dir/home-$role.live"
     client $role "$dir" $name "$game" "$data" SMW_NOLIMIT=1 SMW_REPLAY="$dir/$role.rec.txt" SMW_DUMP="$dir/$role.replay.dump" \
       SMW_FRAMES="$(sed -n 's/^#@ frames=//p' "$dir/$role.rec.txt")" SMW_V2_STATE_LOG="$dir/$role.replay.v2state.log" > "$dir/$role.replay.log" 2>&1
     client $role "$dir" $name "$game" "$data" SMW_NOLIMIT=1 SMW_REPLAY="$dir/$role.rec.txt" SMW_SEGMENT=1 SMW_DUMP="$dir/$role.segment.dump" \
       SMW_FRAMES="$(sed -n 's/^#@ frames=//p' "$dir/$role.rec.txt")" SMW_V2_STATE_LOG="$dir/$role.segment.v2state.log" > "$dir/$role.segment.log" 2>&1
   done
-  rm -rf "${dir:?}/host/data" "${dir:?}/join/data"
+  rm -rf "${dir:?}/host/data" "${dir:?}/join/data" "${dir:?}/join2/data"
 done
 
 echo "logs in $WORK"

@@ -58,6 +58,10 @@ fn shared_listener() -> Option<UdpSocket> {
 
 /// Starts listening for beacons, once.
 pub fn listen() {
+    // Tests set SMW_LAN_DISCOVERY=0, so real games on the network stay out of their server lists.
+    if std::env::var("SMW_LAN_DISCOVERY").is_ok_and(|v| v == "0") {
+        return;
+    }
     static STARTED: Once = Once::new();
     STARTED.call_once(|| {
         let _ = std::thread::Builder::new().name("smw-lan-listen".into()).spawn(|| {

@@ -71,7 +71,8 @@ def frames(path):
 failed = False
 for game in games.split():
     problems = []
-    logs = {role: (work / game / f"{role}.log").read_text(errors="replace") for role in ("host", "join")}
+    roles = ["host", "join"] + (["join2"] if (REPO / "tools" / "ref" / game / "join2.txt").exists() else [])
+    logs = {role: (work / game / f"{role}.log").read_text(errors="replace") for role in roles}
     matches_file = REPO / "tools" / "ref" / game / "matches"
     matches = int(matches_file.read_text()) if matches_file.exists() else 1
     for role, log in logs.items():
@@ -82,20 +83,22 @@ for game in games.split():
         if desyncs:
             problems.append(f"{role}: {desyncs[0]}")
     reruns = sum(int(m) for log in logs.values() for m in re.findall(r"(\d+) re-run ticks", log)[-1:])
-    host, join = states / f"{game}_home-host.log", states / f"{game}_home-join.log"
+    live_logs = {role: states / f"{game}_home-{role}.log" for role in roles}
     compared = 0
-    if host.exists() and join.exists():
-        h, j = frames(host), frames(join)
-        # The last frames may be predictions the session never confirmed before the match ended.
-        last = min(max(h), max(j)) - 8
-        common = sorted(f for f in set(h) & set(j) if f <= last)
-        compared = len(common)
-        differ = [f for f in common if h[f] != j[f]]
-        if differ:
-            problems.append(f"states differ from frame {differ[0]}")
+    if all(log.exists() for log in live_logs.values()):
+        h = frames(live_logs["host"])
+        for role in roles[1:]:
+            j = frames(live_logs[role])
+            # The last frames may be predictions the session never confirmed before the match ended.
+            last = min(max(h), max(j)) - 8
+            common = sorted(f for f in set(h) & set(j) if f <= last)
+            compared = len(common) if role == "join" else min(compared, len(common))
+            differ = [f for f in common if h[f] != j[f]]
+            if differ:
+                problems.append(f"host and {role} states differ from frame {differ[0]}")
         if compared < 300:
             problems.append(f"only {compared} frames to compare")
-        for role, live in (("host", host), ("join", join)):
+        for role, live in live_logs.items():
             replay = work / game / f"{role}.replay.v2state.log"
             if not replay.exists():
                 problems.append(f"{role}'s offline replay logged no states")
