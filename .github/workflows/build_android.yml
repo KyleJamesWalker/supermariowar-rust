@@ -22,6 +22,8 @@ defaults:
     shell: bash
 
 env:
+  SMW_VERSION: ${{ inputs.version }}
+  SMW_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
   NDK_VERSION: 27.2.12479018
   CARGO_NDK_VERSION: 4.1.2
   ABIS: arm64-v8a armeabi-v7a x86_64

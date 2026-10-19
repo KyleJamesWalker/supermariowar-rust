@@ -17,6 +17,8 @@ defaults:
     shell: bash
 
 env:
+  SMW_VERSION: ${{ inputs.version }}
+  SMW_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
   EMSDK_VERSION: 5.0.2
 
 jobs:
