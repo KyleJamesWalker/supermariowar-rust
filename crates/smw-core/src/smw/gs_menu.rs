@@ -85,6 +85,7 @@ pub enum MenuId {
     GraphicsOptions,
     EyeCandyOptions,
     SoundOptions,
+    Stats,
     PlayerControlsSelect,
     PlayerControls,
     ModeOptions,
@@ -152,6 +153,7 @@ pub struct MenuState {
     mGraphicsOptionsMenu: Slot<UI_GraphicsOptionsMenu>,
     mEyeCandyOptionsMenu: Slot<UI_EyeCandyOptionsMenu>,
     mSoundOptionsMenu: Slot<UI_SoundOptionsMenu>,
+    mStatsMenu: Slot<crate::smw::menu::options::stats_menu::UI_StatsMenu>,
 
     // Controls menu
     mPlayerControlsSelectMenu: Slot<UI_PlayerControlsSelectMenu>,
@@ -214,6 +216,7 @@ impl MenuState {
             mGraphicsOptionsMenu: Slot::empty(),
             mEyeCandyOptionsMenu: Slot::empty(),
             mSoundOptionsMenu: Slot::empty(),
+            mStatsMenu: Slot::empty(),
             mPlayerControlsSelectMenu: Slot::empty(),
             mPlayerControlsMenu: Slot::empty(),
             mModeOptionsMenu: Slot::empty(),
@@ -261,6 +264,7 @@ impl MenuState {
             MenuId::GraphicsOptions => &mut **this.mGraphicsOptionsMenu,
             MenuId::EyeCandyOptions => &mut **this.mEyeCandyOptionsMenu,
             MenuId::SoundOptions => &mut **this.mSoundOptionsMenu,
+            MenuId::Stats => &mut **this.mStatsMenu,
             MenuId::PlayerControlsSelect => &mut **this.mPlayerControlsSelectMenu,
             MenuId::PlayerControls => &mut **this.mPlayerControlsMenu,
             MenuId::ModeOptions => &mut **this.mModeOptionsMenu,
@@ -304,7 +308,7 @@ impl MenuState {
     }
 
     pub fn harness_menu_name(&self) -> &'static str {
-        let names: [(MenuId, &'static str); 28] = [
+        let names: [(MenuId, &'static str); 29] = [
             (MenuId::Main, "main"),
             (MenuId::Options, "options"),
             (MenuId::GameplayOptions, "gameplay_options"),
@@ -316,6 +320,7 @@ impl MenuState {
             (MenuId::GraphicsOptions, "graphics_options"),
             (MenuId::EyeCandyOptions, "eyecandy_options"),
             (MenuId::SoundOptions, "sound_options"),
+            (MenuId::Stats, "stats"),
             (MenuId::PlayerControlsSelect, "player_controls_select"),
             (MenuId::PlayerControls, "player_controls"),
             (MenuId::ModeOptions, "mode_options"),
@@ -1289,6 +1294,15 @@ impl MenuState {
         } else if MENU_CODE_TO_SOUND_OPTIONS_MENU == code {
             self.mCurrentMenu = MenuId::SoundOptions;
             self.current().reset_menu(g);
+        } else if MENU_CODE_TO_STATS_MENU == code {
+            self.mStatsMenu.refresh(g);
+            self.mCurrentMenu = MenuId::Stats;
+            self.current().reset_menu(g);
+        } else if MENU_CODE_STATS_RESET == code {
+            self.mStatsMenu.open_reset_dialog(g);
+            self.current().reset_menu(g);
+        } else if MENU_CODE_STATS_RESET_YES == code || MENU_CODE_STATS_RESET_NO == code {
+            self.mStatsMenu.close_reset_dialog(g, MENU_CODE_STATS_RESET_YES == code);
         } else if MENU_CODE_TO_GAMEPLAY_OPTIONS_MENU == code {
             self.mCurrentMenu = MenuId::GameplayOptions;
             self.current().reset_menu(g);
@@ -1670,6 +1684,7 @@ impl GameState for MenuState {
         assign(&mut self.mGraphicsOptionsMenu, UI_GraphicsOptionsMenu::new(g));
         assign(&mut self.mEyeCandyOptionsMenu, UI_EyeCandyOptionsMenu::new(g));
         assign(&mut self.mSoundOptionsMenu, UI_SoundOptionsMenu::new(g));
+        assign(&mut self.mStatsMenu, crate::smw::menu::options::stats_menu::UI_StatsMenu::new(g));
 
         // Controls menu
         assign(&mut self.mPlayerControlsSelectMenu, UI_PlayerControlsSelectMenu::new(g));

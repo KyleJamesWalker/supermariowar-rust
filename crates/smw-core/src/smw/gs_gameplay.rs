@@ -2139,6 +2139,13 @@ pub fn update_exit_pause_dialog(g: &mut Game, iCountDownState: i16) -> bool {
 
             if (playerKeys.game_cancel().fPressed || (playerKeys.game_start().fPressed && g.mode().gameover)) && is_exit_allowed(g) {
                 if g.mode().gameover {
+                    if !g.main_loop.stats_page {
+                        g.main_loop.stats_page = true;
+                        g.game_values.playerInput.reset_keys();
+                        return false;
+                    }
+                    g.main_loop.stats_page = false;
+                    crate::smw::stats::commit(g);
                     if g.game_values.matchtype == MatchType::Tour || g.game_values.matchtype == MatchType::Tournament {
                         update_score_board(g);
                     }
@@ -2403,6 +2410,8 @@ pub fn start_gameplay(g: &mut Game) {
     let mut gp = g.ptr();
     clean_up(g);
     set_game_mode_settings_from_menu(g);
+    crate::smw::stats::reset(g);
+    g.main_loop.stats_page = false;
     g.game_values.appstate = AppState::Game;
 
     if g.game_values.music {
@@ -2488,6 +2497,7 @@ impl GameplayState {
             let mut player = g.players[i];
             g.player(player).r#move(g);
         }
+        crate::smw::stats::tick(g);
 
         play_sfx(g);
 
@@ -2663,6 +2673,9 @@ impl GameState for GameplayState {
 
         if g.game_values.flags.pausegame || g.game_values.flags.exitinggame {
             draw_exit_pause_dialog(g);
+        }
+        if g.main_loop.stats_page {
+            crate::smw::stats::draw_page(g);
         }
 
         play_music(g);

@@ -7,6 +7,7 @@ pub mod powerup_settings_menu;
 pub mod projectile_limits_menu;
 pub mod projectile_options_menu;
 pub mod sound_options_menu;
+pub mod stats_menu;
 pub mod team_options_menu;
 
 use crate::common::uicontrol::{ControlId, Ctl};
