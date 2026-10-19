@@ -323,8 +323,14 @@ unsafe fn add_joysticks(g: &mut Game, field: &mut MI_SelectField<i16>) {
     for iJoystick in 0..g.devices.len() as i16 {
         let pad = g.pad(iJoystick as usize);
         let p = crate::services::services(g).pads.name(iJoystick as usize, pad);
+        #[cfg(not(target_os = "emscripten"))]
+        let split = pad == Some(crate::smw::split_pad::SPLIT_SLOT);
+        #[cfg(target_os = "emscripten")]
+        let split = false;
         let name = if harness::replay_joysticks(g).is_some() {
             "Virtual Controller".to_string()
+        } else if split {
+            "Built-in Controller, Split".to_string()
         } else if let Some(name) = p {
             if harness::replaying(g) {
                 name

@@ -100,7 +100,9 @@ pub fn step(g: &mut Game) {
         return;
     }
     harness::frame_start(g);
-    GameStateManager::instance(gp.get()).current(gp.get()).get().update(gp.get());
+    if !crate::smw::quit_dialog::update(g) {
+        GameStateManager::instance(gp.get()).current(gp.get()).get().update(gp.get());
+    }
     harness::frame_end(g);
 }
 
@@ -186,7 +188,9 @@ unsafe fn tick(g: &mut Game) {
     }
     harness::frame_start(gp.get());
     phase(5);
-    GameStateManager::instance(gp.get()).current(gp.get()).get().update(gp.get());
+    if !crate::smw::quit_dialog::update(g) {
+        GameStateManager::instance(gp.get()).current(gp.get()).get().update(gp.get());
+    }
     phase(6);
     harness::frame_end(gp.get());
 }
@@ -438,7 +442,7 @@ fn assign_hotplugged(g: &mut Game) {
         *pending |= added;
     }
     #[cfg(not(target_os = "emscripten"))]
-    if crate::smw::pad::hotplug(g) {
+    if crate::smw::pad::hotplug(g) | crate::smw::split_pad::update(g) {
         *pending = true;
     }
     let playing = GameStateManager::instance(g).currentState == crate::smw::game_state::StateId::Gameplay;
@@ -653,6 +657,10 @@ pub fn run_with(argv: Vec<String>, services: Option<smw_platform::Services>) {
     if !cmd.replay.is_empty() {
         harness::prepare_watch(g, &cmd.replay, cmd.replay_speed, cmd.segment);
     }
+    #[cfg(not(target_os = "emscripten"))]
+    {
+        g.input.split.forced = cmd.split_pad;
+    }
 
     // C++ catches `const char*`, `std::string`, `std::exception` and `...` around main_game().
     let mut gp = g.ptr();
@@ -719,6 +727,8 @@ pub fn startup(g: &mut Game) {
         create_gamemodes(g);
 
         gp.game_values.read_binary_config(g);
+        #[cfg(not(target_os = "emscripten"))]
+        crate::smw::split_pad::init(g);
         assign_inputs(g);
 
         //Assign the powerup weights to the selected preset

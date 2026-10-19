@@ -15,6 +15,9 @@ pub mod net_v2;
 pub mod pad_type;
 #[cfg(not(target_os = "emscripten"))]
 pub mod pad;
+pub mod quit_dialog;
+#[cfg(not(target_os = "emscripten"))]
+pub mod split_pad;
 #[cfg(not(target_os = "emscripten"))]
 pub mod touch;
 pub mod object_container;

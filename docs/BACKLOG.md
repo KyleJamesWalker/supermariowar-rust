@@ -6,9 +6,7 @@ Work we intend to do but have not started, newest ideas last in each section. Bu
 
 | Item | Notes |
 |---|---|
-| Split built-in controller (muOS) | Two players on one handheld: a Controls option "Built-in controller: single / split". Player 1 gets the D-pad, L1 jump, L2 run and Select item; player 2 gets Y/A/B as left/right/down, X jump, R1 run and R2 item; Start is shared. An optional `--split-pad` flag for the launcher. |
 | Gameplay stats | Scope not decided. Open questions: which stats (stomps, deaths, kills by weapon, items used, mode objectives), per match or lifetime, where they show (scoreboard, a menu screen), and whether they persist. They must stay out of the simulated state, or be derived from replays, so goldens do not change. |
-| Confirm before quitting the game | A controller's Guide button (Xbox logo, PlayStation button; Menu on the Anbernics) quits the app at once in every build (`crates/smw-sdl2/src/pad.rs`, `Target::Quit`), and it sits where thumbs land. Ask "Are you sure?" first, as the exit dialog in a match does. |
 
 ## CPU AI
 

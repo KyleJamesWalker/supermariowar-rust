@@ -259,6 +259,8 @@ pub enum InputEvent {
     /// A menu tap or click, in the game's 640x480 coordinates.
     Tap { x: i16, y: i16 },
     Quit,
+    /// A controller's Guide button: quit once the player confirms.
+    QuitRequest,
     /// Any other backend event, by the backend's type number. Nothing reads its contents.
     Other(u32),
 }

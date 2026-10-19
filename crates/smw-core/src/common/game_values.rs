@@ -278,6 +278,8 @@ pub struct CGameConfig {
     pub tournamentcontrolstyle: TournamentControlStyle, //ID for the player selected control style
     pub wandfreezetime: i16,
     pub toplayer: bool,
+    /// The Controls menu's Built-in Controller: 0 single, 1 split (`smw/split_pad.rs`); not in options.bin.
+    pub splitpad: i16,
     pub teamcolors: bool,
     pub sound: bool,
     pub startgamecountdown: bool,
@@ -438,6 +440,7 @@ impl CGameConfig {
             tournamentcontrolstyle: TournamentControlStyle::default(),
             wandfreezetime: 0,
             toplayer: false,
+            splitpad: 0,
             teamcolors: false,
             sound: false,
             startgamecountdown: false,
