@@ -59,6 +59,8 @@ To quit, press **Menu** or choose **Exit** on the main menu. B on the main menu 
 
 Other builds set neither, so desktop pads keep their raw button numbering there.
 
+While the game runs, the launcher also sets the CPU governor to `performance` and puts the previous one back on exit: a governor that clocks down mid-match slows a net game for every player. `log.txt` gets a `[cpu]` line with the clock and temperature every 10 s.
+
 `SMW_DEBUG_INPUT=1` is off; uncomment its line in `mux_launch.sh` to log a heartbeat every 120 frames, the first 2,000 input events (as SDL queues them, after translation and as the game reads them), and a watchdog line naming the main loop's phase when it stalls for 3 s.
 
 The `AUDIO_DRIVER` line sets `SDL_AUDIODRIVER`, a comma-separated list SDL tries in order. It defaults to `alsa`, the driver muOS's SDL 2.28.5 opens on the RG35XX (it has no PipeWire backend; ALSA's default device forwards to PipeWire). `dummy` runs without sound.
