@@ -159,7 +159,14 @@ fn restore_start(g: &mut Game, my_slot: u8, bytes: Vec<u8>) -> Result<(Vec<u8>, 
     let own_config = gp.game_values.config_bytes(g);
     let slot = my_slot as usize;
     let own_skin = g.game_values.skinids[slot];
+    let gv = &g.game_values;
+    let own_presentation = (gv.framelimiter, gv.sound, gv.music, gv.musicvolume, gv.soundvolume, gv.fullscreen);
     crate::smw::checkpoint::restore_shared(g, bytes)?;
+    // The host's start carries its settings for the match rules; frame rate, sound and fullscreen stay this player's.
+    let gv = &mut g.game_values;
+    (gv.framelimiter, gv.sound, gv.music, gv.musicvolume, gv.soundvolume, gv.fullscreen) = own_presentation;
+    crate::common::sfx::sfx_setmusicvolume(g, own_presentation.3 as i32);
+    crate::common::sfx::sfx_setsoundvolume(g, own_presentation.4 as i32);
     // The host's start holds the host's skin choices; this player's own skin is its choice here.
     g.game_values.skinids[slot] = own_skin;
     let strip = gp.rm.load_full_skin(g, own_skin, g.game_values.colorids[slot]);
