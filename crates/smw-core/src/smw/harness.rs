@@ -704,6 +704,13 @@ fn note_seen(g: &mut Game) {
     let mut names = vec![state];
     if state == "menu" {
         names.extend(MenuState::instance(g).harness_names());
+        if names.contains(&"net_lobby") && !g.netplay.currentRooms.is_empty() {
+            names.push("net_lobby_rooms");
+        }
+        if names.contains(&"net_room") {
+            let players = g.netplay.currentRoom.player_count() as usize;
+            names.extend(["net_room_2p", "net_room_3p", "net_room_4p"].into_iter().take(players.saturating_sub(1)));
+        }
     }
     for name in names {
         if !h(g).seen.contains(&name) {

@@ -15,6 +15,7 @@
 80 down Return
 82 up Return
 360 await net_lobby
+360 await net_lobby_rooms
 360 down Down
 362 up Down
 370 down Down

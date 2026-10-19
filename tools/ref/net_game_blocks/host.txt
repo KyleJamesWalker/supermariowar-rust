@@ -51,6 +51,7 @@
 250 down Return
 252 up Return
 540 await net_room
+540 await net_room_2p
 540 down Up
 542 up Up
 550 down Return

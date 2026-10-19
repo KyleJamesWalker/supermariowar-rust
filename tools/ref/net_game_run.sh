@@ -64,6 +64,10 @@ for game in "${games[@]}"; do
   spid=
   if [ -z "${NET_NO_SERVER:-}" ]; then
     (cd "$dir" && exec "$RELAY" --port 12521 --config serverconfig > server.log 2>&1) & spid=$!
+    for _ in $(seq 100); do
+      grep -q 'Ready!' "$dir/server.log" 2>/dev/null && break
+      sleep 0.1
+    done
   fi
   sleep 0.5
   hdata=$(datadir host "$dir" "$game")
