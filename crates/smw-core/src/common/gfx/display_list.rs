@@ -1,7 +1,7 @@
 //! A record of the screen writes of one gameplay draw, so the main loop can show frames between two ticks. Recording
 //! never changes what a tick draws; only frames rendered from two records are new, and those are display-only.
 
-use crate::common::gfx::soft_surface::{self, BlendMode, BlitState, PixelsMut, Rect, Surface};
+use crate::common::gfx::soft_surface::{self, BlitState, PixelsMut, Rect, Surface};
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -44,7 +44,7 @@ struct Patch {
 }
 
 /// One gameplay draw: its screen writes, and copies of what the draw changed in its sources after using them:
-/// patches of the written rectangles when every blit from the source is a plain copy, else whole snapshots.
+/// patches of the written rectangles when every blit from the source is unscaled, else whole snapshots.
 #[derive(Clone)]
 pub struct Draw {
     cmds: Vec<Cmd>,
@@ -71,7 +71,7 @@ thread_local! {
     static OWNER: Cell<(Owner, u16)> = const { Cell::new((Owner::None, 0)) };
     static RECORD_ONLY: Cell<bool> = const { Cell::new(false) };
     /// The surfaces this draw's recorded blits read from, so far as no snapshot has replaced them, and whether
-    /// every such blit is a plain copy that patches can restore.
+    /// every such blit is one that patches can restore.
     static SOURCES: RefCell<Vec<(*mut Surface, bool)>> = const { RefCell::new(Vec::new()) };
     /// Every snapshot made, so one that no draw holds any more is reused instead of allocated.
     static SNAPSHOTS: RefCell<Vec<Rc<Surface>>> = const { RefCell::new(Vec::new()) };
@@ -178,10 +178,8 @@ pub(crate) fn record_only(dst: *mut Surface) -> bool {
 pub(crate) unsafe fn record_blit(src: *mut Surface, src_rect: Option<Rect>, dst: *mut Surface, at: Option<Rect>, scaled: bool) {
     if !dst.is_null() && dst == SCREEN.get() {
         let s = &*src;
-        let state = s.state();
-        let copy = state.blend == BlendMode::None && state.color_key.is_none() && state.alpha_mod == 255;
         let inside = src_rect.is_none_or(|r| r.w > 0 && r.h > 0 && r.x >= 0 && r.y >= 0 && r.x + r.w <= s.w && r.y + r.h <= s.h);
-        let plain = copy && inside && !scaled;
+        let plain = inside && !scaled;
         SOURCES.with_borrow_mut(|sources| match sources.iter_mut().find(|(p, _)| *p == src) {
             Some((_, p)) => *p &= plain,
             None => sources.push((src, plain)),
@@ -234,24 +232,60 @@ unsafe fn render_with(screen: *mut Surface, before: &HashMap<(Owner, u16), (i32,
                 let mut out = at;
                 if scaled {
                     soft_surface::blit_scaled(&surface.view(), &state, src_rect.as_ref(), &mut view, Some(&mut out));
-                } else {
-                    soft_surface::blit(&surface.view(), &state, src_rect.as_ref(), &mut view, Some(&mut out));
+                    continue;
                 }
-                if changed {
-                    // Newest first, so where writes overlap the oldest pixels, those this blit read, land last.
-                    let read = src_rect.unwrap_or(Rect::new(0, 0, surface.w, surface.h));
-                    for p in cur.patches[patches..].iter().rev().filter(|p| p.surface == src) {
-                        let Some(part) = p.rect.intersect(&read) else { continue };
-                        let from = Rect::new(part.x - p.rect.x, part.y - p.rect.y, part.w, part.h);
-                        let mut to = Rect::new(at.x + part.x - read.x, at.y + part.y - read.y, part.w, part.h);
-                        soft_surface::blit(&p.old.view(), &state, Some(&from), &mut view, Some(&mut to));
+                let read = src_rect.unwrap_or(Rect::new(0, 0, surface.w, surface.h));
+                if !changed {
+                    soft_surface::blit(&surface.view(), &state, src_rect.as_ref(), &mut view, Some(&mut out));
+                    continue;
+                }
+                // Each pixel is blitted once: from the oldest patch over it, which holds what this blit read, else live.
+                let mut claimed: Vec<Rect> = Vec::new();
+                let part = |from: &Surface, origin: (i32, i32), r: Rect, view: &mut PixelsMut| {
+                    let rect = Rect::new(r.x - origin.0, r.y - origin.1, r.w, r.h);
+                    let mut to = Rect::new(at.x + r.x - read.x, at.y + r.y - read.y, r.w, r.h);
+                    soft_surface::blit(&from.view(), &state, Some(&rect), view, Some(&mut to));
+                };
+                for p in cur.patches[patches..].iter().filter(|p| p.surface == src) {
+                    let Some(area) = p.rect.intersect(&read) else { continue };
+                    for r in subtract(area, &claimed) {
+                        part(&p.old, (p.rect.x, p.rect.y), r, &mut view);
                     }
+                    claimed.push(area);
+                }
+                for r in subtract(read, &claimed) {
+                    part(surface, (0, 0), r, &mut view);
                 }
             }
         }
     }
 }
 
+
+/// The parts of `r` outside every rectangle of `holes`, as disjoint rectangles.
+fn subtract(r: Rect, holes: &[Rect]) -> Vec<Rect> {
+    let mut parts = vec![r];
+    for hole in holes {
+        parts = parts
+            .into_iter()
+            .flat_map(|p| {
+                let Some(cut) = p.intersect(hole) else { return vec![p] };
+                let (right, bottom) = (p.x + p.w, p.y + p.h);
+                let (cut_right, cut_bottom) = (cut.x + cut.w, cut.y + cut.h);
+                [
+                    Rect::new(p.x, p.y, p.w, cut.y - p.y),
+                    Rect::new(p.x, cut_bottom, p.w, bottom - cut_bottom),
+                    Rect::new(p.x, cut.y, cut.x - p.x, cut.h),
+                    Rect::new(cut_right, cut.y, right - cut_right, cut.h),
+                ]
+                .into_iter()
+                .filter(|q| q.w > 0 && q.h > 0)
+                .collect()
+            })
+            .collect();
+    }
+    parts
+}
 
 /// `SMW_INTERPOLATE=0` turns interpolation off; read once.
 pub fn interpolation_allowed() -> bool {
@@ -284,7 +318,8 @@ pub unsafe fn check(screen: &Surface, draw: &Draw) -> Result<(), (usize, Rect)> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::gfx::blit::{fill_rect, upper_blit};
+    use crate::common::gfx::blit::{fill_rect, upper_blit, upper_blit_scaled};
+    use crate::common::gfx::soft_surface::BlendMode;
 
     fn pattern(w: i32, h: i32, seed: u32) -> Box<Surface> {
         let mut s = Box::new(Surface::new(w, h));
@@ -300,10 +335,16 @@ mod tests {
     }
 
     /// Draws a background from `map`, redraws tiles of `map` around further blits from it, and checks the record.
-    unsafe fn redraws_its_source(keyed_late: bool) {
+    unsafe fn redraws_its_source(blend: BlendMode, key: bool, scaled_late: bool) -> Draw {
         let mut screen = Box::new(Surface::new(640, 480));
         let mut map = pattern(640, 480, 1);
-        map.blend = BlendMode::None;
+        for p in map.pixels.iter_mut().step_by(7) {
+            *p &= 0x80FF_FFFF;
+        }
+        map.blend = blend;
+        if key {
+            map.color_key = Some(map.pixels[3] & 0x00FF_FFFF);
+        }
         let mut tiles = pattern(128, 128, 2);
         let mut sprites = pattern(64, 64, 3);
         begin(&mut *screen, false);
@@ -313,25 +354,29 @@ mod tests {
         blit(&mut map, Some(Rect::new(16, 16, 64, 64)), &mut screen, 300, 200);
         blit(&mut tiles, Some(Rect::new(32, 0, 32, 32)), &mut map, 48, 48);
         fill_rect(&mut *map, &Rect::new(600, 440, 80, 80), 0xFF12_3456);
-        if keyed_late {
-            map.color_key = Some(map.pixels[0] & 0x00FF_FFFF);
-            blit(&mut map, Some(Rect::new(0, 0, 100, 100)), &mut screen, 500, 0);
+        if scaled_late {
+            let mut at = Rect::new(500, 0, 50, 70);
+            upper_blit_scaled(&mut *map, &Rect::new(0, 0, 100, 100), &mut *screen, &mut at);
         }
         blit(&mut tiles, Some(Rect::new(64, 0, 32, 32)), &mut map, 20, 60);
         blit(&mut map, Some(Rect::new(0, 0, 128, 128)), &mut screen, 200, 300);
         fill_rect(&mut *map, std::ptr::null(), 0xFF00_00FF);
         let draw = end();
-        assert_eq!(draw.snapshots.len(), if keyed_late { 2 } else { 0 });
         assert!(check(&screen, &draw).is_ok());
+        draw
     }
 
     #[test]
-    fn patches_restore_what_plain_blits_read() {
-        unsafe { redraws_its_source(false) };
+    fn patches_restore_what_unscaled_blits_read() {
+        for (blend, key) in [(BlendMode::None, false), (BlendMode::Blend, false), (BlendMode::Blend, true)] {
+            let draw = unsafe { redraws_its_source(blend, key, false) };
+            assert_eq!((draw.snapshots.len(), draw.patches.len()), (0, 5));
+        }
     }
 
     #[test]
-    fn a_keyed_blit_falls_back_to_a_snapshot_that_keeps_earlier_patches() {
-        unsafe { redraws_its_source(true) };
+    fn a_scaled_blit_falls_back_to_a_snapshot_that_keeps_earlier_patches() {
+        let draw = unsafe { redraws_its_source(BlendMode::None, false, true) };
+        assert_eq!((draw.snapshots.len(), draw.patches.len()), (1, 4));
     }
 }
