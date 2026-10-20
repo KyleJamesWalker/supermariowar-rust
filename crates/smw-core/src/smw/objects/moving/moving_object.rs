@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/moving/MovingObject.cpp
+//! Base for every object that moves: sprite animation, screen wrap, and map, block and platform collision.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -32,43 +32,60 @@ use std::ops::{Deref, DerefMut};
 
 #[derive(Clone)]
 
+/// Base state for objects that move and animate; positions and sizes are in pixels.
 pub struct IO_MovingObject {
     pub cobject: CObject,
 
+    /// Global ID of the player who owns or fired the object, or -1.
     pub iPlayerID: i16,
+    /// Team of the owning player.
     pub iTeamID: i16,
 
+    /// Position at the start of this tick (pixels).
     pub fOldX: f32,
     pub fOldY: f32,
+    /// `fy` plus this tick's vertical velocity, computed before collision.
     pub fPrecalculatedY: f32,
 
+    /// Number of animation frames in the sprite strip.
     pub iNumSprites: i16,
+    /// X offset (pixels) of the current animation frame in the sprite.
     pub drawframe: i16,
+    /// Tick counter toward the next animation frame.
     pub animationtimer: i16,
 
+    /// Vertical velocity taken on landing; `GRAVITATION` means no bounce.
     pub bounce: f32,
 
+    /// Ticks per animation frame; 0 stops the animation.
     pub animationspeed: i16,
+    /// Width (pixels) of the frame strip; `drawframe` wraps back to `animationOffsetX` here.
     pub animationWidth: i16,
+    /// Source offset (pixels) of the first frame in the sprite.
     pub animationOffsetX: i16,
     pub animationOffsetY: i16,
 
     pub inair: bool,
     pub onice: bool,
 
+    /// Type tag other objects match on in collisions.
     pub movingObjectType: MovingObjectType,
 
+    /// Moving platform the object is riding, or `PlatformId::NONE`.
     pub platform: PlatformId,
+    /// Side a moving platform pushed the object from this tick, or -1; a push into a solid tile kills it.
     pub iHorizontalPlatformCollision: i16,
     pub iVerticalPlatformCollision: i16,
 
+    /// Super-death tiles kill the object; when false it lands on them.
     pub fObjectDiesOnSuperDeathTiles: bool,
+    /// Map collision runs for this object; read by `collides_with_map`.
     pub fObjectCollidesWithMap: bool,
 }
 impl_base!(IO_MovingObject => cobject: CObject);
 
 impl IO_MovingObject {
-    /// Pass `-1` for the C++ default arguments.
+    /// Collision and animation arguments of `-1` use the sprite frame size and zero offsets.
     #[allow(clippy::too_many_arguments)]
     pub fn new(g: &mut Game, nspr: SpriteId,
         pos: Vec2s,
@@ -179,6 +196,7 @@ impl IO_MovingObject {
         self.fObjectCollidesWithMap
     }
 
+    /// Slows `velx` toward zero with air, ice or ground friction.
     pub fn applyfriction(&mut self) {
         if self.velx > 0.0 {
             if self.inair {
@@ -207,6 +225,7 @@ impl IO_MovingObject {
         }
     }
 
+    /// Wraps the object to the opposite screen edge once it leaves the screen horizontally.
     pub fn flipsidesifneeded(&mut self) {
         if self.ix < 0 || self.fx < 0.0 {
             let fx = self.fx;
@@ -220,6 +239,7 @@ impl IO_MovingObject {
     }
 }
 
+/// Draws the current animation frame, offset from the collision box.
 pub fn io_moving_object_draw<T: IO_MovingObjectTrait + ?Sized>(g: &mut Game, this: &mut T) {
     let o = this.mo();
     g.rm.sprite(o.spr).draw_src(
@@ -230,6 +250,7 @@ pub fn io_moving_object_draw<T: IO_MovingObjectTrait + ?Sized>(g: &mut Game, thi
     );
 }
 
+/// Default update: records the old position, runs map collision, then animates.
 pub fn io_moving_object_update<T: IO_MovingObjectTrait + ?Sized>(g: &mut Game, this: &mut T) {
     {
         let o = this.mo_mut();
@@ -242,6 +263,7 @@ pub fn io_moving_object_update<T: IO_MovingObjectTrait + ?Sized>(g: &mut Game, t
     this.animate();
 }
 
+/// Advances `drawframe` every `animationspeed` ticks.
 pub fn io_moving_object_animate(o: &mut IO_MovingObject) {
     if o.animationspeed > 0 && {
         o.animationtimer += 1;
@@ -256,12 +278,13 @@ pub fn io_moving_object_animate(o: &mut IO_MovingObject) {
     }
 }
 
+/// Default player contact: removes the object.
 pub fn io_moving_object_collide_player<T: IO_MovingObjectTrait + ?Sized>(this: &mut T, _player: PlayerId) -> bool {
     this.mo_mut().dead = true;
     false
 }
 
-// TODO / FIXME: The collision code is almost the same as in CPlayer
+/// Applies velocity and resolves collisions with blocks, tiles and moving platforms, x axis first.
 pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized>(g: &mut Game, this: &mut T) {
         let mut gp = g.ptr();
     let mut o = this.as_mo_ptr();
@@ -269,7 +292,7 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
     o.set_xf(x);
     o.flipsidesifneeded();
 
-    o.fPrecalculatedY = o.fy + o.vely; // Fixes weird float rounding error.  Must be computed here before casting to int.  Otherwise, this will miss the bottom collision, but then hit the side collision and the player can slide out of 1x1 spaces.
+    o.fPrecalculatedY = o.fy + o.vely; // Before any int cast, or the bottom hit is missed and objects slide out of 1x1 gaps.
 
     let mut fPlatformVelX: f32 = 0.0;
     let mut fPlatformVelY: f32 = 0.0;
@@ -321,7 +344,6 @@ pub fn io_moving_object_collision_detection_map<T: IO_MovingObjectTrait + ?Sized
         return;
     }
 
-    // Could be optimized with bit shift >> 5
     let mut ty: i16 = ((o.fy as i16) as i32 / TILESIZE) as i16;
     let ty2: i16 = (((o.fy as i16) as i32 + o.collisionHeight as i32) / TILESIZE) as i16;
     let mut tx: i16 = -1;
@@ -642,7 +664,7 @@ fn block_is_solid(block: Ptr<dyn IO_BlockTrait>) -> bool {
     !block.is_null() && !block.get().is_transparent() && !block.get().is_hidden()
 }
 
-// This method checks the object against the map and moves it outside of any tiles or blocks it might be inside of
+/// Pushes the object out of any solid tile, block or platform it overlaps; returns true if it moved.
 pub fn io_moving_object_collision_detection_checksides<T: IO_MovingObjectTrait + ?Sized>(g: &mut Game, this: &mut T) -> bool {
     let mut o = this.as_mo_ptr();
     // First figure out where the corners of this object are touching
@@ -853,8 +875,7 @@ pub fn io_moving_object_collision_detection_checksides<T: IO_MovingObjectTrait +
         }
     }
 
-    // Updated object to have correct precalculatedY since it wasn't getting collision detection updates
-    // while it was being held by the player
+    // Held objects skip map collision, so `fPrecalculatedY` is stale here.
     o.fPrecalculatedY = o.fy;
 
     // Check moving platforms and make sure this object is not inside one
@@ -863,9 +884,8 @@ pub fn io_moving_object_collision_detection_checksides<T: IO_MovingObjectTrait +
     fRet
 }
 
-// This method probably needs to be rewritten so that it just calls into the object being killed
-// And let it handle not dying and placing itself somewhere else if necessary
-/// `KillObjectMapHazard(short playerID = -1)`
+/// Kills the object on a map hazard. Mode objects (flags, stars, eggs, keys, boxes-mode coins) respawn elsewhere.
+/// In stomp mode, enemies credit a point to `playerID` (-1 for no one).
 pub fn io_moving_object_kill_object_map_hazard<T: IO_MovingObjectTrait + ?Sized>(g: &mut Game, this: &mut T, playerID: i16) {
         let mut gp = g.ptr();
     if this.mo().dead {
@@ -953,28 +973,33 @@ pub trait IO_MovingObjectTrait: CObjectTrait {
     fn mo_mut(&mut self) -> &mut IO_MovingObject;
     fn as_mo_ptr(&mut self) -> Ptr<dyn IO_MovingObjectTrait>;
 
+    /// Advances the animation; called once per update.
     fn animate(&mut self) {
         io_moving_object_animate(self.mo_mut())
     }
 
+    /// Called after hitting a wall on the right (`_fRightSide`) or left.
     fn side_bounce(&mut self, g: &mut Game, _fRightSide: bool) {}
+    /// Returns the vertical velocity to take on landing.
     fn bottom_bounce(&mut self, g: &mut Game) -> f32 {
         self.mo().bounce
     }
 
+    /// Called when the object hits a player or object; kills it unless it survives that hit.
     fn check_and_die(&mut self, g: &mut Game) {
         self.mo_mut().dead = true;
     }
+    /// Removes the object; overrides add death effects or respawn.
     fn die(&mut self, g: &mut Game) {
         self.mo_mut().dead = true;
     }
 
-    /// Non-virtual in C++; on the trait so it can dispatch to `die()` / downcasts.
+    /// Kills the object on a map hazard; see [`io_moving_object_kill_object_map_hazard`].
     fn kill_object_map_hazard(&mut self, g: &mut Game, playerID: i16) {
         io_moving_object_kill_object_map_hazard(g, self, playerID)
     }
 
-    /// `static_cast` / `dynamic_cast` hooks for the intermediate bases.
+    /// Downcasts to the intermediate base traits; `None` unless the object implements one.
     fn as_carried_object(&mut self) -> Option<&mut dyn MO_CarriedObjectTrait> {
         None
     }

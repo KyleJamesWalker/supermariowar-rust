@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/moving/MO_CollectionCard.cpp
+//! Card for card collection mode: players hold up to three, scored by their values.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -23,17 +23,24 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class collection card (for card collection mode)
 //------------------------------------------------------------------------------
+/// Collectible card. A placed card flips to show its value when taken; a card a player lost is taken at once.
 #[derive(Clone)]
 pub struct MO_CollectionCard {
     pub io_moving_object: IO_MovingObject,
 
+    /// Ticks at the current spot, or ticks shown face up after being taken.
     pub timer: i16,
+    /// 0 placed at a spawn point, 1 knocked loose from a player (falls, expires).
     pub r#type: i16,
+    /// Card value 0 to 2, stored in two bits of the player's `subscore[1]`.
     pub value: i16,
 
+    /// Tick counter for the sparkle overlay; it steps a frame every 4 ticks.
     pub sparkleanimationtimer: i16,
+    /// X offset (pixels) of the current sparkle frame.
     pub sparkledrawframe: i16,
 
+    /// Ticks before a loose card can be taken; it expires once this passes minus the card life setting.
     pub uncollectabletime: i16,
 }
 impl_base!(MO_CollectionCard => io_moving_object: IO_MovingObject);
@@ -81,6 +88,7 @@ impl MO_CollectionCard {
         self.value
     }
 
+    /// Moves the card to a random spawn point more than 150 pixels from other cards, trying up to 33 times.
     pub fn place_card(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
 
@@ -138,7 +146,7 @@ impl CObjectTrait for MO_CollectionCard {
             self.state = 2;
             self.animationspeed = 4;
             self.animationtimer = 0;
-            self.animationOffsetY = ((value + 1) << 5) as i16; // FIXME
+            self.animationOffsetY = ((value + 1) << 5) as i16;
             self.drawframe = 96;
         }
 
@@ -152,7 +160,7 @@ impl CObjectTrait for MO_CollectionCard {
             self.animate();
         }
 
-        // Handle flipping over a card to reveal it's value
+        // A taken card flips over to show its value, then disappears.
         if self.state == 2 && self.drawframe == 0 {
             self.state = 3;
             self.timer = 0;

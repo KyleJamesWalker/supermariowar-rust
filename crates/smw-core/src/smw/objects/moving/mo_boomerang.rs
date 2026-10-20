@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/moving/MO_Boomerang.cpp
+//! Boomerang projectile with three flight styles: flat, SMB3 arc, and Zelda homing.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -25,17 +25,24 @@ use crate::smw::player::{get_player_from_global_id, player_killed_player, CPlaye
 //------------------------------------------------------------------------------
 // class boomerang
 //------------------------------------------------------------------------------
+/// Thrown boomerang; kills other players and is caught by its thrower once it has turned around.
 #[derive(Clone)]
 pub struct MO_Boomerang {
     pub io_moving_object: IO_MovingObject,
 
+    /// Sprite row offset (pixels) for the thrower's color, 64 per color.
     pub colorOffset: i16,
 
+    /// Current travel direction; also picks the sprite row.
     pub fMoveToRight: bool,
+    /// The boomerang has turned around; the thrower can catch it now.
     pub fFlipped: bool,
+    /// Ticks in the current flight phase.
     pub iStateTimer: i16,
 
+    /// Flight path, resolved from the game setting at throw time.
     pub iStyle: BoomerangStyle,
+    /// Spotlight that follows the boomerang while spotlights are on.
     pub sSpotlight: SpotlightId,
 }
 impl_base!(MO_Boomerang => io_moving_object: IO_MovingObject);
@@ -113,7 +120,7 @@ impl MO_Boomerang {
         o
     }
 
-    // Call to kill boomerang when it is not caught by player
+    // Removes an uncaught boomerang; with a boomerang limit the thrower loses one use.
     fn forcedead(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         removeifprojectile(g, self.as_mo_ptr(), false, true);
@@ -318,7 +325,6 @@ impl CObjectTrait for MO_Boomerang {
 
                     if (g.player(player).ix < self.ix && !fWrap) || (g.player(player).ix > self.ix && fWrap)
                     // Wrap Boomerang
-                    // if (player->ix < ix)  //No Wrap Boomerang
                     {
                         self.velx -= acc(0.2);
 

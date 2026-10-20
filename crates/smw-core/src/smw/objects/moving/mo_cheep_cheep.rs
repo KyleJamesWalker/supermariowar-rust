@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/moving/MO_CheepCheep.cpp
+//! Cheep cheep: a fish that leaps up from the bottom of the screen in an arc.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -28,11 +28,14 @@ use crate::smw::player::{get_player_from_global_id, CPlayer};
 //------------------------------------------------------------------------------
 // class cheep cheep
 //------------------------------------------------------------------------------
+/// Leaping cheep cheep with a random color, speed and launch point.
 #[derive(Clone)]
 pub struct MO_CheepCheep {
     pub io_moving_object: IO_MovingObject,
 
+    /// Sprite row offset (pixels): 64 per color, plus 32 when moving right.
     pub iColorOffsetY: i16,
+    /// Frozen by an ice blast; stays frozen until it falls off screen or is shattered.
     pub frozen: bool,
 }
 impl_base!(MO_CheepCheep => io_moving_object: IO_MovingObject);
@@ -71,6 +74,7 @@ impl MO_CheepCheep {
         o
     }
 
+    /// Stomped: bounces the player and kills the fish.
     pub fn hittop(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut gp = g.ptr();
         let mut p = player;
@@ -92,6 +96,7 @@ impl MO_CheepCheep {
         false
     }
 
+    /// Side contact: kills an unshielded player.
     pub fn hitother(&mut self, g: &mut Game, mut player: PlayerId) -> bool {
         if g.player(player).is_shielded() {
             return false;
@@ -100,6 +105,7 @@ impl MO_CheepCheep {
         g.player(player).kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill
     }
 
+    /// Breaks a frozen cheep cheep into ice fragments.
     pub fn shatter_die(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         if_sound_on_play(g, &mut gp.rm.sfx_breakblock);

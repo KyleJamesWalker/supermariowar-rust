@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/moving/MO_SuperFireball.cpp
+//! Fire sledge brother fireball: flies in a straight line and kills any unshielded player it hits.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -28,8 +28,11 @@ use crate::smw::player::CPlayer;
 pub struct MO_SuperFireball {
     pub io_moving_object: IO_MovingObject,
 
+    /// Sprite row offset (pixels): 64 per owner color, row 0 for the boss.
     pub colorOffset: i16,
+    /// Sprite row offset (pixels) for direction: 0 left, 32 right.
     pub directionOffset: i16,
+    /// Ticks left before the fireball disappears.
     pub ttl: i16,
 }
 impl_base!(MO_SuperFireball => io_moving_object: IO_MovingObject);

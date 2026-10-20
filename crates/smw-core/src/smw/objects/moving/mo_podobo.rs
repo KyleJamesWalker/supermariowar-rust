@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/moving/MO_Podobo.cpp
+//! Podobo: a lava fireball that leaps up from the bottom of the screen and falls back.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -22,13 +22,17 @@ use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
 //------------------------------------------------------------------------------
 // class podobo (for survival mode)
 //------------------------------------------------------------------------------
+/// Leaping podobo, from a player's podobo powerup (owned) or a map or boss hazard (`iPlayerID` -1).
 #[derive(Clone)]
 pub struct MO_Podobo {
     pub io_moving_object: IO_MovingObject,
 
+    /// Sprite row offset (pixels): 64 per owner color, row 0 for hazards.
     pub iColorOffsetY: i16,
 
+    /// Rises out of map lava, so it is clipped at `iHiddenPlane` while moving up.
     pub fIsSpawned: bool,
+    /// Y (pixels) of the lava surface the podobo is clipped against.
     pub iHiddenPlane: i16,
 }
 impl_base!(MO_Podobo => io_moving_object: IO_MovingObject);
@@ -104,7 +108,7 @@ impl CObjectTrait for MO_Podobo {
             && !g.player(player).is_shielded()
             && !g.player(player).shyguy
         {
-            // Find the player that made this explosion so we can attribute a kill
+            // Credit the kill to the podobo's owner.
             player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Podobo, false, false);
             return true;
         }
@@ -126,7 +130,6 @@ impl CObjectTrait for MO_Podobo {
                 return;
             }
 
-            // ((CO_Shell*)object)->Die() / ((CO_ThrowBlock*)object)->Die() / ((MO_BulletBill*)object)->Die() are all virtual calls
             object.die(g);
 
             if_sound_on_play(g, &mut gp.rm.sfx_kicksound);

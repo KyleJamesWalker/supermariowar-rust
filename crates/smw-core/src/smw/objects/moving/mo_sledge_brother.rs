@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/moving/MO_SledgeBrother.cpp
+//! Sledge brother boss for the boss minigame, in hammer, bomb and fire variants.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -32,6 +32,7 @@ use crate::smw::objects::moving::moving_object::{IO_MovingObject, IO_MovingObjec
 use crate::smw::objects::overmap::wo_thwomp::OMO_Thwomp;
 use crate::smw::player::{get_player_from_global_id, CPlayer};
 
+/// Knocks unheld bombs within 100 pixels of (`x`, `y`) away and upward.
 fn push_bombs(g: &mut Game, container: &CObjectContainer, x: i16, y: i16) {
     let mut gp = g.ptr();
     let list = container.list();
@@ -60,25 +61,28 @@ fn push_bombs(g: &mut Game, container: &CObjectContainer, x: i16, y: i16) {
 //------------------------------------------------------------------------------
 // class sledge brother
 //------------------------------------------------------------------------------
-//{jump, throw, turn, wait, taunt} otherwise move
+/// Cumulative chance (percent) by boss type and difficulty of: jump, throw, turn, wait, taunt; otherwise move.
 pub static g_iSledgeBrotherActions: [[[i16; 5]; 5]; 3] = [
     [[0, 50, 65, 75, 85], [3, 53, 66, 76, 86], [5, 55, 70, 78, 83], [5, 70, 85, 85, 90], [5, 75, 90, 90, 90]],
     [[0, 30, 60, 80, 85], [5, 40, 65, 80, 85], [5, 50, 65, 75, 85], [10, 55, 65, 70, 90], [10, 55, 65, 65, 90]],
     [[0, 50, 65, 75, 85], [3, 53, 65, 75, 85], [5, 60, 72, 80, 88], [5, 65, 80, 85, 90], [5, 75, 90, 90, 90]],
 ];
 
+/// Choices without an action after which it is forced: jump, throw, turn, wait, taunt, move.
 pub static g_iSledgeBrotherNeedAction: [[[i16; 6]; 5]; 3] = [
     [[50, 5, 5, 10, 10, 8], [30, 4, 5, 10, 10, 8], [20, 4, 5, 12, 12, 8], [12, 4, 5, 15, 15, 10], [8, 4, 5, 15, 15, 12]],
     [[50, 5, 5, 10, 15, 8], [30, 4, 5, 10, 12, 8], [20, 4, 5, 12, 10, 8], [15, 4, 5, 15, 8, 10], [10, 4, 5, 15, 6, 12]],
     [[50, 5, 8, 10, 10, 8], [30, 5, 8, 12, 12, 10], [20, 4, 8, 15, 15, 15], [15, 4, 8, 15, 15, 15], [12, 3, 8, 15, 15, 15]],
 ];
 
+/// Most repeats in a row of each action from the random pick: jump, throw, turn, wait, taunt.
 pub static g_iSledgeBrotherMaxAction: [[[i16; 5]; 5]; 3] = [
     [[1, 1, 1, 2, 2], [1, 2, 1, 2, 2], [1, 3, 1, 2, 2], [1, 3, 1, 1, 1], [1, 3, 1, 0, 0]],
     [[1, 1, 1, 2, 2], [1, 2, 1, 2, 2], [1, 3, 1, 2, 2], [1, 3, 1, 1, 1], [1, 3, 1, 0, 0]],
     [[1, 1, 1, 2, 2], [1, 2, 1, 2, 2], [1, 2, 1, 1, 1], [1, 3, 1, 1, 1], [1, 3, 1, 0, 0]],
 ];
 
+/// Minimum and maximum wait, in 62.5 Hz ticks before `ticks` scaling.
 pub static g_iSledgeBrotherWaitTime: [[[i16; 2]; 5]; 3] = [
     [[30, 50], [25, 45], [20, 40], [15, 30], [10, 20]],
     [[30, 50], [25, 45], [20, 40], [15, 30], [10, 20]],
@@ -87,39 +91,55 @@ pub static g_iSledgeBrotherWaitTime: [[[i16; 2]; 5]; 3] = [
 
 #[derive(Clone)]
 
+/// Boss that paces between five spots, throwing projectiles, jumping and taunting until its hit points run out.
 pub struct MO_SledgeBrother {
     pub io_moving_object: IO_MovingObject,
 
+    /// Boss variant: 0 hammer, 1 bomb, 2 fire.
     pub iType: i16,
 
+    /// Current action: 0 choosing, 1 wait, 2 jump, 3 throw, 4 move, 5 taunt.
     pub iActionState: i16,
+    /// X (pixels) of the five spots the boss walks between.
     pub iDestLocationX: [i16; 5],
 
+    /// Index of the current spot in `iDestLocationX`.
     pub location: i16,
 
+    /// Ticks left in the throwing pose.
     pub throwing_timer: i16,
 
+    /// Ticks left flashing after damage; further hits are ignored meanwhile.
     pub hit_timer: i16,
     pub hit_movement_timer: i16,
+    /// Sprite row offset (pixels): the variant's row, cycled while flashing.
     pub hit_offset_y: i16,
 
+    /// Sprite x offset (pixels) of the current leg frame.
     pub leg_offset_x: i16,
     pub leg_movement_timer: i16,
 
+    /// Sprite x offset (pixels) of the current arm frame.
     pub arm_offset_x: i16,
     pub arm_movement_timer: i16,
 
+    /// Ticks left in the taunt.
     pub taunt_timer: i16,
+    /// Ticks left in the wait.
     pub wait_timer: i16,
 
     pub hit_points: i16,
     pub face_right: bool,
 
+    /// X (pixels) of the spot the boss is walking to.
     pub iDestX: i16,
 
+    /// Y (pixels) the boss stands at; a jump ends on reaching it.
     pub iPlatformY: i16,
+    /// Choices made without each action; compared against `g_iSledgeBrotherNeedAction`.
     pub need_action: [i16; 6],
 
+    /// Last action picked and how many times in a row.
     pub last_action: i16,
     pub last_action_count: i16,
 }
@@ -152,7 +172,7 @@ impl MO_SledgeBrother {
             last_action_count: 0,
         };
 
-        o.iType = r#type as i16; // FIXME
+        o.iType = r#type as i16;
         o.state = 1;
         o.iActionState = 0;
         o.location = 2;
@@ -205,6 +225,7 @@ impl MO_SledgeBrother {
         o
     }
 
+    /// Contact with the boss kills an unshielded player.
     pub fn hit(&mut self, g: &mut Game, mut player: PlayerId) -> bool {
         if g.player(player).is_shielded() {
             return false;
@@ -213,6 +234,7 @@ impl MO_SledgeBrother {
         g.player(player).kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill
     }
 
+    /// Takes one hit point for `playerID`'s weapon; the killing hit wins the boss minigame for that player.
     pub fn damage(&mut self, g: &mut Game, playerID: i16) {
         let mut gp = g.ptr();
         if self.hit_timer != 0 || playerID == -1 {

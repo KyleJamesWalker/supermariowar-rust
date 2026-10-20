@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/moving/MO_Coin.cpp
+//! Coin used by coin, greed and boxes modes.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -23,21 +23,29 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class coin (for coin mode)
 //------------------------------------------------------------------------------
+/// Collectible coin; `iType` sets its behavior.
 #[derive(Clone)]
 pub struct MO_Coin {
     pub io_moving_object: IO_MovingObject,
 
+    /// Ticks at the current spot; a mode coin relocates after `ticks(1000)`.
     pub timer: i16,
+    /// Tick counter for the sparkle overlay; it steps a frame every 4 ticks.
     pub sparkleanimationtimer: i16,
+    /// X offset (pixels) of the current sparkle frame.
     pub sparkledrawframe: i16,
 
+    /// 0 coin mode (relocates when taken, no physics), 1 greed drop (falls, expires), 2 boxes mode (falls, adds to `subscore[0]`).
     pub iType: i16,
+    /// Owning team of a greed coin; that team can take it only with `greed.owncoins` set.
     pub iTeam: i16,
+    /// Ticks before the coin can be collected; keeps counting down so greed coins expire after the coin life setting.
     pub iUncollectableTime: i16,
 }
 impl_base!(MO_Coin => io_moving_object: IO_MovingObject);
 
 impl MO_Coin {
+    /// `placecoin` moves the coin to a random spawn point; `color` selects the sprite row.
     #[allow(clippy::too_many_arguments)]
     pub fn new(g: &mut Game, nspr: SpriteId, vel: Vec2f, pos: Vec2s, color: i16, team: i16, r#type: i16, uncollectabletime: i16, placecoin: bool) -> Self {
         let mut o = MO_Coin {
@@ -77,6 +85,7 @@ impl MO_Coin {
         o
     }
 
+    /// Moves the coin to a random spawn point at least 150 pixels from other coins, trying up to 33 times.
     pub fn place_coin(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
 

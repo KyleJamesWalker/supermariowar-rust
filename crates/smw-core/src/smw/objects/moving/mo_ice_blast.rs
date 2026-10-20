@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/moving/MO_IceBlast.cpp
+//! Ice wand blast: flies straight and freezes the first enemy or opposing player it hits.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -23,7 +23,9 @@ use crate::smw::player::CPlayer;
 pub struct MO_IceBlast {
     pub io_moving_object: IO_MovingObject,
 
+    /// Ticks left before the blast disappears.
     pub ttl: i16,
+    /// Spotlight that follows the blast while spotlights are on.
     pub sSpotlight: SpotlightId,
 }
 impl_base!(MO_IceBlast => io_moving_object: IO_MovingObject);

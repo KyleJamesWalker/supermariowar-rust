@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/moving/MO_FlagBase.cpp
+//! Capture-the-flag base: a team scores by bringing an enemy flag to its own base.
 
 use crate::smw::object_container::ObjectId;
 use crate::smw::players::PlayerId;
@@ -23,18 +23,26 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class flag base (for CTF mode)
 //------------------------------------------------------------------------------
+/// A team's flag base; it can drift around the screen or relocate over time.
 #[derive(Clone)]
 pub struct MO_FlagBase {
     pub io_moving_object: IO_MovingObject,
 
     pub teamID: i16,
+    /// Sprite x offset (pixels) for the team color, 48 per color.
     pub iGraphicOffsetX: i16,
+    /// Drift direction (radians).
     pub angle: f32,
+    /// Turn per tick (radians), rerolled when `anglechangetimer` runs out.
     pub anglechange: f32,
+    /// Ticks left before `anglechange` is rerolled.
     pub anglechangetimer: i16,
+    /// Drift speed (pixels per tick) from the flag speed setting; 0 holds the base still.
     pub speed: f32,
+    /// This team's flag while it sits at home; the home-score rule needs it there.
     pub homeflag: ObjectId,
 
+    /// Ticks at the current spot; a still base relocates after `ticks(1000)`.
     pub timer: i16,
 }
 impl_base!(MO_FlagBase => io_moving_object: IO_MovingObject);
@@ -43,7 +51,7 @@ impl MO_FlagBase {
     pub fn new(g: &mut Game, nspr: SpriteId, iTeamID: i16, iColorID: i16) -> Self {
         let mut gp = g.ptr();
         let mut o = MO_FlagBase {
-            // use 1280 and 960 so when placing base, it doesn't interfere (look in getClosestObject())
+            // Start off the map so `place_flag_base` does not measure distance to this base.
             io_moving_object: IO_MovingObject::new(g, nspr, Vec2s::new(1280, 960), 5, 0, -1, -1, -1, -1, -1, -1, -1, -1),
             teamID: 0,
             iGraphicOffsetX: 0,
@@ -85,6 +93,7 @@ impl MO_FlagBase {
         o
     }
 
+    /// With `fInit`, uses the map's base location for this team if there is one; else a random spawn point away from other bases.
     pub fn place_flag_base(&mut self, g: &mut Game, fInit: bool) {
         let mut gp = g.ptr();
 
@@ -112,6 +121,7 @@ impl MO_FlagBase {
         self.set_yi(y);
     }
 
+    /// Returns the team's own flag home, or scores an enemy flag for `player` when the home-score rule allows.
     pub fn score_flag(&mut self, g: &mut Game, mut flag: Ptr<CO_Flag>, mut player: PlayerId) {
         let mut gp = g.ptr();
         if flag.teamID == self.teamID {
@@ -127,7 +137,7 @@ impl MO_FlagBase {
             if_sound_on_play(g, &mut gp.rm.sfx_racesound);
 
             if g.game_values.gamemodesettings.flag.pointmove {
-                // Set the values way outside the map so it will place the base correctly
+                // Off the map so the distance check does not see this base.
                 self.ix = 1280;
                 self.iy = 960;
                 self.place_flag_base(g, false);
@@ -135,6 +145,7 @@ impl MO_FlagBase {
         }
     }
 
+    /// Rerolls the turn rate and the time until the next reroll.
     pub fn change_angle(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         self.anglechange = vel((RANDOM_INT(gp.get(), 101) - 50) as f32 * 0.0002f32);

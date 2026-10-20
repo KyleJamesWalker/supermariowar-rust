@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/moving/MO_Fireball.cpp
+//! Fireball projectile that bounces along the ground until its lifetime runs out.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -25,9 +25,12 @@ use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
 pub struct MO_Fireball {
     pub io_moving_object: IO_MovingObject,
 
+    /// Sprite row offset (pixels) for the shooter's color, 36 per color.
     pub colorOffset: i16,
 
+    /// Ticks left before the fireball disappears.
     pub ttl: i16,
+    /// Spotlight that follows the fireball while spotlights are on.
     pub sSpotlight: SpotlightId,
 }
 impl_base!(MO_Fireball => io_moving_object: IO_MovingObject);
