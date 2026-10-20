@@ -3,7 +3,7 @@
 
   rogue     net_game_3p, whose second joiner (SMW_V2_ROGUE) also claims the host's slot and sends its own start
             parts and GO; the others must ignore it, start the match, and stay in sync
-  settings  net_game, whose joiner has sound and music off and lacks the music track the host's match plays; the
+  settings  net_game, whose joiner has sound and music off and lacks every game track the host's match can play; the
             joiner must play silence and stay in sync
   bad_map   net_game, whose host plays a truncated map; neither client may crash, and each must end the match
             or start it cleanly. Not run by default: the host's map menu still panics on a truncated map.
@@ -34,7 +34,7 @@ data = Path(os.environ.get("SMW_RUST_DATA", REPO / "data")).resolve()
 cases = (os.environ.get("CASES") or "rogue settings").split()
 # Bytes of options.bin: 4 version i32s, then spawnstyle .. teamcolors, sound, music, musicvolume, soundvolume.
 SOUND_OPTIONS = slice(23, 27)
-MUSIC = "music/game/Standard/SMB_Forest.ogg"
+MUSIC = "music/game/Standard"
 TIMEOUT = 120
 
 
@@ -160,7 +160,9 @@ for case in cases:
         quiet = bytearray(options.read_bytes())
         quiet[SOUND_OPTIONS] = bytes(4)
         joiner = copy_data(work / case / "join" / "data")
-        (joiner / MUSIC).unlink()
+        # The host picks its track with the match RNG, so the joiner lacks them all.
+        for track in (joiner / MUSIC).glob("*.ogg"):
+            track.unlink()
         roles = {"host": ("Host", data, {}, None), "join": ("Join", joiner, {}, bytes(quiet))}
         dir, logs, status = run(case, "net_game", roles)
         crashed(status, problems)
