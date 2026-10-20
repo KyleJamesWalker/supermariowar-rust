@@ -4,7 +4,7 @@ use crate::game::Game;
 use crate::common::file_io::BinaryFile;
 use crate::common::game_values::default_powerup_setting;
 use crate::common::global_constants::*;
-use crate::common::map::map_reader::MapReader;
+use crate::common::map::map_reader::{check_warp, checked_count, checked_index, MapReader};
 use crate::common::map::{read_type_summary, CMap, ReadType, WarpEnterDirection, WarpExitDirection};
 use crate::common::tile_types::TileType;
 
@@ -34,7 +34,7 @@ impl MapReader {
                     if iTile == 300 {
                         map.mapdata[i][j][k].iID = TILESETNONE as i16;
                     } else {
-                        let iTileID = g_iTileConversion[iTile as isize as usize];
+                        let iTileID = g_iTileConversion[checked_index("tile", iTile as i32, g_iTileConversion.len() as i32)];
 
                         let tile = &mut map.mapdata[i][j][k];
                         tile.iID = g.g_tilesetmanager.classic_tileset_index() as i16;
@@ -70,6 +70,7 @@ impl MapReader {
                 map.warpdata[i][j].direction = mapfile.read_i32() as WarpEnterDirection;
                 map.warpdata[i][j].connection = mapfile.read_i32() as i16;
                 map.warpdata[i][j].id = mapfile.read_i32() as i16;
+                check_warp(map, &map.warpdata[i][j]);
 
                 if self.parse_nospawn {
                     map.nospawn[0][i][j] = mapfile.read_i32() != 0;
@@ -91,6 +92,8 @@ impl MapReader {
         map.maxConnection = 0;
 
         map.numwarpexits = mapfile.read_i32() as i16;
+        checked_count("warp exit count", map.numwarpexits as i32, i16::MAX as i32);
+        let connections = map.warplocked.len() as i32;
         let mut i: u16 = 0;
         while (i as i32) < map.numwarpexits as i32 && (i as i32) < MAXWARPS {
             let w = &mut map.warpexits[i as usize];
@@ -106,6 +109,7 @@ impl MapReader {
             w.warpx = mapfile.read_i32() as i16;
             w.warpy = mapfile.read_i32() as i16;
             w.numblocks = mapfile.read_i32() as i16;
+            checked_index("warp exit connection", w.connection as i32, connections);
 
             if w.connection > map.maxConnection {
                 map.maxConnection = w.connection;
@@ -126,17 +130,12 @@ impl MapReader {
         }
     }
 
-    pub(super) fn read_spawn_areas_1600(&mut self, map: &mut CMap, mapfile: &mut BinaryFile) -> bool {
+    pub(super) fn read_spawn_areas_1600(&mut self, map: &mut CMap, mapfile: &mut BinaryFile) {
         map.totalspawnsize[0] = 0;
         map.numspawnareas[0] = mapfile.read_i32() as i16;
+        checked_count("spawn area count", map.numspawnareas[0] as i32, MAXSPAWNAREAS);
 
-        if map.numspawnareas[0] as i32 > MAXSPAWNAREAS {
-            println!();
-            println!(" ERROR: Number of spawn areas ({}) was greater than max allowed ({})", map.numspawnareas[0], MAXSPAWNAREAS);
-            return false;
-        }
-
-        for m in 0..map.numspawnareas[0].max(0) as usize {
+        for m in 0..map.numspawnareas[0] as usize {
             let a = &mut map.spawnareas[0][m];
             a.left = mapfile.read_i32() as i16;
             a.top = mapfile.read_i32() as i16;
@@ -156,7 +155,7 @@ impl MapReader {
             map.totalspawnsize[i2] = map.totalspawnsize[0];
             map.numspawnareas[i2] = map.numspawnareas[0];
 
-            for m in 0..map.numspawnareas[0].max(0) as usize {
+            for m in 0..map.numspawnareas[0] as usize {
                 let src = map.spawnareas[0][m];
                 let a = &mut map.spawnareas[i2][m];
                 a.left = src.left;
@@ -171,35 +170,26 @@ impl MapReader {
                 }
             }
         }
-
-        true
     }
 
-    /// Reads the screen rectangles the map redraws each frame; `false` when there are more than `MAXDRAWAREAS`.
-    pub(super) fn read_draw_areas(&mut self, map: &mut CMap, mapfile: &mut BinaryFile) -> bool {
+    /// Reads the screen rectangles the map redraws each frame.
+    pub(super) fn read_draw_areas(&mut self, map: &mut CMap, mapfile: &mut BinaryFile) {
         map.numdrawareas = mapfile.read_i32() as i16;
+        checked_count("draw area count", map.numdrawareas as i32, MAXDRAWAREAS);
 
-        if map.numdrawareas as i32 > MAXDRAWAREAS {
-            println!();
-            println!(" ERROR: Number of draw areas ({}) was greater than max allowed ({})", map.numdrawareas, MAXDRAWAREAS);
-            return false;
-        }
-
-        for m in 0..map.numdrawareas.max(0) as usize {
+        for m in 0..map.numdrawareas as usize {
             map.drawareas[m].x = mapfile.read_i32() as i16 as i32;
             map.drawareas[m].y = mapfile.read_i32() as i16 as i32;
             map.drawareas[m].w = mapfile.read_i32() as u16 as i32;
             map.drawareas[m].h = mapfile.read_i32() as u16 as i32;
         }
-
-        true
     }
 
-    pub(super) fn load_1600(&mut self, g: &mut Game, map: &mut CMap, mapfile: &mut BinaryFile, readtype: ReadType) -> bool {
+    pub(super) fn load_1600(&mut self, g: &mut Game, map: &mut CMap, mapfile: &mut BinaryFile, readtype: ReadType) {
         self.read_autofilters(map, mapfile);
 
         if readtype == read_type_summary {
-            return true;
+            return;
         }
 
         map.clear_platforms();
@@ -210,20 +200,14 @@ impl MapReader {
 
         self.read_eyecandy(map, mapfile);
         self.read_warp_exits(map, mapfile);
-
-        if !self.read_spawn_areas(map, mapfile) {
-            return false;
-        }
-
-        true
+        self.read_spawn_areas(map, mapfile);
     }
 
-    pub(super) fn load_1610(&mut self, g: &mut Game, map: &mut CMap, mapfile: &mut BinaryFile, readtype: ReadType) -> bool {
+    pub(super) fn load_1610(&mut self, g: &mut Game, map: &mut CMap, mapfile: &mut BinaryFile, readtype: ReadType) {
         let mut gp = g.ptr();
-        if !self.load_1600(gp.get(), map, mapfile, readtype) {
-            return false;
+        self.load_1600(gp.get(), map, mapfile, readtype);
+        if readtype != read_type_summary {
+            self.read_draw_areas(map, mapfile);
         }
-
-        self.read_draw_areas(map, mapfile)
     }
 }

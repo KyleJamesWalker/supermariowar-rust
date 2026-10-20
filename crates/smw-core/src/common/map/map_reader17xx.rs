@@ -4,7 +4,7 @@ use crate::game::Game;
 use crate::common::file_io::BinaryFile;
 use crate::common::game_values::default_powerup_setting;
 use crate::common::global_constants::*;
-use crate::common::map::map_reader::MapReader;
+use crate::common::map::map_reader::{check_platform_size, check_warp, checked_count, checked_index, MapReader};
 use crate::common::map::map_reader_constants::g_szBackgroundConversion;
 use crate::common::map::{read_type_preview, read_type_summary, CMap, ReadType, TilesetTile, WarpEnterDirection};
 use crate::common::math::vec2::Vec2f;
@@ -41,6 +41,7 @@ impl MapReader {
                         tile.iCol = 0;
                         tile.iRow = 0;
                     } else {
+                        checked_index("tile", iTileID as i32, TILESETSIZE);
                         tile.iID = iClassicTilesetID;
                         tile.iCol = (iTileID as i32 % TILESETWIDTH) as i16;
                         tile.iRow = (iTileID as i32 / TILESETWIDTH) as i16;
@@ -113,6 +114,7 @@ impl MapReader {
 
     pub(super) fn read_music_category_1701(&mut self, map: &mut CMap, mapfile: &mut BinaryFile) {
         map.musicCategoryID = mapfile.read_i32() as i16;
+        checked_index("music category", map.musicCategoryID as i32, MAXMUSICCATEGORY);
     }
 
     pub(super) fn read_warp_locations_1700(&mut self, map: &mut CMap, mapfile: &mut BinaryFile) {
@@ -123,6 +125,7 @@ impl MapReader {
                 map.warpdata[i][j].direction = mapfile.read_i32() as WarpEnterDirection;
                 map.warpdata[i][j].connection = mapfile.read_i32() as i16;
                 map.warpdata[i][j].id = mapfile.read_i32() as i16;
+                check_warp(map, &map.warpdata[i][j]);
 
                 // The file holds no-spawn flags for types 0 and 5 only; types 1 to 4 copy type 0.
                 let mut sType = 0usize;
@@ -138,19 +141,14 @@ impl MapReader {
         }
     }
 
-    pub(super) fn read_spawn_areas_1700(&mut self, map: &mut CMap, mapfile: &mut BinaryFile) -> bool {
+    pub(super) fn read_spawn_areas_1700(&mut self, map: &mut CMap, mapfile: &mut BinaryFile) {
         let mut i = 0usize;
         while i < 6 {
             map.totalspawnsize[i] = 0;
             map.numspawnareas[i] = mapfile.read_i32() as i16;
+            checked_count("spawn area count", map.numspawnareas[i] as i32, MAXSPAWNAREAS);
 
-            if map.numspawnareas[i] as i32 > MAXSPAWNAREAS {
-                println!();
-                println!(" ERROR: Number of spawn areas ({}) was greater than max allowed ({})", map.numspawnareas[i], MAXSPAWNAREAS);
-                return false;
-            }
-
-            for m in 0..map.numspawnareas[i].max(0) as usize {
+            for m in 0..map.numspawnareas[i] as usize {
                 let a = &mut map.spawnareas[i][m];
                 a.left = mapfile.read_i32() as i16;
                 a.top = mapfile.read_i32() as i16;
@@ -167,23 +165,22 @@ impl MapReader {
             map.totalspawnsize[iType] = map.totalspawnsize[0];
             map.numspawnareas[iType] = map.numspawnareas[0];
 
-            for m in 0..map.numspawnareas[0].max(0) as usize {
+            for m in 0..map.numspawnareas[0] as usize {
                 map.spawnareas[iType][m] = map.spawnareas[0][m];
             }
         }
-
-        true
     }
 
     pub(super) fn read_platforms_1700(&mut self, g: &mut Game, map: &mut CMap, mapfile: &mut BinaryFile, fPreview: bool) {
         map.clear_platforms();
 
-        let iNumPlatforms: usize = mapfile.read_i32() as i16 as isize as usize;
-        map.platforms.reserve(iNumPlatforms.min(1024));
+        let iNumPlatforms = checked_count("platform count", mapfile.read_i32() as i16 as i32, MAXMAPPLATFORMS);
+        map.platforms.reserve(iNumPlatforms);
 
         for _idx in 0..iNumPlatforms {
             let iWidth: i16 = mapfile.read_i32() as i16;
             let iHeight: i16 = mapfile.read_i32() as i16;
+            check_platform_size(iWidth, iHeight);
 
             let (tiles, types) = self.read_platform_tiles_1700(g, map, mapfile, iWidth, iHeight);
 
@@ -220,6 +217,7 @@ impl MapReader {
 
                     r#type = TileType::NonSolid;
                 } else {
+                    checked_index("platform tile", iTile as i32, TILESETSIZE);
                     tile.iID = g.g_tilesetmanager.classic_tileset_index() as i16;
                     tile.iCol = (iTile as i32 % TILESETWIDTH) as i16;
                     tile.iRow = (iTile as i32 / TILESETWIDTH) as i16;
@@ -273,11 +271,11 @@ impl MapReader {
         None
     }
 
-    pub(super) fn load_1700(&mut self, g: &mut Game, map: &mut CMap, mapfile: &mut BinaryFile, readtype: ReadType) -> bool {
+    pub(super) fn load_1700(&mut self, g: &mut Game, map: &mut CMap, mapfile: &mut BinaryFile, readtype: ReadType) {
         self.read_autofilters(map, mapfile);
 
         if readtype == read_type_summary {
-            return true;
+            return;
         }
 
         map.clear_platforms();
@@ -300,14 +298,12 @@ impl MapReader {
         self.read_warp_locations(map, mapfile);
 
         if readtype == read_type_preview {
-            return true;
+            return;
         }
 
         self.read_warp_exits(map, mapfile);
         self.read_spawn_areas(map, mapfile);
-        if !self.read_draw_areas(map, mapfile) {
-            return false;
-        }
+        self.read_draw_areas(map, mapfile);
 
         if self.patch_version <= 1 {
             self.read_platforms(g, map, mapfile, readtype == read_type_preview);
@@ -316,7 +312,5 @@ impl MapReader {
         if self.patch_version == 0 {
             self.read_switches(map, mapfile);
         }
-
-        true
     }
 }

@@ -1017,7 +1017,7 @@ impl CMap {
             reader.load(gp.get(), self, &mut mapfile, iReadType)
         });
 
-        if loaded != Some(true) {
+        if loaded.is_none() {
             println!();
             println!(" ERROR: Couldn't load map {}", file);
             self.clear_failed_load(iReadType);

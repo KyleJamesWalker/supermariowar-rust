@@ -3,8 +3,9 @@
 
 use crate::game::Game;
 use crate::globals::Aliased;
-use crate::common::file_io::BinaryFile;
-use crate::common::map::{CMap, ReadType};
+use crate::common::file_io::{throw_runtime_error, BinaryFile};
+use crate::common::global_constants::{MAPHEIGHT, MAPWIDTH, MAXWARPS};
+use crate::common::map::{CMap, ReadType, Warp, WARP_UNDEFINED};
 use crate::common::version::Version;
 
 /// Map file format version a reader parses, named by version digits (`R160A` is 1.6.0.10).
@@ -72,8 +73,8 @@ impl MapReader {
     }
 
     /// Reads `mapfile`, positioned after the version header, into `map`. `readtype` can stop early for a summary
-    /// or preview; returns `false` when a section is over its limit.
-    pub fn load(&mut self, g: &mut Game, map: &mut CMap, mapfile: &mut BinaryFile, readtype: ReadType) -> bool {
+    /// or preview. A damaged file fails through `throw_runtime_error`.
+    pub fn load(&mut self, g: &mut Game, map: &mut CMap, mapfile: &mut BinaryFile, readtype: ReadType) {
         use MapReaderKind::*;
         match self.kind {
             R1500 => self.load_1500(g, map, mapfile, readtype),
@@ -127,7 +128,7 @@ impl MapReader {
         }
     }
 
-    pub(super) fn read_spawn_areas(&mut self, map: &mut CMap, mapfile: &mut BinaryFile) -> bool {
+    pub(super) fn read_spawn_areas(&mut self, map: &mut CMap, mapfile: &mut BinaryFile) {
         use MapReaderKind::*;
         match self.kind {
             R1700 | R1701 | R1702 => self.read_spawn_areas_1700(map, mapfile),
@@ -158,6 +159,34 @@ impl MapReader {
             R1800 | R1801 | R1802 => self.read_platforms_1800(g, map, mapfile, preview),
             _ => self.read_platforms_1700(g, map, mapfile, preview),
         }
+    }
+}
+
+/// `value` as an index below `len`; any other value fails the load as a damaged map.
+pub(super) fn checked_index(what: &str, value: i32, len: i32) -> usize {
+    if !(0..len).contains(&value) {
+        throw_runtime_error(&format!("Damaged map: {what} {value} is not in 0..{len}"));
+    }
+    value as usize
+}
+
+/// `value` as a count of at most `max`; any other value fails the load as a damaged map.
+pub(super) fn checked_count(what: &str, value: i32, max: i32) -> usize {
+    checked_index(what, value, max + 1)
+}
+
+/// Fails the load on a platform size the map cannot hold.
+pub(super) fn check_platform_size(width: i16, height: i16) {
+    if !(1..=MAPWIDTH).contains(&(width as i32)) || !(1..=MAPHEIGHT).contains(&(height as i32)) {
+        throw_runtime_error(&format!("Damaged map: platform size {width}x{height} is not within {MAPWIDTH}x{MAPHEIGHT}"));
+    }
+}
+
+/// Fails the load when a warp entrance names a connection or exit the map cannot hold.
+pub(super) fn check_warp(map: &CMap, warp: &Warp) {
+    if warp.direction != WARP_UNDEFINED {
+        checked_index("warp connection", warp.connection as i32, map.warplocked.len() as i32);
+        checked_index("warp exit", warp.id as i32, MAXWARPS);
     }
 }
 
