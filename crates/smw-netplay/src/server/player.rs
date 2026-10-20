@@ -47,9 +47,6 @@ pub struct Player {
 
     /// The player's room, 0 for none.
     pub currentRoomID: u32,
-    pub isPlaying: bool,
-    pub playerNumberInRoom: u8,
-    pub synchOK: bool,
 
     pub skinPackage: PlayerSkin,
 
@@ -62,9 +59,6 @@ impl Player {
         let joinTime = time_now();
         Player {
             currentRoomID: 0,
-            isPlaying: false,
-            playerNumberInRoom: 0,
-            synchOK: false,
 
             name: b"Anonymous".to_vec(),
             connected: false,

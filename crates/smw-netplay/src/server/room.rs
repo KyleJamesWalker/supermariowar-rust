@@ -6,7 +6,7 @@ use super::log::verbose;
 use super::player::Player;
 use super::util::{cstr_field, strncpy_sec};
 use smw::common_netplay::protocol_definitions::*;
-use smw::common_netplay::protocol_packages::{CurrentRoom, GameHostInfo, MessageHeader, PlayerInfo, RoomChatMsg};
+use smw::common_netplay::protocol_packages::{CurrentRoom, MessageHeader, RoomChatMsg};
 use smw::globals::Ptr;
 
 const REMOTE_PKG_SIZE_LIMIT: usize = 20000; /* bytes in worst case */
@@ -290,8 +290,6 @@ impl Room {
         }
         self.visible = false;
     }
-
-    pub fn start_game_if_everybody_ready(&mut self) {}
 }
 
 /// Which blob to send: the room's map or mode settings, or a player's skin.

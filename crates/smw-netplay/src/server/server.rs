@@ -31,7 +31,6 @@ pub struct SMWServer {
 
     /// The ID the next new room gets; IDs start at 1, since a player's room ID 0 means no room.
     roomCreateID: u32,
-    currentRoomCount: u32,
     rooms: UnorderedMap<u32, Room>,
 
     /// Where a starting room's players meet.
@@ -89,7 +88,6 @@ impl SMWServer {
             maxPlayerCount: 20,
             players: UnorderedMap::new(),
             roomCreateID: 1,
-            currentRoomCount: 0,
             rooms: UnorderedMap::new(),
             v2: V2Settings::from_env(),
             max_rooms: None,
@@ -327,7 +325,7 @@ impl SMWServer {
 
     fn player_creates_room(&mut self, playerID: u64, data: &[u8]) {
         let Some(mut player) = self.player(playerID) else { return };
-        if player.currentRoomID != 0 || player.isPlaying {
+        if player.currentRoomID != 0 {
             return;
         }
 
@@ -351,7 +349,6 @@ impl SMWServer {
         self.rooms.insert(self.roomCreateID, room);
 
         player.currentRoomID = self.roomCreateID;
-        player.isPlaying = false;
 
         // output
         let mut package = NewRoomCreated::new();
@@ -365,7 +362,7 @@ impl SMWServer {
 
     fn player_joins_room(&mut self, playerID: u64, data: &[u8]) {
         let Some(mut player) = self.player(playerID) else { return };
-        if player.currentRoomID != 0 || player.isPlaying {
+        if player.currentRoomID != 0 {
             return;
         }
 
@@ -397,13 +394,11 @@ impl SMWServer {
         } else {
             player.send_code(NET_RESPONSE_ROOM_FULL);
         }
-
-        player.isPlaying = false;
     }
 
     fn player_leaves_room(&mut self, playerID: u64) {
         let Some(mut player) = self.player(playerID) else { return };
-        if player.currentRoomID == 0 || player.isPlaying {
+        if player.currentRoomID == 0 {
             return;
         }
 
@@ -422,16 +417,12 @@ impl SMWServer {
         }
 
         player.currentRoomID = 0;
-        player.isPlaying = false;
         player.lastActivityTime = time_now();
     }
 
-    /// The room `playerID` hosts, unless the player is playing.
+    /// The room `playerID` hosts.
     fn hosted_room(&mut self, playerID: u64) -> Option<&mut Room> {
         let player = self.player(playerID)?;
-        if player.isPlaying {
-            return None;
-        }
         self.rooms.get_mut(&player.currentRoomID).filter(|room| room.is_host(player))
     }
 
@@ -452,10 +443,6 @@ impl SMWServer {
 
     fn player_changes_skin(&mut self, playerID: u64, data: &[u8]) {
         let Some(mut player) = self.player(playerID) else { return };
-        if player.isPlaying {
-            return;
-        }
-
         player.set_skin(data);
         verbose!("Player {} changed skin", String::from_utf8_lossy(&player.name));
 
@@ -478,7 +465,7 @@ impl SMWServer {
     fn player_sends_chat_msg(&mut self, playerID: u64, data: &[u8]) {
         let Some(mut player) = self.player(playerID) else { return };
         let roomID = player.currentRoomID;
-        if roomID == 0 || player.isPlaying {
+        if roomID == 0 {
             return;
         }
 
@@ -529,8 +516,6 @@ impl SMWServer {
         }
         true
     }
-
-    fn start_room_if_everyone_ready(&mut self, _playerID: u64) {}
 
     /// Drops every room and player and stops the network layer. `Drop` calls it too, so an explicit call runs it twice.
     pub fn cleanup(&mut self) {

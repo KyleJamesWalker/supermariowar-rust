@@ -1049,7 +1049,7 @@ impl NetClient {
     pub fn set_as_last_sent_message(&mut self, g: &mut Game, packageType: u8) {
         self.lastSentMessage.packageType = packageType;
         self.lastSentMessage.timestamp = ticks(g);
-        if matches!(packageType, NET_REQUEST_CONNECT | NET_REQUEST_JOIN_ROOM | NET_REQUEST_CREATE_ROOM | NET_P2G_SYNC_OK) {
+        if matches!(packageType, NET_REQUEST_CONNECT | NET_REQUEST_JOIN_ROOM | NET_REQUEST_CREATE_ROOM) {
             self.lastReply = LastMessage::default();
         }
     }
@@ -1238,13 +1238,6 @@ extern "C" {
 unsafe fn libc_time() -> i64 {
     libc_time_raw(std::ptr::null_mut())
 }
-
-pub type NetworkState = i32;
-pub const INACTIVE: NetworkState = 0;
-pub const DISCONNECTED: NetworkState = 1;
-pub const CONNECTED: NetworkState = 2;
-pub const JOINED: NetworkState = 3;
-pub const PLAYING: NetworkState = 4;
 
 #[derive(Clone)]
 

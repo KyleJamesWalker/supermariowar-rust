@@ -388,55 +388,6 @@ impl MatchRoom {
     }
 }
 
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct GameHostInfo {
-    pub header: MessageHeader,
-    pub _pad0: u8,
-    pub host: u32,
-}
-
-impl GameHostInfo {
-    pub fn new(gh_address: u32) -> Self {
-        GameHostInfo { header: MessageHeader::new(NET_L2P_GAMEHOST_INFO), _pad0: 0, host: gh_address }
-    }
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct PlayerInfo {
-    pub header: MessageHeader,
-    pub _pad0: u8,
-    pub host: [u32; 3],
-    pub port: [u16; 3],
-    pub _pad1: u16,
-}
-
-impl PlayerInfo {
-    pub fn new() -> Self {
-        PlayerInfo { header: MessageHeader::new(NET_L2G_CLIENTS_INFO), _pad0: 0, host: [0; 3], port: [0; 3], _pad1: 0 }
-    }
-
-    pub fn set_player(&mut self, playerNum: u8, p_host: u32, p_port: u16) {
-        self.host[playerNum as usize] = p_host;
-        self.port[playerNum as usize] = p_port;
-    }
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct StartSync {
-    pub header: MessageHeader,
-    pub _pad0: u8,
-    pub commonRandomSeed: u32,
-}
-
-impl StartSync {
-    pub fn new(seed: u32) -> Self {
-        StartSync { header: MessageHeader::new(NET_G2P_SYNC), _pad0: 0, commonRandomSeed: seed }
-    }
-}
-
 crate::net_package!(
     MessageHeader,
     ServerInfo,
@@ -452,10 +403,7 @@ crate::net_package!(
     LeaveRoom,
     CurrentRoom,
     RoomChatMsg,
-    StartRoom,
-    GameHostInfo,
-    PlayerInfo,
-    StartSync
+    StartRoom
 );
 
 #[cfg(test)]
@@ -506,9 +454,6 @@ mod tests {
         );
         assert_eq!((size_of::<RoomChatMsg>(), offset_of!(RoomChatMsg, senderNum), offset_of!(RoomChatMsg, message)), (104, 3, 4));
         assert_eq!(size_of::<StartRoom>(), 3);
-        assert_eq!((size_of::<GameHostInfo>(), offset_of!(GameHostInfo, host)), (8, 4));
-        assert_eq!((size_of::<PlayerInfo>(), offset_of!(PlayerInfo, host), offset_of!(PlayerInfo, port)), (24, 4, 16));
-        assert_eq!((size_of::<StartSync>(), offset_of!(StartSync, commonRandomSeed)), (8, 4));
     }
 
     #[test]
