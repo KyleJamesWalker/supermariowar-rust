@@ -264,11 +264,22 @@ struct Notice {
     frames: u32,
 }
 
-/// Logs `text`, shows it over the match and records it as an `n` token.
+/// Logs `text`, shows it over the match for `NOTICE_FRAMES` and records it as an `n` token.
 fn notify(rec: &mut Option<Vec<String>>, notice: &mut Notice, text: String) {
     println!("[net] v2: {text}");
-    note(rec, format!("n{}", harness::base64_encode(text.as_bytes())));
-    *notice = Notice { text, frames: NOTICE_FRAMES };
+    show_notice(rec, notice, text, NOTICE_FRAMES);
+}
+
+/// Shows `text` for `frames`, or hides the notice when `text` is empty, and records it as `n<frames>.<text>`.
+fn show_notice(rec: &mut Option<Vec<String>>, notice: &mut Notice, text: String, frames: u32) {
+    note(rec, format!("n{frames}.{}", harness::base64_encode(text.as_bytes())));
+    *notice = Notice { text, frames };
+}
+
+/// A recorded [`show_notice`] token's frames and text.
+fn parse_notice(data: &str) -> Option<(u32, String)> {
+    let (frames, text) = data.split_once('.')?;
+    Some((frames.parse().ok()?, String::from_utf8(harness::base64_decode(text)?).ok()?))
 }
 
 /// The room's name for the player in `slot`.
@@ -289,6 +300,11 @@ fn missing_slots(names: &[String], my_slot: u8, heard: &[u8]) -> Vec<u8> {
     (0..names.len() as u8).filter(|&slot| slot != my_slot && names[slot as usize] != "(empty)" && !heard.contains(&slot)).collect()
 }
 
+/// The notice while `peer` is silent, which `NetworkResumed` takes down again.
+fn lag_text(names: &[String], slots: &BTreeMap<PeerId, u8>, peer: PeerId) -> String {
+    format!("{} is lagging", peer_name(names, slots, peer))
+}
+
 /// A match that ended early leaves its last notice for the room menu.
 fn keep_notice(g: &mut Game, notice: &Notice) {
     if !notice.text.is_empty() {
@@ -301,7 +317,7 @@ fn draw_dialogs(g: &mut Game, notice: &mut Notice) {
     if g.game_values.flags.pausegame || g.game_values.flags.exitinggame {
         crate::smw::gs_gameplay::draw_exit_pause_dialog(g);
     }
-    if notice.frames > 0 {
+    if notice.frames > 0 && !notice.text.is_empty() {
         notice.frames -= 1;
         crate::smw::gs_menu::draw_message_bar(g, &notice.text);
     }
@@ -407,10 +423,10 @@ fn replay_tick(g: &mut Game, frame: u32) {
             }
             ("d", _) => draw_dialogs(g, &mut r.notice),
             ("n", data) => {
-                let Some(text) = harness::base64_decode(data).and_then(|b| String::from_utf8(b).ok()) else {
+                let Some((frames, text)) = parse_notice(data) else {
                     harness::fail(format!("the replay's v2 notice at frame {frame} is damaged"));
                 };
-                r.notice = Notice { text, frames: NOTICE_FRAMES };
+                r.notice = Notice { text, frames };
             }
             ("e", kind) => {
                 match kind {
@@ -749,9 +765,16 @@ impl V2Match {
                     notify(&mut self.rec, &mut self.notice, format!("{} dropped out", peer_name(&self.names, &self.slots, addr)));
                 }
                 GgrsEvent::NetworkInterrupted { addr, disconnect_timeout } => {
-                    println!("[net] v2: peer {:08x} silent; dropped in {} ms unless it returns", addr.0 >> 96, disconnect_timeout)
+                    println!("[net] v2: peer {:08x} silent; dropped in {} ms unless it returns", addr.0 >> 96, disconnect_timeout);
+                    let frames = (disconnect_timeout as u64 * crate::common::global_constants::TICKS_PER_SECOND as u64 / 1000) as u32;
+                    show_notice(&mut self.rec, &mut self.notice, lag_text(&self.names, &self.slots, addr), frames);
                 }
-                GgrsEvent::NetworkResumed { addr } => println!("[net] v2: peer {:08x} back", addr.0 >> 96),
+                GgrsEvent::NetworkResumed { addr } => {
+                    println!("[net] v2: peer {:08x} back", addr.0 >> 96);
+                    if self.notice.text == lag_text(&self.names, &self.slots, addr) {
+                        show_notice(&mut self.rec, &mut self.notice, String::new(), 0);
+                    }
+                }
                 _ => {}
             }
         }
@@ -879,9 +902,11 @@ mod tests {
     fn notices_are_recorded_as_tokens() {
         let (mut rec, mut notice) = (Some(Vec::new()), Notice::default());
         notify(&mut rec, &mut notice, "Bo dropped out".to_string());
-        let token = &rec.unwrap()[0];
-        assert_eq!(harness::base64_decode(&token[1..]).as_deref(), Some(&b"Bo dropped out"[..]));
-        assert_eq!((notice.text.as_str(), notice.frames), ("Bo dropped out", NOTICE_FRAMES));
+        show_notice(&mut rec, &mut notice, String::new(), 0);
+        let tokens = rec.unwrap();
+        assert_eq!(parse_notice(&tokens[0][1..]), Some((NOTICE_FRAMES, "Bo dropped out".to_string())));
+        assert_eq!(parse_notice(&tokens[1][1..]), Some((0, String::new())));
+        assert!(notice.text.is_empty());
     }
 
     #[test]
