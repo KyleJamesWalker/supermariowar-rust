@@ -333,7 +333,7 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
             rDotDst.w = dot;
             rDotDst.h = dot;
 
-            gp.rm.sprite(gp.rm.spr_platformpath).draw_src(g, rDotDst.x, rDotDst.y, &Rect { x: rDotSrc.x, y: rDotSrc.y, w: rDotDst.w, h: rDotDst.h });
+            gp.rm.sprite(gp.rm.spr_platformpath).draw_src_to_pos(&Rect { x: rDotSrc.x, y: rDotSrc.y, w: rDotDst.w, h: rDotDst.h }, dst, rDotDst.x, rDotDst.y);
             dAngle += TWO_PI / iNumDots as f32;
         }
 
@@ -348,7 +348,7 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
                 + (ts >> 1)
                 - (fb >> 1)) as i16;
 
-            gp.rm.sprite(gp.rm.spr_hazard_fireball[s]).draw_src(g, x as i32, y as i32, &Rect { x: 0, y: 0, w: fb, h: fb });
+            gp.rm.sprite(gp.rm.spr_hazard_fireball[s]).draw_src_to_pos(&Rect { x: 0, y: 0, w: fb, h: fb }, dst, x as i32, y as i32);
         }
     } else if hazard.itype == 1 {
         let iNumDots: i16 = 16;
@@ -360,7 +360,7 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
             rDotDst.w = dot;
             rDotDst.h = dot;
 
-            gp.rm.sprite(gp.rm.spr_platformpath).draw_src(g, rDotDst.x, rDotDst.y, &Rect { x: rDotSrc.x, y: rDotSrc.y, w: rDotDst.w, h: rDotDst.h });
+            gp.rm.sprite(gp.rm.spr_platformpath).draw_src_to_pos(&Rect { x: rDotSrc.x, y: rDotSrc.y, w: rDotDst.w, h: rDotDst.h }, dst, rDotDst.x, rDotDst.y);
             dAngle += TWO_PI / iNumDots as f32;
         }
 
@@ -371,17 +371,12 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
             let x: i16 = (rPathDst.x + (dRadius * cosf(dAngle)) as i16 as i32) as i16;
             let y: i16 = (rPathDst.y + (dRadius * sinf(dAngle)) as i16 as i32) as i16;
 
-            gp.rm.sprite(gp.rm.spr_hazard_rotodisc[s]).draw_src(g, x as i32, y as i32, &Rect { x: 0, y: 0, w: ts, h: ts });
+            gp.rm.sprite(gp.rm.spr_hazard_rotodisc[s]).draw_src_to_pos(&Rect { x: 0, y: 0, w: ts, h: ts }, dst, x as i32, y as i32);
 
             dAngle += dSector;
         }
     } else if hazard.itype == 2 {
-        gp.rm.sprite(gp.rm.spr_hazard_bulletbill[s]).draw_src(
-            g,
-            rPathDst.x,
-            rPathDst.y,
-            &Rect { x: 0, y: if hazard.dparam[0] < 0.0 { 0 } else { ts }, w: ts, h: ts },
-        );
+        gp.rm.sprite(gp.rm.spr_hazard_bulletbill[s]).draw_src_to_pos(&Rect { x: 0, y: if hazard.dparam[0] < 0.0 { 0 } else { ts }, w: ts, h: ts }, dst, rPathDst.x, rPathDst.y);
 
         let mut iBulletPathX: i16 = (rPathDst.x - dot) as i16;
         if hazard.dparam[0] > 0.0 {
@@ -409,12 +404,7 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
             iOffsetY = -(iTileSize << 1);
         }
 
-        gp.rm.sprite(gp.rm.spr_hazard_flame[s]).draw_src(
-            g,
-            rPathDst.x + iOffsetX as i32,
-            rPathDst.y + iOffsetY as i32,
-            &Rect { x: rect.x >> iSize, y: rect.y >> iSize, w: rect.w >> iSize, h: rect.h >> iSize },
-        );
+        gp.rm.sprite(gp.rm.spr_hazard_flame[s]).draw_src_to_pos(&Rect { x: rect.x >> iSize, y: rect.y >> iSize, w: rect.w >> iSize, h: rect.h >> iSize }, dst, rPathDst.x + iOffsetX as i32, rPathDst.y + iOffsetY as i32);
     } else if hazard.itype >= 4 && hazard.itype <= 7 {
         let rect = &g_rPirhanaRects[(hazard.itype - 4) as usize][hazard.iparam[1] as usize][0];
         let mut iOffsetX: i16 = 0;
@@ -434,12 +424,7 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
             }
         }
 
-        gp.rm.sprite(gp.rm.spr_hazard_pirhanaplant[s]).draw_src(
-            g,
-            rPathDst.x + iOffsetX as i32,
-            rPathDst.y + iOffsetY as i32,
-            &Rect { x: rect.x >> iSize, y: rect.y >> iSize, w: rect.w >> iSize, h: rect.h >> iSize },
-        );
+        gp.rm.sprite(gp.rm.spr_hazard_pirhanaplant[s]).draw_src_to_pos(&Rect { x: rect.x >> iSize, y: rect.y >> iSize, w: rect.w >> iSize, h: rect.h >> iSize }, dst, rPathDst.x + iOffsetX as i32, rPathDst.y + iOffsetY as i32);
     }
 }
 
