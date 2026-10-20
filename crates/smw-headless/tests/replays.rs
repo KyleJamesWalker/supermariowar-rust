@@ -420,6 +420,38 @@ fn rollback_frenzy() {
     assert_eq!(rollback_mid_match("frenzy_cpu", Some(1200), 400, 7), 400);
 }
 
+/// A v2 match's shared pause: any player's start pauses it, and only that player's start resumes it.
+#[test]
+fn v2_pause_belongs_to_the_pauser() {
+    use smw::smw::rollback::{advance, KeySlot, Keys};
+
+    let out = std::env::temp_dir().join(format!("smw-headless-{}-v2-pause", std::process::id()));
+    let mut paused = Vec::new();
+    sandboxed(&repo().join("tools").join("replays").join("frenzy_cpu.txt"), &out, None, |argv, services| {
+        let g = smw::game::Game::create();
+        g.services = Some(services);
+        smw::globals::init_globals(g);
+        g.RootDataDirectory = argv[2].clone();
+        smw::smw::main::startup(g);
+        smw::smw::main::gameloop_start(g);
+        while smw::smw::harness::frame(g) < 1200 {
+            smw::smw::main::frame(g);
+        }
+        g.netplay.v2_match = true;
+        let start = Keys(1 << (2 * smw::common::input::KEY_GAME_START + 1));
+        let slots = [KeySlot::Local(0), KeySlot::Local(1), KeySlot::Local(2), KeySlot::Local(3)];
+        for presser in [1, 0, 2, 1, 3] {
+            let keys: Vec<(KeySlot, Keys)> = slots.iter().enumerate().map(|(p, &s)| (s, if p == presser { start } else { Keys(0) })).collect();
+            advance(g, &keys, true);
+            paused.push((g.game_values.flags.pausegame, g.game_values.flags.pauseowner));
+        }
+        g.netplay.v2_match = false;
+        smw::smw::main::shutdown(g);
+    });
+    let _ = std::fs::remove_dir_all(&out);
+    assert_eq!(paused, [(true, 1), (true, 1), (true, 1), (false, -1), (true, 3)]);
+}
+
 /// Prints the average cost of a rollback save, a load of the copy GGRS hands back, and a plain tick over `ticks` ticks
 /// of the first match, from its 300th tick, played on `map` when given.
 fn snapshot_cost(name: &str, map: Option<&str>, ticks: u32) {

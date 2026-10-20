@@ -4,7 +4,7 @@
 use crate::common::eyecandy::{CEyecandyContainer, SpotlightManager};
 use crate::common::game_mode::{CGameModeTrait, ModeId};
 use crate::common::game_values::CGameValues;
-use crate::common::input::COutputControl;
+use crate::common::input::{COutputControl, KEY_GAME_START};
 use crate::common::map::CMap;
 use crate::common::random_number_generator::RngState;
 use crate::common::score::CScore;
@@ -30,6 +30,11 @@ impl Keys {
             bits |= (key.fDown as u16) << (2 * k) | (key.fPressed as u16) << (2 * k + 1);
         }
         Keys(bits)
+    }
+
+    /// Whether key `k` went down this tick.
+    pub fn pressed(self, k: usize) -> bool {
+        self.0 & 1 << (2 * k + 1) != 0
     }
 
     /// Writes these keys into one input slot.
@@ -192,14 +197,19 @@ pub fn advance(g: &mut Game, keys: &[(KeySlot, Keys)], rerun: bool) -> bool {
     changed
 }
 
-/// A v2 match's pause: any player's start key toggles it on every peer at the same tick. True while paused.
+/// A v2 match's pause, the same on every peer at the same tick: any player's start key pauses, and only that
+/// player's start key resumes. True while paused.
 fn shared_pause(g: &mut Game, keys: &[(KeySlot, Keys)], silent: bool) -> bool {
-    const START_PRESSED: u16 = 1 << (2 * 6 + 1);
-    let flags = &mut g.game_values.flags;
-    let pressed = keys.iter().any(|(_, k)| k.0 & START_PRESSED != 0);
-    if pressed && !flags.noexit && !g.mode().gameover {
+    let flags = &g.game_values.flags;
+    let toggler = if flags.pausegame {
+        usize::try_from(flags.pauseowner).ok().filter(|&p| keys.get(p).is_some_and(|(_, k)| k.pressed(KEY_GAME_START)))
+    } else {
+        keys.iter().position(|(_, k)| k.pressed(KEY_GAME_START))
+    };
+    if let Some(player) = toggler.filter(|_| !flags.noexit && !g.mode().gameover) {
         let flags = &mut g.game_values.flags;
         flags.pausegame = !flags.pausegame;
+        flags.pauseowner = if flags.pausegame { player as i16 } else { -1 };
         if !silent {
             let mut gp = g.ptr();
             crate::common::game_values::if_sound_on_play(g, &mut gp.rm.sfx_pause);
