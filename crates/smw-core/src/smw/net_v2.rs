@@ -605,7 +605,9 @@ impl V2Match {
                     }
                 }
                 Some(&MSG_GO) if from_host => self.go = true,
-                Some(&MSG_LEAVE) if from_host => return Err("The host left before the match started".to_string()),
+                Some(&MSG_LEAVE) if self.slots.contains_key(&peer) => {
+                    return Err(format!("{} left before the match started", peer_name(&self.names, &self.slots, peer)));
+                }
                 _ => {}
             }
         }
