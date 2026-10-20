@@ -163,7 +163,7 @@ addToLibrary({
             const peer = SMWPeer.peers.get(id);
             if (!peer || peer.gone) return;
             peer.gone = true;
-            if (peer.connected) SMWPeer.changes.push([id, 0]);
+            SMWPeer.changes.push([id, 0]);
             peer.channels.forEach((channel) => channel.close());
             peer.pc.close();
             SMWPeer.peers.delete(id);

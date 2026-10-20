@@ -329,8 +329,11 @@ async fn on_event(
     if let Some(id) = event.get("IdAssigned").and_then(parse_uuid) {
         lock(&context.shared).id = Some(id);
     } else if let Some(id) = event.get("NewPeer").and_then(parse_uuid) {
-        if let Some(peer) = new_peer(api, context, id, true).await {
-            peers.insert(id, peer);
+        match new_peer(api, context, id, true).await {
+            Some(peer) => {
+                peers.insert(id, peer);
+            }
+            None => lock(&context.shared).changes.push((id, PeerState::Disconnected)),
         }
     } else if let Some(id) = event.get("PeerLeft").and_then(parse_uuid) {
         let _ = context.gone.send(id);
@@ -353,6 +356,7 @@ async fn on_event(
         };
         if matches!(signal, Signal::Offer(_)) && !peers.contains_key(&sender) {
             let Some(peer) = new_peer(api, context, sender, false).await else {
+                lock(&context.shared).changes.push((sender, PeerState::Disconnected));
                 return;
             };
             peers.insert(sender, peer);
@@ -512,14 +516,12 @@ impl Handshake {
     }
 }
 
-/// Closes the connection to `id`, reporting `Disconnected` if it had connected.
+/// Closes the connection to `id` and reports `Disconnected`, also for a handshake that never connected.
 async fn drop_peer(shared: &SharedRef, peers: &mut HashMap<PeerId, Peer>, id: PeerId) {
     let Some(peer) = peers.remove(&id) else {
         return;
     };
-    if peer.connected.load(Ordering::Acquire) {
-        lock(shared).changes.push((id, PeerState::Disconnected));
-    }
+    lock(shared).changes.push((id, PeerState::Disconnected));
     let _ = peer.connection.close().await;
 }
 
@@ -547,5 +549,27 @@ mod tests {
         assert_eq!(socket.update_peers(), vec![(PeerId(7), PeerState::Connected)]);
         assert_eq!(socket.receive(RELIABLE), vec![(PeerId(7), vec![1])]);
         assert!(!socket.signaling_closed());
+    }
+
+    #[test]
+    fn a_failed_handshake_reports_disconnected() {
+        let runtime = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+        runtime.block_on(async {
+            let shared = SharedRef::default();
+            let (outgoing, _outgoing_rx) = unbounded_channel();
+            let (gone, mut gone_rx) = unbounded_channel();
+            let ice = rtc_configuration(&IceConfig { servers: Vec::new(), relay_only: false });
+            let context = Context { ice, shared: shared.clone(), outgoing, gone };
+            let api = APIBuilder::new().build();
+            let id = PeerId(9);
+            let peer = new_peer(&api, &context, id, true).await.unwrap();
+            peer.signals.send(Signal::Answer("not an SDP answer".into())).unwrap();
+            let mut peers = HashMap::from([(id, peer)]);
+
+            let failed = tokio::time::timeout(Duration::from_secs(10), gone_rx.recv()).await;
+            assert_eq!(failed.unwrap(), Some(id));
+            drop_peer(&shared, &mut peers, id).await;
+            assert_eq!(std::mem::take(&mut lock(&shared).changes), vec![(id, PeerState::Disconnected)]);
+        });
     }
 }
