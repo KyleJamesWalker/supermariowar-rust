@@ -1,6 +1,6 @@
 # GPU shader presets
 
-Status: desktop done, Android and web open. Desktop builds run RetroArch `.slangp` shader presets through [librashader](https://github.com/SnowflakePowered/librashader), picked under Graphics Options > Shader. Six tuned presets ship with the game, and players can add their own.
+Status: done. Desktop builds run RetroArch `.slangp` shader presets through [librashader](https://github.com/SnowflakePowered/librashader), picked under Graphics Options > Shader. Six tuned presets ship with the game, and players can add their own. Android and the web get a built-in CRT-Easymode shader.
 
 ## Summary
 
@@ -16,7 +16,8 @@ Players get CRT and other display effects from the RetroArch shader collection, 
 - **Presenter:** with the `shaders` feature on and a preset selected, `smw-sdl2` opens an OpenGL 3.3 core window instead of the renderer (`crates/smw-sdl2/src/shader.rs`). Each frame, it uploads the image, runs the preset's filter chain into a texture at the letterboxed size, and blits that texture to the window. If the context or the preset fails, the window falls back to the renderer. The touch controls draw over it with their own small shader (`shader_overlay.rs`), and an event watch maps mouse coordinates to the 640x480 picture, as SDL's renderer does.
 - **Bundled presets (`shaders/presets/`):** each `#reference`s an upstream preset and overrides a few parameters for the 480-line picture. crt-guest-advanced treats more than 375 lines as interlaced, so both guest presets set `inter` to 800. CRT Trinitron 240p also halves the internal resolution, for 240-line scanlines over a Trinitron mask. CRT Royale turns off interlace detection, and its 3-pixel mask needs 3x output or more. Captures at 2x and 4x picked these settings.
 - **Packaging:** the desktop release builds use the `shaders` feature. `tools/shader_bundle.py` follows the presets' references, passes, textures and includes, and copies those 61 files (1.2 MB) and `SHADER_LICENSES.md` into the package's `shaders/`, beside `data/`.
-- **Feature gate:** librashader builds SPIRV-Cross and glslang from C++. The `shaders` feature on `smw-sdl2` (passed through as `smw/shaders`) keeps that out of the Android, web, muOS and aarch64 builds.
+- **Feature gates:** librashader builds SPIRV-Cross and glslang from C++, so the `shaders` feature on `smw-sdl2` (passed through as `smw/shaders`) stays off in the Android, web, muOS and aarch64 builds. The `gl` feature needs only glow and turns on the built-in presenter.
+- **Built-in presenter (`crt_lite.rs`):** a GLSL ES 1.00 port of CRT-Easymode for OpenGL ES 2 (Android) and WebGL 1 (the web), drawn straight to the window. WebGL 1 has no BGRA upload, so it uploads the frame's bytes as RGBA and swaps the channels in the shader. The backend lists it through `Video::builtin_shaders`, and the menu shows it as CRT Easymode where librashader is missing. The Android library and the web page build with `gl`.
 - **Settings (`smw/video_settings.rs`):** the Graphics menu's Shader option lists Off, the bundled presets, then the player's. Off keeps today's renderer. Integer Scaling keeps the picture at whole multiples of 640x480, where scanlines look even. Both save to `video.txt` in the settings folder, and the window opens with the saved preset. The two options appear only when the backend supports shaders, so the headless goldens do not change.
 
 `guides/REPLAY.md` lists the development options. `SMW_SHADER=<preset.slangp>` selects a preset. `SMW_WINDOW_SCALE=<n>` opens the window at n times 640x480. `SMW_SHADER_SHOT=<n>` saves the window after present n as `shader_<n>.bmp` in `SMW_SHOT_DIR`.
@@ -33,7 +34,6 @@ Players get CRT and other display effects from the RetroArch shader collection, 
 - **BVM Monitor** is dark: crt-potato multiplies by a mask texture and has no parameters to brighten it.
 - **macOS:** OpenGL stops at 4.1 there, so presets that need GL 4.3 features, such as crt-geom (`GL_ARB_arrays_of_arrays`), fail to load. The menu should leave them out.
 - **The 480-line source:** at 2x, each source line covers two screen rows, which is too few for strong scanlines. Presets tuned for 240-line games, such as CRT-Royale, look washed out unless tuned or shown at 3x and up.
-- **Android and the web:** librashader targets desktop GL. OpenGL ES and WebGL need a lighter built-in shader.
 
 ## Rollout
 
@@ -41,6 +41,6 @@ Players get CRT and other display effects from the RetroArch shader collection, 
 2. Done: overlay and mouse mapping in the GL path.
 3. Done: the Graphics setting, integer scaling and the player's `shaders/` folder.
 4. Done: tuned bundled presets, release packaging and license notices.
-5. Open: a built-in shader for OpenGL ES (Android) and WebGL (web).
+5. Done: a built-in shader for OpenGL ES (Android) and WebGL (web).
 
 Off stays the default, and turning the setting off returns to the current renderer.
