@@ -1,6 +1,4 @@
-//! Port of src/smw/GSGameplay.cpp
-//!
-//! `_DEBUG`-only code (autotest, debug hotkeys, autokill) is not ported: the reference build is Release.
+//! The gameplay state: a match from its countdown to the scoreboard, with the collisions, wind, screen effects and dialogs.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -69,12 +67,14 @@ use crate::smw::objects::throw_block_type::ThrowBlockType;
 use crate::smw::player::{get_player_from_global_id, player_killed_player, CPlayer, PlayerDeathStyle, PlayerState};
 use std::io::Write;
 
+/// The countdown step at which play starts; the steps above it only animate the map.
 pub const COUNTDOWN_START_INDEX: i16 = 4;
 
 
+/// X offset of each member's stored powerup in a scoreboard of 1 to 3 members.
 pub static scorepowerupoffsets: [[i16; 3]; 3] = [[37, 0, 0], [71, 89, 0], [105, 123, 141]];
 
-/// Constructors of this file's class-type globals, plus the link-time `musicfinished` hook in sfx.
+/// Creates the gameplay globals: the spotlight manager.
 pub fn init_globals(g: &mut Game) {
     g.spotlightManager.init(SpotlightManager::new());
     g.sfx.musicfinished = g.sfx.musicfinished;
@@ -82,13 +82,20 @@ pub fn init_globals(g: &mut Game) {
 
 #[derive(Clone)]
 
+/// The running match's own state; the rest lives in `Game`.
 pub struct GameplayState {
+    /// Countdown steps left: 28 when the countdown starts, 0 once it is over.
     iCountDownState: i16,
+    /// Ticks left in the current countdown step.
     iCountDownTimer: i16,
+    /// Ticks the wind holds before it picks its next target.
     iWindTimer: i16,
+    /// The wind speed the wind eases towards.
     dNextWind: f32,
+    /// X offset of each team's score digits in its scoreboard.
     iScoreTextOffset: [i16; 4],
 
+    /// Half seconds until each player respawns, by global id; 0 when not respawning.
     pub respawnCount: [i16; 4],
     respawnanimationtimer: [i16; 4],
     respawnanimationframe: [i16; 4],
@@ -102,7 +109,9 @@ pub struct GameplayState {
 }
 
 impl GameplayState {
+    /// X offset of each member's portrait in a team's scoreboard.
     pub const scoreoffsets: [i16; 3] = [2, 36, 70];
+    /// Source x in the small powerup sheet for each `powerup` from 1.
     pub const g_iPowerupToIcon: [i16; 8] = [80, 176, 272, 304, 336, 368, 384, 400];
 
     fn new() -> Self {
@@ -136,14 +145,14 @@ impl GameplayState {
     }
 
     pub fn instance(g: &mut Game) -> &'static mut GameplayState {
-        // Safety net until globals::init_globals calls gs_gameplay::init_globals.
+        // `globals::init_globals` leaves the gameplay globals out, so the first `instance` creates them.
         if !g.spotlightManager.is_initialized() {
             init_globals(g);
         }
         g.ptr().get().gps.get_or_insert_with(GameplayState::new)
     }
 
-    /// Not in the C++: the fields a replay checkpoint (smw/checkpoint.rs) saves and restores.
+    /// The fields a replay checkpoint (smw/checkpoint.rs) saves and restores.
     pub fn checkpoint(&mut self, s: &mut crate::smw::checkpoint::Snap) {
         s.io(&mut self.iCountDownState);
         s.io(&mut self.iCountDownTimer);
@@ -230,6 +239,7 @@ const fn rc(x: i32, y: i32, w: i32, h: i32) -> Rect {
     Rect { x, y, w, h }
 }
 
+/// Source and destination rects of each countdown digit (3, 2, 1, Go) at four sizes.
 const iCountDownNumbers: [[[Rect; 2]; 4]; 4] = [
     [
         [rc(0, 0, 64, 64), rc(288, 208, 64, 64)],
@@ -257,6 +267,7 @@ const iCountDownNumbers: [[[Rect; 2]; 4]; 4] = [
     ],
 ];
 
+/// The countdown's 28 steps: how many ticks each lasts, the digit and size it shows, and its announcer sound.
 const iCountDownTimes: [i16; 28] = {
     let (p, l) = (ticks(15) as i16, ticks(45) as i16);
     [3, 3, 3, p, 3, 3, 3, 3, 3, 3, p, 3, 3, 3, 3, 3, 3, p, 3, 3, 3, 3, 3, 3, l, 3, 3, 3]
@@ -266,6 +277,7 @@ const iCountDownRectGroup: [i16; 28] = [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1
 const iCountDownAnnounce: [i16; 28] = [-1, -1, -1, 12, -1, -1, -1, -1, -1, -1, 13, -1, -1, -1, -1, -1, -1, 14, -1, -1, -1, -1, -1, -1, 15, -1, -1, -1];
 
 #[rustfmt::skip]
+/// Moving object types that collide: when `[a][b]` is set, the `b` object handles touching the `a` object.
 const g_iCollisionMap: [[i16; MOVINGOBJECT_LAST as usize]; MOVINGOBJECT_LAST as usize] = [
 //   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], //movingobject_none = 0
@@ -304,12 +316,12 @@ const g_iCollisionMap: [[i16; MOVINGOBJECT_LAST as usize]; MOVINGOBJECT_LAST as 
     [0,0,0,1,1,0,0,1,1,0,0,0,1,1,0,0,0,0,0,0,1,1,0,1,1,0,0,0,0,0,1,0,0,1], //movingobject_throwbox = 33
 ];
 
-//handles a collision between a powerup and an object
+/// Lets `o2` handle touching `o1`.
 pub fn collisionhandler_o2o(g: &mut Game, o1: Ptr<dyn IO_MovingObjectTrait>, mut o2: Ptr<dyn IO_MovingObjectTrait>) {
     o2.collide_object(g, o1);
 }
 
-//Must only be called after organizeteams() is called
+/// The team of player `id`, with its member index in `subTeamID`, or -1; valid only once the teams are organised.
 pub fn lookup_team_id_sub(g: &mut Game, id: i16, teamID: Option<&mut i16>, subTeamID: Option<&mut i16>) -> i16 {
     for i in 0..g.score_cnt {
         for j in 0..g.game_values.teamcounts[i as usize] {
@@ -342,6 +354,7 @@ pub fn lookup_team_id(g: &mut Game, id: i16) -> i16 {
     lookup_team_id_sub(g, id, None, None)
 }
 
+/// Called when a music track ends: restarts `backgroundmusic[3]` with `fResumeMusic`, unless a match is running.
 pub fn musicfinished(g: &mut Game) {
     let mut gp = g.ptr();
     if !g.game_values.music {
@@ -357,6 +370,7 @@ pub fn musicfinished(g: &mut Game) {
     }
 }
 
+/// The mode's icon index; the minigames' icons follow the standard modes' at 25 to 27.
 pub fn get_mode_icon_index_from_mode(mut iMode: i16) -> i16 {
     if iMode as i32 == game_mode_pipe_minigame {
         iMode = 25;
@@ -374,12 +388,12 @@ fn draw_rect(g: &mut Game, sprite: &gfxSprite, x: i32, y: i32, sx: i32, sy: i32,
     sprite.draw_src(g, x, y, &Rect { x: sx, y: sy, w, h });
 }
 
-/// `static_cast<MusicCategory>(id)`.
+/// Music category `id`; panics past the last one.
 fn music_category(id: i16) -> MusicCategory {
     MusicCategory::ALL[id as usize]
 }
 
-/// `sfxMusic(path)`, which throws on failure.
+/// Loads a music file; panics when it cannot.
 fn load_music(g: &mut Game, path: &std::path::Path) -> sfxMusic {
     sfxMusic::from_file(g, path).unwrap_or_else(|e| std::panic::panic_any(e))
 }
@@ -656,6 +670,7 @@ impl GameplayState {
 // RUNNING
 //
 
+/// Teams with a living player; `lastteam` gets the survivor when exactly one is left, else -1.
 pub fn count_alive_teams(g: &mut Game, lastteam: Option<&mut i16>) -> i16 {
     let mut findlastteam: i16 = 0;
 
@@ -699,7 +714,7 @@ impl GameplayState {
             None => Ptr::null(),
         };
 
-        // The index still advances after a removal, so the player shifted into slot i is skipped this frame (as in C++).
+        // The index still advances after a removal, so the player shifted into slot i is skipped this frame.
         let mut i: usize = 0;
         while i < g.players.len() {
             if g.player(g.players[i]).state == PlayerState::Dead {
@@ -720,7 +735,7 @@ impl GameplayState {
                     gmChicken.get().clear_chicken();
                 }
 
-                // C++ leaves this dangling and reads freed memory when the flag reaches a base.
+                // A flag a removed player threw must not name that player any more.
                 for &obj in g.objectcontainer[1].list() {
                     let mut obj = obj;
                     if let Some(flag) = obj.as_any().downcast_mut::<CO_Flag>() {
@@ -757,6 +772,7 @@ impl GameplayState {
     }
 }
 
+/// Eases the wind towards `dNextWind`, holds it for a while, then picks the next target.
 pub fn check_wind_event(g: &mut Game, iWindTimer: &mut i16, dNextWind: &mut f32) {
     let mut gp = g.ptr();
     if *iWindTimer <= 0 {
@@ -782,6 +798,7 @@ pub fn check_wind_event(g: &mut Game, iWindTimer: &mut i16, dNextWind: &mut f32)
     }
 }
 
+/// Deletes the dead objects and effects in every container.
 pub fn clean_dead_non_player_objects(g: &mut Game) {
     g.eyecandy[0].clean_dead_objects();
     g.eyecandy[1].clean_dead_objects();
@@ -793,6 +810,7 @@ pub fn clean_dead_non_player_objects(g: &mut Game) {
     g.noncolcontainer.clean_dead_objects();
 }
 
+/// Keeps the platforms, hazards and effects moving while the countdown holds the players.
 pub fn animate_during_countdown(g: &mut Game) {
         let mut gp = g.ptr();
     //Move platforms
@@ -813,6 +831,7 @@ pub fn animate_during_countdown(g: &mut Game) {
     gp.g_map.update(g);
 }
 
+/// Kills the players with global ids `ids` by POW, in order from a random one.
 pub fn pow_kills(g: &mut Game, ids: &[i32]) {
     let mut gp = g.ptr();
     let pKillPlayers: Vec<PlayerId> = ids.iter().filter_map(|&id| g.players.iter().copied().find(|p| g.player(*p).globalID as i32 == id)).collect();
@@ -839,6 +858,7 @@ pub fn pow_kills(g: &mut Game, ids: &[i32]) {
     }
 }
 
+/// One tick of a POW or MOd shake: kills the players and enemies on the ground, or in the air for MOd.
 pub fn shake_screen(g: &mut Game) {
         let mut gp = g.ptr();
     if g.game_values.flags.screenshaketimer <= 0 {
@@ -1090,6 +1110,7 @@ pub fn handle_p2obj_collisions(g: &mut Game) {
     }
 }
 
+/// Collides each pair of moving objects whose types `g_iCollisionMap` pairs.
 pub fn handle_obj2obj_collisions(g: &mut Game) {
     for iLayer1 in 0..3usize {
         let iContainerEnd1 = g.objectcontainer[iLayer1].list().len();
@@ -1128,7 +1149,7 @@ pub fn handle_obj2obj_collisions(g: &mut Game) {
                         }
                     }
 
-                    // Returns from the whole function, not just the object1 loop (as in C++).
+                    // Returns from the whole function, not just the object1 loop.
                     if object1.is_dead() {
                         return;
                     }
@@ -1384,7 +1405,6 @@ impl GameplayState {
                 g.game_values.screenfade = 0;
 
                 //display the mode and goal at the start of the game
-                //if (game_values.matchtype == MatchType::QuickGame)
                 if g.game_values.startmodedisplay && g.game_values.singleplayermode == -1 {
                     let gm = g.mode();
                     let szMode: String = if gm.goal < 0 {
@@ -1672,6 +1692,7 @@ pub fn is_pause_allowed(g: &mut Game) -> bool {
     !g.game_values.flags.noexit && !g.netplay.v2_match
 }
 
+/// Whether the players may leave the match: always, unless `noexit` is set and a human still plays.
 pub fn is_exit_allowed(g: &mut Game) -> bool {
     if !g.game_values.flags.noexit || g.players.is_empty() {
         return true;
@@ -1686,6 +1707,7 @@ pub fn is_exit_allowed(g: &mut Game) -> bool {
     true
 }
 
+/// Adds a finished match to the World, Tour or Tournament standings.
 pub fn update_score_board(g: &mut Game) {
     let mut gp = g.ptr();
     if g.game_values.matchtype == MatchType::World {
@@ -1829,7 +1851,7 @@ pub fn update_score_board(g: &mut Game) {
     }
 }
 
-/// NOTE: The elements are ordered!
+/// A map block's type as map files store it; the eight switch types must stay consecutive (`load_map_objects`).
 pub type MapBlockType = i32;
 pub const MapBlock_BrickYellow: MapBlockType = 0;
 pub const MapBlock_Powerup: MapBlockType = 1;
@@ -1862,11 +1884,12 @@ pub const MapBlock_WpnBreakPWings: MapBlockType = 27;
 pub const MapBlock_WpnBreakStar: MapBlockType = 28;
 pub const MapBlock_WpnBreakLeaf: MapBlockType = 29;
 
-/// `new T(...)` returned as `IO_Block*`.
+/// Boxes a block as a trait object.
 fn new_block<T: IO_BlockTrait + 'static>(b: T) -> Ptr<dyn IO_BlockTrait> {
     Ptr::from_box(Box::new(b) as Box<dyn IO_BlockTrait>)
 }
 
+/// The block object for map block `typeId` at `drawPos` in pixels, or null for an empty cell.
 pub fn spawn_map_block(g: &mut Game, typeId: i16, drawPos: Vec2s, objdata: &MapBlock, switchStates: &[i16; 4]) -> Ptr<dyn IO_BlockTrait> {
         let mut gp = g.ptr();
         let mut rm = g.rm;
@@ -1907,6 +1930,7 @@ pub fn spawn_map_block(g: &mut Game, typeId: i16, drawPos: Vec2s, objdata: &MapB
     }
 }
 
+/// Creates the map's hazards, blocks and items; with `fPreview` the throw boxes stay empty.
 pub fn load_map_objects(g: &mut Game, fPreview: bool) {
         let mut gp = g.ptr();
         let mut rm = g.rm;
@@ -2064,6 +2088,7 @@ pub fn load_map_objects(g: &mut Game, fPreview: bool) {
     map.update_all_tile_gaps(&g.noncolcontainer);
 }
 
+/// Ends the match: frees the players, objects and effects, restores the map's preview objects and stops the sounds.
 pub fn clean_up(g: &mut Game) {
     let mut gp = g.ptr();
     //delete object list
@@ -2095,7 +2120,7 @@ pub fn clean_up(g: &mut Game) {
     g.y_shake = 0;
 }
 
-/// Returns true on exit.
+/// Runs the pause, exit and quit dialogs and the end-of-match keys; true when the match ends.
 pub fn update_exit_pause_dialog(g: &mut Game, iCountDownState: i16) -> bool {
         let mut gp = g.ptr();
     let waiting = g.mode().gameover && g.game_values.screenfade == 0 && !g.game_values.flags.exitinggame && !g.game_values.flags.pausegame;
@@ -2213,7 +2238,7 @@ pub fn update_screen_shake(g: &mut Game) {
     }
 }
 
-// updates the bullet bills spawned by a powerup
+/// Counts down each player's bullet bill powerup and spawns its bullet bills.
 pub fn update_bullet_bill_powerup(g: &mut Game) {
     for iPlayer in 0..4i16 {
         let p = iPlayer as usize;
@@ -2228,6 +2253,7 @@ pub fn update_bullet_bill_powerup(g: &mut Game) {
     }
 }
 
+/// Spawns one of player `p`'s bullet bills at a random height, flying left or right.
 pub fn spawn_bullet_bills(g: &mut Game, p: usize) {
         let mut gp = g.ptr();
     g.game_values.bulletbillspawntimer[p] = ticks(RANDOM_INT(gp.get(), 20) + 25) as i16;
@@ -2247,7 +2273,7 @@ pub fn spawn_bullet_bills(g: &mut Game, p: usize) {
     if_sound_on_play(g, &mut gp.rm.sfx_bulletbillsound);
 }
 
-// scrolling to center at the end of game
+/// Moves the scoreboards to the middle of the screen at the end of a match.
 pub fn update_scoreboard_animation(g: &mut Game) {
     if g.game_values.flags.showscoreboard {
         if g.game_values.flags.scorepercentmove < 1.0f32 {
@@ -2335,6 +2361,7 @@ pub fn play_music(g: &mut Game) {
     }
 }
 
+/// Tab: switches to another track for the map's music category.
 pub fn play_next_music_track(g: &mut Game) {
     let mut gp = g.ptr();
     if g.mode().gameover || g.game_values.flags.playinvinciblesound || g.rm.sfx_timewarning.is_playing(g) {
@@ -2398,6 +2425,7 @@ impl GameplayState {
     }
 }
 
+/// Whether the match advances this frame: always in a net game, otherwise not while paused or in the exit dialog.
 pub fn should_update(g: &mut Game) -> bool {
     if g.netplay.active {
         return true;
@@ -2410,6 +2438,7 @@ pub fn should_update(g: &mut Game) -> bool {
     true
 }
 
+/// Starts the match the menu set up: clears the last one, applies the mode settings and starts the music.
 pub fn start_gameplay(g: &mut Game) {
     let mut gp = g.ptr();
     clean_up(g);
@@ -2426,6 +2455,7 @@ pub fn start_gameplay(g: &mut Game) {
     }
 }
 
+/// Leaves the match for the menu, fading in.
 pub fn end_gameplay(g: &mut Game) {
         let mut gp = g.ptr();
     clean_up(g);
@@ -2556,6 +2586,7 @@ impl GameplayState {
         self.handle_input(g);
     }
 
+    /// The countdown step (`iCountDownState`).
     pub fn countdown_state(&self) -> i16 {
         self.iCountDownState
     }
@@ -2686,6 +2717,7 @@ impl GameState for GameplayState {
     }
 }
 
+/// Whether the two players overlap, across the screen's wrapping edge too.
 pub fn coldec_player2player(g: &Game, o1: PlayerId, o2: PlayerId) -> bool {
     let sw = App::screenWidth;
     let (o1ix, o1iy, o1r, o1b) = (g.player(o1).ix as i32, g.player(o1).iy as i32, g.player(o1).right_x() as i32, g.player(o1).bottom_y() as i32);
@@ -2702,6 +2734,7 @@ pub fn coldec_player2player(g: &Game, o1: PlayerId, o2: PlayerId) -> bool {
     }
 }
 
+/// Whether the player overlaps the object's collision box, across the wrapping edge too.
 pub fn coldec_player2obj(g: &Game, o1: PlayerId, o2: Ptr<dyn CObjectTrait>) -> bool {
     let sw = App::screenWidth;
     let (o1ix, o1iy, o1r, o1b) = (g.player(o1).ix as i32, g.player(o1).iy as i32, g.player(o1).right_x() as i32, g.player(o1).bottom_y() as i32);
@@ -2718,6 +2751,7 @@ pub fn coldec_player2obj(g: &Game, o1: PlayerId, o2: Ptr<dyn CObjectTrait>) -> b
     }
 }
 
+/// Whether the two objects' collision boxes overlap, across the wrapping edge too.
 pub fn coldec_obj2obj(o1: Ptr<dyn CObjectTrait>, o2: Ptr<dyn CObjectTrait>) -> bool {
     let sw = App::screenWidth;
     //Special cases to deal with players overlapping the right and left sides of the screen
@@ -2736,6 +2770,8 @@ pub fn coldec_obj2obj(o1: Ptr<dyn CObjectTrait>, o2: Ptr<dyn CObjectTrait>) -> b
     }
 }
 
+/// The mystery mushroom: moves every ready player, with its stored powerup, to another one's place.
+/// False with fewer than two ready players.
 pub fn swap_players(g: &mut Game, iUsingPlayerID: i16) -> bool {
         let mut gp = g.ptr();
     //Count available players to switch with
