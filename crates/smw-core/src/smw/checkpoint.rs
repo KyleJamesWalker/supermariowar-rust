@@ -38,6 +38,10 @@ pub struct Snap {
     pos: usize,
     /// A read ran past the end or met an impossible length.
     damaged: bool,
+    /// Loading another peer's match start, whose map name this machine must not trust.
+    shared: bool,
+    /// Why a shared match start was refused.
+    refused: Option<String>,
 }
 
 /// A value a `Snap` saves and loads in place.
@@ -47,11 +51,11 @@ pub trait Field {
 
 impl Snap {
     fn saver() -> Self {
-        Snap { load: false, buf: Vec::new(), pos: 0, damaged: false }
+        Snap { load: false, buf: Vec::new(), pos: 0, damaged: false, shared: false, refused: None }
     }
 
     fn loader(bytes: Vec<u8>) -> Self {
-        Snap { load: true, buf: bytes, pos: 0, damaged: false }
+        Snap { load: true, buf: bytes, pos: 0, damaged: false, shared: false, refused: None }
     }
 
     /// Saves `v`, or overwrites it with the next value when loading.
@@ -240,6 +244,13 @@ fn data_path(g: &mut Game, name: &str) -> String {
     }
 }
 
+/// A map name another peer's match start may use: data-relative or in the settings directory, never absolute or
+/// climbing out with `..`.
+fn shared_name_ok(name: &str) -> bool {
+    let rest = name.strip_prefix(HOME_PREFIX).unwrap_or(name);
+    !rest.starts_with(['/', '\\', '~']) && !rest.contains(':') && !rest.split(['/', '\\']).any(|part| part == "..")
+}
+
 /// Loads a sound or track a checkpoint names; one this machine lacks plays as silence.
 fn load_audio<T>(g: &mut Game, name: &str, load: fn(&mut Game, &Path) -> Result<T, String>) -> Option<T> {
     if name.is_empty() {
@@ -303,6 +314,7 @@ pub fn restore_shared(g: &mut Game, bytes: Vec<u8>) -> Result<(), String> {
     }
     let mut s = Snap::loader(bytes);
     s.pos = 5;
+    s.shared = true;
     let mut map: Vec<u8> = Vec::new();
     s.io(&mut map);
     let mut frame = 0u32;
@@ -311,6 +323,9 @@ pub fn restore_shared(g: &mut Game, bytes: Vec<u8>) -> Result<(), String> {
     let path = crate::common::path::get_home_directory(g) + SHARED_MAP;
     std::fs::write(&path, &map).map_err(|e| format!("cannot write {path}: {e}"))?;
     walk(g, &mut s);
+    if let Some(why) = s.refused {
+        return Err(why);
+    }
     if s.damaged || s.pos != s.buf.len() {
         return Err("the match start is damaged".to_string());
     }
@@ -474,8 +489,11 @@ fn walk(g: &mut Game, s: &mut Snap) {
         let mut map_index = g.maplist.get_current();
         s.io(&mut map);
         s.io(&mut map_index);
+        if s.shared && !shared_name_ok(&map) {
+            s.refused.get_or_insert(format!("the match start names the map {map}"));
+        }
         map = local_path(g, &map);
-        if s.load {
+        if s.load && s.refused.is_none() {
             g.maplist.set_current(map_index);
             let path = data_path(g, &map);
             gp.g_map.load_map(g, &path, crate::common::map::read_type_full);
@@ -723,6 +741,20 @@ mod tests {
         let mut l = Snap::loader(vec![0xFF, 0xFF, 0xFF, 0xFF, 1]);
         l.io(&mut v);
         assert!(l.damaged && v.is_empty());
+    }
+
+    #[test]
+    fn shared_names_stay_in_data_and_settings() {
+        assert!(shared_name_ok("maps/2skyfight.map"));
+        assert!(shared_name_ok("~settings/net_v2.map"));
+        assert!(!shared_name_ok("/etc/passwd"));
+        assert!(!shared_name_ok("~settings//etc/passwd"));
+        assert!(!shared_name_ok("~settings/../secret.map"));
+        assert!(!shared_name_ok("maps/../../outside.map"));
+        assert!(!shared_name_ok("maps\\..\\outside.map"));
+        assert!(!shared_name_ok("C:\\maps\\x.map"));
+        assert!(!shared_name_ok("\\\\server\\share\\x.map"));
+        assert!(!shared_name_ok("~other/x.map"));
     }
 
     #[test]
