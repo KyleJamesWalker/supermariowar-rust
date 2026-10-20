@@ -819,10 +819,6 @@ impl V2Match {
         let started = Instant::now();
         let requests = match session.advance_frame() {
             Ok(requests) => requests,
-            Err(GgrsError::PredictionThreshold) => {
-                self.perf.waits += 1;
-                return true;
-            }
             Err(e) => {
                 println!("[net] v2: {e}");
                 return false;
@@ -834,6 +830,10 @@ impl V2Match {
             }
         }
         let advances = requests.iter().filter(|r| matches!(r, ggrs::GgrsRequest::AdvanceFrame { .. })).count() as u64;
+        // At the prediction window GGRS returns no AdvanceFrame rather than `PredictionThreshold`.
+        if advances == 0 {
+            self.perf.waits += 1;
+        }
         self.rollback_ticks += advances.saturating_sub(1);
         self.ticks += 1;
         if self.ticks % 600 == 0 {
