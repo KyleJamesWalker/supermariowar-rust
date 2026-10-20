@@ -6,7 +6,7 @@ use futures_util::{SinkExt, StreamExt};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tokio_tungstenite::tungstenite::Message;
@@ -64,6 +64,11 @@ struct Shared {
 
 type SharedRef = Arc<Mutex<Shared>>;
 
+/// Locks `m` even if a panicking callback poisoned it; every holder leaves the data consistent.
+fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
+    m.lock().unwrap_or_else(PoisonError::into_inner)
+}
+
 /// What the game thread asks of the tokio thread.
 enum Command {
     Send(usize, PeerId, Vec<u8>),
@@ -92,7 +97,7 @@ impl Socket {
                     .build()
                     .expect("tokio runtime");
                 runtime.block_on(run(url, ice, task_shared.clone(), rx));
-                task_shared.lock().unwrap().signaling_closed = true;
+                lock(&task_shared).signaling_closed = true;
             })
             .expect("spawn the peer socket thread");
         Socket {
@@ -103,15 +108,15 @@ impl Socket {
     }
 
     pub fn id(&mut self) -> Option<PeerId> {
-        self.shared.lock().unwrap().id
+        lock(&self.shared).id
     }
 
     pub fn update_peers(&mut self) -> Vec<(PeerId, PeerState)> {
-        std::mem::take(&mut self.shared.lock().unwrap().changes)
+        std::mem::take(&mut lock(&self.shared).changes)
     }
 
     pub fn signaling_closed(&self) -> bool {
-        self.shared.lock().unwrap().signaling_closed
+        lock(&self.shared).signaling_closed
     }
 
     pub fn send(&mut self, channel: usize, peer: PeerId, data: &[u8]) {
@@ -124,7 +129,7 @@ impl Socket {
         if channel > UNRELIABLE || (channel == UNRELIABLE && self.unreliable_taken) {
             return Vec::new();
         }
-        std::mem::take(&mut self.shared.lock().unwrap().inbox[channel])
+        std::mem::take(&mut lock(&self.shared).inbox[channel])
     }
 
     pub fn take_unreliable(&mut self) -> Channel {
@@ -160,7 +165,7 @@ impl Channel {
     }
 
     pub fn receive(&mut self) -> Vec<(PeerId, Vec<u8>)> {
-        std::mem::take(&mut self.shared.lock().unwrap().inbox[UNRELIABLE])
+        std::mem::take(&mut lock(&self.shared).inbox[UNRELIABLE])
     }
 }
 
@@ -269,13 +274,13 @@ async fn run(
                 Some(Ok(_)) => {}
                 _ => {
                     signaling_open = false;
-                    shared.lock().unwrap().signaling_closed = true;
+                    lock(&shared).signaling_closed = true;
                 }
             },
             Some(text) = outgoing_rx.recv(), if signaling_open => {
                 if ws_tx.send(Message::Text(text.into())).await.is_err() {
                     signaling_open = false;
-                    shared.lock().unwrap().signaling_closed = true;
+                    lock(&shared).signaling_closed = true;
                 }
             }
             _ = keep_alive.tick(), if signaling_open => {
@@ -322,7 +327,7 @@ async fn on_event(
     event: &Value,
 ) {
     if let Some(id) = event.get("IdAssigned").and_then(parse_uuid) {
-        context.shared.lock().unwrap().id = Some(id);
+        lock(&context.shared).id = Some(id);
     } else if let Some(id) = event.get("NewPeer").and_then(parse_uuid) {
         if let Some(peer) = new_peer(api, context, id, true).await {
             peers.insert(id, peer);
@@ -381,17 +386,13 @@ async fn new_peer(api: &API, context: &Context, id: PeerId, offerer: bool) -> Op
         channel.on_open(Box::new(move || {
             if opened.fetch_add(1, Ordering::AcqRel) + 1 == 2 {
                 connected.store(true, Ordering::Release);
-                shared
-                    .lock()
-                    .unwrap()
-                    .changes
-                    .push((id, PeerState::Connected));
+                lock(&shared).changes.push((id, PeerState::Connected));
             }
             Box::pin(async {})
         }));
         let shared = context.shared.clone();
         channel.on_message(Box::new(move |message| {
-            shared.lock().unwrap().inbox[index].push((id, message.data.to_vec()));
+            lock(&shared).inbox[index].push((id, message.data.to_vec()));
             Box::pin(async {})
         }));
         let gone = context.gone.clone();
@@ -424,7 +425,7 @@ async fn new_peer(api: &API, context: &Context, id: PeerId, offerer: bool) -> Op
                 if remote_set.load(Ordering::Acquire) {
                     context.signal(id, json!({ "IceCandidate": json }));
                 } else {
-                    pending.lock().unwrap().push(json);
+                    lock(&pending).push(json);
                 }
             }
             Box::pin(async {})
@@ -494,7 +495,7 @@ impl Handshake {
             };
             connection.set_remote_description(remote).await?;
             self.remote_set.store(true, Ordering::Release);
-            for json in std::mem::take(&mut *self.pending.lock().unwrap()) {
+            for json in std::mem::take(&mut *lock(&self.pending)) {
                 context.signal(id, json!({ "IceCandidate": json }));
             }
             for candidate in early_candidates.drain(..) {
@@ -517,11 +518,34 @@ async fn drop_peer(shared: &SharedRef, peers: &mut HashMap<PeerId, Peer>, id: Pe
         return;
     };
     if peer.connected.load(Ordering::Acquire) {
-        shared
-            .lock()
-            .unwrap()
-            .changes
-            .push((id, PeerState::Disconnected));
+        lock(shared).changes.push((id, PeerState::Disconnected));
     }
     let _ = peer.connection.close().await;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_poisoned_lock_still_serves_the_game_thread() {
+        let shared = SharedRef::default();
+        let held = shared.clone();
+        let _ = std::thread::spawn(move || {
+            let _guard = lock(&held);
+            panic!("a webrtc callback panics");
+        })
+        .join();
+        assert!(shared.is_poisoned());
+        lock(&shared).id = Some(PeerId(7));
+        lock(&shared).changes.push((PeerId(7), PeerState::Connected));
+        lock(&shared).inbox[RELIABLE].push((PeerId(7), vec![1]));
+
+        let (commands, _rx) = unbounded_channel();
+        let mut socket = Socket { shared, commands, unreliable_taken: false };
+        assert_eq!(socket.id(), Some(PeerId(7)));
+        assert_eq!(socket.update_peers(), vec![(PeerId(7), PeerState::Connected)]);
+        assert_eq!(socket.receive(RELIABLE), vec![(PeerId(7), vec![1])]);
+        assert!(!socket.signaling_closed());
+    }
 }
