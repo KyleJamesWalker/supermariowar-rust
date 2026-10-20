@@ -17,18 +17,23 @@ fn throw_error(msg: String) -> ! {
 }
 
 /// Always fullscreen on Android.
-unsafe fn create_window(fullscreen: bool) -> *mut SDL_Window {
-    let mut window_flags = SDL_WindowFlags::SDL_WINDOW_RESIZABLE as u32;
+unsafe fn create_window(fullscreen: bool, extra_flags: u32) -> *mut SDL_Window {
+    let mut window_flags = SDL_WindowFlags::SDL_WINDOW_RESIZABLE as u32 | extra_flags;
     if fullscreen || cfg!(target_os = "android") {
         window_flags |= SDL_WindowFlags::SDL_WINDOW_FULLSCREEN_DESKTOP as u32;
     }
 
+    // SMW_WINDOW_SCALE opens the window at a multiple of 640x480.
+    let scale = std::env::var("SMW_WINDOW_SCALE").ok().and_then(|s| s.parse::<i32>().ok()).filter(|s| *s > 0).unwrap_or(1);
+    // SMW_WINDOW_DISPLAY opens it centered on that display (0 is the primary one).
+    let display = std::env::var("SMW_WINDOW_DISPLAY").ok().and_then(|d| d.parse::<i32>().ok()).filter(|d| (0..SDL_GetNumVideoDisplays()).contains(d));
+    let pos = display.map_or(SDL_WINDOWPOS_CENTERED, |d| SDL_WINDOWPOS_CENTERED | d);
     let window = SDL_CreateWindow(
         b"smw\0".as_ptr() as *const _,
-        SDL_WINDOWPOS_CENTERED,
-        SDL_WINDOWPOS_CENTERED,
-        SCREEN_W as i32,
-        SCREEN_H as i32,
+        pos,
+        pos,
+        SCREEN_W as i32 * scale,
+        SCREEN_H as i32 * scale,
         window_flags,
     );
     if window.is_null() {
@@ -113,11 +118,22 @@ pub struct Sdl2Video {
     /// One per overlay image, null where SDL could not create it.
     overlay_textures: Vec<*mut SDL_Texture>,
     vsync: bool,
+    #[cfg(feature = "shaders")]
+    shader: Option<crate::shader::ShaderPresenter>,
 }
 
 impl Sdl2Video {
     pub fn new() -> Self {
-        Sdl2Video { window: null_mut(), renderer: null_mut(), texture: null_mut(), overlay_generation: Option::None, overlay_textures: Vec::new(), vsync: false }
+        Sdl2Video {
+            window: null_mut(),
+            renderer: null_mut(),
+            texture: null_mut(),
+            overlay_generation: Option::None,
+            overlay_textures: Vec::new(),
+            vsync: false,
+            #[cfg(feature = "shaders")]
+            shader: Option::None,
+        }
     }
 }
 
@@ -131,6 +147,10 @@ impl Drop for Sdl2Video {
     fn drop(&mut self) {
         // SAFETY: each pointer is destroyed once; SDL rejects the nulls left when `open` never ran.
         unsafe {
+            #[cfg(feature = "shaders")]
+            {
+                self.shader = Option::None;
+            }
             for tex in self.overlay_textures.drain(..) {
                 SDL_DestroyTexture(tex);
             }
@@ -199,7 +219,24 @@ impl Video for Sdl2Video {
             let mut v = SDL_version { major: 0, minor: 0, patch: 0 };
             SDL_GetVersion(&mut v);
             println!("[gfx] SDL {}.{}.{} loaded.", v.major, v.minor, v.patch);
-            self.window = create_window(fullscreen);
+            #[cfg(feature = "shaders")]
+            if let Some(preset) = std::env::var_os("SMW_SHADER") {
+                crate::shader::request_context();
+                self.window = create_window(fullscreen, crate::shader::window_flags());
+                match crate::shader::ShaderPresenter::new(self.window, preset.as_ref()) {
+                    Ok(shader) => {
+                        self.vsync = shader.vsync();
+                        self.shader = Some(shader);
+                        return;
+                    }
+                    Err(e) => {
+                        eprintln!("[gfx] Shader preset unavailable, using the renderer: {e}");
+                        SDL_DestroyWindow(self.window);
+                        SDL_GL_ResetAttributes();
+                    }
+                }
+            }
+            self.window = create_window(fullscreen, 0);
             (self.renderer, self.vsync) = create_renderer(self.window);
             self.texture = create_screen_texture(self.renderer);
         }
@@ -208,6 +245,11 @@ impl Video for Sdl2Video {
     fn present(&mut self, frame: Frame<'_>, overlay: Option<&Overlay>) {
         // SAFETY: `Frame` holds SCREEN_W * SCREEN_H pixels, the texture's size; SDL rejects the nulls before `open`.
         unsafe {
+            #[cfg(feature = "shaders")]
+            if let Some(shader) = self.shader.as_mut() {
+                shader.present(self.window, frame);
+                return;
+            }
             SDL_UpdateTexture(self.texture, null(), frame.pixels.as_ptr() as *const _, (SCREEN_W * 4) as i32);
             SDL_RenderClear(self.renderer);
             SDL_RenderCopy(self.renderer, self.texture, null(), null());
@@ -219,6 +261,11 @@ impl Video for Sdl2Video {
     }
 
     fn output_size(&self) -> (i32, i32) {
+        #[cfg(feature = "shaders")]
+        if self.shader.is_some() {
+            // SAFETY: the presenter only exists once `open` made the window.
+            return unsafe { crate::shader::drawable_size(self.window) };
+        }
         let (mut w, mut h) = (0, 0);
         // SAFETY: the out-pointers are live locals; SDL rejects a null renderer.
         unsafe { SDL_GetRendererOutputSize(self.renderer, &mut w, &mut h) };

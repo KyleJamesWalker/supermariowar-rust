@@ -5,9 +5,14 @@ edition.workspace = true
 description = "Super Mario War - the SDL2 backend: smw-platform's traits over SDL2"
 publish.workspace = true
 
+[features]
+shaders = ["dep:librashader", "dep:glow"]
+
 [dependencies]
 smw-platform = { path = "../smw-platform" }
 sdl2 = { version = "0.38", features = ["mixer"] }
+librashader = { version = "0.12.1", default-features = false, features = ["runtime-gl", "presets", "preprocess", "stable"], optional = true }
+glow = { version = "0.17", optional = true }
 
 [dev-dependencies]
 smw-headless = { path = "../smw-headless" }

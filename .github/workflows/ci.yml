@@ -264,6 +264,7 @@ jobs:
       - name: Build
         run: |
           cargo build --release --locked --bins
+          cargo check --release --locked -p smw --features shaders
           cargo build --release --locked -p smw3 ${{ runner.os == 'Linux' && '--features smw-sdl3/build-from-source' || '' }}
 
       - name: Pack
