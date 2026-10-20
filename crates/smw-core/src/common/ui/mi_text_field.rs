@@ -1,4 +1,4 @@
-//! Port of src/common/ui/MI_TextField.cpp
+//! A text entry menu item, with an on-screen keyboard for pads, mice and touch.
 
 use crate::common::resource_manager::SpriteId;
 use crate::common::keys::*;
@@ -13,22 +13,24 @@ use crate::globals::*;
 use crate::common::global_constants::ticks;
 use crate::common::keys::{SDL_SCANCODE_LSHIFT, SDL_SCANCODE_RSHIFT};
 
+/// The shifted characters of the number keys 0 to 9 on a US layout.
 const NUMBER_KEY_MAP: [i16; 10] = [41, 33, 64, 35, 36, 37, 94, 38, 42, 40];
 
-/// Not in upstream: the on-screen keyboard's character rows, unshifted and shifted, and its bottom row
+/// The on-screen keyboard's character rows, unshifted and shifted, and its bottom row
 /// (first column, columns spanned, label).
 const OSK_KEYS: [&[u8; 10]; 4] = [b"1234567890", b"qwertyuiop", b"asdfghjkl-", b"zxcvbnm,./"];
 const OSK_SHIFTED: [&[u8; 10]; 4] = [b"!@#$%^&*()", b"QWERTYUIOP", b"ASDFGHJKL_", b"ZXCVBNM<>?"];
 const OSK_BOTTOM: [(i16, i16, &str); 4] = [(0, 3, "Shift"), (3, 3, "Space"), (6, 2, "Del"), (8, 2, "Done")];
 const OSK_ROWS: i16 = 5;
 const OSK_COLS: i16 = 10;
+/// On-screen keyboard geometry in pixels: key cell width, row height, panel left edge, width and height.
 const OSK_CELL: i32 = 56;
 const OSK_ROW_H: i32 = 36;
 const OSK_X: i32 = 24;
 const OSK_W: i32 = 592;
 const OSK_H: i32 = 16 + OSK_ROWS as i32 * OSK_ROW_H + 12;
 
-/// Not in upstream. `UI_Menu` reports what opened a field: a pad button or a mouse click opens the on-screen keyboard.
+/// `UI_Menu` reports what opened a field: a pad button or a mouse click opens the on-screen keyboard.
 pub fn note_opener(g: &mut Game, keyboard: bool) {
     g.text_field_opened_by_key = keyboard;
 }
@@ -55,16 +57,21 @@ fn is_text_key(key: Keycode) -> bool {
         || key == SDLK_SLASH
 }
 
+/// A labeled text field that edits a `String` in place.
 pub struct MI_TextField {
     pub ui_control: UI_Control,
 
+    /// Byte index of the cursor, and the length in bytes.
     pub iCursorIndex: i16,
     pub iNumChars: i16,
+    /// Buffer size: the field holds at most `iMaxChars - 1` characters.
     pub iMaxChars: i16,
 
     pub spr: SpriteId,
     pub szName: String,
+    /// The text before the cursor, for measuring.
     pub szTempValue: String,
+    /// The string being edited; null until `set_data`.
     pub szOutValue: *mut String,
 
     pub iWidth: i16,
@@ -76,12 +83,13 @@ pub struct MI_TextField {
     pub mcControlSelectedCode: MenuCodeEnum,
 
     pub iAdjustmentY: i16,
+    /// Width in pixels of the text before the cursor, and how much the field shows before it scrolls.
     pub iStringWidth: i16,
     pub iAllowedWidth: i16,
 
     pub szDisallowedChars: String,
 
-    /// Not in upstream: the on-screen keyboard is open, its cursor, and its one-shot Shift.
+    /// The on-screen keyboard is open, its cursor, and its one-shot Shift.
     pub fOsk: bool,
     pub iOskRow: i16,
     pub iOskCol: i16,
@@ -125,11 +133,12 @@ impl MI_TextField {
         self.szName = name.into();
     }
 
-    /// Gets the values of the currently selected item
+    /// The string being edited; panics before `set_data`.
     pub fn get_value(&self) -> &String {
         unsafe { self.szOutValue.as_ref().expect("MI_TextField::GetValue without data") }
     }
 
+    /// Empties the string being edited; panics before `set_data`.
     pub fn clear(&mut self) {
         unsafe { self.szOutValue.as_mut().expect("MI_TextField::Clear without data").clear() };
         self.iCursorIndex = 0;
@@ -144,7 +153,7 @@ impl MI_TextField {
         self.mcControlSelectedCode = code;
     }
 
-    /// Set where the data of this control is written to (some member of game_values probably)
+    /// Edits `data` in place, holding at most `maxchars - 1` characters, with the cursor at its end.
     pub fn set_data(&mut self, g: &mut Game, data: &mut String, maxchars: i16) {
         self.iMaxChars = maxchars;
         self.szOutValue = data as *mut String;
@@ -168,7 +177,7 @@ impl MI_TextField {
 
         let mut bytes = unsafe { (*self.szOutValue).as_bytes().to_vec() };
         bytes.resize(self.iCursorIndex as usize, 0);
-        // byte-level std::string::resize; the font only reads bytes
+        // May cut a multi-byte character; the font reads only bytes.
         self.szTempValue = unsafe { String::from_utf8_unchecked(bytes) };
 
         self.iStringWidth = g.rm.menu_font_large.get_width(&self.szTempValue) as i16;
@@ -215,7 +224,7 @@ impl MI_TextField {
         MENU_CODE_UNSELECT_ITEM
     }
 
-    /// Not in upstream. The on-screen keyboard: the menu directions move its cursor, select presses the key,
+    /// The on-screen keyboard: the menu directions move its cursor, select presses the key,
     /// cancel erases (or leaves an empty field). A typed character means a keyboard is here, so it closes.
     fn osk_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         let key = playerInput.iPressedKey;
@@ -315,7 +324,7 @@ impl MI_TextField {
         }
     }
 
-    /// Not in upstream. Tells the web page (web/textinput.js) where the field being edited is and what it
+    /// Tells the web page (web/textinput.js) where the field being edited is and what it
     /// holds, so a touch screen can open its on-screen keyboard; the typing still arrives as key events.
     #[cfg(target_os = "emscripten")]
     fn notify_page(&self) {
@@ -384,7 +393,6 @@ impl UI_ControlTrait for MI_TextField {
         let keystate = crate::smw::harness::keyboard_state(g);
 
         for iPlayer in 0..4usize {
-            // NOTE: copied from UI_Menu::SendInput
             // Only let player 1 on the keyboard control the menu
             if iPlayer != 0
                 && !g.input_control(g.game_values.playerInput.inputControls[iPlayer]).is_null()
@@ -409,7 +417,6 @@ impl UI_ControlTrait for MI_TextField {
         }
 
 
-        // TODO: check string conversion
         //Watch for characters typed in including delete and backspace
         let mut key: Keycode = playerInput.iPressedKey;
         if is_text_key(key) {
