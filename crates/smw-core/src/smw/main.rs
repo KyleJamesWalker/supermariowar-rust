@@ -710,6 +710,7 @@ pub fn startup(g: &mut Game) {
         ensure_settings_dir(g);
         create_globals(g);
 
+        crate::smw::video_settings::load(g);
         gfx_init(g, App::screenWidth, App::screenHeight, false); //initialize the graphics (SDL)
         g.blitdest = g.screen;
 

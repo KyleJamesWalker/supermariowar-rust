@@ -19,6 +19,7 @@ pub mod pad;
 pub mod quit_dialog;
 #[cfg(not(target_os = "emscripten"))]
 pub mod touch;
+pub mod video_settings;
 pub mod object_container;
 pub mod objectgame;
 pub mod objecthazard;

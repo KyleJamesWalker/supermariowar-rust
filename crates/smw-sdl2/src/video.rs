@@ -118,8 +118,12 @@ pub struct Sdl2Video {
     /// One per overlay image, null where SDL could not create it.
     overlay_textures: Vec<*mut SDL_Texture>,
     vsync: bool,
+    integer_scale: bool,
     #[cfg(feature = "shaders")]
     shader: Option<crate::shader::ShaderPresenter>,
+    /// The preset `set_shader` picked before `open`.
+    #[cfg(feature = "shaders")]
+    pending_shader: Option<std::path::PathBuf>,
 }
 
 impl Sdl2Video {
@@ -131,8 +135,11 @@ impl Sdl2Video {
             overlay_generation: Option::None,
             overlay_textures: Vec::new(),
             vsync: false,
+            integer_scale: false,
             #[cfg(feature = "shaders")]
             shader: Option::None,
+            #[cfg(feature = "shaders")]
+            pending_shader: Option::None,
         }
     }
 }
@@ -145,23 +152,69 @@ impl Default for Sdl2Video {
 
 impl Drop for Sdl2Video {
     fn drop(&mut self) {
-        // SAFETY: each pointer is destroyed once; SDL rejects the nulls left when `open` never ran.
-        unsafe {
-            #[cfg(feature = "shaders")]
-            {
-                self.shader = Option::None;
-            }
-            for tex in self.overlay_textures.drain(..) {
-                SDL_DestroyTexture(tex);
-            }
-            SDL_DestroyTexture(self.texture);
-            SDL_DestroyRenderer(self.renderer);
-            SDL_DestroyWindow(self.window);
-        }
+        // SAFETY: `destroy` frees each object once and leaves nulls behind.
+        unsafe { self.destroy() };
     }
 }
 
 impl Sdl2Video {
+    /// Makes the window and its presenter: the shader presenter for `preset`, else the renderer. Err says why the
+    /// preset did not load; the window then uses the renderer.
+    unsafe fn create(&mut self, fullscreen: bool, preset: Option<&std::path::Path>) -> Result<(), String> {
+        let mut result = Ok(());
+        #[cfg(feature = "shaders")]
+        if let Some(preset) = preset {
+            crate::shader::request_context();
+            self.window = create_window(fullscreen, crate::shader::window_flags());
+            match crate::shader::ShaderPresenter::new(self.window, preset) {
+                Ok(shader) => {
+                    self.vsync = shader.vsync();
+                    self.shader = Some(shader);
+                    self.apply_integer_scale();
+                    return Ok(());
+                }
+                Err(e) => {
+                    SDL_DestroyWindow(self.window);
+                    SDL_GL_ResetAttributes();
+                    result = Err(e);
+                }
+            }
+        }
+        #[cfg(not(feature = "shaders"))]
+        if preset.is_some() {
+            result = Err("built without the shaders feature".to_string());
+        }
+        self.window = create_window(fullscreen, 0);
+        (self.renderer, self.vsync) = create_renderer(self.window);
+        self.texture = create_screen_texture(self.renderer);
+        self.apply_integer_scale();
+        result
+    }
+
+    /// Frees the window and everything drawn into it. Safety: no other pointer to them is in use.
+    unsafe fn destroy(&mut self) {
+        #[cfg(feature = "shaders")]
+        {
+            self.shader = Option::None;
+        }
+        for tex in self.overlay_textures.drain(..) {
+            SDL_DestroyTexture(tex);
+        }
+        self.overlay_generation = Option::None;
+        SDL_DestroyTexture(self.texture);
+        SDL_DestroyRenderer(self.renderer);
+        SDL_DestroyWindow(self.window);
+        (self.texture, self.renderer, self.window) = (null_mut(), null_mut(), null_mut());
+    }
+
+    unsafe fn apply_integer_scale(&mut self) {
+        #[cfg(feature = "shaders")]
+        crate::shader::set_integer_scale(self.integer_scale);
+        if !self.renderer.is_null() {
+            SDL_RenderSetIntegerScale(self.renderer, if self.integer_scale { SDL_bool::SDL_TRUE } else { SDL_bool::SDL_FALSE });
+        }
+    }
+
     /// Draws in window pixels, outside the 640x480 logical viewport. Safety: the renderer must be open.
     unsafe fn draw_overlay(&mut self, overlay: &Overlay) {
         if self.overlay_generation != Some(overlay.generation) {
@@ -220,26 +273,41 @@ impl Video for Sdl2Video {
             SDL_GetVersion(&mut v);
             println!("[gfx] SDL {}.{}.{} loaded.", v.major, v.minor, v.patch);
             #[cfg(feature = "shaders")]
-            if let Some(preset) = std::env::var_os("SMW_SHADER") {
-                crate::shader::request_context();
-                self.window = create_window(fullscreen, crate::shader::window_flags());
-                match crate::shader::ShaderPresenter::new(self.window, preset.as_ref()) {
-                    Ok(shader) => {
-                        self.vsync = shader.vsync();
-                        self.shader = Some(shader);
-                        return;
-                    }
-                    Err(e) => {
-                        eprintln!("[gfx] Shader preset unavailable, using the renderer: {e}");
-                        SDL_DestroyWindow(self.window);
-                        SDL_GL_ResetAttributes();
-                    }
-                }
+            let preset = std::env::var_os("SMW_SHADER").map(std::path::PathBuf::from).or(self.pending_shader.take());
+            #[cfg(not(feature = "shaders"))]
+            let preset: Option<std::path::PathBuf> = Option::None;
+            if let Err(e) = self.create(fullscreen, preset.as_deref()) {
+                eprintln!("[gfx] Shader preset unavailable, using the renderer: {e}");
             }
-            self.window = create_window(fullscreen, 0);
-            (self.renderer, self.vsync) = create_renderer(self.window);
-            self.texture = create_screen_texture(self.renderer);
         }
+    }
+
+    fn supports_shaders(&self) -> bool {
+        cfg!(feature = "shaders")
+    }
+
+    fn set_shader(&mut self, preset: Option<&std::path::Path>) -> Result<(), String> {
+        if self.window.is_null() {
+            #[cfg(feature = "shaders")]
+            {
+                self.pending_shader = preset.map(std::path::Path::to_path_buf);
+                return Ok(());
+            }
+            #[cfg(not(feature = "shaders"))]
+            return if preset.is_some() { Err("built without the shaders feature".to_string()) } else { Ok(()) };
+        }
+        // SAFETY: the window is open, so `destroy` frees live objects and `create` replaces them.
+        unsafe {
+            let fullscreen = SDL_GetWindowFlags(self.window) & SDL_WindowFlags::SDL_WINDOW_FULLSCREEN_DESKTOP as u32 != 0;
+            self.destroy();
+            self.create(fullscreen, preset)
+        }
+    }
+
+    fn set_integer_scale(&mut self, on: bool) {
+        self.integer_scale = on;
+        // SAFETY: takes the renderer only when it exists.
+        unsafe { self.apply_integer_scale() };
     }
 
     fn present(&mut self, frame: Frame<'_>, overlay: Option<&Overlay>) {

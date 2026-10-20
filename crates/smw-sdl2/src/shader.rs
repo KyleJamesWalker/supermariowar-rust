@@ -186,9 +186,17 @@ impl Drop for ShaderPresenter {
     }
 }
 
-/// The scale and offset that fit 640x480 into a `w` by `h` area, centered.
+/// Whether `letterbox` keeps to whole multiples of 640x480.
+static INTEGER_SCALE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+pub fn set_integer_scale(on: bool) {
+    INTEGER_SCALE.store(on, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// The scale and offset that fit 640x480 into a `w` by `h` pixel area, centered.
 fn letterbox(w: i32, h: i32) -> (f32, f32, f32) {
-    let scale = (w as f32 / SCREEN_W as f32).min(h as f32 / SCREEN_H as f32);
+    let fit = (w as f32 / SCREEN_W as f32).min(h as f32 / SCREEN_H as f32);
+    let scale = if INTEGER_SCALE.load(std::sync::atomic::Ordering::Relaxed) && fit >= 1.0 { fit.floor() } else { fit };
     (scale, (w as f32 - SCREEN_W as f32 * scale) / 2.0, (h as f32 - SCREEN_H as f32 * scale) / 2.0)
 }
 
@@ -208,22 +216,27 @@ unsafe extern "C" fn mouse_to_logical(_: *mut std::ffi::c_void, e: *mut SDL_Even
     }
     let (mut w, mut h) = (0, 0);
     SDL_GetWindowSize(window, &mut w, &mut h);
-    if w <= 0 || h <= 0 {
+    let (dw, dh) = drawable_size(window);
+    if w <= 0 || h <= 0 || dw <= 0 || dh <= 0 {
         return 1;
     }
+    // Events come in window points; the letterbox is laid out in drawable pixels, which differ on HiDPI screens.
+    let px = |x: i32, y: i32| ((x as f32 * dw as f32 / w as f32) as i32, (y as f32 * dh as f32 / h as f32) as i32);
     if t == SDL_EventType::SDL_MOUSEMOTION as u32 {
         let m = &mut (*e).motion;
-        (m.x, m.y) = to_logical(m.x, m.y, w, h);
-        let scale = letterbox(w, h).0;
+        let (x, y) = px(m.x, m.y);
+        (m.x, m.y) = to_logical(x, y, dw, dh);
+        let scale = letterbox(dw, dh).0 * w as f32 / dw as f32;
         (m.xrel, m.yrel) = ((m.xrel as f32 / scale) as i32, (m.yrel as f32 / scale) as i32);
     } else {
         let b = &mut (*e).button;
-        (b.x, b.y) = to_logical(b.x, b.y, w, h);
+        let (x, y) = px(b.x, b.y);
+        (b.x, b.y) = to_logical(x, y, dw, dh);
     }
     1
 }
 
-/// A point in a `w` by `h` window as a 640x480 picture pixel; points in the bars fall outside 0..640 or 0..480.
+/// A pixel in a `w` by `h` drawable as a 640x480 picture pixel; pixels in the bars fall outside 0..640 or 0..480.
 fn to_logical(x: i32, y: i32, w: i32, h: i32) -> (i32, i32) {
     let (scale, ox, oy) = letterbox(w, h);
     (((x as f32 - ox) / scale).floor() as i32, ((y as f32 - oy) / scale).floor() as i32)

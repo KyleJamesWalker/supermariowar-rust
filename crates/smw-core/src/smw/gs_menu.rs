@@ -1167,6 +1167,10 @@ impl MenuState {
         } else if MENU_CODE_TOGGLE_FULLSCREEN == code {
             gfx_changefullscreen(g, g.game_values.fullscreen);
             g.blitdest = g.screen;
+        } else if MENU_CODE_SHADER_CHANGED == code {
+            crate::smw::video_settings::apply_shader(g);
+        } else if MENU_CODE_INTEGER_SCALE_CHANGED == code {
+            crate::smw::video_settings::apply_integer_scale(g);
         } else if MENU_CODE_TO_GAME_SETUP_MENU == code {
             self.to_game_setup_menu(g);
         } else if MENU_CODE_BACK_TO_GAME_SETUP_MENU == code {

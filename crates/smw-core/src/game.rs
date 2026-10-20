@@ -137,6 +137,8 @@ pub struct Game {
     pub blitdest: *mut Surface,
     pub fps_limiter: FPSLimiter,
     pub main_loop: MainLoopState,
+    /// The shader preset and integer scaling settings.
+    pub video: crate::smw::video_settings::VideoSettings,
     pub(crate) harness: Harness,
     pub(crate) editor_harness: EditorHarness,
     #[cfg(not(target_os = "emscripten"))]
@@ -323,6 +325,7 @@ impl Game {
             blitdest: std::ptr::null_mut(),
             fps_limiter: FPSLimiter::new(),
             main_loop: MainLoopState::new(),
+            video: crate::smw::video_settings::VideoSettings::new(),
             harness: Harness::new(),
             editor_harness: EditorHarness::new(),
             #[cfg(not(target_os = "emscripten"))]
@@ -421,6 +424,7 @@ impl Game {
             blitdest: if self.blitdest == self.screen { screen_ptr } else { self.blitdest },
             fps_limiter: FPSLimiter::new(),
             main_loop: self.main_loop.clone(),
+            video: self.video.clone(),
             harness: self.harness.clone_inputs(),
             editor_harness: EditorHarness::new(),
             #[cfg(not(target_os = "emscripten"))]
