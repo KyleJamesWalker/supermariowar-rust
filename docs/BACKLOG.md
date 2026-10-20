@@ -78,6 +78,19 @@ A full-codebase review on 2026-10-19, at the head of the GPU shader stack, confi
 - At CI size (48 cases per map, 30 ticks) the damaged-map fuzz test does not find the spawn-area panic without its direct check. Run a long fuzz pass nightly. Also add a byte mutator that knows the 1.8 section offsets. Then damage reaches the spawn areas, draw areas and warp exits, which `save_map` recomputes (`damaged_maps_that_load_play`, M).
 - Unconfirmed: whether anything can move the `String` that `MI_TextField::szOutValue` points to, and whether the world menu catches a world file that fails to parse. Also unconfirmed: whether a host-sent tour-stop line or menu skin can panic the joiner's parser, and how `smw-peer` behaves under TURN after a dropped connection.
 
+## Performance
+
+A read-only profile on 2026-10-20 of a headless 4-CPU replay on an Apple-silicon Mac. None of these changes simulated gameplay unless the item says so. Device numbers are scaled from `design/NETPLAY_V2.md`, not measured.
+
+- Every loaded image blits through the per-pixel alpha blend. `convert_to_screen` turns the color key into alpha 0 and sets no `color_key`, so the opaque 640x480 map layers blend too. The backmap blit takes 78% of gameplay samples: 255 us blended against 20 us copied. Mark a surface opaque when every pixel has alpha 255, clear the mark on any non-opaque write, and copy opaque sources. Output stays bit-identical (`soft_image.rs`, `soft_surface.rs`, M). The alpha 0 and 255 shortcut inside the blend loop is a separate PR on #262.
+- Check whether keyed sprites can set `color_key` at load and take the key loop (66 us against 90 us for 300 sprites). This holds only if the alpha-0 pixels are exactly the key pixels. Confirm with `tools/blit_unverified.sh` (S).
+- `SMW_PERF`'s present column adds the texture upload to the vsync wait, so the device's 5 ms cannot be split. Time `display_list::render`, `SDL_UpdateTexture` and `SDL_RenderPresent` apart, and log the renderer's texture formats once. A GLES2 driver without BGRA support converts the 1.2 MB frame on the CPU every present (`main.rs`, `video.rs`, S). Do this before more device tuning.
+- A Very Hard CPU rebuilds its navigation graph every 8 ticks on maps with platforms, with 300 or more allocations per build, and `route` allocates its scratch buffers per call. Reuse the buffers and store the edges as two flat vectors (`ai_nav.rs`, S). One graph shared by all CPUs per tick changes gameplay. Batch it with other AI work.
+- On a 60 Hz display, interpolation records each tick and replays it once per present, for no visual gain. Rasterize directly when the refresh rate is at or below the tick rate (`main.rs`, `gs_gameplay.rs`, S).
+- Small per-frame allocations: `draw_platforms` clones two vectors six times a frame (`map.rs`), `touch::overlay` clones the cutouts and builds a new quad vector every present (`touch.rs`), and `display_list::begin` regrows its command vector every tick (S each).
+- A headless replay spends about 1.4 s of 2.5 s asleep in `services::delay` calls from the map preview widgets and the live-record poll. The golden sweeps pay about 80 s per run. Make `delay` a no-op in the headless services (S).
+- Startup on the device is unmeasured: about 230 PNGs decode through `flate2`'s Rust backend, and a missing `maps/cache/mapsummary.txt` loads every map. Log per-phase startup times first, then consider `zlib-rs` and shipping the cache (S).
+
 ## Parked
 
 - Upgrade `webrtc` past 0.17.2: 0.21 turns methods `smw-peer` awaits into synchronous calls, so it needs a port (57 compile errors on the bump). Until then, `.github/dependabot.yml` ignores its minor and major updates. Remove that entry when this starts. The upgrade also drops the second `sha1` (0.10) that `dtls` 0.17 pulls in.
