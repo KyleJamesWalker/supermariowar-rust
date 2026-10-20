@@ -384,7 +384,7 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
         }
 
         let iBulletPathSpacing: i16 = (hazard.dparam[0] * dBulletBillFrequency[s]) as i16;
-        while iBulletPathX >= 0 && (iBulletPathX as i32) < get_screen_width(iSize as i32) {
+        while iBulletPathSpacing != 0 && iBulletPathX >= 0 && (iBulletPathX as i32) < get_screen_width(iSize as i32) {
             rDotDst = Rect { x: iBulletPathX as i32, y: rPathDst.y + ((ts - dot) >> 1), w: dot, h: dot };
             g.rm.sprite(g.rm.spr_platformpath).draw_src_to(&rDotSrc, dst, &rDotDst);
 
@@ -3096,6 +3096,21 @@ pub(crate) mod tests {
         }
         out.sort();
         out
+    }
+
+    #[test]
+    fn slow_bullet_bill_thumbnail_finishes() {
+        let g = map_game();
+        let _g = lock_globals();
+        let pack = convert_path(g, "gfx/packs/Classic");
+        *g.rm.sprite(g.rm.spr_hazard_bulletbill[2]) = ImageLoader::new(convert_path_pack(g, "gfx/packs/hazards/bulletbill_thumbnail.png", &pack)).create(g);
+        *g.rm.sprite(g.rm.spr_platformpath) = ImageLoader::new(convert_path_pack(g, "gfx/leveleditor/leveleditor_platform_path.png", &pack)).create(g);
+        let thumb = crate::common::gfx::soft_surface::alloc_surface(crate::common::gfx::soft_surface::Surface::new_xrgb(160, 120));
+        for velocity in [0.0, 0.3, -0.3] {
+            let mut hazard = MapHazard { itype: 2, ix: 10, iy: 10, ..Default::default() };
+            hazard.dparam[0] = velocity;
+            draw_map_hazard(g, &hazard, 2, false, thumb);
+        }
     }
 
     #[test]
