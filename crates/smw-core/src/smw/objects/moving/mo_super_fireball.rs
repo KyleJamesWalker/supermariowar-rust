@@ -67,13 +67,13 @@ impl MO_SuperFireball {
         o.iPlayerID = iGlobalID;
         o.iTeamID = teamID;
         o.colorOffset = ((iColorID as i32 + 1) * 64) as i16;
-        o.directionOffset = if o.velx < 0.0 { 0 } else { 32 };
         o.movingObjectType = movingobject_superfireball;
 
         o.state = 1;
 
         o.velx = vel.x;
         o.vely = vel.y;
+        o.directionOffset = if o.velx < 0.0 { 0 } else { 32 };
         o.ttl = ticks(RANDOM_INT(gp.get(), 30) + 60) as i16;
 
         o.drawframe = 0;
