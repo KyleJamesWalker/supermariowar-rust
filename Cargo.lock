@@ -2335,7 +2335,7 @@ name = "smw-netplay"
 version = "0.1.0"
 dependencies = [
  "base64 0.23.1",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "hmac 0.13.0",
  "sha1 0.11.0",
  "smw-globals",
@@ -2393,7 +2393,7 @@ dependencies = [
 name = "smw_relay"
 version = "0.1.0"
 dependencies = [
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "serde_json",
  "smw-netplay",
  "tungstenite 0.30.0",
