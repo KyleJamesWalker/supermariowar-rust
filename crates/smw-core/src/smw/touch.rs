@@ -1,4 +1,4 @@
-//! Not in upstream: on-screen touch controls for Android (`SMW_TOUCH=1`), drawn beside the 4:3 picture. Like
+//! On-screen touch controls for Android (`SMW_TOUCH=1`), drawn beside the 4:3 picture. Like
 //! web/touch.js they press player 1's default keys, so recordings hold ordinary key input;
 //! a still tap off the controls is a menu tap.
 
@@ -8,6 +8,7 @@ use smw_platform::{Input, InputEvent, Overlay, TouchPhase, OverlayImage, Overlay
 use std::sync::Arc;
 use crate::common::path::get_home_directory;
 
+/// A key the touch controls press; Jump presses Up.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Key {
     Left,
@@ -27,6 +28,7 @@ impl Key {
         1 << self as u8
     }
 
+    /// The right keyboard set's default key for it.
     fn sym(self) -> i32 {
         (match self {
             Key::Left => SDLK_LEFT,
@@ -41,12 +43,14 @@ impl Key {
     }
 }
 
+/// The left control: a fixed D-pad, or a stick that appears under the thumb.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Mode {
     Dpad,
     Stick,
 }
 
+/// The control a finger went down on; the finger keeps it until it lifts.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Zone {
     Dpad,
@@ -59,7 +63,9 @@ enum Zone {
 struct Finger {
     id: i64,
     zone: Zone,
+    /// The keys the finger holds, as `Key::bit`s.
     keys: u8,
+    /// Where it went down; for a stick, the base, which follows the thumb.
     origin: (f32, f32),
     pos: (f32, f32),
 }
@@ -267,10 +273,13 @@ struct Controls {
     mode: Mode,
     layout: Layout,
     fingers: Vec<Finger>,
+    /// How many fingers hold each key, by `Key`.
     held: [u8; 8],
+    /// Key presses and releases waiting for `flush`.
     queue: Vec<(Key, bool)>,
     /// Fingers that went down outside the controls, by where they went down.
     presses: Vec<(i64, (f32, f32))>,
+    /// Menu taps in 640x480 coordinates waiting for `flush`.
     taps: Vec<(i16, i16)>,
 }
 
@@ -279,6 +288,7 @@ impl Controls {
         Controls { mode, layout, fingers: Vec::new(), held: [0; 8], queue: Vec::new(), presses: Vec::new(), taps: Vec::new() }
     }
 
+    /// Sets finger `i`'s keys, queueing a press or release only when no other finger holds that key.
     fn set_keys(&mut self, i: usize, keys: u8) {
         let old = self.fingers[i].keys;
         for key in KEYS.into_iter().filter(|k| old & k.bit() != 0 && keys & k.bit() == 0) {
@@ -345,14 +355,19 @@ impl Controls {
 
 struct Touch {
     controls: Controls,
+    /// Off after key or pad input, on again at the next touch.
     visible: bool,
+    /// The overlay's fade, 0 to 1.
     alpha: f32,
     cutouts: Vec<Rect>,
     images: Option<Arc<[OverlayImage]>>,
+    /// Bumped whenever `images` is rebuilt.
     generation: u64,
 }
 
+/// The Android touch controls' state inside `Game`.
 pub struct TouchState {
+    /// The live controls; None without `SMW_TOUCH` and in replays.
     touch: Option<Touch>,
     session_on: bool,
     first: bool,
@@ -375,6 +390,7 @@ pub fn set_cutouts(boxes: &[[i32; 4]]) {
     let rects = boxes.iter().filter(|b| b[2] > b[0] && b[3] > b[1]).map(|b| Rect { x: b[0] as f32, y: b[1] as f32, w: (b[2] - b[0]) as f32, h: (b[3] - b[1]) as f32 });
     *CUTOUTS.lock().unwrap_or_else(|e| e.into_inner()) = rects.collect();
 }
+/// File in the settings directory holding the left control's mode: `dpad` or `stick`.
 const MODE_FILE: &str = "touch_controls.txt";
 
 fn load_mode(g: &mut Game) -> Mode {
@@ -441,6 +457,7 @@ pub fn filter(g: &mut Game, input: &Input) -> bool {
         }
         return false;
     }
+    // A key other than Android's Back, a pad button or a stick past half way hides the controls.
     let other_input = match input.event {
         InputEvent::Key { key, down: true, .. } => key.0 != SDLK_AC_BACK,
         InputEvent::PadButton { down: true, .. } => true,
@@ -500,6 +517,7 @@ pub fn overlay(g: &mut Game) -> Option<Overlay> {
     Some(Overlay { generation: t.generation, images: t.images.clone()?, quads: quads(t) })
 }
 
+/// Indexes into the images `build_images` makes; `ARM` is four images, one per direction.
 const DPAD_BASE: usize = 0;
 const ARM: usize = 1;
 const DPAD_CENTER: usize = 5;
@@ -516,6 +534,7 @@ const STICK_BASE: usize = 15;
 const STICK_KNOB: usize = 16;
 const TEXTURES: usize = 17;
 
+/// The overlay's quads in window pixels for the current mode and held keys.
 fn quads(t: &Touch) -> Vec<OverlayQuad> {
     let c = &t.controls;
     let l = c.layout;
@@ -705,6 +724,7 @@ fn glyph(ch: u8) -> Option<[u8; 7]> {
     })
 }
 
+/// Rasterises every overlay image for `l`, in the order of the index constants.
 fn build_images(l: &Layout) -> Vec<OverlayImage> {
     let dp = l.dp;
     let border = 2.0 * dp;

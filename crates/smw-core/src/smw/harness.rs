@@ -1,7 +1,7 @@
-//! Port of src/smw/Harness.cpp from tools/cpp-harness.patch (not in upstream C++).
+//! Replays, state dumps, screenshots and session recordings.
 //!
-//! Deterministic replay/dump harness. Every entry point is a no-op unless the corresponding
-//! SMW_* environment variable is set; docs/guides/REPLAY.md is the byte-level spec.
+//! Outside a recording, every entry point is a no-op unless its SMW_* environment variable is set;
+//! docs/guides/REPLAY.md is the byte-level spec.
 
 use crate::common::keys::*;
 use crate::game::Game;
@@ -26,6 +26,7 @@ extern "C" {
     fn srand(seed: u32);
 }
 
+/// The kind of a replay input line.
 #[derive(PartialEq, Eq, Clone, Copy)]
 enum EventKind {
     Key,
@@ -39,58 +40,81 @@ enum EventKind {
     Await,
 }
 
+/// One replay input line.
 #[derive(Clone)]
 struct ReplayEvent {
     frame: u32,
     kind: EventKind,
     down: bool,
+    /// The SDL key name, or the name an `await` waits for.
     keyName: String,
+    /// Device index, 0 to 7.
     device: i32,
+    /// Axis, button or hat index; a tap's x.
     index: i32,
+    /// Axis value, button state (0 or 1) or hat bits; a tap's y.
     value: i32,
 }
 
+/// How many axes, buttons and hats a replay line may name per device.
 const VIRTUAL_AXES: i32 = 64;
 const VIRTUAL_BUTTONS: i32 = 64;
 const VIRTUAL_HATS: i32 = 1;
 
+/// The harness's state inside `Game`, read from the SMW_* variables at startup.
 pub struct Harness {
+    /// The RNG, libc and the sound clock run off `seed` and the frame count: SMW_SEED, or a recorded session.
     seeded: bool,
     seed: u32,
+    /// SMW_NOLIMIT: frames run back to back without pacing.
     noLimit: bool,
+    /// SMW_MAP: the map every match plays on, or empty.
     map: String,
+    /// SMW_FRAMES: quit after this many frames plus `shift`; -1 for no limit.
     maxFrames: i64,
+    /// SMW_DUMP: the per-frame state dump.
     dump: Option<BufWriter<File>>,
+    /// SMW_SHOT_FRAMES: frames saved as BMP screenshots.
     shotFrames: BTreeSet<u32>,
     shotDir: String,
+    /// SMW_SHOT_EVERY and SMW_SHOT_RANGE: a screenshot every `shotEvery` frames in `shotFrom..=shotTo`.
     shotEvery: u32,
     shotFrom: u32,
     shotTo: u32,
+    /// SMW_SHOT_STREAM: the periodic screenshots as raw frames appended to one file.
     shotStream: Option<BufWriter<File>>,
+    /// The replay's input lines in frame order; `nextEvent` is the next one to play.
     events: Vec<ReplayEvent>,
+    /// Joysticks attached at launch in the replay: one past the highest device not first seen in a `jadd`.
     joysticks: i32,
     /// `jadd`/`jremove` lines: (frame, device, added).
     devices: Vec<(u32, i32, bool)>,
     nextDevice: usize,
     /// `#@ touch=1`: the session had Android's touch controls.
     touch: bool,
+    /// SMW_REPLAY is set.
     replay: bool,
     nextEvent: usize,
+    /// Frames run so far; the virtual sound clock and seeded net clock run on it.
     frame: u32,
+    /// Real audio plays on top of the virtual mixer (`audible`).
     audible: bool,
     speed: f32,
     /// Frames the script's `await` lines have waited so far; later events and SMW_FRAMES move by it.
     shift: u32,
     /// States and menus current since the last satisfied `await`, so one that has already passed still satisfies it.
     seen: Vec<&'static str>,
+    /// The session recording being written.
     rec: Option<Recorder>,
     segment: Option<Segment>,
     /// The keyboard as the replayed key events left it; pushed events do not update SDL's own state.
     replay_keys: [u8; crate::common::keys::SDL_NUM_SCANCODES],
+    /// A `--replay` watch's throwaway HOME, removed by `finish`.
     watch_home: Option<std::path::PathBuf>,
     /// Bit d set: open joystick d is a standard-mapping pad. SDL opens the connected pads in page order.
     #[cfg(target_os = "emscripten")]
     web_standard: i32,
+    /// Each open joystick's hat as its D-pad button lines left it (`web_dpad`).
     #[cfg(target_os = "emscripten")]
     web_hats: [i32; 8],
 }
@@ -177,6 +201,7 @@ fn env(name: &str) -> Option<String> {
     std::env::var(name).ok().filter(|v| !v.is_empty())
 }
 
+/// Prints `msg` and exits with status 2.
 pub fn fail(msg: String) -> ! {
     eprintln!("[harness] {}", msg);
     std::process::exit(2);
@@ -210,6 +235,7 @@ fn strtol10(s: &str) -> i64 {
     }
 }
 
+/// The ms clock of seeded runs: 1000 at frame 0, then one tick's worth of ms per frame.
 fn virtual_ticks(g: &mut Game) -> u32 {
     1000u32.wrapping_add((h(g).frame as u64 * 1000 / crate::common::global_constants::TICKS_PER_SECOND as u64) as u32)
 }
@@ -219,6 +245,7 @@ pub fn read_recording(path: impl AsRef<std::path::Path>) -> Option<String> {
     String::from_utf8(read_maybe_gzip(path).ok()?).ok()
 }
 
+/// Parses a replay's input lines, exiting on a malformed one; also reads its `jadd`/`jremove` and `#@ touch=` lines.
 fn load_events(g: &mut Game, path: &str) -> Vec<ReplayEvent> {
     let mut gp = g.ptr();
     let text = read_recording(path).unwrap_or_else(|| fail(format!("cannot open replay {}", path)));
@@ -331,7 +358,7 @@ fn load_events(g: &mut Game, path: &str) -> Vec<ReplayEvent> {
     std::mem::take(events)
 }
 
-/// Not in the C++. A replay's `jadd`/`jremove` lines for this frame: (device, connected).
+/// A replay's `jadd`/`jremove` lines for this frame: (device, connected).
 pub fn replay_device_changes(g: &mut Game) -> Vec<(usize, bool)> {
     let mut gp = g.ptr();
     let mut changes = Vec::new();
@@ -345,7 +372,7 @@ pub fn replay_device_changes(g: &mut Game) -> Vec<(usize, bool)> {
     changes
 }
 
-/// Not in the C++. While recording, a `jadd`/`jremove` line for a pad connected or disconnected before this frame.
+/// While recording, a `jadd`/`jremove` line for a pad connected or disconnected before this frame.
 pub fn record_device(g: &mut Game, index: usize, added: bool) {
     let mut gp = g.ptr();
     let Some(r) = rec(g).filter(|r| r.live) else { return };
@@ -380,6 +407,7 @@ fn input_of(g: &mut Game, ev: &ReplayEvent) -> Input {
     Input { timestamp: 0, event: input_for(g, ev) }
 }
 
+/// The dump's name for the current top-level state.
 fn state_name(g: &mut Game) -> &'static str {
     let mut gp = g.ptr();
     use crate::smw::game_state::StateId;
@@ -409,6 +437,7 @@ pub fn keyboard_state(g: &mut Game) -> *const u8 {
     }
 }
 
+/// Writes one frame's dump block: the state, the menu or gameplay details, the sound commands and the RNG counters.
 fn dump_frame(g: &mut Game, out: &mut impl Write) -> std::io::Result<()> {
     let mut gp = g.ptr();
     let state = state_name(g);
@@ -428,6 +457,7 @@ fn dump_frame(g: &mut Game, out: &mut impl Write) -> std::io::Result<()> {
     writeln!(out, "R calls={} last={}", RandomNumberGenerator::call_count(gp.get()), RandomNumberGenerator::last_value(gp.get()))
 }
 
+/// Reads the SMW_* variables and sets up seeding, the replay, recording, the dump and screenshots.
 pub fn init(g: &mut Game) {
     let mut gp = g.ptr();
     unsafe {
@@ -523,6 +553,7 @@ pub fn dump_to(g: &mut Game, path: &str) {
     h(g).dump = Some(BufWriter::new(file));
 }
 
+/// The seed for libc `srand`: the harness seed in seeded runs, else `fallback`.
 pub fn libc_seed(g: &mut Game, fallback: u32) -> u32 {
     let mut gp = g.ptr();
     if h(gp.get()).seeded {
@@ -532,9 +563,8 @@ pub fn libc_seed(g: &mut Game, fallback: u32) -> u32 {
     }
 }
 
-/// Not in upstream: in a browser replay, the number of joysticks the replay uses. They exist only as
-/// the device index its events carry (`which`), which is what the game compares with its bindings.
-/// A replay's device count; a replay opens no backend pads.
+/// A replay's joystick count, or None outside a replay. Its joysticks exist only as the device index its events
+/// carry, which is what the game compares with its bindings.
 pub fn replay_joysticks(g: &mut Game) -> Option<usize> {
     h(g).replay.then(|| h(g).joysticks.max(0) as usize)
 }
@@ -552,11 +582,13 @@ pub fn replay_touch(g: &mut Game) -> bool {
     h(gp.get()).replay && h(gp.get()).touch
 }
 
+/// Whether a replay (SMW_REPLAY) is running.
 pub fn replaying(g: &mut Game) -> bool {
     let mut gp = g.ptr();
     h(gp.get()).replay
 }
 
+/// The current frame number.
 pub fn frame(g: &mut Game) -> u32 {
     let mut gp = g.ptr();
     h(gp.get()).frame
@@ -611,11 +643,13 @@ pub fn net_seed() -> Option<u32> {
     env("SMW_NET_SEED").and_then(|s| s.parse().ok())
 }
 
+/// SMW_NOLIMIT: run frames without pacing.
 pub fn no_limit(g: &mut Game) -> bool {
     let mut gp = g.ptr();
     h(gp.get()).noLimit
 }
 
+/// SMW_MAP: the map every match plays on.
 pub fn forced_map(g: &mut Game) -> Option<&'static str> {
     let mut gp = g.ptr();
     if h(gp.get()).map.is_empty() {
@@ -625,6 +659,7 @@ pub fn forced_map(g: &mut Game) -> Option<&'static str> {
     }
 }
 
+/// Start of a frame: advances the virtual sound clock, then runs `frame_start_input`.
 pub fn frame_start(g: &mut Game) {
     #[cfg(not(target_os = "emscripten"))]
     {
@@ -741,6 +776,7 @@ pub fn wait_event(g: &mut Game) -> Input {
     input
 }
 
+/// End of a frame: writes the dump block, markers and screenshots, then counts the frame and quits at SMW_FRAMES.
 pub fn frame_end(g: &mut Game) {
     let mut gp = g.ptr();
     if let Some(mut out) = h(gp.get()).dump.take() {
@@ -775,21 +811,23 @@ pub fn frame_end(g: &mut Game) {
 }
 
 //------------------------------------------------------------------------------------------------
-// Session recording (not in the C++). A normal launch, i.e. one without SMW_REPLAY, runs seeded and
-// records every input the game sees to <settings dir>/replays/<timestamp>.txt in the replay format,
-// so the session can be watched again or replayed on the C++ reference. See docs/guides/REPLAY.md, "Recordings".
+// Session recording: a launch without SMW_REPLAY runs seeded and records every input the game sees to
+// <settings dir>/replays/<timestamp>.txt in the replay format (docs/guides/REPLAY.md, "Recordings").
 //------------------------------------------------------------------------------------------------
 
+/// Recordings kept in the replays directory; each recorded launch deletes the oldest beyond it.
 const KEEP_RECORDINGS: usize = 10;
 
 /// The settings files a recording embeds, as `#@ <key>=<base64>`.
 const SETTINGS_FILES: [(&str, &str); 3] = [("options_b64", "options.bin"), ("controls_b64", "controls.sdl2.bin"), ("servers_b64", "servers.toml")];
 
+/// A session recording being written.
 struct Recorder {
     out: BufWriter<File>,
     path: String,
     /// Live input held back by `input::poll` until the next frame start (or blocking wait).
     pending: Vec<Input>,
+    /// The window was closed; the session ends at this frame start.
     quit: bool,
     /// The frame a window close arrived in; the recording ends before it.
     quitFrame: Option<u32>,
@@ -811,6 +849,7 @@ fn rec(g: &mut Game) -> Option<&'static mut Recorder> {
 
 const BASE64: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
+/// Standard base64 with padding.
 pub fn base64_encode(data: &[u8]) -> String {
     let mut out = String::with_capacity((data.len() + 2) / 3 * 4);
     for chunk in data.chunks(3) {
@@ -827,6 +866,7 @@ pub fn base64_encode(data: &[u8]) -> String {
     out
 }
 
+/// Standard base64, read up to the first `=`; None on a character outside the alphabet.
 pub fn base64_decode(text: &str) -> Option<Vec<u8>> {
     let mut out = Vec::with_capacity(text.len() / 4 * 3);
     let mut acc: u32 = 0;
@@ -863,12 +903,14 @@ fn utc_timestamp() -> String {
     format!("{:04}-{:02}-{:02}_{:02}{:02}{:02}", y, m, d, rem / 3600, rem / 60 % 60, rem % 60)
 }
 
+/// A recorded session's seed, from the clock and the process id.
 fn random_seed() -> u32 {
     let nanos = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0);
     let mixed = (nanos as u64) ^ ((std::process::id() as u64) << 32) ^ (nanos >> 64) as u64;
     (mixed ^ (mixed >> 29)).wrapping_mul(0x9E3779B97F4A7C15).wrapping_shr(32) as u32
 }
 
+/// Deletes the oldest `.txt` recordings in `dir`, which ends in a slash, beyond `KEEP_RECORDINGS`.
 fn prune_recordings(dir: &str) {
     let Ok(entries) = std::fs::read_dir(dir) else { return };
     let mut names: Vec<String> = entries
@@ -1005,6 +1047,7 @@ fn device_index(g: &mut Game, which: i32) -> Option<i32> {
     (0..g.devices.len()).find(|&i| g.pad(i) == Some(PadSlot(which))).map(|i| i as i32)
 }
 
+/// The replay line for `ev`.
 fn line_for(ev: &ReplayEvent) -> String {
     match ev.kind {
         EventKind::Key => format!("{} {} {}", ev.frame, if ev.down { "down" } else { "up" }, ev.keyName),
@@ -1043,6 +1086,7 @@ fn push_live_script(g: &mut Game, r: &mut Recorder, frame: u32) {
     }
 }
 
+/// The backend pad slot of open device `device`, or -1.
 fn sdl_instance(g: &mut Game, device: i32) -> i32 {
     if device >= 0 {
         if let Some(pad) = g.pad(device as usize) {
@@ -1052,13 +1096,14 @@ fn sdl_instance(g: &mut Game, device: i32) -> i32 {
     -1
 }
 
+/// Writes `ev` to the recording and queues its input for the game.
 fn record_event(g: &mut Game, r: &mut Recorder, ev: &ReplayEvent) {
     let _ = writeln!(r.out, "{}", line_for(ev));
     let input = input_of(g, ev);
     crate::smw::input::push_ready(g, input);
 }
 
-/// Not in upstream. Browsers report a standard-mapping pad's D-pad as buttons 12-15 (up, down, left,
+/// Browsers report a standard-mapping pad's D-pad as buttons 12-15 (up, down, left,
 /// right) and desktop SDL as hat 0, so each of those button lines is preceded by the hat line it implies.
 #[cfg(target_os = "emscripten")]
 mod web_dpad {
@@ -1071,6 +1116,7 @@ mod web_dpad {
     }
 
 
+    /// Notes which open pads use the standard mapping.
     pub fn init(g: &mut Game) {
         unsafe {
             super::h(g).web_standard = emscripten_run_script_int(
@@ -1079,6 +1125,7 @@ mod web_dpad {
         }
     }
 
+    /// The hat line a D-pad button line implies, or None for any other line.
     pub fn hat_for(g: &mut Game, ev: &ReplayEvent) -> Option<ReplayEvent> {
         if ev.kind != EventKind::JoyButton || !(12..=15).contains(&ev.index) || super::h(g).web_standard & (1 << ev.device) == 0 {
             return None;
@@ -1166,7 +1213,7 @@ fn record_wait_event(g: &mut Game) -> Input {
     }
 }
 
-/// Three seconds.
+/// Frames a watch plays past the last input of a recording that has no `frames=` line.
 const UNFINISHED_TAIL_FRAMES: u32 = 3 * crate::common::global_constants::TICKS_PER_SECOND;
 
 /// Writes `#@ frames=` and closes the recording, or removes a watch session's throwaway HOME.
@@ -1240,9 +1287,8 @@ pub fn prepare_watch(g: &mut Game, file: &str, speed: Option<f32>, segment: Opti
 }
 
 //------------------------------------------------------------------------------------------------
-// Markers, checkpoints and segment replays (not in the C++). A recording marks each change of game
-// state with a `#@ mark` line and saves a `#@ checkpoint` at the start of each match, from which a
-// segment replay starts that match directly. See docs/guides/REPLAY.md, "Markers, checkpoints and clips".
+// Markers, checkpoints and segment replays: a recording marks each change of game state with a `#@ mark` line and
+// saves a `#@ checkpoint` at each match start, from which a segment replay starts that match (docs/guides/REPLAY.md).
 //------------------------------------------------------------------------------------------------
 
 /// A replay's event, written to its SMW_RECORD_TO recording as it is pushed.
@@ -1370,7 +1416,7 @@ fn load_segment(g: &mut Game, path: &str) {
     h(gp.get()).segment = Some(Segment { checkpoint: bytes });
 }
 
-/// A checkpoint line's binary: `z64=` (zlib, then base64) or, in older recordings, `b64=` (base64).
+/// A checkpoint line's binary: `z64=` (zlib, then base64) or `b64=` (base64).
 fn checkpoint_bytes(d: &[(String, String)]) -> Result<Vec<u8>, String> {
     let mut bytes = None;
     for (key, value) in d.iter().skip(1) {
