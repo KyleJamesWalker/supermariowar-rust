@@ -20,7 +20,7 @@ Players get CRT and other display effects from the RetroArch shader collection, 
 - **Built-in presenter (`crt_lite.rs`):** a GLSL ES 1.00 port of CRT-Easymode for OpenGL ES 2 (Android) and WebGL 1 (the web), drawn straight to the window. WebGL 1 has no BGRA upload, so it uploads the frame's bytes as RGBA and swaps the channels in the shader. The backend lists it through `Video::builtin_shaders`, and the menu shows it as CRT Easymode where librashader is missing. The Android library and the web page build with `gl`.
 - **Settings (`smw/video_settings.rs`):** the Graphics menu's Shader option lists Off, the bundled presets, then the player's. Off keeps today's renderer. Integer Scaling keeps the picture at whole multiples of 640x480, where scanlines look even. Both save to `video.txt` in the settings folder, and the window opens with the saved preset. The two options appear only when the backend supports shaders, so the headless goldens do not change.
 
-`guides/REPLAY.md` lists the development options. `SMW_SHADER=<preset.slangp>` selects a preset. `SMW_WINDOW_SCALE=<n>` opens the window at n times 640x480. `SMW_SHADER_SHOT=<n>` saves the window after present n as `shader_<n>.bmp` in `SMW_SHOT_DIR`.
+`guides/REPLAY.md` lists the development options. `SMW_SHADER=<preset.slangp>` selects a preset. `SMW_WINDOW_SCALE=<n>` opens the window at n times 640x480. `SMW_SHADER_SHOT=<n>` saves the window after present n as `shader_<n>.bmp` in `SMW_SHOT_DIR`. CI's `shaders` job renders the built-in CRT Easymode and the CRT Lottes preset on Mesa's llvmpipe under xvfb and compares the captures with `tools/shader_golden/` (`tools/shader_shot_test.py`; `UPDATE=1` rewrites the goldens, which come from llvmpipe on Linux).
 
 ## Alternatives considered
 
