@@ -41,6 +41,8 @@ impl PlayerSkin {
 pub struct Player {
     /// The name the lobby gave this player, unique ignoring ASCII case.
     pub name: Vec<u8>,
+    /// Sent `NET_REQUEST_CONNECT`; a connection that only asks for server info never does.
+    pub connected: bool,
     pub network_client: Option<Box<dyn NetPeer>>,
 
     /// The player's room, 0 for none.
@@ -65,6 +67,7 @@ impl Player {
             synchOK: false,
 
             name: b"Anonymous".to_vec(),
+            connected: false,
             network_client: None,
 
             skinPackage: PlayerSkin::default(),

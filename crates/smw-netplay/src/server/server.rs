@@ -31,7 +31,6 @@ pub struct SMWServer {
     /// The `NET_RESPONSE_SERVERINFO` reply, kept in step with the config.
     serverInfo: ServerInfo,
 
-    currentPlayerCount: u32,
     maxPlayerCount: u32,
     /// Connected players, by `NetPeer::get_player_id`.
     players: UnorderedMap<u64, Player>,
@@ -71,7 +70,6 @@ impl SMWServer {
         SMWServer {
             serverName: "SMW Server".to_string(),
             serverInfo: ServerInfo::with("SMW Server", 0, 20 /* maxPlayerCount */),
-            currentPlayerCount: 0,
             maxPlayerCount: 20,
             players: UnorderedMap::new(),
             roomCreateID: 1,
@@ -191,6 +189,7 @@ impl SMWServer {
     */
 
     fn send_server_info(&mut self, client: &mut dyn NetPeer) {
+        self.serverInfo.currentPlayerCount = self.players.values().filter(|p| p.connected).count() as u32;
         client.send_reliable(self.serverInfo.as_bytes());
     }
 
@@ -220,6 +219,7 @@ impl SMWServer {
         let package = ClientConnection::from_bytes(data);
 
         player.name = self.unique_name(playerID, cstr_bytes(&package.playerName));
+        player.connected = true;
         player.send_connect_ok();
 
         log(&format!("{} : <{}> connected.", player.network_client.as_ref().unwrap().address_as_string(), cstr_field(&package.playerName)));
@@ -533,8 +533,7 @@ impl NetworkEventHandler for SMWServer {
             let mut new_client = new_client;
             self.send_code(new_client.as_mut(), NET_RESPONSE_CONNECT_SERVERFULL);
             log("[warning] Server full...");
-            // The peer is neither kept nor disconnected.
-            std::mem::forget(new_client);
+            new_client.disconnect();
         } else {
             let address = new_client.address_as_string();
             self.players.index_or_insert_with(new_client.get_player_id(), Player::new).set_client(new_client);
@@ -665,7 +664,9 @@ mod tests {
         fn send_reliable(&mut self, data: &[u8]) -> bool {
             self.send(data)
         }
-        fn disconnect(&mut self) {}
+        fn disconnect(&mut self) {
+            self.outbox.borrow_mut().push(Vec::new());
+        }
         fn address_host(&self) -> u32 {
             0
         }
@@ -717,7 +718,7 @@ mod tests {
     }
 
     fn codes(outbox: &Outbox) -> Vec<u8> {
-        outbox.borrow_mut().drain(..).map(|m| m[2]).collect()
+        outbox.borrow_mut().drain(..).filter_map(|m| m.get(2).copied()).collect()
     }
 
     fn room_with_password(server: &mut SMWServer, password: &str) -> u32 {
@@ -944,6 +945,28 @@ mod tests {
         send(&mut server, 1, &host, MessageHeader::new(NET_G2L_GAME_RESULTS).as_bytes());
         send(&mut server, 3, &late, JoinRoom::with(room, "").as_bytes());
         assert!(codes(&late).contains(&NET_RESPONSE_JOIN_OK));
+    }
+
+    #[test]
+    fn server_info_counts_connected_players() {
+        let mut server = server();
+        connect(&mut server, 1, "One");
+        connect(&mut server, 2, "Two");
+        let probe = Outbox::default();
+        server.on_connect(&mut (), Box::new(TestPeer { id: 3, outbox: probe.clone() }));
+        send(&mut server, 3, &probe, MessageHeader::new(NET_REQUEST_SERVERINFO).as_bytes());
+        assert_eq!({ ServerInfo::from_bytes(&probe.borrow()[0]).currentPlayerCount }, 2);
+    }
+
+    #[test]
+    fn a_full_lobby_disconnects_the_next_player() {
+        let mut server = server();
+        server.set_max_players(1);
+        connect(&mut server, 1, "One");
+        let refused = Outbox::default();
+        server.on_connect(&mut (), Box::new(TestPeer { id: 2, outbox: refused.clone() }));
+        assert_eq!(*refused.borrow(), [MessageHeader::new(NET_RESPONSE_CONNECT_SERVERFULL).as_bytes().to_vec(), Vec::new()]);
+        assert!(!server.players.contains_key(&2));
     }
 
     #[test]
