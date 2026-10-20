@@ -1,4 +1,4 @@
-//! Port of src/smw/player_components/PlayerInvincibility.cpp
+//! Star invincibility: timer and flashing palette.
 
 use crate::game::Game;
 use crate::common::gfx::gfx_palette::{invincibility_1, invincibility_2, invincibility_3, normal, PlayerPalette};
@@ -7,14 +7,18 @@ use crate::smw::player::CPlayer;
 use crate::common::global_constants::{ticks};
 
 const INVINCIBILITY_ANIMATION_STATES: [PlayerPalette; 4] = [normal, invincibility_1, invincibility_2, invincibility_3];
+/// Invincibility duration, in ticks.
 const INVINCIBILITY_TIME: i16 = ticks(580) as i16;
+/// Final stretch, in ticks, where the palette flashes slower to warn it is ending.
 const INVINCIBILITY_HURRYUP_TIME: i16 = ticks(100) as i16;
+/// Ticks per palette frame, normally and during the hurry-up.
 const INVINCIBILITY_ANIMATION_DELAY: i16 = 4;
 const INVINCIBILITY_HURRYUP_ANIMATION_DELAY: i16 = 7;
 
 #[derive(Clone, Default)]
 pub struct PlayerInvincibility {
     pub invincible: bool,
+    /// Ticks since invincibility began.
     pub timer: i16,
     pub _alias: Aliased,
 }
@@ -29,6 +33,7 @@ impl PlayerInvincibility {
         self.timer = 0;
     }
 
+    /// Starts or restarts invincibility, removing the shield and taking over the music.
     pub fn turn_on(&mut self, g: &mut Game, player: &mut CPlayer) {
         let mut gp = g.ptr();
         self.invincible = true;
@@ -62,6 +67,7 @@ impl PlayerInvincibility {
         }
     }
 
+    /// Palette to draw this tick while invincible.
     pub fn get_player_palette(&self) -> PlayerPalette {
         let len = INVINCIBILITY_ANIMATION_STATES.len();
         if (self.timer as i32) < (INVINCIBILITY_TIME as i32 - INVINCIBILITY_HURRYUP_TIME as i32) {

@@ -1,4 +1,4 @@
-//! Port of src/smw/player_components/PlayerJail.cpp
+//! Jail state for jail mode: a jailed player is slowed until freed or the timer ends.
 
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -12,8 +12,11 @@ use crate::smw::player::CPlayer;
 
 #[derive(Clone, Default)]
 pub struct PlayerJail {
+    /// Team that jailed the player, or -1.
     pub owner_teamID: i8,
+    /// Jail sprite color: the jailer's color in owned style, -1 for the neutral sprite.
     pub color: i8,
+    /// Ticks left in jail; above 0 means jailed.
     pub timer: i16,
     pub _alias: Aliased,
 }
@@ -36,6 +39,7 @@ impl PlayerJail {
         self.color
     }
 
+    /// Jails the player for `timetofree` ticks on behalf of `inflictor`'s team.
     pub fn lock_in_by(&mut self, g: &mut Game, inflictor: &mut CPlayer) {
         self.timer = g.game_values.gamemodesettings.jail.timetofree;
         self.owner_teamID = inflictor.teamID as i8;
@@ -47,6 +51,7 @@ impl PlayerJail {
         }
     }
 
+    /// Frees the player after they kill someone; plays a hit sound if they were not jailed.
     pub fn escape(&mut self, g: &mut Game, player: &mut CPlayer) {
         let mut gp = g.ptr();
         if self.is_active() {
@@ -66,6 +71,7 @@ impl PlayerJail {
         }
     }
 
+    /// Frees the player when a teammate touches them.
     pub fn free_by_teammate(&mut self, g: &mut Game, player: &mut CPlayer) {
         let mut gp = g.ptr();
         if self.is_active() {
@@ -81,6 +87,7 @@ impl PlayerJail {
         }
     }
 
+    /// Counts the jail time down; with `timetofree` of 1 or less, jail never expires on its own.
     pub fn update(&mut self, g: &mut Game, player: &mut CPlayer) {
         let mut gp = g.ptr();
         if self.is_active() && g.game_values.gamemodesettings.jail.timetofree > 1 {

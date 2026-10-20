@@ -1,4 +1,4 @@
-//! Port of src/smw/player_components/PlayerWarpStatus.cpp
+//! Warp pipe travel: sliding into a warp, picking an exit, and sliding out.
 
 use crate::game::Game;
 use crate::common::game_values::if_sound_on_play;
@@ -11,9 +11,13 @@ use crate::smw::player::{CPlayer, PlayerState};
 
 #[derive(Clone, Default)]
 pub struct PlayerWarpStatus {
+    /// Pixels travelled into the entrance, or pixels left to clear the exit.
     pub warpcounter: i16,
+    /// Connection group of the warp being used; the exit is chosen from the same group.
     pub warpconnection: i16,
+    /// Id of the entrance warp exit, excluded when picking where to come out.
     pub warpid: i16,
+    /// Screen coordinate of the pipe mouth, in pixels; sprites are clipped past it.
     pub warpplane: i16,
     /// The fraction of a pixel of warp travel carried into the next tick.
     pub step_remainder: f32,
@@ -45,6 +49,7 @@ impl PlayerWarpStatus {
         self.warpplane
     }
 
+    /// Moves a warping player one pixel per original-rate tick, carrying the remainder.
     pub fn update(&mut self, g: &mut Game, player: &mut CPlayer) {
         debug_assert!(player.iswarping());
 
@@ -103,6 +108,7 @@ impl PlayerWarpStatus {
         }
     }
 
+    /// Starts entering `warp` and applies the entrance warp lock.
     pub fn enter_warp(&mut self, g: &mut Game, player: &mut CPlayer, warp: Ptr<Warp>) {
         let mut gp = g.ptr();
         debug_assert!(warp.direction != WARP_UNDEFINED);
@@ -159,6 +165,8 @@ impl PlayerWarpStatus {
         if_sound_on_play(g, &mut gp.rm.sfx_pipe);
     }
 
+    /// Moves the player to a random exit in the connection, triggers the block it faces,
+    /// refreshes the shield and applies the exit warp lock.
     pub fn choose_warp_exit(&mut self, g: &mut Game, player: &mut CPlayer) {
         let mut gp = g.ptr();
         let mut exit: Ptr<WarpExit> = gp.g_map.get_random_warp_exit(g, self.warpconnection as i32, self.warpid as i32);

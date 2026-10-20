@@ -1,4 +1,4 @@
-//! Port of src/smw/player_components/PlayerCollisions.cpp
+//! Player collision handling: against map tiles, other players, and objects.
 
 use crate::smw::players::PlayerId;
 use crate::game::Game;
@@ -17,11 +17,12 @@ use crate::smw::player::{CPlayer, PlayerDeathStyle, PlayerState};
 use crate::smw::player_components::player_shield::{HARD, OFF, SOFT, SOFT_WITH_STOMP};
 
 #[derive(Clone, Default)]
+/// Stateless; groups the player's collision routines.
 pub struct PlayerCollisions {
     pub _alias: Aliased,
 }
 
-/// `block && !block->isTransparent() && !block->isHidden()`
+/// True for a block that exists and is neither transparent nor hidden.
 fn is_solid_block(mut block: Ptr<dyn IO_BlockTrait>) -> bool {
     !block.is_null() && !block.is_transparent() && !block.is_hidden()
 }
@@ -31,6 +32,7 @@ impl PlayerCollisions {
         Self::default()
     }
 
+    /// Pushes the player down out of a solid tile or block at their top edge; returns true on a hit.
     pub fn checktop(&mut self, g: &mut Game, player: &mut CPlayer) -> bool {
         if (player.top_y() as f32) < 0.0f32 {
             return false;
@@ -75,6 +77,7 @@ impl PlayerCollisions {
         false
     }
 
+    /// Pushes the player right out of a solid tile or block at their left edge; returns true on a hit.
     fn checkleft(&mut self, g: &mut Game, player: &mut CPlayer) -> bool {
         if player.fy < 0.0f32 {
             return false;
@@ -116,6 +119,7 @@ impl PlayerCollisions {
         false
     }
 
+    /// Pushes the player left out of a solid tile or block at their right edge; returns true on a hit.
     fn checkright(&mut self, g: &mut Game, player: &mut CPlayer) -> bool {
         if player.fy < 0.0f32 {
             return false;
@@ -161,6 +165,7 @@ impl PlayerCollisions {
         false
     }
 
+    /// Pushes the player out of solid tiles touching any of their four corners.
     pub fn checksides(&mut self, g: &mut Game, player: &mut CPlayer) {
         //First figure out where the corners of this object are touching
         let mut iCase: u8 = 0;
@@ -370,6 +375,8 @@ impl PlayerCollisions {
         }
     }
 
+    /// If `player` came down onto `other`, bounces them and kills `other` when falling fast enough
+    /// and `other` is unshielded; returns true on any landing.
     fn is_stomping(&mut self, g: &mut Game, mut player: PlayerId, mut other: PlayerId) -> bool {
         if g.player(player).fOldY + PH as f32 <= g.player(other).fOldY && g.player(player).bottom_y() >= g.player(other).top_y() {
             //don't reposition if player is warping when he kills the other player
@@ -419,7 +426,7 @@ impl PlayerCollisions {
         false
     }
 
-    //handles a collision between two players (is being called if o1, o2 collide)
+    /// Resolves two overlapping players: team rules, freezes, invincibility, stomps, then pushback.
     pub fn handle_p2p(&mut self, g: &mut Game, mut o1: PlayerId, mut o2: PlayerId) {
         let mut gp = g.ptr();
         //If teams tag each other
@@ -543,12 +550,13 @@ impl PlayerCollisions {
         }
     }
 
-    //handles a collision between a player and an object
+    /// Lets the object handle touching the player; returns the object's result.
     pub fn handle_p2o(&mut self, g: &mut Game, o1: PlayerId, mut o2: Ptr<dyn CObjectTrait>) -> bool {
         o2.collide_player(g, o1)
     }
 
-    //calculates the new positions for both players when they are pushing each other
+    /// Separates two side-by-side players (`o1` on the left) and bounces them apart, handling
+    /// screen wrap; a kuribo shoe pushes harder.
     fn handle_p2p_pushback(&mut self, g: &mut Game, mut o1: PlayerId, mut o2: PlayerId) {
         //o1 is left to o2
         //  |o1||o2|

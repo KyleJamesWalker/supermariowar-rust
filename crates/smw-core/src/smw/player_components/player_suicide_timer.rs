@@ -1,4 +1,4 @@
-//! Port of src/smw/player_components/PlayerSuicideTimer.cpp
+//! Idle timer: a player who stops giving input for too long is killed.
 
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -9,8 +9,11 @@ use crate::smw::player::CPlayer;
 
 #[derive(Clone, Default)]
 pub struct PlayerSuicideTimer {
+    /// Idle ticks; the countdown starts once this exceeds `suicidetime`.
     pub timer: i16,
+    /// Ticks toward the next countdown second.
     pub counttimer: i16,
+    /// Countdown seconds shown over the player, from 2; the player dies when it goes below 0.
     pub displaytimer: i16,
     pub _alias: Aliased,
 }
@@ -26,6 +29,7 @@ impl PlayerSuicideTimer {
         self.displaytimer = 2;
     }
 
+    /// Counts idle time; disabled at game over and in single-player mode.
     pub fn update(&mut self, g: &mut Game, player: &mut CPlayer) {
         if g.mode().gameover || g.game_values.singleplayermode >= 0 {
             self.reset();

@@ -1,3 +1,4 @@
+//! Per-player state components that `CPlayer` owns and updates each tick.
 pub mod player_award_effects;
 pub mod player_burnup_timer;
 pub mod player_cape;

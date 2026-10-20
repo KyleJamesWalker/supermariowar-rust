@@ -7,7 +7,9 @@ use std::ops::{Deref, DerefMut};
 /// A player in `Game::players`. A handle to a removed player finds nothing.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct PlayerId {
+    /// Index into `Players::slots`.
     slot: u8,
+    /// Must match the slot's generation; bumped on removal so stale handles miss.
     generation: u8,
 }
 
@@ -18,7 +20,7 @@ impl Default for PlayerId {
 }
 
 impl PlayerId {
-    /// No player: what a null `CPlayer*` was in the C++.
+    /// No player.
     pub const NONE: PlayerId = PlayerId { slot: u8::MAX, generation: 0 };
 
     pub fn is_none(self) -> bool {
@@ -28,9 +30,11 @@ impl PlayerId {
 
 /// Derefs to the play order; the slots own the players.
 pub struct Players {
+    /// Living players in play order; what `Players` derefs to.
     order: Vec<PlayerId>,
     /// Null for a free slot; otherwise a `Box::into_raw` that `remove` frees.
     slots: Vec<*mut CPlayer>,
+    /// Current generation of each slot.
     generations: Vec<u8>,
 }
 
@@ -78,6 +82,7 @@ impl Players {
     }
 
     #[allow(clippy::mut_from_ref)]
+    /// Returns the player behind `id`, or `None` for `NONE` or a removed player.
     pub fn get(&self, id: PlayerId) -> Option<&'static mut CPlayer> {
         let slot = id.slot as usize;
         if slot >= self.slots.len() || self.generations[slot] != id.generation {
@@ -102,7 +107,7 @@ impl DerefMut for Players {
 }
 
 impl Game {
-    /// Panics on a removed player, where the C++ read freed memory.
+    /// Returns the player behind `id`; panics on `NONE` or a removed player.
     pub fn player(&self, id: PlayerId) -> &'static mut CPlayer {
         self.players.get(id).unwrap_or_else(|| panic!("no player {:?}", id))
     }
