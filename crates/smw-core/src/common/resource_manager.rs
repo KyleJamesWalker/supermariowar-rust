@@ -1038,7 +1038,7 @@ impl CResourceManager {
         *self.sprite(self.spr_overlay) = builder("gfx/packs/menu/menu_shade.png").create(g);
     }
 
-    /// Loads every sound from the current sound pack; returns `false` without audio and panics on a missing file.
+    /// Loads every sound from the current sound pack; returns `false` without audio. A missing file plays as silence.
     pub fn load_game_sounds(&mut self, g: &mut Game) -> bool {
         let mut gp = g.ptr();
         g.game_values.soundcapable = false;
@@ -1049,7 +1049,7 @@ impl CResourceManager {
 
         let soundpack = g.soundpacklist.current_path().to_string_lossy().into_owned();
         let mut open = |relpath: &str| {
-            sfxSound::from_file(g, Path::new(&convert_path_pack(gp.get(), relpath, &soundpack))).unwrap_or_else(|what| panic!("{}", what))
+            sfxSound::from_file_or_silence(g, Path::new(&convert_path_pack(gp.get(), relpath, &soundpack)))
         };
 
         self.sfx_mip = open("sfx/packs/mip.wav");

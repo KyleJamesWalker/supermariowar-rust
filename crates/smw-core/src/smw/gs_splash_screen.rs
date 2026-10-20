@@ -174,7 +174,7 @@ impl GameState for SplashScreenState {
 pub fn load_game_data(g: &mut Game) {
         let mut gp = g.ptr();
     // menu music
-    g.backgroundmusic[2] = sfxMusic::from_file(g, gp.musiclist.music(1)).unwrap_or_else(|e| std::panic::panic_any(e));
+    g.backgroundmusic[2] = sfxMusic::from_file_or_silence(g, gp.musiclist.music(1));
 
     gp.rm.load_all_graphics(g);
     gp.rm.load_game_sounds(g);
