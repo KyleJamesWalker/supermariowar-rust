@@ -11,6 +11,7 @@ pub use keys::HeadlessKeyboard;
 
 /// The last presented frame, 640x480 ARGB8888.
 pub struct HeadlessVideo {
+    /// `SCREEN_W * SCREEN_H` pixels, row by row; black until the first `present`.
     pub pixels: Vec<u32>,
 }
 
@@ -126,6 +127,7 @@ impl AudioOut for HeadlessAudio {
 
 /// Time passes only when the game sleeps.
 pub struct HeadlessClock {
+    /// Milliseconds since the backend was made.
     now: Cell<u64>,
 }
 
@@ -152,6 +154,7 @@ impl Clock for HeadlessClock {
     }
 }
 
+/// Fixed directories, and directory listings in a fixed order.
 pub struct HeadlessStorage {
     pub settings_dir: PathBuf,
     pub root_dir: PathBuf,
@@ -174,6 +177,7 @@ impl Storage for HeadlessStorage {
     }
 }
 
+/// The reflected CRC-32C (Castagnoli) lookup table.
 const fn crc32c_table() -> [u32; 256] {
     let mut table = [0; 256];
     let mut i = 0;
@@ -207,7 +211,9 @@ pub fn apfs_key(name: &str) -> u32 {
 /// cycle started waits for the next one.
 #[derive(Default)]
 pub struct HeadlessEvents {
+    /// `None` is the end-of-cycle mark.
     queue: VecDeque<Option<Input>>,
+    /// A mark is in `queue`.
     sentinel: bool,
 }
 

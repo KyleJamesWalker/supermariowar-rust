@@ -4,14 +4,18 @@ use smw_platform::Keyboard;
 use std::sync::OnceLock;
 
 const TABLE: &str = include_str!("sdl2_keys.txt");
+/// `SDL_NUM_SCANCODES`.
 const NUM_SCANCODES: usize = 512;
+/// Set in a keycode that names a key by its scancode (`SDLK_SCANCODE_MASK`).
 const SCANCODE_MASK: i32 = 1 << 30;
 
+/// The table by scancode: its name (empty when unnamed) and its key (0 when none).
 struct Keymap {
     names: Vec<&'static str>,
     keys: Vec<i32>,
 }
 
+/// Parsed from `TABLE` on first use.
 fn keymap() -> &'static Keymap {
     static KEYMAP: OnceLock<Keymap> = OnceLock::new();
     KEYMAP.get_or_init(|| {
@@ -26,6 +30,7 @@ fn keymap() -> &'static Keymap {
     })
 }
 
+/// `SDL_GetScancodeName`: empty for an unnamed or out-of-range scancode.
 fn scancode_name(scancode: i32) -> &'static str {
     usize::try_from(scancode).ok().and_then(|s| keymap().names.get(s)).copied().unwrap_or("")
 }
@@ -73,6 +78,7 @@ impl Keyboard for HeadlessKeyboard {
             return scancode_name(key & !SCANCODE_MASK).to_string();
         }
         match key {
+            // Control characters are named after their keys' scancodes; other characters after themselves, uppercased.
             13 => scancode_name(40).to_string(),
             27 => scancode_name(41).to_string(),
             8 => scancode_name(42).to_string(),

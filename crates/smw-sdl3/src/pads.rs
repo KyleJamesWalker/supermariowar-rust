@@ -21,14 +21,17 @@ const LAYOUT: [i32; 11] = [
     6,  // Left shoulder
     7,  // Right shoulder
 ];
+/// The joystick buttons the left and right triggers become.
 const TRIGGER_BUTTONS: [u8; 2] = [8, 9];
+/// How far a trigger must travel to count as pressed.
 const TRIGGER_THRESHOLD: i16 = 16384;
+/// `SDL_GamepadButton` values of the Guide button and the first D-pad direction.
 const GUIDE: u8 = 5;
 const DPAD_UP: u8 = 11;
 /// Hat bits for D-pad up, down, left and right.
 const DPAD_BITS: [u8; 4] = [1, 4, 8, 2];
 
-/// (name, GUID prefix, mapping), applied to the first entry matching a joystick that is no gamepad, as smw-sdl2's.
+/// (name, GUID prefix, mapping), applied to the first entry matching a joystick that is no gamepad; the same as smw-sdl2's.
 const BUILTIN_MAPPINGS: [(&str, &str, &str); 3] = [
     ("muOS-Keys", "19000000", H700_RAW),
     ("Deeplay-keys", "", H700_RAW),
@@ -39,25 +42,35 @@ const MUINPUT: &str =
 const H700_RAW: &str =
     "a:b3,b:b4,x:b6,y:b5,leftshoulder:b7,rightshoulder:b8,lefttrigger:b12,righttrigger:b13,guide:b11,start:b10,back:b9,dpup:h0.1,dpleft:h0.8,dpright:h0.2,dpdown:h0.4,leftx:a0,lefty:a1,";
 
+/// One open pad.
 struct Pad {
+    /// The game's device number for it.
     index: usize,
+    /// SDL's joystick instance ID, which events carry as `which`.
     instance: u32,
     /// Opened as a gamepad, whose events are translated.
     controller: bool,
+    /// Owned when `gamepad` is null; otherwise the gamepad's own joystick.
     joystick: *mut SDL_Joystick,
     gamepad: *mut SDL_Gamepad,
+    /// The D-pad bits last sent as hat 0.
     dpad: u8,
+    /// Whether each trigger was last sent as pressed.
     triggers: [bool; 2],
 }
 
+/// The open pads, shared by `Sdl3Pads` and `Sdl3Events`.
 #[derive(Default)]
 pub struct PadState {
     pads: Vec<Pad>,
     translate_on: bool,
     /// A live session: pads connected or removed while it runs open and close.
     hotplug_on: bool,
+    /// A joystick was added or removed since the last `hotplug`.
     hotplug_pending: bool,
+    /// `SMW_DEBUG_INPUT` is set.
     debug_input: bool,
+    /// Inputs logged so far at each `log` stage.
     logged: [u32; 3],
 }
 
@@ -123,6 +136,7 @@ impl PadState {
     }
 }
 
+/// A gamepad button as the joystick event the game binds; `None` drops it.
 fn translate_button(p: &mut Pad, button: u8, down: bool) -> Option<InputEvent> {
     let pad = PadSlot(p.instance as i32);
     if button == GUIDE {
@@ -136,6 +150,7 @@ fn translate_button(p: &mut Pad, button: u8, down: bool) -> Option<InputEvent> {
     Some(InputEvent::PadButton { pad, button: target as u8, down })
 }
 
+/// Sticks keep their axis; triggers become buttons; `None` drops the event.
 fn translate_axis(p: &mut Pad, axis: u8, value: i16) -> Option<InputEvent> {
     let pad = PadSlot(p.instance as i32);
     match axis {
@@ -153,6 +168,7 @@ fn translate_axis(p: &mut Pad, axis: u8, value: i16) -> Option<InputEvent> {
     }
 }
 
+/// Hat 0 showing `dpad`, or `None` when the D-pad did not change.
 fn set_dpad(p: &mut Pad, dpad: u8) -> Option<InputEvent> {
     if dpad == p.dpad {
         return None;
@@ -161,6 +177,7 @@ fn set_dpad(p: &mut Pad, dpad: u8) -> Option<InputEvent> {
     Some(InputEvent::PadHat { pad: PadSlot(p.instance as i32), hat: 0, value: dpad })
 }
 
+/// Safety: `p` must be null or NUL-terminated.
 unsafe fn c_string(p: *const std::ffi::c_char) -> String {
     if p.is_null() {
         String::new()
@@ -171,6 +188,7 @@ unsafe fn c_string(p: *const std::ffi::c_char) -> String {
 
 /// The connected joysticks, in SDL's order: the backend device indices.
 fn joystick_ids() -> Vec<SDL_JoystickID> {
+    // SAFETY: SDL returns null or `count` IDs, which are copied before the array is freed.
     unsafe {
         let mut count = 0;
         let ids = SDL_GetJoysticks(&mut count);
@@ -183,6 +201,7 @@ fn joystick_ids() -> Vec<SDL_JoystickID> {
     }
 }
 
+/// SDL3 joysticks and gamepads.
 pub struct Sdl3Pads {
     state: Rc<RefCell<PadState>>,
 }
@@ -195,6 +214,7 @@ impl Sdl3Pads {
 
     /// Opens joystick `id` as device number `index`.
     fn open_pad(&mut self, id: SDL_JoystickID, index: usize) -> Option<PadInfo> {
+        // SAFETY: SDL tolerates unknown IDs; the joystick is checked non-null before use and the mapping freed once.
         unsafe {
             let mut st = self.state.borrow_mut();
             let name = c_string(SDL_GetJoystickNameForID(id));
@@ -248,6 +268,7 @@ impl Sdl3Pads {
         let Some(i) = st.pads.iter().position(|p| p.instance == instance) else { return };
         let pad = st.pads.remove(i);
         println!("[pad] joystick {} removed", pad.index);
+        // SAFETY: the pad was just removed from the list, so it is closed once.
         unsafe {
             if pad.gamepad.is_null() {
                 SDL_CloseJoystick(pad.joystick);
@@ -260,6 +281,7 @@ impl Sdl3Pads {
 
 impl Pads for Sdl3Pads {
     fn open_all(&mut self, open: bool, translate: bool) -> Vec<Option<PadInfo>> {
+        // SAFETY: plain SDL calls; `open_pad` checks what it opens.
         unsafe {
             SDL_InitSubSystem(SDL_INIT_JOYSTICK | SDL_INIT_GAMEPAD);
             {
@@ -288,6 +310,7 @@ impl Pads for Sdl3Pads {
         let mut open: Vec<(usize, u32, *mut SDL_Joystick)> = self.state.borrow().pads.iter().map(|p| (p.index, p.instance, p.joystick)).collect();
         open.sort_unstable_by_key(|&(index, _, _)| index);
         for (_, instance, joystick) in open {
+            // SAFETY: `joystick` is open until `close`.
             if !unsafe { SDL_JoystickConnected(joystick) } {
                 self.close(instance);
                 changes.push(PadChange::Removed(PadSlot(instance as i32)));
@@ -311,12 +334,14 @@ impl Pads for Sdl3Pads {
             Some(pad) => SDL_JoystickID(pad.0 as u32),
             None => *joystick_ids().get(index)?,
         };
+        // SAFETY: SDL returns null or a NUL-terminated name, which is checked.
         let p = unsafe { SDL_GetJoystickNameForID(id) };
         (!p.is_null()).then(|| unsafe { c_string(p) })
     }
 
     fn family(&self, index: usize) -> PadFamily {
         let Some(&id) = joystick_ids().get(index) else { return PadFamily::Generic };
+        // SAFETY: an unknown ID gives `SDL_GAMEPAD_TYPE_UNKNOWN`.
         match unsafe { SDL_GetGamepadTypeForID(id) } {
             SDL_GAMEPAD_TYPE_XBOX360 | SDL_GAMEPAD_TYPE_XBOXONE => PadFamily::Xbox,
             SDL_GAMEPAD_TYPE_PS3 | SDL_GAMEPAD_TYPE_PS4 | SDL_GAMEPAD_TYPE_PS5 => PadFamily::PlayStation,
@@ -329,6 +354,7 @@ impl Pads for Sdl3Pads {
     }
 
     fn set_led(&mut self, player: i32, rgb: [u8; 3]) {
+        // SAFETY: the joystick is checked non-null.
         unsafe {
             let js = SDL_GetJoystickFromPlayerIndex(player);
             if !js.is_null() {

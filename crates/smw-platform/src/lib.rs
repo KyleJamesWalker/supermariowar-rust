@@ -1,13 +1,16 @@
-//! The boundary between the game and a platform backend (docs/design/ARCHITECTURE_V2.md, Trait boundaries and
-//! Normalized input). Nothing implements or calls these yet; phases 2 and 3 move the SDL calls behind them.
+//! The boundary between the game and a platform backend: the traits a backend implements and the normalized input
+//! it delivers (docs/design/ARCHITECTURE_V2.md).
 
 use std::path::{Path, PathBuf};
 
+/// The game's picture width in pixels.
 pub const SCREEN_W: usize = 640;
+/// The game's picture height in pixels.
 pub const SCREEN_H: usize = 480;
 
 /// One finished frame: 640x480 ARGB8888, the same bytes `SMW_SHOT_STREAM` writes.
 pub struct Frame<'a> {
+    /// `SCREEN_W * SCREEN_H` pixels, row by row.
     pub pixels: &'a [u32],
 }
 
@@ -21,26 +24,34 @@ pub struct OverlayImage {
 /// One image drawn in window pixels, with its alpha and color modulation.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct OverlayQuad {
+    /// Index into [`Overlay::images`].
     pub image: u16,
+    /// The destination rectangle: `x`, `y`, `w`, `h` in window pixels.
     pub x: i32,
     pub y: i32,
     pub w: i32,
     pub h: i32,
+    /// 0 transparent to 255 opaque.
     pub alpha: u8,
+    /// R, G, B multipliers; `[255; 3]` leaves the image unchanged.
     pub color: [u8; 3],
 }
 
 /// What the core draws over the game's picture, outside its 640x480 viewport: the Android touch controls. The images
 /// change only with `generation`, so a backend uploads them once per generation.
 pub struct Overlay {
+    /// Changes whenever `images` does.
     pub generation: u64,
     pub images: std::sync::Arc<[OverlayImage]>,
+    /// Drawn in order, later quads on top.
     pub quads: Vec<OverlayQuad>,
 }
 
+/// The game window.
 pub trait Video {
-    /// Creates the window. A backend that cannot panics with its error message, as the C++ throws.
+    /// Creates the window. A backend that cannot panics with its error message.
     fn open(&mut self, fullscreen: bool);
+    /// Shows `frame` scaled into the window, with `overlay` drawn over it in window pixels.
     fn present(&mut self, frame: Frame<'_>, overlay: Option<&Overlay>);
     /// The window's size in pixels, which the overlay is laid out in.
     fn output_size(&self) -> (i32, i32);
@@ -48,6 +59,7 @@ pub trait Video {
     fn display_dpi(&self) -> Option<f32>;
     fn set_fullscreen(&mut self, on: bool);
     fn set_title(&mut self, title: &str);
+    /// Shows `message` in a modal error box.
     fn show_error(&mut self, message: &str);
     /// Shows or hides the mouse cursor over the window.
     fn show_cursor(&mut self, on: bool);
@@ -57,6 +69,7 @@ pub trait Video {
     }
 }
 
+/// The platform's input event queue.
 pub trait Events {
     /// The next queued input, or `None` when the queue is empty.
     fn poll(&mut self) -> Option<Input>;
@@ -84,9 +97,11 @@ pub trait Keyboard {
     fn has_focus(&self) -> bool;
 }
 
+/// A loaded sound effect; the core picks the numbers.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct SoundId(pub u32);
 
+/// A loaded music track; the core picks the numbers.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct TrackId(pub u32);
 
@@ -105,18 +120,22 @@ pub trait AudioOut {
     fn load_track(&mut self, id: TrackId, bytes: &[u8]) -> Result<f64, String>;
     fn free_sound(&mut self, id: SoundId);
     fn free_track(&mut self, id: TrackId);
-    /// Plays on the channel the core's virtual mixer chose.
+    /// Plays on the channel the core's virtual mixer chose, cutting off what it was playing.
+    /// `loops` is the number of extra repeats, -1 forever.
     fn play(&mut self, channel: u8, id: SoundId, loops: i32);
     /// `None` halts every channel.
     fn halt(&mut self, channel: Option<u8>);
+    /// Starts a track from the beginning, looping unless `once`.
     fn play_track(&mut self, id: TrackId, once: bool);
     fn stop_track(&mut self);
     fn pause_track(&mut self, paused: bool);
     /// 0 to 128, as SDL_mixer.
     fn set_sound_volume(&mut self, volume: i32);
+    /// 0 to 128.
     fn set_music_volume(&mut self, volume: i32);
 }
 
+/// Wall-clock time and sleeping.
 pub trait Clock {
     /// Wall-clock milliseconds. Only the frame driver, the FPS overlay and netplay message timestamps read it.
     fn now_ms(&self) -> u64;
@@ -127,8 +146,9 @@ pub trait Clock {
     fn sleep_ms(&self, ms: u32);
 }
 
+/// Where the game finds its data and keeps its settings.
 pub trait Storage {
-    /// `~/Library/Preferences/.smw` on macOS, as the C++ game.
+    /// The directory settings files live in: `~/Library/Preferences/.smw` on macOS.
     fn settings_dir(&self) -> PathBuf;
     /// `GetRootDirectory()`: the executable's directory, where the game looks for `data/` unless `--datadir` says otherwise.
     fn root_dir(&self) -> PathBuf;
@@ -157,20 +177,25 @@ pub struct Services {
 pub struct PadInfo {
     /// How its input events name it.
     pub pad: PadSlot,
+    /// The joystick name SDL reports.
     pub name: String,
+    /// SDL's joystick GUID as a hex string.
     pub guid: String,
     /// A game controller whose events the backend translates (`SMW_PAD_TRANSLATE`).
     pub controller: bool,
 }
 
+/// One hotplug change from [`Pads::hotplug`].
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum PadChange {
     /// A pad that was unplugged; the backend has closed it.
     Removed(PadSlot),
-    /// A pad that was plugged in, by the backend's device index, for `Pads::open`.
+    /// A pad that was plugged in, by the backend's handle for it (SDL2's device index, SDL3's instance ID), for
+    /// `Pads::open`.
     Connected(i32),
 }
 
+/// A pad's maker, as far as the backend can tell; Options > Controls shows it.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum PadFamily {
     Generic,
@@ -200,7 +225,7 @@ pub trait Pads {
 }
 
 /// A pad as SDL's events name it (`which`): the device index for added events, the instance ID otherwise. The game
-/// compares it with the device index a binding names, as the C++ does, and replays push `<dev>` here.
+/// compares it with the device index a binding names, and replays push `<dev>` here.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct PadSlot(pub i32);
 
@@ -208,6 +233,7 @@ pub struct PadSlot(pub i32);
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct Keycode(pub i32);
 
+/// Finger down, moved, or lifted.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum TouchPhase {
     Down,
@@ -215,14 +241,18 @@ pub enum TouchPhase {
     Up,
 }
 
+/// A mouse event; positions are in the game's 640x480 coordinates and can fall outside them.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum MouseEvent {
     /// `buttons` is SDL's button mask.
     Motion { x: i32, y: i32, xrel: i32, yrel: i32, buttons: u32 },
+    /// `button` in SDL's numbering (1 left, 2 middle, 3 right); `clicks` counts a multi-click.
     Button { button: u8, down: bool, clicks: u8, x: i32, y: i32 },
+    /// Scroll amounts; positive `y` scrolls away from the user.
     Wheel { x: i32, y: i32 },
 }
 
+/// What happened to a pad in an [`InputEvent::Pad`] or [`InputEvent::Gamepad`] event.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum DeviceChange {
     Added,
@@ -238,10 +268,12 @@ pub struct Input {
     pub event: InputEvent,
 }
 
+/// What an [`Input`] carries.
 #[derive(Clone, PartialEq, Debug)]
 pub enum InputEvent {
     /// `scancode` and `mods` are SDL2's values; `window` is the window ID.
     Key { key: Keycode, scancode: i32, mods: u16, down: bool, repeat: bool, window: u32 },
+    /// Raw joystick input; `value` is -32768 to 32767, a hat `value` SDL's `SDL_HAT_*` mask.
     PadAxis { pad: PadSlot, axis: u8, value: i16 },
     PadButton { pad: PadSlot, button: u8, down: bool },
     PadHat { pad: PadSlot, hat: u8, value: u8 },
@@ -253,8 +285,9 @@ pub enum InputEvent {
     Gamepad { pad: PadSlot, change: DeviceChange },
     /// Normalized to the window, 0.0 to 1.0.
     Touch { touch: i64, finger: i64, phase: TouchPhase, x: f32, y: f32, dx: f32, dy: f32, pressure: f32 },
+    /// Typed text, from SDL's text input.
     Text(String),
-    /// The window the event belongs to, then the event.
+    /// `window` is the window ID and `which` the mouse instance.
     Mouse { window: u32, which: u32, event: MouseEvent },
     /// A menu tap or click, in the game's 640x480 coordinates.
     Tap { x: i16, y: i16 },

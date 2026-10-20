@@ -6,6 +6,7 @@ use smw_platform::{AudioOut, SoundId, TrackId};
 use std::collections::HashMap;
 use std::ffi::CStr;
 
+/// Mixer channels; the core's virtual mixer has the same count.
 const CHANNELS: i32 = 16;
 
 extern "C" {
@@ -19,6 +20,7 @@ fn mix_error() -> String {
     unsafe { CStr::from_ptr(SDL_GetError()).to_string_lossy().into_owned() }
 }
 
+/// SDL_mixer output, holding the chunks and tracks the core loaded by its ids.
 #[derive(Default)]
 pub struct Sdl2Audio {
     sounds: HashMap<SoundId, *mut Mix_Chunk>,
@@ -31,6 +33,7 @@ impl Sdl2Audio {
         Self::default()
     }
 
+    /// For the opened spec; 0 while the mixer is closed.
     fn bytes_per_second() -> u64 {
         let (mut frequency, mut format, mut channels) = (0, 0u16, 0);
         unsafe { Mix_QuerySpec(&mut frequency, &mut format, &mut channels) };
@@ -39,6 +42,7 @@ impl Sdl2Audio {
 }
 
 /// The real device with no format changes allowed; if that fails, the silent dummy driver rather than another spec.
+/// On failure, restarts SDL's audio subsystem on the dummy driver.
 unsafe fn open_exact() {
     if Mix_OpenAudioDevice(44100, AUDIO_S16 as u16, 2, 2048, std::ptr::null(), 0) == 0 {
         return;
@@ -52,6 +56,7 @@ unsafe fn open_exact() {
 
 impl AudioOut for Sdl2Audio {
     fn open(&mut self, exact: bool) {
+        // SAFETY: plain SDL_mixer calls; `Mix_Linked_Version` and the driver name are static.
         unsafe {
             if exact {
                 open_exact();
@@ -77,30 +82,36 @@ impl AudioOut for Sdl2Audio {
     }
 
     fn close(&mut self) {
+        // SAFETY: SDL_mixer ignores a close without an open.
         unsafe { Mix_CloseAudio() };
     }
 
     fn is_open(&self) -> bool {
+        // SAFETY: the out-pointers are live locals.
         let (mut frequency, mut format, mut channels) = (0, 0u16, 0);
         unsafe { Mix_QuerySpec(&mut frequency, &mut format, &mut channels) != 0 }
     }
 
     fn load_sound(&mut self, id: SoundId, bytes: &[u8]) -> Result<u32, String> {
+        // SAFETY: the chunk is decoded before the call returns and frees the RWops, so `bytes` need not outlive it.
         let chunk = unsafe { Mix_LoadWAV_RW(SDL_RWFromConstMem(bytes.as_ptr() as *const _, bytes.len() as i32), 1) };
         if chunk.is_null() {
             return Err(mix_error());
         }
         self.sounds.insert(id, chunk);
         let bytes_per_second = Self::bytes_per_second();
+        // SAFETY: `chunk` was just checked non-null.
         Ok(if bytes_per_second != 0 { (unsafe { (*chunk).alen } as u64 * 1000 / bytes_per_second) as u32 } else { 0 })
     }
 
     fn load_track(&mut self, id: TrackId, bytes: &[u8]) -> Result<f64, String> {
         let bytes = bytes.to_vec();
+        // SAFETY: SDL_mixer streams from `bytes`, whose heap buffer `tracks` keeps until the track is freed.
         let music = unsafe { Mix_LoadMUS_RW(SDL_RWFromConstMem(bytes.as_ptr() as *const _, bytes.len() as i32), 1) };
         if music.is_null() {
             return Err(mix_error());
         }
+        // SAFETY: `music` was just checked non-null.
         let duration = unsafe { Mix_MusicDuration(music) };
         self.tracks.insert(id, (music, bytes));
         Ok(duration)
@@ -108,33 +119,39 @@ impl AudioOut for Sdl2Audio {
 
     fn free_sound(&mut self, id: SoundId) {
         if let Some(chunk) = self.sounds.remove(&id) {
+            // SAFETY: removed from the map, so each chunk is freed once.
             unsafe { Mix_FreeChunk(chunk) };
         }
     }
 
     fn free_track(&mut self, id: TrackId) {
         if let Some((music, _)) = self.tracks.remove(&id) {
+            // SAFETY: removed from the map, so each track is freed once; SDL_mixer halts it first if it is playing.
             unsafe { Mix_FreeMusic(music) };
         }
     }
 
     fn play(&mut self, channel: u8, id: SoundId, loops: i32) {
         if let Some(&chunk) = self.sounds.get(&id) {
+            // SAFETY: `chunk` is live while it is in `sounds`.
             unsafe { Mix_PlayChannelTimed(channel as i32, chunk, loops, -1) };
         }
     }
 
     fn halt(&mut self, channel: Option<u8>) {
+        // SAFETY: SDL_mixer checks the channel number.
         unsafe { Mix_HaltChannel(channel.map_or(-1, |c| c as i32)) };
     }
 
     fn play_track(&mut self, id: TrackId, once: bool) {
         if let Some(&(music, _)) = self.tracks.get(&id) {
+            // SAFETY: `music` is live while it is in `tracks`.
             unsafe { Mix_PlayMusic(music, if once { 0 } else { -1 }) };
         }
     }
 
     fn stop_track(&mut self) {
+        // SAFETY: the remaining calls take no pointers.
         unsafe { Mix_HaltMusic() };
     }
 

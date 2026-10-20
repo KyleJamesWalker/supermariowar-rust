@@ -1,10 +1,12 @@
+//! Link settings for the game's emscripten build.
+
 fn main() {
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("emscripten") {
         emscripten_link_args();
     }
 }
 
-/// The settings of upstream's cmake/PlatformEmscripten.cmake, applied to the game binary.
+/// Links in SDL2's emscripten ports, the JS libraries, IDBFS and data/ as the preloaded file system.
 fn emscripten_link_args() {
     let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let data = repo.join("data");
@@ -21,17 +23,17 @@ fn emscripten_link_args() {
         r#"-sSDL2_IMAGE_FORMATS=["png","bmp"]"#,
         "-sUSE_SDL_MIXER=2",
         "-sALLOW_MEMORY_GROWTH=1",
-        // Not in upstream: the port builds large globals (CResourceManager, CGameValues) on the stack
-        // before boxing them, which overflows emscripten's 64 KiB default. 8 MiB matches the native main thread.
+        // Large globals (CResourceManager, CGameValues) are built on the stack before boxing, which overflows
+        // emscripten's 64 KiB default. 8 MiB matches the native main thread.
         "-sSTACK_SIZE=8MB",
-        // Not in upstream: ENV and FS let tools/web_replay.mjs set SMW_* variables and read the harness
-        // output; web/shell.html starts the game with callMain and keeps settings and recordings in IDBFS.
+        // ENV and FS let tools/web_replay.mjs set SMW_* variables and read the harness output; web/shell.html
+        // starts the game with callMain and keeps settings and recordings in IDBFS.
         "-sEXPORTED_RUNTIME_METHODS=ENV,FS,callMain,addRunDependency,removeRunDependency",
         "-lidbfs.js",
-        // Not in upstream: keeps the canvas size when SDL itself enters or leaves fullscreen (see the file).
+        // Keeps the canvas size when SDL itself enters or leaves fullscreen (see the file).
         "--pre-js",
         &fullscreen.display().to_string(),
-        // Not in upstream: the WebSocket to smw_relay for netplay (src/smw/platform/network/websocket).
+        // The WebSocket to smw_relay for netplay (crates/smw-core/src/smw/platform/network/websocket).
         "--js-library",
         &relay_socket.display().to_string(),
         // The WebRTC peers for netplay v2 (crates/smw-peer).

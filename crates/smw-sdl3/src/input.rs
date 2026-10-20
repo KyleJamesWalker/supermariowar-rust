@@ -6,9 +6,10 @@ use sdl3_sys::everything::*;
 use smw_platform::{DeviceChange, Input, InputEvent, Keycode, MouseEvent, PadSlot, TouchPhase};
 use std::ffi::{c_char, CStr, CString};
 
-/// The `SDL_EVENT_USER` codes that carry an `InputEvent::Tap` and an `InputEvent::QuitRequest`, as smw-sdl2's.
+/// The `SDL_EVENT_USER` codes that carry an `InputEvent::Tap` and an `InputEvent::QuitRequest`, the same as smw-sdl2's.
 const TAP_CODE: i32 = 0x5441;
 const QUIT_REQUEST_CODE: i32 = 0x5152;
+/// Set in a keycode that names a key by its scancode (`SDLK_SCANCODE_MASK`).
 const SCANCODE_MASK: i32 = 1 << 30;
 
 /// SDL2 scancodes of the consumer keys and the SDL3 scancode for each, where SDL3 has one. The rest of the two
@@ -64,6 +65,7 @@ pub fn key_to_sdl2(key: u32) -> i32 {
     }
 }
 
+/// SDL2's keycode in SDL3's values; 0 for a consumer key SDL3 does not have.
 pub fn key_from_sdl2(key: i32) -> u32 {
     if key & SCANCODE_MASK != 0 {
         let s = scancode_from_sdl2(key & !SCANCODE_MASK);
@@ -90,7 +92,9 @@ fn millis(ns: u64) -> u32 {
     (ns / 1_000_000) as u32
 }
 
+/// Normalizes an SDL3 event into SDL2's numbering; mouse positions are floored to whole pixels.
 pub fn from_sdl(e: &SDL_Event) -> Input {
+    // SAFETY: each branch reads only the union member its event type names; text pointers are checked for null.
     unsafe {
         let event = if is(e, SDL_EVENT_QUIT) {
             InputEvent::Quit
@@ -175,6 +179,7 @@ impl TextArena {
         TextArena(Vec::new())
     }
 
+    /// Keeps `text`, NULs removed, among the last 64 and returns a pointer valid until 64 more are held.
     fn hold(&mut self, text: &str) -> *const c_char {
         if self.0.len() >= 64 {
             self.0.remove(0);
@@ -191,6 +196,7 @@ impl Default for TextArena {
     }
 }
 
+/// The SDL3 event `from_sdl` reads back as `input`; a text event points into `texts`.
 pub fn to_sdl(input: &Input, texts: &mut TextArena) -> SDL_Event {
     let mut e = SDL_Event { r#type: 0 };
     let timestamp = input.timestamp as u64 * 1_000_000;
