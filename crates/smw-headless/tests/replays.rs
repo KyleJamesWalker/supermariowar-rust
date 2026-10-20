@@ -452,8 +452,8 @@ fn v2_pause_belongs_to_the_pauser() {
     assert_eq!(paused, [(true, 1), (true, 1), (true, 1), (false, -1), (true, 3)]);
 }
 
-/// Prints the average cost of a rollback save, a load of the copy GGRS hands back, and a plain tick over `ticks` ticks
-/// of the first match, from its 300th tick, played on `map` when given.
+/// Prints the average cost of a rollback save, a load and a plain tick over `ticks` ticks of the first match, from its
+/// 300th tick, played on `map` when given.
 fn snapshot_cost(name: &str, map: Option<&str>, ticks: u32) {
     use smw::smw::rollback::{load, save};
     use std::time::{Duration, Instant};
@@ -484,7 +484,7 @@ fn snapshot_cost(name: &str, map: Option<&str>, ticks: u32) {
             let state = save(g);
             saving += t.elapsed();
             let t = Instant::now();
-            load(g, state.clone());
+            load(g, &state);
             loading += t.elapsed();
             let t = Instant::now();
             smw::smw::main::frame(g);

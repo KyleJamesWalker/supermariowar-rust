@@ -134,40 +134,43 @@ pub fn save(g: &mut Game) -> MatchState {
     }
 }
 
-/// Puts `s` back. Call it between ticks, never from inside the gameplay state's own update.
-pub fn load(g: &mut Game, s: MatchState) {
-    *g.game_values = s.game_values;
-    *g.g_map = s.g_map;
-    g.noncolcontainer = s.noncolcontainer;
-    g.objectcontainer = s.objectcontainer;
-    g.eyecandy = s.eyecandy;
-    g.players = s.players;
-    for (live, saved) in g.score.iter_mut().zip(s.score) {
-        **live = saved;
+/// Puts `s` back. Call it between ticks, never from inside the gameplay state's own update. Players and objects are
+/// copied over the live ones of the same type, which keeps their allocations.
+pub fn load(g: &mut Game, s: &MatchState) {
+    *g.game_values = s.game_values.clone();
+    *g.g_map = s.g_map.clone();
+    g.noncolcontainer.clone_from(&s.noncolcontainer);
+    for (live, saved) in g.objectcontainer.iter_mut().zip(&s.objectcontainer) {
+        live.clone_from(saved);
+    }
+    g.eyecandy = s.eyecandy.clone();
+    g.players.clone_from(&s.players);
+    for (live, saved) in g.score.iter_mut().zip(&s.score) {
+        **live = saved.clone();
     }
     g.score_cnt = s.score_cnt;
-    match s.mode {
+    match &s.mode {
         None => {}
-        Some(ModeState::Standard(i, mode)) => g.gamemodes[i].set(mode),
-        Some(ModeState::BonusHouse(mode)) => *g.bonushousemode = mode,
-        Some(ModeState::Pipe(mode)) => *g.pipegamemode = mode,
-        Some(ModeState::Boss(mode)) => *g.bossgamemode = mode,
-        Some(ModeState::Boxes(mode)) => *g.boxesgamemode = mode,
+        Some(ModeState::Standard(i, mode)) => g.gamemodes[*i].set(mode.clone_box()),
+        Some(ModeState::BonusHouse(mode)) => *g.bonushousemode = mode.clone(),
+        Some(ModeState::Pipe(mode)) => *g.pipegamemode = mode.clone(),
+        Some(ModeState::Boss(mode)) => *g.bossgamemode = mode.clone(),
+        Some(ModeState::Boxes(mode)) => *g.boxesgamemode = mode.clone(),
     }
     g.currentgamemode = s.currentgamemode;
     g.main_loop.stats_page = s.stats_page;
-    g.rng = s.rng;
+    g.rng = s.rng.clone();
     let audible = g.sfx.sfx_audible;
-    g.sfx = s.sfx;
+    g.sfx = s.sfx.clone();
     g.sfx.sfx_audible = audible;
     g.x_shake = s.x_shake;
     g.y_shake = s.y_shake;
     g.shakeleft = s.shakeleft;
     g.g_iSwirlSpawnLocations = s.swirl_spawns;
-    *g.spotlightManager = s.spotlights;
+    *g.spotlightManager = s.spotlights.clone();
     g.g_iWinningPlayer = s.winning_player;
     g.g_iCurrentDrawIndex = s.draw_index;
-    g.gps = s.gps;
+    g.gps = s.gps.clone();
     harness::set_frame(g, s.frame);
 }
 
@@ -318,7 +321,7 @@ where
                 cell.save(frame, Some(state), sum);
             }
             ggrs::GgrsRequest::LoadGameState { cell, .. } => {
-                load(g, cell.load().expect("GGRS loads only saved frames"));
+                load(g, &cell.data().expect("GGRS loads only saved frames"));
                 rerun = true;
             }
             ggrs::GgrsRequest::AdvanceFrame { inputs } => {
@@ -388,7 +391,7 @@ pub fn replay_requests(g: &mut Game, requests: &[Req], slots: &[KeySlot], saves:
             }
             Req::Load(frame) => {
                 let Some(state) = saves.get(frame) else { harness::fail(format!("the v2 replay loads frame {frame}, which it never saved")) };
-                load(g, state.clone());
+                load(g, state);
                 rerun = true;
             }
             Req::Advance(keys) => {
