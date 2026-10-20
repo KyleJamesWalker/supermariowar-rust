@@ -12,6 +12,8 @@ updates:
     ignore:
       - dependency-name: webrtc
         update-types: ['version-update:semver-major', 'version-update:semver-minor']
+      - dependency-name: bincode
+        versions: ['>= 2']
 
   - package-ecosystem: github-actions
     directories:
