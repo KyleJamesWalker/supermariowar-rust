@@ -968,10 +968,41 @@ pub fn io_moving_object_kill_object_map_hazard<T: IO_MovingObjectTrait + ?Sized>
 }
 
 /// Virtual interface added by `IO_MovingObject` (`draw`, `update`, `collide` are on `CObjectTrait`).
+/// The `IO_MovingObject` fields of `IO_MovingObjectTrait::harness_hash`, and the carried-object, walking-enemy and
+/// powerup fields for those kinds.
+pub fn mo_harness_hash<T: IO_MovingObjectTrait + ?Sized>(this: &mut T, h: &mut crate::smw::rollback::Fnv) {
+    let m = this.mo();
+    h.i16s(&[m.iPlayerID, m.iTeamID, m.drawframe, m.animationtimer, m.iHorizontalPlatformCollision, m.iVerticalPlatformCollision]);
+    h.f32s(&[m.fOldX, m.fOldY, m.fPrecalculatedY, m.bounce]);
+    h.bools(&[m.inair, m.onice, m.platform.is_none(), m.fObjectDiesOnSuperDeathTiles, m.fObjectCollidesWithMap]);
+    h.u32(m.movingObjectType as u32);
+    if let Some(c) = this.as_carried_object() {
+        let c = c.carried();
+        h.player(c.owner);
+        h.bools(&[c.fCarriedByKuriboShoe, c.fSmoking]);
+        h.f32s(&[c.dKickX, c.dKickY]);
+        h.i16s(&[c.iOwnerLeftOffset, c.iOwnerRightOffset, c.iOwnerUpOffset]);
+    }
+    if let Some(w) = this.as_walking_enemy() {
+        let w = w.we();
+        h.f32s(&[w.spawnradius, w.spawnangle, w.frozenvelocity]);
+        h.i16s(&[w.killStyle as i16, w.burnuptimer, w.frozentimer, w.frozenanimationspeed]);
+        h.bools(&[w.fKillOnWeakWeapon, w.fBouncing, w.fFallOffLedges, w.frozen]);
+    }
+    if let Some(p) = this.as_powerup() {
+        h.f32s(&[p.pu().desty]);
+    }
+}
+
 pub trait IO_MovingObjectTrait: CObjectTrait {
     fn mo(&self) -> &IO_MovingObject;
     fn mo_mut(&mut self) -> &mut IO_MovingObject;
     fn as_mo_ptr(&mut self) -> Ptr<dyn IO_MovingObjectTrait>;
+
+    /// Feeds the object's simulated state beyond `CObject` into a desync checksum; overrides add their own fields.
+    fn harness_hash(&mut self, h: &mut crate::smw::rollback::Fnv) {
+        mo_harness_hash(self, h);
+    }
 
     /// Advances the animation; called once per update.
     fn animate(&mut self) {

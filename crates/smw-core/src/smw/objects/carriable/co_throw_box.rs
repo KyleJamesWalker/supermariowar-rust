@@ -270,6 +270,11 @@ impl CObjectTrait for CO_ThrowBox {
 }
 
 impl IO_MovingObjectTrait for CO_ThrowBox {
+    fn harness_hash(&mut self, h: &mut crate::smw::rollback::Fnv) {
+        crate::smw::objects::moving::moving_object::mo_harness_hash(self, h);
+        h.i16s(&[self.iItem, self.frozentimer, self.frozenanimationspeed]);
+        h.bools(&[self.frozen]);
+    }
     crate::impl_io_moving_object_plumbing!();
     fn as_carried_object(&mut self) -> Option<&mut dyn MO_CarriedObjectTrait> {
         Some(self)

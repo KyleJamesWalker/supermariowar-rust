@@ -115,6 +115,10 @@ impl CObjectTrait for PU_CoinPowerup {
 }
 
 impl IO_MovingObjectTrait for PU_CoinPowerup {
+    fn harness_hash(&mut self, h: &mut crate::smw::rollback::Fnv) {
+        crate::smw::objects::moving::moving_object::mo_harness_hash(self, h);
+        h.i16s(&[self.iValue]);
+    }
     crate::impl_io_moving_object_plumbing!();
     fn as_powerup(&mut self) -> Option<&mut dyn MO_PowerupTrait> {
         Some(self)

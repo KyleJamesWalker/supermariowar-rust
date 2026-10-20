@@ -184,6 +184,11 @@ impl CObjectTrait for MO_AttackZone {
 }
 
 impl IO_MovingObjectTrait for MO_AttackZone {
+    fn harness_hash(&mut self, h: &mut crate::smw::rollback::Fnv) {
+        crate::smw::objects::moving::moving_object::mo_harness_hash(self, h);
+        h.i16s(&[self.iTimer, self.iStyle as i16]);
+        h.bools(&[self.fDieOnCollision]);
+    }
     crate::impl_io_moving_object_plumbing!();
 
     fn die(&mut self, g: &mut Game) {

@@ -270,6 +270,8 @@ pub trait CObjectTrait: Any + CloneObject {
     fn as_io_block(&mut self) -> Option<&mut dyn IO_BlockTrait> {
         None
     }
+    /// Feeds an over-map object's simulated state beyond `CObject` into a desync checksum.
+    fn harness_hash_object(&mut self, _h: &mut crate::smw::rollback::Fnv) {}
     fn as_io_moving_object(&mut self) -> Option<&mut dyn IO_MovingObjectTrait> {
         None
     }

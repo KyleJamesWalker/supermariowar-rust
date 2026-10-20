@@ -222,8 +222,8 @@ fn shared_pause(g: &mut Game, keys: &[(KeySlot, Keys)], silent: bool) -> bool {
 }
 
 /// FNV-1a over the match's harness dump (game mode, players, object counts) and the simulated state the dump leaves
-/// out: the mode's own state, scores, every object and block, every platform, the switches and the RNG. Floats go in
-/// as their bits, so every platform hashes the same state alike. What a desync check compares.
+/// out: the mode's own state, scores, every object and block with its type's own state, every platform, the switches and the RNG. Floats go in as their bits, so every platform hashes the same state
+/// alike. What a desync check compares.
 pub fn checksum(g: &mut Game) -> u128 {
     let mut gp = g.ptr();
     let mut dump = Vec::new();
@@ -248,6 +248,11 @@ pub fn checksum(g: &mut Game) -> u128 {
             h.u32(o.ix as u32);
             h.u32(o.iy as u32);
             h.f32s(&[o.fx, o.fy, o.velx, o.vely]);
+            let mut object = *object;
+            match object.as_io_moving_object() {
+                Some(moving) => moving.harness_hash(&mut h),
+                None => object.harness_hash_object(&mut h),
+            }
         }
     }
     for object in g.noncolcontainer.list() {

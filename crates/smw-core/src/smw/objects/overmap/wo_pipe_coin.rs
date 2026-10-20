@@ -74,6 +74,9 @@ impl OMO_PipeCoin {
 }
 
 impl CObjectTrait for OMO_PipeCoin {
+    fn harness_hash_object(&mut self, h: &mut crate::smw::rollback::Fnv) {
+        h.i16s(&[self.iTeamID, self.iColorID, self.iUncollectableTime]);
+    }
     crate::impl_cobject_plumbing!();
 
     fn update(&mut self, g: &mut Game) {
