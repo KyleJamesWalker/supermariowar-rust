@@ -1091,6 +1091,11 @@ impl CGameConfig {
         }
     }
 
+    /// `read_controls` from the controls bytes `config_bytes` returned.
+    pub fn read_controls_bytes(&mut self, g: &mut Game, controls: Vec<u8>) {
+        catch_runtime_error(|| self.read_controls(g, &mut BinaryFile::memory("controls.sdl2.bin", controls)));
+    }
+
     /// Saves options.bin, controls.sdl2.bin, the map filters and the map summary cache.
     pub fn write_config(&self, g: &mut Game) {
         let mut gp = g.ptr();

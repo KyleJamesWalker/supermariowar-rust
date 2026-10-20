@@ -850,9 +850,12 @@ impl NetClient {
             }
         }
 
-        g.currentgamemode = pkg.gamemodeID as i16;
-        g.game_values.gamemode = Some(crate::common::game_mode::ModeId::Standard((g.currentgamemode as usize) as u8));
-        g.mode().goal = pkg.gamemodeGoal as i16;
+        // The lobby keeps the mode the room was created with; the host's own pick (Map & Mode) is the room's mode.
+        if pkg.remotePlayerNumber != pkg.hostPlayerNumber {
+            g.currentgamemode = pkg.gamemodeID as i16;
+            g.game_values.gamemode = Some(crate::common::game_mode::ModeId::Standard((g.currentgamemode as usize) as u8));
+            g.mode().goal = pkg.gamemodeGoal as i16;
+        }
 
         let gm = g.gamemodes[g.currentgamemode as usize].ptr();
         println!("  Game mode #{}: {} with {}: {}", g.currentgamemode, gm.get_mode_name(), gm.get_goal_name(), g.mode().goal);

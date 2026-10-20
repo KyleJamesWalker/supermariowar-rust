@@ -197,6 +197,8 @@ fn restore_start(g: &mut Game, my_slot: u8, bytes: Vec<u8>) -> Result<(Vec<u8>, 
     g.game_values.skinids[slot] = own_skin;
     let strip = gp.rm.load_full_skin(g, own_skin, g.game_values.colorids[slot]);
     gp.rm.set_strip(gp.rm.spr_player[slot], strip);
+    // The host's start also holds its key bindings and devices; this player keeps reading its own.
+    gp.game_values.read_controls_bytes(g, own_config.1.clone());
     // The host captured mid-tick; this finishes that tick as its frame_end did there.
     harness::end_rollback_tick(g);
     println!("[net] v2: restored the host's match start");
