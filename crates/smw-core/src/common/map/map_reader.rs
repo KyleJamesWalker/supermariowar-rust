@@ -3,8 +3,10 @@
 
 use crate::game::Game;
 use crate::globals::Aliased;
-use crate::common::file_io::BinaryFile;
-use crate::common::map::{CMap, ReadType};
+use crate::common::file_io::{throw_runtime_error, BinaryFile};
+use crate::common::global_constants::{MAPHEIGHT, MAPWIDTH, MAXWARPS};
+use crate::common::map::{CMap, MapHazard, ReadType, SpawnArea, Warp, ThrowBox, WARP_UNDEFINED};
+use crate::smw::gs_gameplay::MapBlock_WpnBreakLeaf;
 use crate::common::version::Version;
 
 /// Map file format version a reader parses, named by version digits (`R160A` is 1.6.0.10).
@@ -72,8 +74,8 @@ impl MapReader {
     }
 
     /// Reads `mapfile`, positioned after the version header, into `map`. `readtype` can stop early for a summary
-    /// or preview; returns `false` when a section is over its limit.
-    pub fn load(&mut self, g: &mut Game, map: &mut CMap, mapfile: &mut BinaryFile, readtype: ReadType) -> bool {
+    /// or preview. A damaged file fails through `throw_runtime_error`.
+    pub fn load(&mut self, g: &mut Game, map: &mut CMap, mapfile: &mut BinaryFile, readtype: ReadType) {
         use MapReaderKind::*;
         match self.kind {
             R1500 => self.load_1500(g, map, mapfile, readtype),
@@ -127,7 +129,7 @@ impl MapReader {
         }
     }
 
-    pub(super) fn read_spawn_areas(&mut self, map: &mut CMap, mapfile: &mut BinaryFile) -> bool {
+    pub(super) fn read_spawn_areas(&mut self, map: &mut CMap, mapfile: &mut BinaryFile) {
         use MapReaderKind::*;
         match self.kind {
             R1700 | R1701 | R1702 => self.read_spawn_areas_1700(map, mapfile),
@@ -158,6 +160,103 @@ impl MapReader {
             R1800 | R1801 | R1802 => self.read_platforms_1800(g, map, mapfile, preview),
             _ => self.read_platforms_1700(g, map, mapfile, preview),
         }
+    }
+}
+
+/// `value` as an index below `len`; any other value fails the load as a damaged map.
+pub(super) fn checked_index(what: &str, value: i32, len: i32) -> usize {
+    if !(0..len).contains(&value) {
+        throw_runtime_error(&format!("Damaged map: {what} {value} is not in 0..{len}"));
+    }
+    value as usize
+}
+
+/// `value` as a count of at most `max`; any other value fails the load as a damaged map.
+pub(super) fn checked_count(what: &str, value: i32, max: i32) -> usize {
+    checked_index(what, value, max + 1)
+}
+
+/// `value` when it is in `min..=max`; any other value fails the load as a damaged map.
+pub(super) fn checked_range(what: &str, value: i32, min: i32, max: i32) -> i32 {
+    if !(min..=max).contains(&value) {
+        throw_runtime_error(&format!("Damaged map: {what} {value} is not in {min}..={max}"));
+    }
+    value
+}
+
+/// Positions, speeds and angles in map files stay far inside this; past it, paths that wrap an angle never finish.
+const MAX_MAP_FLOAT: f32 = 65536.0;
+
+/// `value` when it is finite and within `MAX_MAP_FLOAT`; anything else fails the load as a damaged map.
+pub(super) fn checked_float(what: &str, value: f32) -> f32 {
+    if !(value.abs() <= MAX_MAP_FLOAT) {
+        throw_runtime_error(&format!("Damaged map: {what} {value} is not within {MAX_MAP_FLOAT}"));
+    }
+    value
+}
+
+/// Fails the load on a spawn area that reaches outside the map, where a player would spawn off screen.
+pub(super) fn check_spawn_area(area: &SpawnArea) {
+    checked_index("spawn area left", area.left as i32, MAPWIDTH);
+    checked_index("spawn area top", area.top as i32, MAPHEIGHT);
+    checked_range("spawn area width", area.width as i32, 0, MAPWIDTH - area.left as i32);
+    checked_range("spawn area height", area.height as i32, 0, MAPHEIGHT - area.top as i32);
+    checked_range("spawn area size", area.size as i32, 0, MAPWIDTH * MAPHEIGHT);
+}
+
+/// Fails the load on a tile object type no block exists for; -1 is no object.
+pub(super) fn check_object_type(object_type: i16) {
+    checked_range("object type", object_type as i32, -1, MapBlock_WpnBreakLeaf);
+}
+
+/// Fails the load on an item the game cannot place inside the map.
+pub(super) fn check_item(item_type: i32, x: i16, y: i16) {
+    checked_range("item type", item_type, 0, ThrowBox as i32);
+    checked_index("item column", x as i32, MAPWIDTH);
+    checked_index("item row", y as i32, MAPHEIGHT);
+}
+
+/// Fails the load on a hazard the game cannot create: unknown type, off the map in half tiles, a count the editor
+/// never writes, a zero or negative frequency, a direction past the hazard's sprites, or an unusable float.
+pub(super) fn check_hazard(hazard: &MapHazard) {
+    checked_range("hazard type", hazard.itype as i32, 0, 7);
+    checked_index("hazard column", hazard.ix as i32, 2 * MAPWIDTH);
+    checked_index("hazard row", hazard.iy as i32, 2 * MAPHEIGHT);
+    if hazard.itype <= 1 {
+        checked_range("hazard count", hazard.iparam[0] as i32, 0, 9);
+    } else {
+        checked_range("hazard frequency", hazard.iparam[0] as i32, 1, i16::MAX as i32);
+    }
+    if hazard.itype >= 3 {
+        checked_index("hazard direction", hazard.iparam[1] as i32, 4);
+    }
+    for value in hazard.dparam {
+        checked_float("hazard parameter", value);
+    }
+}
+
+/// Fails the load when a warp entrance's connection has no exit, which a player entering it would need.
+pub(super) fn check_warp_exits(map: &CMap) {
+    let exits = &map.warpexits[..map.numwarpexits as usize];
+    for warp in map.warpdata.iter().flatten() {
+        if warp.direction != WARP_UNDEFINED && !exits.iter().any(|e| e.connection == warp.connection) {
+            throw_runtime_error(&format!("Damaged map: warp connection {} has no exit", warp.connection));
+        }
+    }
+}
+
+/// Fails the load on a platform size the map cannot hold.
+pub(super) fn check_platform_size(width: i16, height: i16) {
+    if !(1..=MAPWIDTH).contains(&(width as i32)) || !(1..=MAPHEIGHT).contains(&(height as i32)) {
+        throw_runtime_error(&format!("Damaged map: platform size {width}x{height} is not within {MAPWIDTH}x{MAPHEIGHT}"));
+    }
+}
+
+/// Fails the load when a warp entrance names a connection or exit the map cannot hold.
+pub(super) fn check_warp(map: &CMap, warp: &Warp) {
+    if warp.direction != WARP_UNDEFINED {
+        checked_index("warp connection", warp.connection as i32, map.warplocked.len() as i32);
+        checked_index("warp exit", warp.id as i32, MAXWARPS);
     }
 }
 
