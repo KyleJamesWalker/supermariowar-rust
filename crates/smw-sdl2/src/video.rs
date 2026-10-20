@@ -121,8 +121,10 @@ pub struct Sdl2Video {
     integer_scale: bool,
     #[cfg(feature = "shaders")]
     shader: Option<crate::shader::ShaderPresenter>,
+    #[cfg(feature = "gl")]
+    lite: Option<crate::crt_lite::CrtLite>,
     /// The preset `set_shader` picked before `open`.
-    #[cfg(feature = "shaders")]
+    #[cfg(feature = "gl")]
     pending_shader: Option<std::path::PathBuf>,
 }
 
@@ -138,7 +140,9 @@ impl Sdl2Video {
             integer_scale: false,
             #[cfg(feature = "shaders")]
             shader: Option::None,
-            #[cfg(feature = "shaders")]
+            #[cfg(feature = "gl")]
+            lite: Option::None,
+            #[cfg(feature = "gl")]
             pending_shader: Option::None,
         }
     }
@@ -158,10 +162,29 @@ impl Drop for Sdl2Video {
 }
 
 impl Sdl2Video {
-    /// Makes the window and its presenter: the shader presenter for `preset`, else the renderer. Err says why the
-    /// preset did not load; the window then uses the renderer.
+    /// Makes the window and its presenter: the built-in one for a `builtin:<name>` preset, the librashader one for
+    /// a `.slangp` file, else the renderer. Err says why the preset did not load; the window then uses the renderer.
     unsafe fn create(&mut self, fullscreen: bool, preset: Option<&std::path::Path>) -> Result<(), String> {
         let mut result = Ok(());
+        #[cfg(feature = "gl")]
+        if let Some(name) = preset.and_then(|p| p.to_str()).and_then(|p| p.strip_prefix("builtin:")) {
+            crate::crt_lite::request_context();
+            let flags = SDL_WindowFlags::SDL_WINDOW_OPENGL as u32 | SDL_WindowFlags::SDL_WINDOW_ALLOW_HIGHDPI as u32;
+            self.window = create_window(fullscreen, flags);
+            match crate::crt_lite::CrtLite::new(self.window, name) {
+                Ok(lite) => {
+                    self.vsync = lite.vsync();
+                    self.lite = Some(lite);
+                    self.apply_integer_scale();
+                    return Ok(());
+                }
+                Err(e) => {
+                    SDL_DestroyWindow(self.window);
+                    SDL_GL_ResetAttributes();
+                    return self.create(fullscreen, Option::None).and(Err(e));
+                }
+            }
+        }
         #[cfg(feature = "shaders")]
         if let Some(preset) = preset {
             crate::shader::request_context();
@@ -182,7 +205,7 @@ impl Sdl2Video {
         }
         #[cfg(not(feature = "shaders"))]
         if preset.is_some() {
-            result = Err("built without the shaders feature".to_string());
+            result = Err("this build runs only the built-in shaders".to_string());
         }
         self.window = create_window(fullscreen, 0);
         (self.renderer, self.vsync) = create_renderer(self.window);
@@ -197,6 +220,10 @@ impl Sdl2Video {
         {
             self.shader = Option::None;
         }
+        #[cfg(feature = "gl")]
+        {
+            self.lite = Option::None;
+        }
         for tex in self.overlay_textures.drain(..) {
             SDL_DestroyTexture(tex);
         }
@@ -208,8 +235,8 @@ impl Sdl2Video {
     }
 
     unsafe fn apply_integer_scale(&mut self) {
-        #[cfg(feature = "shaders")]
-        crate::shader::set_integer_scale(self.integer_scale);
+        #[cfg(feature = "gl")]
+        crate::gl_common::set_integer_scale(self.integer_scale);
         if !self.renderer.is_null() {
             SDL_RenderSetIntegerScale(self.renderer, if self.integer_scale { SDL_bool::SDL_TRUE } else { SDL_bool::SDL_FALSE });
         }
@@ -272,9 +299,9 @@ impl Video for Sdl2Video {
             let mut v = SDL_version { major: 0, minor: 0, patch: 0 };
             SDL_GetVersion(&mut v);
             println!("[gfx] SDL {}.{}.{} loaded.", v.major, v.minor, v.patch);
-            #[cfg(feature = "shaders")]
+            #[cfg(feature = "gl")]
             let preset = std::env::var_os("SMW_SHADER").map(std::path::PathBuf::from).or(self.pending_shader.take());
-            #[cfg(not(feature = "shaders"))]
+            #[cfg(not(feature = "gl"))]
             let preset: Option<std::path::PathBuf> = Option::None;
             if let Err(e) = self.create(fullscreen, preset.as_deref()) {
                 eprintln!("[gfx] Shader preset unavailable, using the renderer: {e}");
@@ -283,18 +310,25 @@ impl Video for Sdl2Video {
     }
 
     fn supports_shaders(&self) -> bool {
-        cfg!(feature = "shaders")
+        cfg!(feature = "gl")
+    }
+
+    fn builtin_shaders(&self) -> Vec<String> {
+        #[cfg(all(feature = "gl", not(feature = "shaders")))]
+        return crate::crt_lite::BUILTIN.iter().map(|s| s.to_string()).collect();
+        #[cfg(any(not(feature = "gl"), feature = "shaders"))]
+        Vec::new()
     }
 
     fn set_shader(&mut self, preset: Option<&std::path::Path>) -> Result<(), String> {
         if self.window.is_null() {
-            #[cfg(feature = "shaders")]
+            #[cfg(feature = "gl")]
             {
                 self.pending_shader = preset.map(std::path::Path::to_path_buf);
                 return Ok(());
             }
-            #[cfg(not(feature = "shaders"))]
-            return if preset.is_some() { Err("built without the shaders feature".to_string()) } else { Ok(()) };
+            #[cfg(not(feature = "gl"))]
+            return if preset.is_some() { Err("built without shader support".to_string()) } else { Ok(()) };
         }
         // SAFETY: the window is open, so `destroy` frees live objects and `create` replaces them.
         unsafe {
@@ -318,6 +352,11 @@ impl Video for Sdl2Video {
                 shader.present(self.window, frame, overlay);
                 return;
             }
+            #[cfg(feature = "gl")]
+            if let Some(lite) = self.lite.as_mut() {
+                lite.present(self.window, frame, overlay);
+                return;
+            }
             SDL_UpdateTexture(self.texture, null(), frame.pixels.as_ptr() as *const _, (SCREEN_W * 4) as i32);
             SDL_RenderClear(self.renderer);
             SDL_RenderCopy(self.renderer, self.texture, null(), null());
@@ -329,10 +368,10 @@ impl Video for Sdl2Video {
     }
 
     fn output_size(&self) -> (i32, i32) {
-        #[cfg(feature = "shaders")]
-        if self.shader.is_some() {
-            // SAFETY: the presenter only exists once `open` made the window.
-            return unsafe { crate::shader::drawable_size(self.window) };
+        #[cfg(feature = "gl")]
+        if self.renderer.is_null() && !self.window.is_null() {
+            // SAFETY: without a renderer, a GL presenter owns the open window.
+            return unsafe { crate::gl_common::drawable_size(self.window) };
         }
         let (mut w, mut h) = (0, 0);
         // SAFETY: the out-pointers are live locals; SDL rejects a null renderer.

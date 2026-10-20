@@ -79,6 +79,10 @@ pub trait Video {
             None => Ok(()),
         }
     }
+    /// The shaders built into the backend, which `set_shader` takes as `builtin:<name>`.
+    fn builtin_shaders(&self) -> Vec<String> {
+        Vec::new()
+    }
     /// Scales the picture only by whole multiples of 640x480 when `on`.
     fn set_integer_scale(&mut self, _on: bool) {}
 }

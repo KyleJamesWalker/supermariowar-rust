@@ -23,6 +23,8 @@ fn emscripten_link_args() {
         r#"-sSDL2_IMAGE_FORMATS=["png","bmp"]"#,
         "-sUSE_SDL_MIXER=2",
         "-sALLOW_MEMORY_GROWTH=1",
+        // The built-in shader presenter loads its WebGL functions through SDL_GL_GetProcAddress.
+        "-sGL_ENABLE_GET_PROC_ADDRESS=1",
         // Large globals (CResourceManager, CGameValues) are built on the stack before boxing, which overflows
         // emscripten's 64 KiB default. 8 MiB matches the native main thread.
         "-sSTACK_SIZE=8MB",

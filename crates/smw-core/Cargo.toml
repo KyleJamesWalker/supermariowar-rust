@@ -11,6 +11,8 @@ name = "smw"
 [features]
 # Mirrors the C++ NO_NETWORK build (NetworkLayerNULL).
 no_network = []
+# The built-in GPU shader presenter, for the Android library this crate builds.
+gl = ["smw-sdl2/gl"]
 
 [dependencies]
 smw-globals = { path = "../smw-globals" }

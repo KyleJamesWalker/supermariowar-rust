@@ -12,14 +12,14 @@ const FILE: &str = "video.txt";
 pub struct ShaderPreset {
     /// The file name without `.slangp`.
     pub name: String,
-    /// `bundled/<path>` or `user/<path>`, relative to its folder; what `video.txt` stores.
+    /// `builtin/<name>`, or `bundled/<path>` or `user/<path>` relative to its folder; what `video.txt` stores.
     pub key: String,
     pub path: PathBuf,
 }
 
 #[derive(Clone, Debug, Default)]
 pub struct VideoSettings {
-    /// The bundled presets, then the player's, each group by name.
+    /// The backend's built-in presets, then the bundled ones, then the player's, each group by name.
     pub presets: Vec<ShaderPreset>,
     /// The Graphics menu's choice: 0 is Off, `n` is `presets[n - 1]`.
     pub shader: i16,
@@ -82,7 +82,13 @@ pub fn load(g: &mut Game) {
     if !services(g).video.supports_shaders() {
         return;
     }
-    let mut presets = find_presets(&bundled_dir(g), "bundled");
+    let mut presets: Vec<ShaderPreset> = services(g)
+        .video
+        .builtin_shaders()
+        .into_iter()
+        .map(|name| ShaderPreset { key: format!("builtin/{name}"), path: PathBuf::from(format!("builtin:{name}")), name })
+        .collect();
+    presets.extend(find_presets(&bundled_dir(g), "bundled"));
     presets.extend(find_presets(&user_dir(g), "user"));
     let text = std::fs::read_to_string(get_home_directory(g) + FILE).unwrap_or_default();
     let (shader, integer_scale) = parse(&text, &presets);
