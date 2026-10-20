@@ -23,6 +23,7 @@ use std::collections::BTreeMap;
 pub struct Keys(pub u16);
 
 impl Keys {
+    /// Packs the keys of one input slot.
     pub fn of(control: &COutputControl) -> Keys {
         let mut bits = 0u16;
         for (k, key) in control.keys.iter().enumerate() {
@@ -31,6 +32,7 @@ impl Keys {
         Keys(bits)
     }
 
+    /// Writes these keys into one input slot.
     pub fn apply(self, control: &mut COutputControl) {
         for (k, key) in control.keys.iter_mut().enumerate() {
             key.fDown = self.0 & 1 << (2 * k) != 0;
@@ -42,7 +44,9 @@ impl Keys {
 /// Where a player's keys go: a local input slot, or a remote player's slot (net games' `PlayerKeys`).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum KeySlot {
+    /// An index into `game_values.playerInput.outputControls`.
     Local(usize),
+    /// An index into `netplay.netPlayerInput.outputControls`, by the remote player's slot.
     Net(usize),
 }
 
@@ -73,6 +77,7 @@ pub struct MatchState {
     winning_player: i16,
     draw_index: i16,
     gps: Option<GameplayState>,
+    /// The harness frame counter, which the virtual sound clock and [`checksum`] read.
     frame: u32,
 }
 
@@ -82,6 +87,7 @@ impl Clone for Box<dyn CGameModeTrait> {
     }
 }
 
+/// Copies the live match into a [`MatchState`]; the screen surface and display lists stay out.
 pub fn save(g: &mut Game) -> MatchState {
     MatchState {
         game_values: (*g.game_values).clone(),
@@ -261,12 +267,16 @@ where
 /// A GGRS request as a v2 recording keeps it (`#@ v2` lines, docs/guides/REPLAY.md).
 #[derive(Clone, Debug, PartialEq)]
 pub enum Req {
+    /// Save the state of this GGRS frame.
     Save(i32),
+    /// Load the state saved at this GGRS frame.
     Load(i32),
+    /// Run one tick with these keys, one per GGRS player handle.
     Advance(Vec<Keys>),
 }
 
 impl Req {
+    /// The recordable part of a live GGRS request.
     pub fn of<A>(request: &ggrs::GgrsRequest<GgrsConfig<A>>) -> Req
     where
         A: Clone + PartialEq + Eq + std::hash::Hash + std::fmt::Debug + 'static,
@@ -287,6 +297,7 @@ impl Req {
         }
     }
 
+    /// Reads a [`Req::token`]; `None` for any other token.
     pub fn parse(token: &str) -> Option<Req> {
         let (kind, rest) = token.split_at_checked(1)?;
         match kind {
