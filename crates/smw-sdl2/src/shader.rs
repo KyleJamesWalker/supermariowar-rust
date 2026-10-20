@@ -5,7 +5,8 @@ use librashader::presets::ShaderFeatures;
 use librashader::runtime::gl::{FilterChain, FilterChainOptions, GLImage};
 use librashader::runtime::{Size, Viewport};
 use sdl2::sys::*;
-use smw_platform::{Frame, SCREEN_H, SCREEN_W};
+use crate::shader_overlay::OverlayGl;
+use smw_platform::{Frame, Overlay, SCREEN_H, SCREEN_W};
 use std::ffi::{CStr, CString};
 use std::path::Path;
 use std::sync::Arc;
@@ -34,6 +35,7 @@ pub struct ShaderPresenter {
     output: Option<(glow::Texture, Size<u32>)>,
     /// Attaches `output` so it can be blitted to the window.
     read_fbo: glow::Framebuffer,
+    overlay: OverlayGl,
     frame_count: usize,
     /// `SMW_SHADER_SHOT`: the present whose output is saved as `shader_<n>.bmp` in `SMW_SHOT_DIR`.
     shot: Option<usize>,
@@ -67,9 +69,11 @@ impl ShaderPresenter {
             .map_err(|e| format!("{}: {e:?}", preset.display()))?;
         let input = single_level_texture(&gl, SCREEN_W as i32, SCREEN_H as i32, glow::BGRA)?;
         let read_fbo = gl.create_framebuffer()?;
+        let overlay = OverlayGl::new(&gl)?;
         println!("[gfx] Shader preset {} on OpenGL {}", preset.display(), gl.get_parameter_string(glow::VERSION));
         let shot = std::env::var("SMW_SHADER_SHOT").ok().and_then(|n| n.parse().ok());
-        Ok(ShaderPresenter { context, gl, chain, input, output: Option::None, read_fbo, frame_count: 0, shot })
+        SDL_AddEventWatch(Some(mouse_to_logical), std::ptr::null_mut());
+        Ok(ShaderPresenter { context, gl, chain, input, output: Option::None, read_fbo, overlay, frame_count: 0, shot })
     }
 
     pub fn vsync(&self) -> bool {
@@ -92,9 +96,9 @@ impl ShaderPresenter {
     }
 
     /// Safety: `window` is the window `new` was given.
-    pub unsafe fn present(&mut self, window: *mut SDL_Window, frame: Frame<'_>) {
+    pub unsafe fn present(&mut self, window: *mut SDL_Window, frame: Frame<'_>, overlay: Option<&Overlay>) {
         let (dw, dh) = drawable_size(window);
-        let scale = (dw as f32 / SCREEN_W as f32).min(dh as f32 / SCREEN_H as f32);
+        let (scale, _, _) = letterbox(dw, dh);
         let size = Size::new((SCREEN_W as f32 * scale) as u32, (SCREEN_H as f32 * scale) as u32);
         if size.width == 0 || size.height == 0 {
             return;
@@ -127,9 +131,7 @@ impl ShaderPresenter {
         if let Err(e) = self.chain.frame(&input, &viewport, self.frame_count, Option::None) {
             eprintln!("[gfx] Shader frame {}: {e:?}", self.frame_count);
         }
-        if self.shot == Some(self.frame_count) {
-            self.save_shot(out, size);
-        }
+        let shot = self.shot == Some(self.frame_count);
         self.frame_count += 1;
 
         let (x0, y0) = ((dw - size.width as i32) / 2, (dh - size.height as i32) / 2);
@@ -143,24 +145,30 @@ impl ShaderPresenter {
         let (w, h) = (size.width as i32, size.height as i32);
         gl.blit_framebuffer(0, 0, w, h, x0, y0 + h, x0 + w, y0, glow::COLOR_BUFFER_BIT, glow::NEAREST);
         gl.bind_framebuffer(glow::READ_FRAMEBUFFER, Option::None);
+        if let Some(overlay) = overlay {
+            self.overlay.draw(gl, overlay, dw, dh);
+        }
+        if shot {
+            self.save_shot(dw, dh);
+        }
         SDL_GL_SwapWindow(window);
     }
 }
 
 impl ShaderPresenter {
-    /// Writes the chain's output as a BMP; its first row is the frame's top row, as the blit's flip implies.
-    unsafe fn save_shot(&self, out: glow::Texture, size: Size<u32>) {
+    /// Writes the window's back buffer, overlay and letterbox included, as a BMP.
+    unsafe fn save_shot(&self, w: i32, h: i32) {
         let gl = &self.gl;
-        let (w, h) = (size.width as usize, size.height as usize);
+        let (w, h) = (w as usize, h as usize);
         let mut rgba = vec![0u8; w * h * 4];
-        gl.bind_framebuffer(glow::READ_FRAMEBUFFER, Some(self.read_fbo));
-        gl.framebuffer_texture_2d(glow::READ_FRAMEBUFFER, glow::COLOR_ATTACHMENT0, glow::TEXTURE_2D, Some(out), 0);
-        gl.read_pixels(0, 0, w as i32, h as i32, glow::RGBA, glow::UNSIGNED_BYTE, glow::PixelPackData::Slice(Some(&mut rgba)));
         gl.bind_framebuffer(glow::READ_FRAMEBUFFER, Option::None);
+        gl.read_pixels(0, 0, w as i32, h as i32, glow::RGBA, glow::UNSIGNED_BYTE, glow::PixelPackData::Slice(Some(&mut rgba)));
+        // The back buffer's first row is the bottom of the window.
+        let mut upright: Vec<u8> = rgba.chunks_exact(w * 4).rev().flatten().copied().collect();
         let dir = std::env::var("SMW_SHOT_DIR").unwrap_or_else(|_| ".".to_string());
-        let path = CString::new(format!("{dir}/shader_{}.bmp", self.frame_count)).unwrap_or_default();
+        let path = CString::new(format!("{dir}/shader_{}.bmp", self.frame_count - 1)).unwrap_or_default();
         let format = SDL_PixelFormatEnum::SDL_PIXELFORMAT_ABGR8888 as u32;
-        let surface = SDL_CreateRGBSurfaceWithFormatFrom(rgba.as_mut_ptr() as *mut _, w as i32, h as i32, 32, (w * 4) as i32, format);
+        let surface = SDL_CreateRGBSurfaceWithFormatFrom(upright.as_mut_ptr() as *mut _, w as i32, h as i32, 32, (w * 4) as i32, format);
         if surface.is_null() || SDL_SaveBMP_RW(surface, SDL_RWFromFile(path.as_ptr(), c"wb".as_ptr()), 1) != 0 {
             eprintln!("[gfx] Could not save {}: {}", path.to_string_lossy(), CStr::from_ptr(SDL_GetError()).to_string_lossy());
         }
@@ -170,9 +178,55 @@ impl ShaderPresenter {
 
 impl Drop for ShaderPresenter {
     fn drop(&mut self) {
-        // SAFETY: the context was created in `new` and is deleted once, after the chain's GL objects.
-        unsafe { SDL_GL_DeleteContext(self.context) };
+        // SAFETY: the watch and the context were made in `new` and are removed once.
+        unsafe {
+            SDL_DelEventWatch(Some(mouse_to_logical), std::ptr::null_mut());
+            SDL_GL_DeleteContext(self.context);
+        }
     }
+}
+
+/// The scale and offset that fit 640x480 into a `w` by `h` area, centered.
+fn letterbox(w: i32, h: i32) -> (f32, f32, f32) {
+    let scale = (w as f32 / SCREEN_W as f32).min(h as f32 / SCREEN_H as f32);
+    (scale, (w as f32 - SCREEN_W as f32 * scale) / 2.0, (h as f32 - SCREEN_H as f32 * scale) / 2.0)
+}
+
+/// Maps mouse events from window points to the 640x480 picture, as SDL's renderer does for its logical size.
+unsafe extern "C" fn mouse_to_logical(_: *mut std::ffi::c_void, e: *mut SDL_Event) -> i32 {
+    let t = (*e).type_;
+    let window_id = if t == SDL_EventType::SDL_MOUSEMOTION as u32 {
+        (*e).motion.windowID
+    } else if t == SDL_EventType::SDL_MOUSEBUTTONDOWN as u32 || t == SDL_EventType::SDL_MOUSEBUTTONUP as u32 {
+        (*e).button.windowID
+    } else {
+        return 1;
+    };
+    let window = SDL_GetWindowFromID(window_id);
+    if window.is_null() {
+        return 1;
+    }
+    let (mut w, mut h) = (0, 0);
+    SDL_GetWindowSize(window, &mut w, &mut h);
+    if w <= 0 || h <= 0 {
+        return 1;
+    }
+    if t == SDL_EventType::SDL_MOUSEMOTION as u32 {
+        let m = &mut (*e).motion;
+        (m.x, m.y) = to_logical(m.x, m.y, w, h);
+        let scale = letterbox(w, h).0;
+        (m.xrel, m.yrel) = ((m.xrel as f32 / scale) as i32, (m.yrel as f32 / scale) as i32);
+    } else {
+        let b = &mut (*e).button;
+        (b.x, b.y) = to_logical(b.x, b.y, w, h);
+    }
+    1
+}
+
+/// A point in a `w` by `h` window as a 640x480 picture pixel; points in the bars fall outside 0..640 or 0..480.
+fn to_logical(x: i32, y: i32, w: i32, h: i32) -> (i32, i32) {
+    let (scale, ox, oy) = letterbox(w, h);
+    (((x as f32 - ox) / scale).floor() as i32, ((y as f32 - oy) / scale).floor() as i32)
 }
 
 /// The window's size in physical pixels.
@@ -192,4 +246,22 @@ unsafe fn single_level_texture(gl: &glow::Context, w: i32, h: i32, format: u32) 
     gl.tex_parameter_i32(glow::TEXTURE_2D, glow::TEXTURE_MAX_LEVEL, 0);
     gl.tex_image_2d(glow::TEXTURE_2D, 0, glow::RGBA8 as i32, w, h, 0, format, glow::UNSIGNED_BYTE, glow::PixelUnpackData::Slice(Option::None));
     Ok(tex)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::to_logical;
+
+    #[test]
+    fn window_points_map_to_picture_pixels() {
+        assert_eq!(to_logical(0, 0, 640, 480), (0, 0));
+        assert_eq!(to_logical(639, 479, 640, 480), (639, 479));
+        assert_eq!(to_logical(640, 480, 1280, 960), (320, 240));
+        // Pillarboxed: 1600x960 has 160-point bars at each side.
+        assert_eq!(to_logical(160, 0, 1600, 960), (0, 0));
+        assert_eq!(to_logical(100, 10, 1600, 960).0, -30);
+        // Letterboxed: 640x600 has 60-point bars above and below.
+        assert_eq!(to_logical(320, 60, 640, 600), (320, 0));
+        assert_eq!(to_logical(320, 539, 640, 600), (320, 479));
+    }
 }

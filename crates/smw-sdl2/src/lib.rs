@@ -13,6 +13,8 @@ mod pad;
 mod pads;
 #[cfg(feature = "shaders")]
 mod shader;
+#[cfg(feature = "shaders")]
+mod shader_overlay;
 mod video;
 pub use audio::Sdl2Audio;
 pub use pads::Sdl2Pads;

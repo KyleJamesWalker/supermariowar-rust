@@ -247,7 +247,7 @@ impl Video for Sdl2Video {
         unsafe {
             #[cfg(feature = "shaders")]
             if let Some(shader) = self.shader.as_mut() {
-                shader.present(self.window, frame);
+                shader.present(self.window, frame, overlay);
                 return;
             }
             SDL_UpdateTexture(self.texture, null(), frame.pixels.as_ptr() as *const _, (SCREEN_W * 4) as i32);

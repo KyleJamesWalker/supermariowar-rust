@@ -13,7 +13,7 @@ Players get CRT and other display effects from the RetroArch shader collection, 
 ## Proposed design
 
 - **Presets:** [libretro/slang-shaders](https://github.com/libretro/slang-shaders) is a shallow submodule at `shaders/slang-shaders`. Each file keeps its upstream license header. Our own presets live in `shaders/presets/`: they point at the upstream shaders and tune their parameters for a 480-line source. Players add presets under `~/.smw/shaders/`.
-- **Presenter:** with the `shaders` feature on and a preset selected, `smw-sdl2` opens an OpenGL 3.3 core window instead of the renderer (`crates/smw-sdl2/src/shader.rs`). Each frame, it uploads the image, runs the preset's filter chain into a texture at the letterboxed size, and blits that texture to the window. If the context or the preset fails, the window falls back to the renderer.
+- **Presenter:** with the `shaders` feature on and a preset selected, `smw-sdl2` opens an OpenGL 3.3 core window instead of the renderer (`crates/smw-sdl2/src/shader.rs`). Each frame, it uploads the image, runs the preset's filter chain into a texture at the letterboxed size, and blits that texture to the window. If the context or the preset fails, the window falls back to the renderer. The touch controls draw over it with their own small shader (`shader_overlay.rs`), and an event watch maps mouse coordinates to the 640x480 picture, as SDL's renderer does.
 - **Feature gate:** librashader builds SPIRV-Cross and glslang from C++. The `shaders` feature on `smw-sdl2` (passed through as `smw/shaders`) keeps that out of the Android, web, muOS and aarch64 builds.
 - **Settings:** a Graphics option lists the bundled presets, then the player's, with Off first. Off keeps today's renderer. An integer scaling option keeps the image at whole multiples of 640x480, where scanlines look even.
 
@@ -30,7 +30,6 @@ Players get CRT and other display effects from the RetroArch shader collection, 
 - **Licensing:** most CRT shaders are GPL, crt-lottes is public domain, and librashader is MPL-2.0 or GPL-3.0. The game has no declared license. The release ships the shaders as loose source files with a notices file.
 - **macOS:** OpenGL stops at 4.1 there, so presets that need GL 4.3 features, such as crt-geom (`GL_ARB_arrays_of_arrays`), fail to load. The menu should leave them out.
 - **The 480-line source:** at 2x, each source line covers two screen rows, which is too few for strong scanlines. Presets tuned for 240-line games, such as CRT-Royale, look washed out unless tuned or shown at 3x and up.
-- **Not drawn yet in the GL path:** the touch and F1 overlay, and mouse coordinates in game pixels.
 - **Android and the web:** librashader targets desktop GL. OpenGL ES and WebGL need a lighter built-in shader.
 
 ## Rollout
