@@ -80,12 +80,12 @@ pub const MAPTITLESTRING: &str = "World Editor";
 const szEditModes: [&str; 10] = [
     "Background Mode",
     "Foreground Mode",
-    "Path Sprite Mode",
-    "Stage Mode",
     "Path Mode",
+    "Start/Door Mode",
+    "Path Sprite Mode",
     "Vehicle Mode",
     "Warp Mode",
-    "Start/Door Mode",
+    "Water Mode",
     "Boundary Mode",
     "Stage Mode",
 ];
