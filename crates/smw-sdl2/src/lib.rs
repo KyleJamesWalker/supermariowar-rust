@@ -76,7 +76,7 @@ fn home_directory() -> String {
 fn home_directory() -> String {
     let mut result = String::from(".smw/");
     if let Ok(folder) = std::env::var("USERPROFILE") {
-        result = folder + "/" + &result;
+        result = folder + "/" + result.as_str();
     }
     result
 }
