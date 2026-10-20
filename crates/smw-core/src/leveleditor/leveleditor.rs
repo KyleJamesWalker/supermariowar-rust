@@ -1317,8 +1317,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                                                 update_tile_type(g, iLocalX, iLocalY);
                                             }
 
-                                            // (sic) checks the item at (iLocalY, iLocalY), not the painted cell.
-                                            adjust_map_items(g, iLocalY, iLocalY);
+                                            adjust_map_items(g, iLocalX, iLocalY);
                                         }
                                     }
                                 }
