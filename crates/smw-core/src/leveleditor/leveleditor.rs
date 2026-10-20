@@ -1,4 +1,4 @@
-//! Port of src/leveleditor/leveleditor.cpp
+//! The level editor: paints a map's tiles, blocks, warps, items, spawn zones, platforms and hazards, and saves it.
 
 use crate::common::keys::*;
 use crate::common::gfx::soft_surface::Rect;
@@ -37,8 +37,10 @@ use std::io::Write;
 use std::path::Path;
 use std::ptr::{null, null_mut};
 
+/// Appended to the game title in the window title and banner.
 const MAPTITLESTRING: &str = "Level Editor";
 
+/// Editor screens: what `LevelEditorState::state` holds and each screen function returns to run next.
 const EDITOR_EDIT: i32 = 0;
 const EDITOR_TILES: i32 = 1;
 const EDITOR_QUIT: i32 = 2;
@@ -62,13 +64,16 @@ const EDITOR_MAPHAZARDS: i32 = 19;
 
 const MAX_PLATFORMS: i32 = 32;
 const MAX_PLATFORM_VELOCITY: i32 = 16;
+/// Tile types including `NonSolid`; the tile type picker shows the rest.
 const NUMTILETYPES: i32 = 19;
+/// The platform list's grid of icons.
 const UI_PLATFORM_ROWS: i32 = 4;
 const UI_PLATFORM_COLS: i32 = 8;
 
 const MW: usize = MAPWIDTH as usize;
 const MH: usize = MAPHEIGHT as usize;
 
+/// The event types as `u32` match patterns.
 const SDL_QUIT_EV: u32 = SDL_QUIT;
 const SDL_KEYDOWN_EV: u32 = SDL_KEYDOWN;
 const SDL_KEYUP_EV: u32 = SDL_KEYUP;
@@ -89,18 +94,21 @@ const fn sdl_button(x: u32) -> u32 {
 const SDL_BUTTON_LMASK: u32 = sdl_button(SDL_BUTTON_LEFT);
 const SDL_BUTTON_RMASK: u32 = sdl_button(SDL_BUTTON_RIGHT);
 
+/// Everything a map cell holds, as move mode copies it.
 #[derive(Clone, Copy)]
 pub struct EditorMapTile {
+    /// One tile per layer.
     pub tile: [TilesetTile; MAPLAYERS as usize],
     pub block: MapBlock,
     pub warp: Warp,
     pub nospawn: [bool; NUMSPAWNAREATYPES as usize],
     pub tiletype: TileType,
+    /// The map item on the cell, or -1.
     pub item: i32,
 }
 
 impl EditorMapTile {
-    /// Static storage: every member starts zeroed.
+    /// An empty cell with every field zero.
     fn zeroed() -> Self {
         EditorMapTile {
             tile: [TilesetTile::default(); MAPLAYERS as usize],
@@ -113,99 +121,161 @@ impl EditorMapTile {
     }
 }
 
-/// The editor's state, a part of `Game`.
+/// The level editor's state, in `Game::level_editor`.
 pub struct LevelEditorState {
+    /// The last polled input event.
     pub event: EditorEvent,
+    /// The tile type the tile and animation pickers set with the right and middle buttons.
     pub set_type: TileType,
+    /// The size, in tiles, of the selection tile and animated tile modes paint.
     pub set_tile_rows: i32,
     pub set_tile_cols: i32,
+    /// The tileset the tile picker shows and tile mode paints from.
     pub set_tile_tileset: i32,
+    /// The picked selection's corners in picker tiles; the animation picker's x is the sheet row.
     pub set_tile_start_x: i32,
     pub set_tile_start_y: i32,
     pub set_tile_end_x: i32,
     pub set_tile_end_y: i32,
+    /// A picker selection is being dragged out.
     pub set_tile_drag: bool,
+    /// The tile picker's scroll offset, in tiles.
     pub view_tileset_x: i32,
     pub view_tileset_y: i32,
+    /// The animation picker's scroll offset, 0 to 12 columns.
     pub view_animated_tileset_x: i32,
+    /// The block type block mode paints, as `MapBlock::iType`.
     pub set_block: i32,
+    /// Whether switched blocks (types 11 to 14) are painted on.
     pub set_block_switch_on: i32,
+    /// The tile type tile type mode paints.
     pub set_tiletype: TileType,
+    /// The map item map item mode places.
     pub set_mapitem: i32,
+    /// The warp entry direction and connection warp mode paints.
     pub set_direction: i32,
     pub set_connection: i32,
+    /// What the mouse paints: 0 blocks, 1 tiles, 2 warps, 3 move, 4 no player spawn, 5 no item spawn,
+    /// 6 tile types, 7 map items, 8 animated tiles.
     pub edit_mode: i32,
+    /// The tile layer painted, 0 bottom background to 3 top foreground.
     pub selected_layer: i32,
+    /// The no player spawn zone edited: 0 every player, 1 to 4 one team.
     pub nospawn_mode: i32,
+    /// Move mode: 0 idle, 1 dragging the selection, 2 dragging a selection box, 3 placing a copy.
     pub move_mode: i32,
+    /// The cell a move or copy started from.
     pub move_start_x: i32,
     pub move_start_y: i32,
+    /// How far, in cells, the moved or copied selection is from where it started.
     pub move_offset_x: i32,
     pub move_offset_y: i32,
+    /// Left Ctrl is held: a click selects one cell instead of starting a selection box.
     pub move_nodrag: bool,
+    /// Pasting replaces what is under the selection; false merges, keeping what lies under empty cells.
     pub move_replace: bool,
+    /// The cell a selection box drag started on; `move_drag_offset_*` is the cell under the pointer.
     pub move_drag_start_x: i32,
     pub move_drag_start_y: i32,
     pub move_drag_offset_x: i32,
     pub move_drag_offset_y: i32,
+    /// The screen the main loop runs next, one of the `EDITOR_*` and file constants.
     pub state: i32,
+    /// Move mode's selection, by column and row.
     pub selectedtiles: [[bool; MH]; MW],
+    /// The selection's shape while it moves, which `pastemoveselection` shifts back into `selectedtiles`.
     pub moveselectedtiles: [[bool; MH]; MW],
+    /// The selected cells as they were when copied or picked up.
     pub copiedtiles: Global<[[EditorMapTile; MH]; MW]>,
+    /// The layer selected when the cells were copied.
     pub copiedlayer: i32,
+    /// The pointer, clamped to the window.
     pub mouse_x: i32,
     pub mouse_y: i32,
+    /// Each animated tile's type by `iRow + 32 * iCol` (256 entries), kept in tile_animation_tileset.tls.
     pub animatedtiletypes: Vec<TileType>,
+    /// The platform and hazard editors' frames, buttons and sliders.
     pub s_platform: Global<gfxSprite>,
+    /// The path type buttons.
     pub s_platformpathbuttons: Global<gfxSprite>,
+    /// The hazard type buttons.
     pub s_maphazardbuttons: Global<gfxSprite>,
+    /// Blocks are drawn.
     pub viewblocks: bool,
+    /// Only `selected_layer` is drawn, and move mode moves only that layer.
     pub view_only_layer: bool,
     pub viewwarps: bool,
+    /// Set when a picker closes on a press, so that press does not paint; cleared on left release.
     pub ignoreclick: bool,
+    /// The map search text; at startup, the map leveleditor.bin names.
     pub findstring: String,
+    /// How many of `g_Platforms` are in use.
     pub g_iNumPlatforms: i16,
+    /// The platforms being edited, `MAX_PLATFORMS` of them, written into the map on save and test.
     pub g_Platforms: Global<Vec<MapPlatform>>,
+    /// The backgrounds G cycles through and the background picker shows.
     pub backgroundlist: Ptr<BackgroundList>,
+    /// Frames left to show the music category box.
     pub g_musiccategorydisplaytimer: i16,
+    /// Frames left to show the message box, with its title and lines.
     pub g_messagedisplaytimer: i16,
     pub g_szMessageTitle: String,
     pub g_szMessageLine: [String; 3],
+    /// Kept in leveleditor.bin.
     pub g_fFullScreen: bool,
+    /// The quit confirmation is showing, with Yes selected when `fSelectedYes`.
     pub fExiting: bool,
     pub fSelectedYes: bool,
     pub editor_edit_initialized: bool,
+    /// The platform list's frame; other screens use it as a scratch rectangle.
     pub r: Rect,
+    /// The type of the block the properties screen edits.
     pub iBlockType: i16,
     pub editor_properties_initialized: bool,
+    /// The New button of the platform and hazard lists: source rectangle, then where it is drawn.
     pub rNewButton: [Rect; 2],
+    /// Per path or hazard type: button source and destination, then icon source and destination.
     pub rTypeButton: [[Rect; 4]; 8],
+    /// A `PLATFORM_EDIT_STATE_*` step.
     pub iPlatformEditState: i16,
+    /// Swapping two platforms: 1 once the first, `iPlatformSwitchIndex`, is picked.
     pub iPlatformSwitchState: i16,
     pub iPlatformSwitchIndex: i16,
     pub iEditPlatform: i16,
+    /// The edited platform's tile bounds, for drawing its path.
     pub iPlatformTop: i16,
     pub iPlatformLeft: i16,
     pub iPlatformWidth: i16,
     pub iPlatformHeight: i16,
+    /// The platform whose thumbnail the pointer shows, or -1.
     pub iPlatformPreview: i16,
     pub editor_platforms_initialized: bool,
+    /// A `MAPHAZARD_EDIT_STATE_*` step.
     pub iEditState: i16,
     pub iEditMapHazard: i16,
+    /// The hazard list's frame: source, then destination.
     pub rBackground: [Rect; 2],
+    /// Per hazard: icon source, then where the hazard list draws it.
     pub rIconRects: [[Rect; 2]; MAXMAPHAZARDS as usize],
     pub editor_maphazards_initialized: bool,
+    /// The tileset `set_tile_tileset` names.
     pub tileset: Ptr<CTileset>,
+    /// The held arrow key scrolling a picker: 0 up, 1 down, 2 left, 3 right, -1 none.
     pub view_tileset_repeat_direction: i16,
     pub view_tileset_repeat_timer: i16,
     pub editor_tiles_initialized: bool,
+    /// The mode items edited: 0 race goals, 1 flag bases.
     pub modeitemmode: i16,
+    /// The race goal or flag base being dragged, or -1; `dragoffset*` is the pointer's offset into it.
     pub dragmodeitem: i16,
     pub dragoffsetx: i16,
     pub dragoffsety: i16,
     pub editor_modeitems_initialized: bool,
+    /// The background picker's page, 16 backgrounds each.
     pub iPage: i16,
+    /// The page's thumbnails.
     pub sBackgrounds: Global<[gfxSprite; 16]>,
+    /// A thumbnail's size; `rDst` is where each of the 16 is drawn.
     pub rSrc: Rect,
     pub rDst: [Rect; 16],
     pub editor_backgrounds_initialized: bool,
@@ -318,38 +388,50 @@ fn ed(g: &mut Game) -> &mut LevelEditorState {
     &mut g.level_editor
 }
 
+/// Clamps an x coordinate to the 640-pixel window.
 pub fn bound_to_window_w(x: i32) -> i32 {
     0.max(x.min(640 - 1))
 }
 
+/// Clamps a y coordinate to the 480-pixel window.
 pub fn bound_to_window_h(y: i32) -> i32 {
     0.max(y.min(480 - 1))
 }
 
+/// Stores the motion event's position, clamped, as the pointer position.
 pub fn bound_mouse_motion_coords(g: &mut Game) {
     let mut gp = g.ptr();
     ed(gp.get()).mouse_x = bound_to_window_w(ed(gp.get()).event.motion_x());
     ed(gp.get()).mouse_y = bound_to_window_h(ed(gp.get()).event.motion_y());
 }
 
+/// A platform being edited: tiles and types on the whole map grid, column-major, and its path.
 pub struct MapPlatform {
     pub tiles: Vec<TilesetTile>,
     pub types: Vec<TileType>,
+    /// Speed step: 2 to 16 on straight paths; -10 to 10, never 0, on ellipses, negative counter-clockwise.
     pub iVelocity: i16,
+    /// The path's start in pixels, or an ellipse's center.
     pub iStartX: i16,
     pub iStartY: i16,
+    /// A straight path's end in pixels.
     pub iEndX: i16,
     pub iEndY: i16,
 
     pub iPathType: PlatformPathType,
 
+    /// A continuous path's direction, or an ellipse's start angle, in radians.
     pub fAngle: f32,
+    /// An ellipse's radii in pixels.
     pub fRadiusX: f32,
     pub fRadiusY: f32,
 
+    /// Where among the map's layers it draws, 0 to 4.
     pub iDrawLayer: i16,
 
+    /// The icon's source rectangle, then where the platform list draws it.
     pub rIcon: [Rect; 2],
+    /// A 160x120 thumbnail, which `update_preview` redraws.
     pub preview: gfxSprite,
     pub _alias: Aliased,
 }
@@ -374,8 +456,10 @@ impl MapPlatform {
         }
     }
 
+    /// Redraws `preview` from the tiles at thumbnail size.
     pub fn update_preview(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
+        // SAFETY: `preview` holds a live surface once `blank` has made it.
         unsafe {
             if self.preview.get_surface().is_null() {
                 self.preview = gfxSprite::blank(g, 160, 120);
@@ -406,17 +490,19 @@ impl MapPlatform {
     }
 }
 
-/// `SDL_GetKeyboardState(NULL)`, which the replay harness replaces while it is active.
+/// `SDL_GetKeyboardState(NULL)`, through the replay harness.
 fn get_keyboard_state(g: &mut Game) -> *const u8 {
     editor_harness::keyboard_state(g)
 }
 
-/// `SDL_GetMouseState(NULL, NULL)`, which the replay harness replaces while it is active.
+/// `SDL_GetMouseState(NULL, NULL)`, through the replay harness.
 fn get_mouse_state(g: &mut Game) -> u32 {
     editor_harness::mouse_state(g)
 }
 
+/// Whether `key` is held in a keyboard state array.
 pub fn check_key(g: &mut Game, keystate: *const u8, key: Keycode) -> bool {
+    // SAFETY: `keystate` has an entry for every scancode the keyboard maps a key to.
     unsafe { *keystate.add(crate::services::services(g).keyboard.scancode_from_key(key) as usize) != 0 }
 }
 
@@ -434,7 +520,7 @@ fn rect(x: i32, y: i32, w: i32, h: i32) -> Rect {
     Rect { x, y, w, h }
 }
 
-//main main main
+/// Runs the level editor on the backend `smw::services::set_backend` chose.
 pub fn main() {
     main_with(std::env::args().collect(), None);
 }
@@ -465,7 +551,7 @@ pub fn main_with(argv: Vec<String>, services: Option<smw_platform::Services>) {
         g.RootDataDirectory = cmd.data_root.clone();
     }
 
-    // C++ catches `const char*`, `std::string`, `std::exception` and `...` around inner_main().
+    // A panic shows its message in an error box and exits with status 1.
     let mut gp = g.ptr();
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| inner_main(gp.get())));
     if let Err(payload) = result {
@@ -479,6 +565,8 @@ pub fn main_with(argv: Vec<String>, services: Option<smw_platform::Services>) {
     }
 }
 
+/// Loads settings and graphics and runs the editor screens until quit, then saves the map to
+/// maps/ZZleveleditor.map, the editor settings, the animated tile types and the tilesets.
 pub fn inner_main(g: &mut Game) {
     let mut gp = g.ptr();
     ensure_settings_dir(g);
@@ -703,6 +791,7 @@ pub fn inner_main(g: &mut Game) {
     println!("\n---------------- shutdown ----------------");
 }
 
+/// The type of a cell's topmost tile that is not `NonSolid`.
 pub fn calculate_tile_type(g: &mut Game, x: i16, y: i16) -> TileType {
     let mut gp = g.ptr();
     let mut r#type = TileType::NonSolid;
@@ -727,15 +816,18 @@ pub fn calculate_tile_type(g: &mut Game, x: i16, y: i16) -> TileType {
     r#type
 }
 
+/// Sets a cell's tile type from its tiles.
 pub fn update_tile_type(g: &mut Game, x: i16, y: i16) {
     g.g_map.mapdatatop[x as usize][y as usize] = calculate_tile_type(g, x, y);
 }
 
+/// A cell's tile type differs from its tiles', so it was set by hand and painting keeps it.
 pub fn tile_type_is_modified(g: &mut Game, x: i16, y: i16) -> bool {
         let mut gp = g.ptr();
     gp.g_map.mapdatatop[x as usize][y as usize] != calculate_tile_type(g, x, y)
 }
 
+/// Removes the map item on a cell once the cell is solid or holds a block.
 pub fn adjust_map_items(g: &mut Game, x: i16, y: i16) {
     const IGNORED_TILES: [TileType; 3] = [TileType::NonSolid, TileType::SolidOnTop, TileType::IceOnTop];
 
@@ -785,10 +877,12 @@ fn paint_block(g: &mut Game, iClickX: i16, iClickY: i16) {
     }
 }
 
+/// The main painting screen; returns the next screen.
 pub fn editor_edit(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
     init_editor_edit(g);
 
+    // SAFETY: `g.screen`, `g.blitdest` and the sprite surfaces stay live for the editor's whole run.
     unsafe {
         if ed(gp.get()).fExiting {
             //handle messages
@@ -907,7 +1001,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                             }
                         }
 
-                        //if 'B' is pressed, rotate backgrounds
+                        //'B' opens the background picker
                         if key == SDLK_b {
                             ed(gp.get()).editor_edit_initialized = false;
                             return EDITOR_BACKGROUNDS;
@@ -1223,7 +1317,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                                                 update_tile_type(g, iLocalX, iLocalY);
                                             }
 
-                                            // (sic) the C++ passes iLocalY twice here.
+                                            // (sic) checks the item at (iLocalY, iLocalY), not the painted cell.
                                             adjust_map_items(g, iLocalY, iLocalY);
                                         }
                                     }
@@ -1442,6 +1536,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
     }
 }
 
+/// Draws which layers are shown, the selected one highlighted.
 fn draw_layer_indicator(g: &mut Game) {
         let mut gp = g.ptr();
     if ed(gp.get()).view_only_layer {
@@ -1451,7 +1546,7 @@ fn draw_layer_indicator(g: &mut Game) {
     }
 }
 
-/// `strncmp(name, szBackgroundFile, strlen(name))` over the music category names.
+/// Sets the music category to the first one whose name starts the background's file name.
 fn set_music_category_from_background(g: &mut Game) {
     for iCategory in 0..MAXMUSICCATEGORY as i16 {
         if g.g_map.szBackgroundFile.as_bytes().starts_with(g_szMusicCategoryNames[iCategory as usize].as_bytes()) {
@@ -1461,6 +1556,7 @@ fn set_music_category_from_background(g: &mut Game) {
     }
 }
 
+/// Paints the animated tile selection with its top left at a cell.
 fn paint_animated_tiles(g: &mut Game, iClickX: i16, iClickY: i16) {
     let mut gp = g.ptr();
     for i in 0..ed(g).set_tile_cols as i16 {
@@ -1473,6 +1569,7 @@ fn paint_animated_tiles(g: &mut Game, iClickX: i16, iClickY: i16) {
                 let fNeedUpdate = !tile_type_is_modified(g, iLocalX, iLocalY);
                 set_tileset_tile(
                     &mut g.g_map.mapdata[iLocalX as usize][iLocalY as usize][ed(gp.get()).selected_layer as usize],
+                    // The animation picker is transposed: its x is the sheet row, its y the column.
                     TILESETANIMATED as i16,
                     (ed(gp.get()).set_tile_start_y + j as i32) as i16,
                     (ed(gp.get()).set_tile_start_x + i as i32) as i16,
@@ -1528,6 +1625,7 @@ fn erase_at(g: &mut Game, iClickX: i16, iClickY: i16, fButtonDown: bool) {
     }
 }
 
+/// Draws the message box while its timer runs, counting it down.
 pub fn draw_message(g: &mut Game) {
         let mut gp = g.ptr();
     if ed(gp.get()).g_messagedisplaytimer > 0 {
@@ -1541,6 +1639,8 @@ pub fn draw_message(g: &mut Game) {
     }
 }
 
+/// Sets a cell's no player spawn flag. Zone 0 sets every team's as well, and a team's cannot be cleared
+/// while zone 0 is set.
 pub fn set_no_spawn(g: &mut Game, nospawnmode: i16, col: i16, row: i16, value: bool) {
     if !value && nospawnmode > 0 && g.g_map.nospawn[0][col as usize][row as usize] {
         return;
@@ -1555,6 +1655,7 @@ pub fn set_no_spawn(g: &mut Game, nospawnmode: i16, col: i16, row: i16, value: b
     }
 }
 
+/// Whether a cell shows a cell of the selection being moved or copied.
 fn in_moved_selection(g: &mut Game, i: i32, j: i32) -> bool {
     let mut gp = g.ptr();
     (ed(gp.get()).move_mode == 1 || ed(gp.get()).move_mode == 3)
@@ -1565,8 +1666,10 @@ fn in_moved_selection(g: &mut Game, i: i32, j: i32) -> bool {
         && ed(gp.get()).selectedtiles[(i - ed(gp.get()).move_offset_x) as usize][(j - ed(gp.get()).move_offset_y) as usize]
 }
 
+/// Draws a tile layer at `iBlockSize` pixels per tile; with `fUseCopied`, only the moved selection's tiles.
 pub fn drawlayer(g: &mut Game, layer: i32, fUseCopied: bool, iBlockSize: i16) {
     let mut gp = g.ptr();
+    // SAFETY: `g.screen`, `g.blitdest` and the sprite surfaces stay live for the editor's whole run.
     unsafe {
         let iTilesetIndex: i16 = if iBlockSize as i32 == TILESIZE {
             0
@@ -1617,8 +1720,10 @@ pub fn drawlayer(g: &mut Game, layer: i32, fUseCopied: bool, iBlockSize: i16) {
     }
 }
 
+/// Draws the map at `iBlockSize` pixels per tile; `fScreenshot` leaves out the moved selection and hidden blocks.
 pub fn drawmap(g: &mut Game, fScreenshot: bool, iBlockSize: i16, fWithPlatforms: bool) {
         let mut gp = g.ptr();
+    // SAFETY: `g.screen`, `g.blitdest` and the sprite surfaces stay live for the editor's whole run.
     unsafe {
         let bs = iBlockSize as i32;
         if bs != TILESIZE {
@@ -1806,6 +1911,7 @@ pub fn drawmap(g: &mut Game, fScreenshot: bool, iBlockSize: i16, fWithPlatforms:
     }
 }
 
+/// The warp picker; picking one returns to painting warps.
 pub fn editor_warp(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
     //handle messages
@@ -1857,6 +1963,7 @@ const NUM_EYECANDY: i16 = 7;
 const szEyecandyNames: [&str; NUM_EYECANDY as usize] = ["Clouds", "Ghosts", "Leaves", "Snow", "Fish", "Rain", "Bubbles"];
 const szLayerNames: [&str; 3] = ["Back Layer", "Mid Layer", "Top Layer"];
 
+/// Toggles each eyecandy effect on each of the three layers.
 pub fn editor_eyecandy(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
     //handle messages
@@ -1872,6 +1979,7 @@ pub fn editor_eyecandy(g: &mut Game) -> i32 {
             if ed(gp.get()).event.key_sym() == SDLK_ESCAPE || ed(gp.get()).event.key_sym() == SDLK_e {
                 return EDITOR_EDIT;
             }
+            // A key press also runs the click handling below, which reads the key event as a button event.
             fall = true;
         }
 
@@ -1938,7 +2046,7 @@ pub fn editor_eyecandy(g: &mut Game) -> i32 {
     EDITOR_EYECANDY
 }
 
-/// Returns the index of the block setting under (x, y); C++ returns a pointer into `iSettings`.
+/// The index of the powerup setting under (x, y) on the block properties screen, also written to `iSettingIndex`.
 pub fn get_block_property(x: i32, y: i32, iSettingIndex: Option<&mut i16>) -> Option<usize> {
     for iSetting in 0..NUM_BLOCK_SETTINGS as i16 {
         let ix: i16 = (iSetting % 6) * 100 + 35;
@@ -1967,6 +2075,7 @@ pub fn init_editor_properties(g: &mut Game, iBlockCol: i16, iBlockRow: i16) {
     ed(gp.get()).editor_properties_initialized = true;
 }
 
+/// Edits a block's hidden flag and, for powerup blocks, its powerup weights; runs its own frame loop until closed.
 pub fn editor_properties(g: &mut Game, iBlockCol: i16, iBlockRow: i16) -> i32 {
         let mut gp = g.ptr();
     init_editor_properties(g, iBlockCol, iBlockRow);
@@ -2015,6 +2124,7 @@ pub fn editor_properties(g: &mut Game, iBlockCol: i16, iBlockRow: i16) -> i32 {
                         g.g_map.objectdata[bc][br].iSettings[s] = iValue;
                     }
                 }
+                // A key press also runs the click handling below, which reads the key event as a button event.
                 fall = true;
             }
 
@@ -2146,6 +2256,8 @@ pub fn editor_properties(g: &mut Game, iBlockCol: i16, iBlockRow: i16) -> i32 {
 
 const szPathNames: [&str; 3] = ["Line Segment", "Continuous", "Ellipse"];
 
+/// Platform editor steps: the list, picking a new or changed path type, tiles, the path, testing, tile types,
+/// animated tiles, reordering.
 const PLATFORM_EDIT_STATE_SELECT: i16 = 0;
 const PLATFORM_EDIT_STATE_PATH_TYPE: i16 = 1;
 const PLATFORM_EDIT_STATE_CHANGE_PATH_TYPE: i16 = 2;
@@ -2156,6 +2268,7 @@ const PLATFORM_EDIT_STATE_TILETYPE: i16 = 6;
 const PLATFORM_EDIT_STATE_ANIMATED: i16 = 7;
 const PLATFORM_EDIT_STATE_MOVE: i16 = 8;
 
+/// Sizes and centers the platform list's frame for the current platform count.
 pub fn editor_platforms_update_layout(g: &mut Game) {
     let mut gp = g.ptr();
     const padding: i32 = 32;
@@ -2202,6 +2315,7 @@ pub fn init_editor_platforms(g: &mut Game) {
     ed(gp.get()).editor_platforms_initialized = true;
 }
 
+/// Fills `dst_area` with copies of `src_area` from the platform sprite.
 pub fn editor_platforms_draw_background_section(g: &mut Game, src_area: &Rect, dst_area: &Rect) {
     let mut gp = g.ptr();
     let mut offset_y = 0;
@@ -2223,6 +2337,7 @@ pub fn editor_platforms_draw_background_section(g: &mut Game, src_area: &Rect, d
     }
 }
 
+/// Draws the frame `r` from the sprite's corners, edges and middle.
 pub fn editor_platforms_draw_background(g: &mut Game) {
     let mut gp = g.ptr();
     const corner: i32 = 24;
@@ -2256,12 +2371,13 @@ pub fn editor_platforms_draw_background(g: &mut Game) {
     }
 }
 
+/// The platform editor is painting tiles, animated tiles or tile types.
 fn platform_edit_or_animated_or_tiletype(g: &mut Game) -> bool {
     let mut gp = g.ptr();
     PLATFORM_EDIT_STATE_EDIT == ed(gp.get()).iPlatformEditState || PLATFORM_EDIT_STATE_ANIMATED == ed(gp.get()).iPlatformEditState || PLATFORM_EDIT_STATE_TILETYPE == ed(gp.get()).iPlatformEditState
 }
 
-/// The nested `while (editor_x() == EDITOR_X)` loops the platform editor runs for tiles, animation and tile types.
+/// Runs picker `f` in its own frame loop until it returns something other than `stay`.
 fn run_nested_editor(g: &mut Game, f: fn(&mut Game) -> i32, stay: i32) {
     FPSLimiter::instance(g).frame_start(g);
     while f(g) == stay {
@@ -2273,6 +2389,7 @@ fn run_nested_editor(g: &mut Game, f: fn(&mut Game) -> i32, stay: i32) {
     }
 }
 
+/// The platform list and editor.
 pub fn editor_platforms(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
     init_editor_platforms(g);
@@ -2593,6 +2710,7 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
                         }
                     }
                 }
+                // A press not handled above also runs the motion handling below.
                 fall = true;
             }
         }
@@ -2809,6 +2927,7 @@ pub fn editor_platforms(g: &mut Game) -> i32 {
     EDITOR_PLATFORM
 }
 
+/// The path type of type button `v`.
 fn path_type_from(v: u8) -> PlatformPathType {
     match v {
         0 => PlatformPathType::Straight,
@@ -2818,6 +2937,7 @@ fn path_type_from(v: u8) -> PlatformPathType {
     }
 }
 
+/// Draws a platform's thumbnail at the pointer.
 pub fn display_platform_preview(g: &mut Game, iPlatformId: i16, iMouseX: i16, iMouseY: i16) {
     let mut gp = g.ptr();
     let srcRect = rect(0, 0, 160, 120);
@@ -2825,6 +2945,7 @@ pub fn display_platform_preview(g: &mut Game, iPlatformId: i16, iMouseX: i16, iM
     ed(gp.get()).g_Platforms[iPlatformId as usize].preview.draw_src_to(&srcRect, g.screen, &dstRect);
 }
 
+/// Swaps two platforms and redraws their thumbnails.
 pub fn switch_platforms(g: &mut Game, iPlatformId1: i16, iPlatformId2: i16) {
     let mut gp = g.ptr();
     let mut tempPlatform = MapPlatform::new();
@@ -2838,6 +2959,7 @@ pub fn switch_platforms(g: &mut Game, iPlatformId1: i16, iPlatformId2: i16) {
     ed(gp.get()).g_Platforms[b].update_preview(g);
 }
 
+/// Copies the tiles and path; the icon and thumbnail stay.
 pub fn copy_platform(toPlatform: &mut MapPlatform, fromPlatform: &MapPlatform) {
     toPlatform.fAngle = fromPlatform.fAngle;
     toPlatform.fRadiusX = fromPlatform.fRadiusX;
@@ -2858,11 +2980,12 @@ pub fn copy_platform(toPlatform: &mut MapPlatform, fromPlatform: &MapPlatform) {
     }
 }
 
+/// Sets the path's start, or an ellipse's center, unless `ignoreclick`.
 pub fn update_platform_path_start(g: &mut Game, iEditPlatform_: i16, mut iClickX: i16, mut iClickY: i16, fSnapToTile: bool) {
     let mut gp = g.ptr();
     if !ed(gp.get()).ignoreclick {
         if fSnapToTile {
-            //Round off coord to nearest tile
+            //Snap down to a multiple of 16 pixels
             iClickX &= !15;
             iClickY &= !15;
         }
@@ -2872,11 +2995,12 @@ pub fn update_platform_path_start(g: &mut Game, iEditPlatform_: i16, mut iClickX
     }
 }
 
+/// Sets a straight path's end, unless `ignoreclick`.
 pub fn update_platform_path_end(g: &mut Game, iEditPlatform_: i16, mut iClickX: i16, mut iClickY: i16, fSnapToTile: bool) {
     let mut gp = g.ptr();
     if !ed(gp.get()).ignoreclick {
         if fSnapToTile {
-            //Round off coord to nearest tile
+            //Snap down to a multiple of 16 pixels
             iClickX &= !15;
             iClickY &= !15;
         }
@@ -2904,6 +3028,7 @@ fn snap_angle(mut fAngle: f32) -> f32 {
     fAngle
 }
 
+/// Points the path from its start toward the click, unless `ignoreclick`.
 pub fn update_platform_path_angle(g: &mut Game, iEditPlatform_: i16, iClickX: i16, iClickY: i16, fSnapToAngle: bool) {
     let mut gp = g.ptr();
     if !ed(gp.get()).ignoreclick {
@@ -2925,6 +3050,7 @@ pub fn update_platform_path_angle(g: &mut Game, iEditPlatform_: i16, iClickX: i1
     }
 }
 
+/// Sets an ellipse's x or y radius, or both with `fSetCircle`, from the click, unless `ignoreclick`.
 pub fn update_platform_path_radius(g: &mut Game, iEditPlatform_: i16, iClickX: i16, iClickY: i16, fSnapToRadius: bool, fIsRadiusX: bool, fSetCircle: bool) {
     let mut gp = g.ptr();
     if !ed(gp.get()).ignoreclick {
@@ -2964,6 +3090,7 @@ pub fn update_platform_path_radius(g: &mut Game, iEditPlatform_: i16, iClickX: i
 /// `draw_platform`: draws the unfinished platform (complete map width x height grid).
 pub fn draw_platform_unfinished(g: &mut Game, iPlatform: i16, fDrawTileTypes: bool) {
         let mut gp = g.ptr();
+    // SAFETY: `g.screen`, `g.blitdest` and the sprite surfaces stay live for the editor's whole run.
     unsafe {
         let p = iPlatform as usize;
         for iCol in 0..MAPWIDTH as i16 {
@@ -3000,11 +3127,13 @@ pub fn draw_platform_unfinished(g: &mut Game, iPlatform: i16, fDrawTileTypes: bo
     }
 }
 
+/// Hazard editor steps: the list, picking a type, placing it, its settings.
 const MAPHAZARD_EDIT_STATE_SELECT: i16 = 0;
 const MAPHAZARD_EDIT_STATE_TYPE: i16 = 1;
 const MAPHAZARD_EDIT_STATE_LOCATION: i16 = 2;
 const MAPHAZARD_EDIT_STATE_PROPERTIES: i16 = 3;
 
+/// By `MapHazard::itype`.
 const szHazardNames: [&str; 8] = ["Fireballs", "Rotodisc", "Bullet Bill", "Flame Thrower", "Green Pirhana", "Red Pirhana", "Tall Pirhana", "Short Pirhana"];
 
 pub fn init_editor_maphazards(g: &mut Game) {
@@ -3036,6 +3165,7 @@ pub fn init_editor_maphazards(g: &mut Game) {
     ed(gp.get()).editor_maphazards_initialized = true;
 }
 
+/// The hazard list and editor. Locations are in 16-pixel cells.
 pub fn editor_maphazards(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
     init_editor_maphazards(g);
@@ -3078,7 +3208,7 @@ pub fn editor_maphazards(g: &mut Game) -> i32 {
                 }
             } else if sym == SDLK_DELETE {
                 if MAPHAZARD_EDIT_STATE_PROPERTIES == ed(gp.get()).iEditState || MAPHAZARD_EDIT_STATE_LOCATION == ed(gp.get()).iEditState {
-                    //Copy platforms into empty spot
+                    //Shift the later hazards down over it
                     let mut iMapHazard = ed(gp.get()).iEditMapHazard as usize;
                     while iMapHazard < g.g_map.maphazards.len().wrapping_sub(1) {
                         g.g_map.maphazards[iMapHazard].itype = g.g_map.maphazards[iMapHazard + 1].itype;
@@ -3184,7 +3314,7 @@ pub fn editor_maphazards(g: &mut Game) -> i32 {
                 let (cx, cy) = (iClickX as i32, iClickY as i32);
 
                 if MAPHAZARD_EDIT_STATE_SELECT == ed(gp.get()).iEditState {
-                    //check clicks on existing platforms
+                    //check clicks on existing hazards
                     for iMapHazard in 0..g.g_map.maphazards.len() {
                         let ic = ed(gp.get()).rIconRects[iMapHazard][1];
                         if cx >= ic.x && cx < ic.x + ic.w && cy >= ic.y && cy < ic.y + ic.h {
@@ -3256,6 +3386,7 @@ pub fn editor_maphazards(g: &mut Game) -> i32 {
                     }
                 }
             } else {
+                // A press not handled above also runs the motion handling below.
                 fall = true;
             }
         }
@@ -3285,7 +3416,7 @@ pub fn editor_maphazards(g: &mut Game) -> i32 {
         }
     }
 
-    //Draw platform editing
+    //Draw the hazard editor
     drawmap(g, false, TILESIZE as i16, false);
 
     gp.rm.sprite(gp.rm.menu_shade).draw(g, 0, 0);
@@ -3356,6 +3487,7 @@ pub fn editor_maphazards(g: &mut Game) -> i32 {
     EDITOR_MAPHAZARDS
 }
 
+/// Appends a fireball string with zeroed settings and returns its index.
 pub fn new_map_hazard(g: &mut Game) -> i16 {
     let mut hazard = MapHazard::default();
     hazard.itype = 0;
@@ -3371,6 +3503,7 @@ pub fn new_map_hazard(g: &mut Game) -> i16 {
     (g.g_map.maphazards.len() - 1) as i16
 }
 
+/// Draws a hazard's velocity and frequency sliders.
 pub fn draw_map_hazard_controls(g: &mut Game, hazard: &MapHazard) {
         let mut gp = g.ptr();
     if hazard.itype == 0 || hazard.itype == 1 || hazard.itype == 2 {
@@ -3414,6 +3547,7 @@ pub fn draw_map_hazard_controls(g: &mut Game, hazard: &MapHazard) {
     }
 }
 
+/// Sets a fireball string's length or a rotodisc's radius, and its start angle, from the click.
 pub fn adjust_map_hazard_radius(g: &mut Game, hazard: &mut MapHazard, iClickX: i16, iClickY: i16) {
     let mut gp = g.ptr();
     let iDiffX: i16 = (iClickX as i32 - (((hazard.ix as i32) << 4) + 16)) as i16;
@@ -3469,10 +3603,12 @@ pub fn init_editor_tiles(g: &mut Game) {
     ed(gp.get()).editor_tiles_initialized = true;
 }
 
+/// The tileset picker: dragging selects tiles; the right and middle buttons step a tile's type.
 pub fn editor_tiles(g: &mut Game) -> i32 {
     let mut gp = g.ptr();
     init_editor_tiles(g);
 
+    // SAFETY: `g.screen`, `g.blitdest` and the sprite surfaces stay live for the editor's whole run.
     unsafe {
         //handle messages
         while poll_event(g, &mut ed(gp.get()).event) != 0 {
@@ -3672,6 +3808,7 @@ pub fn editor_tiles(g: &mut Game) -> i32 {
     }
 }
 
+/// The block picker.
 pub fn editor_blocks(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
     //handle messages
@@ -3737,6 +3874,7 @@ pub fn editor_blocks(g: &mut Game) -> i32 {
     EDITOR_BLOCKS
 }
 
+/// The map item picker.
 pub fn editor_mapitems(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
     //handle messages
@@ -3754,7 +3892,7 @@ pub fn editor_mapitems(g: &mut Game) -> i32 {
                     let set_item_x = (ed(gp.get()).event.button_x() / TILESIZE) as i16;
                     let set_item_y = (ed(gp.get()).event.button_y() / TILESIZE) as i16;
 
-                    //Set the selected block to one of the interaction blocks
+                    //Pick one of the six map items
                     if set_item_y == 0 && set_item_x >= 0 && set_item_x <= 5 {
                         ed(gp.get()).set_mapitem = set_item_x as i32;
 
@@ -3797,6 +3935,7 @@ pub fn init_editor_modeitems(g: &mut Game) {
     ed(gp.get()).editor_modeitems_initialized = true;
 }
 
+/// Drags the race goals and flag bases; R switches a set between placed and random.
 pub fn editor_modeitems(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
     init_editor_modeitems(g);
@@ -3837,6 +3976,7 @@ pub fn editor_modeitems(g: &mut Game) -> i32 {
                     }
                 }
             }
+            // A key press also runs the click handling below, which reads the key event as a button event.
             fall = true;
         }
 
@@ -3935,6 +4075,7 @@ pub fn editor_modeitems(g: &mut Game) -> i32 {
     EDITOR_MODEITEMS
 }
 
+/// The tile type picker.
 pub fn editor_tiletype(g: &mut Game) -> i32 {
     let mut gp = g.ptr();
     //handle messages
@@ -4005,10 +4146,12 @@ fn free_background_surfaces(g: &mut Game) {
     }
 }
 
+/// The background picker; the left button also sets the music category. Quit only closes the picker.
 pub fn editor_backgrounds(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
     init_editor_backgrounds(g);
 
+    // SAFETY: `g.screen`, `g.blitdest` and the sprite surfaces stay live for the editor's whole run.
     unsafe {
         //handle messages
         while poll_event(g, &mut ed(gp.get()).event) != 0 {
@@ -4114,10 +4257,12 @@ pub fn init_editor_animation(g: &mut Game) {
     ed(gp.get()).editor_animation_initialized = true;
 }
 
+/// The animated tile picker; the right and middle buttons step a tile's type.
 pub fn editor_animation(g: &mut Game) -> i32 {
     let mut gp = g.ptr();
     init_editor_animation(g);
 
+    // SAFETY: `g.screen`, `g.blitdest` and the sprite surfaces stay live for the editor's whole run.
     unsafe {
         //handle messages
         while poll_event(g, &mut ed(gp.get()).event) != 0 {
@@ -4187,7 +4332,7 @@ pub fn editor_animation(g: &mut Game) -> i32 {
                             ed(gp.get()).set_tile_rows = ed(gp.get()).set_tile_end_y - ed(gp.get()).set_tile_start_y + 1;
 
                             ed(gp.get()).set_tile_drag = false;
-                            ed(gp.get()).edit_mode = 8; //change to edit mode using tiles
+                            ed(gp.get()).edit_mode = 8; //change to edit mode using animated tiles
                             ed(gp.get()).editor_animation_initialized = false;
                             return EDITOR_EDIT;
                         }
@@ -4239,6 +4384,7 @@ pub fn editor_animation(g: &mut Game) -> i32 {
 
         crate::common::gfx::blit::fill_rect(g.screen, null(), 0xFF888888);
 
+        // Transposed: each picker column is a sheet row, each picker row a four-frame sheet column.
         for iCol in ed(gp.get()).view_animated_tileset_x as i16..(ed(gp.get()).view_animated_tileset_x + 20) as i16 {
             for iRow in 0..8i16 {
                 let iDestX: i16 = ((iCol as i32 - ed(gp.get()).view_animated_tileset_x) << 5) as i16;
@@ -4272,8 +4418,10 @@ pub fn editor_animation(g: &mut Game) -> i32 {
     }
 }
 
+/// Draws the backgrounds of page `iPage_` into the thumbnails.
 pub fn load_background_page(g: &mut Game, iPage_: i16) {
     let mut gp = g.ptr();
+    // SAFETY: `g.screen`, `g.blitdest` and the sprite surfaces stay live for the editor's whole run.
     unsafe {
         let srcRectBackground = rect(0, 0, 640, 480);
         let dstRectBackground = rect(0, 0, 160, 120);
@@ -4302,6 +4450,7 @@ pub fn load_background_page(g: &mut Game, iPage_: i16) {
     }
 }
 
+/// Shows the key help until a key is pressed.
 pub fn display_help(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
     drawmap(g, false, TILESIZE as i16, false);
@@ -4387,6 +4536,7 @@ pub fn display_help(g: &mut Game) -> i32 {
     DISPLAY_HELP
 }
 
+/// Asks for a name and saves the map as maps/<name>.map.
 pub fn save_as(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
     let mut fileName = String::new();
@@ -4405,6 +4555,7 @@ pub fn save_as(g: &mut Game) -> i32 {
     0
 }
 
+/// Draws a text prompt over the map and presents it.
 fn draw_dialog(g: &mut Game, title: &str, instructions: &str, input: Option<&str>) {
         let mut gp = g.ptr();
     drawmap(g, false, TILESIZE as i16, false);
@@ -4419,6 +4570,7 @@ fn draw_dialog(g: &mut Game, title: &str, instructions: &str, input: Option<&str
     gfx_flipscreen(g);
 }
 
+/// Reads up to `inputsize - 1` characters into `input`; true on Enter, false on Escape or quit.
 pub fn dialog(g: &mut Game, title: &str, instructions: &str, input: &mut String, inputsize: i32) -> bool {
     let mut gp = g.ptr();
     let mut currentChar: u32 = 0;
@@ -4497,6 +4649,7 @@ pub fn dialog(g: &mut Game, title: &str, instructions: &str, input: &mut String,
     }
 }
 
+/// Asks for a name and opens the first map matching it.
 pub fn find(g: &mut Game) -> i32 {
     let mut gp = g.ptr();
     let mut fileName = String::new();
@@ -4513,6 +4666,7 @@ pub fn find(g: &mut Game) -> i32 {
     0
 }
 
+/// Empties the map and the edited platforms.
 pub fn clear_map(g: &mut Game) -> i32 {
     let mut gp = g.ptr();
     g.g_map.clear_map();
@@ -4522,6 +4676,8 @@ pub fn clear_map(g: &mut Game) -> i32 {
     0
 }
 
+/// Loads the map list's current map, its background and its platforms; unplaced race goals and flag bases get
+/// default spots.
 pub fn loadcurrentmap(g: &mut Game) {
     let mut gp = g.ptr();
     let filename = g.maplist.current_filename().to_string();
@@ -4597,6 +4753,7 @@ pub fn loadcurrentmap(g: &mut Game) {
     }
 }
 
+/// Clears a platform's tiles and gives it a default path.
 pub fn set_platform_to_defaults(g: &mut Game, iPlatform: i16) {
     let mut gp = g.ptr();
     let p = &mut ed(gp.get()).g_Platforms[iPlatform as usize];
@@ -4620,6 +4777,7 @@ pub fn set_platform_to_defaults(g: &mut Game, iPlatform: i16) {
     p.iDrawLayer = 2;
 }
 
+/// Saves the current map and shows a confirmation.
 pub fn savecurrentmap(g: &mut Game) -> i32 {
     let mut gp = g.ptr();
     ed(gp.get()).g_messagedisplaytimer = ticks(60) as i16;
@@ -4633,6 +4791,7 @@ pub fn savecurrentmap(g: &mut Game) -> i32 {
     0
 }
 
+/// Replaces the map's platforms with the edited ones, each cropped to its tiles.
 pub fn insert_platforms_into_map(g: &mut Game) {
         let mut gp = g.ptr();
     //First take the created platforms and move them into the actual map
@@ -4683,6 +4842,7 @@ pub fn insert_platforms_into_map(g: &mut Game) {
     }
 }
 
+/// Writes the edited platforms into the map and saves it to `file`.
 pub fn save_map(g: &mut Game, file: &str) {
         let mut gp = g.ptr();
     insert_platforms_into_map(g);
@@ -4691,6 +4851,7 @@ pub fn save_map(g: &mut Game, file: &str) {
     gp.g_map.save_map(g, file);
 }
 
+/// The bounding box of a platform's tiles, in tiles; 1x1 at 0,0 when it has none.
 pub fn calculate_platform_dims(g: &mut Game, iPlatform: i16, ix: &mut i16, iy: &mut i16, iw: &mut i16, ih: &mut i16) {
     let mut gp = g.ptr();
     let mut iTop: i16 = MAPHEIGHT as i16;
@@ -4737,6 +4898,7 @@ pub fn calculate_platform_dims(g: &mut Game, iPlatform: i16, ix: &mut i16, iy: &
     *ih = iHeight;
 }
 
+/// Opens the next map matching `findstring`.
 pub fn findcurrentstring(g: &mut Game) -> i32 {
     let mut gp = g.ptr();
     if !ed(gp.get()).findstring.is_empty() {
@@ -4749,6 +4911,7 @@ pub fn findcurrentstring(g: &mut Game) -> i32 {
     0
 }
 
+/// Asks for a name and creates and opens an empty map.
 pub fn newmap(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
     let mut fileName = String::new();
@@ -4769,6 +4932,7 @@ pub fn newmap(g: &mut Game) -> i32 {
     0
 }
 
+/// Clears the move selection.
 pub fn resetselectedtiles(g: &mut Game) {
     let mut gp = g.ptr();
     for kk in 0..MH {
@@ -4778,6 +4942,7 @@ pub fn resetselectedtiles(g: &mut Game) {
     }
 }
 
+/// Saves the selection's shape for `pastemoveselection`.
 pub fn copymoveselection(g: &mut Game) {
     let mut gp = g.ptr();
     for kk in 0..MH {
@@ -4789,6 +4954,7 @@ pub fn copymoveselection(g: &mut Game) {
     ed(gp.get()).copiedlayer = ed(gp.get()).selected_layer;
 }
 
+/// Adds the saved shape, shifted by `movex`, `movey` cells, to the selection.
 pub fn pastemoveselection(g: &mut Game, movex: i32, movey: i32) {
     let mut gp = g.ptr();
     for kk in 0..MAPHEIGHT {
@@ -4802,6 +4968,7 @@ pub fn pastemoveselection(g: &mut Game, movex: i32, movey: i32) {
     }
 }
 
+/// Copies the selected cells into `copiedtiles`; false when nothing is selected.
 pub fn copyselectedtiles(g: &mut Game) -> bool {
     let mut gp = g.ptr();
     //Copy the selected tiles and remove tiles from map
@@ -4847,6 +5014,7 @@ pub fn copyselectedtiles(g: &mut Game) -> bool {
     ret
 }
 
+/// Empties the selected cells: only the selected layer when it is shown alone, otherwise everything.
 pub fn clearselectedmaptiles(g: &mut Game) {
     let mut gp = g.ptr();
     for kk in 0..MH {
@@ -4878,7 +5046,7 @@ pub fn clearselectedmaptiles(g: &mut Game) {
     }
 }
 
-/// `replacetile(short*, short, bool)`
+/// Sets `*iDstTile` in replace mode, or in merge mode when `fAllowReplace`.
 pub fn replacetile_short(g: &mut Game, iDstTile: &mut i16, iSrcTile: i16, fAllowReplace: bool) {
     let mut gp = g.ptr();
     if ed(gp.get()).move_replace || fAllowReplace {
@@ -4892,7 +5060,7 @@ pub fn copytilesettile(dst: &mut TilesetTile, src: &TilesetTile) {
     dst.iRow = src.iRow;
 }
 
-/// `replacetile(TilesetTile*, TilesetTile*)`
+/// Copies a tile in replace mode, or in merge mode when the source is not empty.
 pub fn replacetile_tile(g: &mut Game, dstTile: &mut TilesetTile, srcTile: &TilesetTile) {
     let mut gp = g.ptr();
     if ed(gp.get()).move_replace {
@@ -4911,7 +5079,7 @@ pub fn copymapblock(dst: &mut MapBlock, src: &MapBlock) {
     }
 }
 
-/// `replacetile(MapBlock*, MapBlock*)`
+/// Copies a block in replace mode, or in merge mode when the source is not empty.
 pub fn replacetile_block(g: &mut Game, dstTile: &mut MapBlock, srcTile: &MapBlock) {
     let mut gp = g.ptr();
     if ed(gp.get()).move_replace {
@@ -4921,6 +5089,7 @@ pub fn replacetile_block(g: &mut Game, dstTile: &mut MapBlock, srcTile: &MapBloc
     }
 }
 
+/// Pastes `copiedtiles` at the selection shifted by `movex`, `movey` cells, dropping cells off the map.
 pub fn pasteselectedtiles(g: &mut Game, movex: i32, movey: i32) {
     let mut gp = g.ptr();
     //Paste the tiles into their new location
@@ -4943,7 +5112,7 @@ pub fn pasteselectedtiles(g: &mut Game, movex: i32, movey: i32) {
                         replacetile_block(g, &mut gp.g_map.objectdata[iNewX][iNewY], &c.block);
 
                         replacetile_short(g, &mut gp.g_map.warpdata[iNewX][iNewY].connection, c.warp.connection, c.warp.connection != -1);
-                        // The C++ writes the direction through a `short*`; WarpEnterDirection is an int-sized enum.
+                        // Only the direction's low 16 bits are replaced.
                         let mut dir = g.g_map.warpdata[iNewX][iNewY].direction as i16;
                         replacetile_short(g, &mut dir, c.warp.direction as i16, c.warp.connection != -1);
                         g.g_map.warpdata[iNewX][iNewY].direction = (g.g_map.warpdata[iNewX][iNewY].direction & !0xFFFF) | (dir as u16 as i32);
@@ -4970,6 +5139,7 @@ pub fn pasteselectedtiles(g: &mut Game, movex: i32, movey: i32) {
     }
 }
 
+/// The cell midway between the selection's first and last cells in row order; 0,0 when nothing is selected.
 pub fn getcenterselection(g: &mut Game, x: &mut i32, y: &mut i32) {
     let mut gp = g.ptr();
     let mut left = -1;
@@ -5004,9 +5174,10 @@ pub fn getcenterselection(g: &mut Game, x: &mut i32, y: &mut i32) {
     *y = ((bottom - top) >> 1) + top;
 }
 
-//take screenshots in full and thumbnail sizes
+/// Saves the map, platforms and hazards as maps/screenshots/<map>.png, <map>_preview.png and <map>_thumb.png.
 pub fn takescreenshot(g: &mut Game) {
     let mut gp = g.ptr();
+    // SAFETY: `g.screen`, `g.blitdest` and the sprite surfaces stay live for the editor's whole run.
     unsafe {
         let iTileSizes: [i16; 3] = [TILESIZE as i16, PREVIEWTILESIZE as i16, THUMBTILESIZE as i16];
         let old_screen = g.screen;
@@ -5074,6 +5245,7 @@ pub fn takescreenshot(g: &mut Game) {
     }
 }
 
+/// Loads `animatedtiletypes` from `szFile`, all `NonSolid` when it does not exist; false when it cannot be read.
 pub fn read_animated_tile_type_file(g: &mut Game, szFile: &str) -> bool {
     let mut gp = g.ptr();
     //Detect if the tiletype file already exists, if not create it
@@ -5096,6 +5268,7 @@ pub fn read_animated_tile_type_file(g: &mut Game, szFile: &str) -> bool {
     true
 }
 
+/// Saves `animatedtiletypes` to `szFile`; false when it cannot be written.
 pub fn write_animated_tile_type_file(g: &mut Game, szFile: &str) -> bool {
     let mut gp = g.ptr();
     let mut tsf = BinaryFile::new(szFile, "wb");
@@ -5206,7 +5379,7 @@ pub fn dump_editor_state(g: &mut Game, out: &mut dyn Write) {
             hm.add(g.g_map.mapdatatop[x][y].0 as i32);
             let b = &g.g_map.objectdata[x][y];
             hm.add(b.iType as i32);
-            // Only the settings the map format stores: the rest keep stale heap bytes in the C++.
+            // Only the settings the map format stores; the rest keep whatever earlier edits left.
             let stored = match b.iType {
                 1 | 15 => b.iSettings.len(),
                 11..=14 => 1,
