@@ -1,4 +1,4 @@
-//! Not in upstream: recording and replaying a net match at the transport boundary. A client's recording keeps every
+//! Recording and replaying a client's network at the transport boundary. A client's recording keeps every
 //! network event its listeners saw as `#@ net` lines; a replay hands them to the same handlers at the same frame.
 
 use crate::game::Game;
@@ -7,13 +7,16 @@ use smw_netplay::common_netplay::network_interface::{NetPeer, NetworkEventHandle
 use std::any::Any;
 use std::collections::{BTreeMap, VecDeque};
 
-/// Which of the client's two listeners an event reached: its client (lobby or foreign game host) or its own game host.
+/// Which listener an event reached, as `side=c` or `side=h` in the line.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Side {
+    /// The lobby connection, the only listener a game polls.
     Client,
+    /// No listener polls this side.
     Host,
 }
 
+/// What happened on the connection.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Kind {
     Connect,
@@ -21,16 +24,20 @@ pub enum Kind {
     Disconnect,
 }
 
+/// What a replay needs to stand in for a recorded peer.
 #[derive(Clone, PartialEq, Eq, Debug, Default)]
 pub struct PeerInfo {
     pub host: u32,
     pub port: u16,
     pub player_id: u64,
+    /// `NetPeer::peer_key`.
     pub key: u64,
 }
 
+/// One recorded network event.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct NetEvent {
+    /// The harness frame the event arrived in.
     pub frame: u32,
     /// Which of the side's polls in that frame got it: a frame may poll a listener more than once.
     pub poll: u32,
@@ -52,6 +59,7 @@ impl NetEvent {
         format!("#@ net frame={} side={} poll={} peer={}:{}:{}:{} {}", self.frame, side, self.poll, p.host, p.port, p.player_id, p.key, kind)
     }
 
+    /// Reads a [`NetEvent::line`]; `None` for any other line.
     pub fn parse(line: &str) -> Option<NetEvent> {
         let rest = line.strip_prefix("#@ net ")?;
         let mut fields = rest.split(' ');
@@ -78,6 +86,7 @@ impl NetEvent {
     }
 }
 
+/// The recorded identity of a live peer.
 pub fn info(peer: &dyn NetPeer) -> PeerInfo {
     PeerInfo { host: peer.address_host(), port: peer.address_port(), player_id: peer.get_player_id(), key: peer.peer_key() }
 }
@@ -173,9 +182,11 @@ fn parse_value(line: &str) -> Option<(u32, String, String)> {
 
 #[derive(Clone)]
 
+/// A replay's recorded network, consumed in order.
 pub struct Replay {
     events: Vec<NetEvent>,
     next: usize,
+    /// Each `#@ netv` key's values, in the order the game read them.
     values: BTreeMap<String, VecDeque<String>>,
     /// Each frame of the v2 matches: `#@ v2 frame=<n> <tokens>` (smw/net_v2.rs).
     v2: VecDeque<(u32, String)>,
@@ -183,6 +194,7 @@ pub struct Replay {
 
 #[derive(Clone)]
 
+/// The game's net recording state (`Game::net_record`).
 pub struct NetRecordState {
     replay: Option<Replay>,
     /// The frame of the last poll, and how often each side was polled in it.
@@ -195,6 +207,7 @@ impl NetRecordState {
     }
 }
 
+/// The index of this poll of `side` within `frame`, from 0.
 fn next_poll(g: &mut Game, side: Side, frame: u32) -> u32 {
     let p = &mut g.net_record.polls;
     if p.0 != frame {
@@ -299,10 +312,12 @@ pub fn value_opt(g: &mut Game, key: &str, live: impl FnOnce() -> Option<String>)
     Some(value(g, key, || live().unwrap_or_else(|| "-".to_string()))).filter(|v| v != "-")
 }
 
+/// [`value`] for a number; an unreadable recorded value reads 0.
 pub fn value_u32(g: &mut Game, key: &str, live: impl FnOnce() -> u32) -> u32 {
     value(g, key, || live().to_string()).parse().unwrap_or(0)
 }
 
+/// [`value`] for a flag, recorded as `0` or `1`.
 pub fn value_bool(g: &mut Game, key: &str, live: impl FnOnce() -> bool) -> bool {
     value(g, key, || (live() as u8).to_string()) == "1"
 }

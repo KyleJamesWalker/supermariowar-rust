@@ -1,3 +1,5 @@
+//! The netplay client's network support: the lobby transport interface, recording, settings and LAN discovery.
+
 pub mod file_compressor;
 #[cfg(not(target_os = "emscripten"))]
 pub mod lan_beacon;

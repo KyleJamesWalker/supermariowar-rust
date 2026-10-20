@@ -1,6 +1,5 @@
-//! Netplay v2 matches (docs/design/NETPLAY_V2.md, rollout step 4): every peer restores the host's match start, then
-//! the match runs under a GGRS P2P session over the room's WebRTC connections. A recording keeps every frame of the
-//! match as a `#@ v2` line, which a replay plays back without the network (docs/guides/REPLAY.md).
+//! Netplay v2 matches: every peer restores the host's match start, then the match runs under a GGRS P2P session over
+//! the room's WebRTC connections. Recordings keep each frame as a `#@ v2` line, which a replay plays without the network.
 
 use crate::common::input::COutputControl;
 use crate::game::Game;
@@ -500,7 +499,7 @@ impl V2Match {
         }
     }
 
-    /// GGRS handles follow room slot order, so every peer numbers the players alike.
+    /// Builds the GGRS session; handles follow room slot order, so every peer numbers the players alike.
     fn start_session(&mut self) -> Result<P2PSession<GgrsConfig<PeerId>>, GgrsError> {
         let mut players: Vec<(u8, Option<PeerId>)> = self.slots.iter().map(|(&peer, &slot)| (slot, Some(peer))).collect();
         players.push((self.my_slot, None));
