@@ -20,8 +20,11 @@ use tungstenite::Message;
 /// How long a new connection has to send its HTTP request head and finish the handshake.
 const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(5);
 const WRITE_TIMEOUT: Duration = Duration::from_secs(5);
-/// How long a client thread waits for input before it sends what the main thread queued.
-const POLL: Duration = Duration::from_millis(4);
+/// How long a socket thread waits for input before it sends what other threads queued, while traffic flows.
+const POLL_ACTIVE: Duration = Duration::from_millis(4);
+/// The same once a connection has been quiet for `ACTIVE_WINDOW`.
+const POLL_IDLE: Duration = Duration::from_millis(50);
+const ACTIVE_WINDOW: Duration = Duration::from_secs(2);
 /// Time between pings to a lobby client.
 const PING_INTERVAL: Duration = Duration::from_secs(20);
 /// A lobby client silent this long is disconnected.
@@ -75,6 +78,32 @@ impl Slot {
 impl Drop for Slot {
     fn drop(&mut self) {
         self.0.fetch_sub(1, Ordering::SeqCst);
+    }
+}
+
+/// A socket's read timeout: `POLL_ACTIVE` while traffic flows, `POLL_IDLE` once it stops.
+pub struct Poll {
+    last_active: Instant,
+    timeout: Duration,
+}
+
+impl Poll {
+    pub fn new(stream: &TcpStream) -> Poll {
+        let _ = stream.set_read_timeout(Some(POLL_ACTIVE));
+        Poll { last_active: Instant::now(), timeout: POLL_ACTIVE }
+    }
+
+    pub fn active(&mut self) {
+        self.last_active = Instant::now();
+    }
+
+    /// Sets the timeout for the next read.
+    pub fn update(&mut self, stream: &TcpStream) {
+        let timeout = if self.last_active.elapsed() < ACTIVE_WINDOW { POLL_ACTIVE } else { POLL_IDLE };
+        if timeout != self.timeout {
+            let _ = stream.set_read_timeout(Some(timeout));
+            self.timeout = timeout;
+        }
     }
 }
 
@@ -177,7 +206,7 @@ fn run_client(stream: TcpStream, id: ClientId, config: &Config, events: &Sender<
     };
     println!("[relay] client {id} connected from {who} (origin {origin})");
 
-    let _ = ws.get_ref().set_read_timeout(Some(POLL));
+    let mut poll = Poll::new(ws.get_ref());
     let (tx, outgoing) = sync_channel(OUTBOX_LEN);
     let overflow = Arc::new(AtomicBool::new(false));
     if events.send(Event::Open { id, outbox: Outbox { tx, overflow: overflow.clone() } }).is_err() {
@@ -191,6 +220,7 @@ fn run_client(stream: TcpStream, id: ClientId, config: &Config, events: &Sender<
             match ws.read() {
                 Ok(Message::Binary(data)) => {
                     last_heard = Instant::now();
+                    poll.active();
                     if data.len() < HEADER_LEN {
                         break 'session "malformed message".to_string();
                     }
@@ -211,6 +241,9 @@ fn run_client(stream: TcpStream, id: ClientId, config: &Config, events: &Sender<
         while let Ok(message) = outgoing.try_recv() {
             queued.push(Message::Binary(message.into()));
         }
+        if !queued.is_empty() {
+            poll.active();
+        }
         if last_ping.elapsed() >= PING_INTERVAL {
             queued.push(Message::Ping(Default::default()));
             last_ping = Instant::now();
@@ -227,6 +260,7 @@ fn run_client(stream: TcpStream, id: ClientId, config: &Config, events: &Sender<
         if last_heard.elapsed() >= IDLE_TIMEOUT {
             break "timed out".to_string();
         }
+        poll.update(ws.get_ref());
     };
 
     let _ = events.send(Event::Closed { id });

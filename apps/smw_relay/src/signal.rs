@@ -2,6 +2,7 @@
 //! as `matchbox_server` speaks it, so a relay alone can pair a room's WebRTC peers, e.g. on a LAN without internet.
 
 use crate::config::Config;
+use crate::websocket::Poll;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::io::ErrorKind;
@@ -14,8 +15,6 @@ use tungstenite::http::StatusCode;
 use tungstenite::protocol::WebSocketConfig;
 use tungstenite::Message;
 
-/// How long a signaling thread waits for input before it sends what other peers queued.
-const POLL: Duration = Duration::from_millis(4);
 /// A signaling peer silent this long leaves its room.
 const IDLE_TIMEOUT: Duration = Duration::from_secs(60);
 /// Messages queued for one peer; more are dropped.
@@ -63,7 +62,7 @@ pub fn run(stream: TcpStream, room: String, config: &Config) {
     };
     let ws_config = WebSocketConfig::default().max_message_size(Some(MAX_MESSAGE_LEN)).max_frame_size(Some(MAX_MESSAGE_LEN));
     let Ok(mut ws) = tungstenite::accept_hdr_with_config(stream, check_origin, Some(ws_config)) else { return };
-    let _ = ws.get_ref().set_read_timeout(Some(POLL));
+    let mut poll = Poll::new(ws.get_ref());
 
     let me = new_peer_id();
     let (tx, outgoing) = sync_channel::<String>(OUTBOX_LEN);
@@ -94,6 +93,7 @@ pub fn run(stream: TcpStream, room: String, config: &Config) {
             match ws.read() {
                 Ok(Message::Text(text)) => {
                     last_heard = Instant::now();
+                    poll.active();
                     let Ok(request) = serde_json::from_str::<Value>(&text) else { continue };
                     if let Some(signal) = request.get("Signal") {
                         let (Some(receiver), Some(data)) = (signal.get("receiver").and_then(Value::as_str), signal.get("data")) else { continue };
@@ -113,12 +113,16 @@ pub fn run(stream: TcpStream, room: String, config: &Config) {
             }
             wrote = true;
         }
-        if wrote && ws.flush().is_err() {
-            break;
+        if wrote {
+            poll.active();
+            if ws.flush().is_err() {
+                break;
+            }
         }
         if last_heard.elapsed() >= IDLE_TIMEOUT {
             break;
         }
+        poll.update(ws.get_ref());
     }
 
     let remaining: Vec<SyncSender<String>> = {
