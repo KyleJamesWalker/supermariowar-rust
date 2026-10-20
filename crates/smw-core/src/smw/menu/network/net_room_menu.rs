@@ -162,15 +162,12 @@ impl UI_NetRoomMenu {
             // Other players' skins are the files the client wrote when their skin messages arrived.
             let path = format!("{}net_skin{}.bmp", get_home_directory(g), p);
             if p == g.netplay.remotePlayerNumber as i16 {
-                println!("  player {} -> local", p);
                 gp.get().rm.load_menu_skin(g, p, gp.get().game_values.skinids[0], p, false);
             } else if file_exists(&path) {
-                println!("  player {} -> {}", p, path);
                 if !gp.rm.load_menu_skin_path(g, p, Path::new(&path), p, false) {
                     gp.get().rm.load_menu_skin(g, p, gp.get().game_values.skinids[p as usize], p, false);
                 }
             } else {
-                println!("  player {} -> default", p);
                 gp.rm.load_menu_skin(g, p, 0, p, false);
             }
         }

@@ -445,25 +445,21 @@ impl MenuState {
     /// Leaves the menu for a match: saves the config, loads skins, announcer and music, and starts the fade.
     fn start_game(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        println!("> StartGame");
 
         g.game_values.appstate = AppState::StartGame;
 
         gp.game_values.write_config(g);
 
         //Load skins for players
-        println!("Loading player skins...");
         for k in 0..4usize {
             if g.game_values.playercontrol[k] > 0 {
                 if g.netplay.active {
                     if k == g.netplay.remotePlayerNumber as usize {
                         // local player uses local skin
-                        println!("  player {} -> local", k);
                         let skin = gp.rm.load_full_skin(g, gp.game_values.skinids[k], gp.game_values.colorids[k]);
                         g.rm.set_strip(g.rm.spr_player[k], skin);
                     } else {
                         let path = format!("{}net_skin{}.bmp", get_home_directory(g), k);
-                        println!("  player {} -> {}", k, path);
 
                         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| gp.rm.load_full_skin_path(g, Path::new(&path), k as i16)));
                         match result {
@@ -538,7 +534,6 @@ impl MenuState {
 
         g.game_values.screenfade = 8;
         g.game_values.screenfadespeed = 8;
-        println!("< StartGame");
     }
 
     /// Gives game setup to team `iControlTeam` (-1 for all) and arms the AI timer if that team has no humans.
@@ -630,7 +625,6 @@ impl MenuState {
     /// The `MENU_CODE_TO_GAME_SETUP_MENU` branch of `MenuState::update`.
     fn to_game_setup_menu(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        println!("MENU_CODE_TO_GAME_SETUP_MENU");
         //Moves teams to the first arrays in the list and counts the number of teams
         g.score_cnt = self.mTeamSelectMenu.get_team_count(g);
         self.iDisplayError = DISPLAY_ERROR_NONE;
@@ -638,7 +632,6 @@ impl MenuState {
         let mut fErrorReadingTourFile = false;
 
         if MatchType::MiniGame == g.game_values.matchtype {
-            println!(" Match type: Minigame");
             let minigame: Minigame = self.mMatchSelectionMenu.get_minigame(g);
             match minigame {
                 Minigame::PipeCoin => {
@@ -671,7 +664,6 @@ impl MenuState {
             }
             self.start_game(g);
         } else if MatchType::QuickGame == g.game_values.matchtype {
-            println!(" Match type: Quick game");
             let iRandomMode = RANDOM_INT(gp.get(), GAMEMODE_LAST) as i16;
             g.game_values.gamemode = Some(crate::common::game_mode::ModeId::Standard((iRandomMode as usize) as u8));
 
@@ -686,7 +678,6 @@ impl MenuState {
         } else {
             //Load the tour here if one was selected
             if g.game_values.matchtype == MatchType::Tour {
-                println!("  Match type: Tour");
                 if !self.read_tour_file(g) {
                     self.iDisplayError = DISPLAY_ERROR_READ_TOUR_FILE;
                     self.iDisplayErrorTimer = ticks(120) as i16;
@@ -696,7 +687,6 @@ impl MenuState {
                     g.ctl(self.mTournamentScoreboardMenu.miTournamentScoreboard).create_scoreboard(g, gp.score_cnt, numGames, gp.rm.spr_tour_markers);
                 }
             } else if g.game_values.matchtype == MatchType::Tournament {
-                println!("  Match type: Tournament");
                 //Set who is controlling the tournament menu
                 if g.game_values.tournamentcontrolstyle == TournamentControlStyle::Random || g.game_values.tournamentcontrolstyle == TournamentControlStyle::RandomLoser {
                     //Random
@@ -714,7 +704,6 @@ impl MenuState {
                 let numGames = g.game_values.tournamentgames;
                 g.ctl(self.mTournamentScoreboardMenu.miTournamentScoreboard).create_scoreboard(g, gp.score_cnt, numGames, gp.rm.menu_mode_large);
             } else if g.game_values.matchtype == MatchType::World {
-                println!("  Match type: World");
                 let this = Ptr::from_mut(self);
                 let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                     let mut this = this;
@@ -750,7 +739,6 @@ impl MenuState {
             }
 
             if !fErrorReadingTourFile {
-                println!("  !fErrorReadingTourFile");
                 self.mTournamentScoreboardMenu.eyeCandy.clean();
 
                 //Initialize tournament values
@@ -763,9 +751,7 @@ impl MenuState {
                 }
 
                 if MatchType::SingleGame == g.game_values.matchtype || MatchType::Tournament == g.game_values.matchtype || MatchType::NetGame == g.game_values.matchtype {
-                    println!("  MatchType::SingleGame || MatchType::Tournament");
                     let szCurrentMapName = g.ctl(self.mGameSettingsMenu.miMapField).szMapName.clone();
-                    println!("current map: {}", szCurrentMapName);
                     g.maplist.findexact(&szCurrentMapName, false);
                     g.ctl(self.mGameSettingsMenu.miMapField).load_current_map(g);
 
@@ -1000,7 +986,6 @@ impl MenuState {
                 load_match_map(g, &szMapName);
                 sShortMapName = strip_path_and_extension(&szMapName);
 
-                println!("  State: GS_START_GAME, Match type: MatchType::QuickGame");
             } else if g.netplay.active {
                 // NOTE: for the host, netplay.mapfilepath will be ./data/something
                 // while for the other players, it's ~/.smw/net_last.map
@@ -1065,7 +1050,6 @@ fn load_match_map(g: &mut Game, path: &str) {
 pub fn enter_gameplay_tail(g: &mut Game) {
         let mut gp = g.ptr();
     g.game_values.appstate = AppState::Game;
-    println!("  GS_GAME");
 
     gp.get().g_map.predrawbackground(g, &gp.get().rm.sprite(gp.get().rm.spr_background), &gp.get().rm.sprite(gp.get().rm.spr_backmap[0]));
     gp.get().g_map.predrawforeground(g, &gp.get().rm.sprite(gp.get().rm.spr_frontmap[0]));
@@ -1111,7 +1095,6 @@ impl MenuState {
             self.current().reset_menu(g);
             self.iUnlockMinigameOptionIndex = 0;
         } else if MENU_CODE_MATCH_SELECTION_START == code || MENU_CODE_QUICK_GAME_START == code {
-            println!("itt vagyok");
 
             if MENU_CODE_QUICK_GAME_START == code {
                 g.game_values.matchtype = MatchType::QuickGame;
@@ -1122,7 +1105,6 @@ impl MenuState {
             self.mTeamSelectMenu.reset_team_select(g);
             self.mCurrentMenu = MenuId::TeamSelect;
             self.current().reset_menu(g);
-            println!("Hello");
 
             if g.game_values.matchtype != MatchType::Tournament {
                 g.game_values.tournamentcontrolteam = -1;
