@@ -17,15 +17,21 @@ use tungstenite::http::StatusCode;
 use tungstenite::protocol::WebSocketConfig;
 use tungstenite::Message;
 
+/// How long a new connection has to send its HTTP request head and finish the handshake.
 const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(5);
 const WRITE_TIMEOUT: Duration = Duration::from_secs(5);
 /// How long a client thread waits for input before it sends what the main thread queued.
 const POLL: Duration = Duration::from_millis(4);
+/// Time between pings to a lobby client.
 const PING_INTERVAL: Duration = Duration::from_secs(20);
+/// A lobby client silent this long is disconnected.
 const IDLE_TIMEOUT: Duration = Duration::from_secs(60);
+/// Messages queued for one client before it counts as fallen behind.
 const OUTBOX_LEN: usize = 1024;
+/// The largest HTTP request head the relay reads, in bytes.
 const MAX_REQUEST_HEAD: usize = 8 * 1024;
 
+/// What a lobby client's thread tells the main thread.
 pub enum Event {
     Open { id: ClientId, outbox: Outbox },
     Message { id: ClientId, data: Vec<u8> },
@@ -39,6 +45,7 @@ pub struct Outbox {
 }
 
 impl Outbox {
+    /// The main thread's handle for queueing messages to this client.
     pub fn into_sink(self) -> Sink {
         Rc::new(move |message| {
             if self.tx.try_send(message).is_err() {
@@ -48,6 +55,7 @@ impl Outbox {
     }
 }
 
+/// Binds `config.port` and serves it from background threads; lobby client events go to `events`.
 pub fn serve(config: &Config, events: Sender<Event>) -> io::Result<()> {
     let listener = TcpListener::bind(SocketAddr::from(([0, 0, 0, 0], config.port)))?;
     let config = Arc::new(config.clone());
@@ -64,6 +72,7 @@ pub fn serve(config: &Config, events: Sender<Event>) -> io::Result<()> {
     Ok(())
 }
 
+/// Routes one TCP connection: signaling, `/healthz`, or a lobby WebSocket client.
 fn handle_connection(mut stream: TcpStream, id: ClientId, config: &Config, active: &AtomicUsize, events: &Sender<Event>) {
     let _ = stream.set_read_timeout(Some(HANDSHAKE_TIMEOUT));
     let _ = stream.set_write_timeout(Some(WRITE_TIMEOUT));
@@ -99,6 +108,7 @@ fn handle_connection(mut stream: TcpStream, id: ClientId, config: &Config, activ
     active.fetch_sub(1, Ordering::SeqCst);
 }
 
+/// One lobby client's WebSocket, until it closes, falls behind or goes quiet.
 fn run_client(stream: TcpStream, id: ClientId, config: &Config, events: &Sender<Event>) {
     let mut who = stream.peer_addr().map(|a| a.to_string()).unwrap_or_default();
     let mut origin = String::new();
@@ -223,6 +233,7 @@ fn respond(stream: &mut TcpStream, status: &str, body: &str) {
     let _ = stream.flush();
 }
 
+/// True when `127.0.0.1:<port>` answers `GET /healthz` with 200.
 pub fn healthcheck(port: u16) -> bool {
     let Ok(mut stream) = TcpStream::connect_timeout(&SocketAddr::from(([127, 0, 0, 1], port)), Duration::from_secs(3)) else {
         return false;

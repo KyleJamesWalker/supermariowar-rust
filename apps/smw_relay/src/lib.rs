@@ -1,5 +1,5 @@
-//! `smw_relay`: the netplay lobby server plus a connection switch, both over WebSocket, so the browser
-//! build can play online, and a netplay v2 signaling server on `/signal/<room>`. See docs/guides/RELAY.md.
+//! `smw_relay`: the netplay lobby over WebSocket, through a connection switch, and netplay v2 signaling on
+//! `/signal/<room>`. See docs/guides/RELAY.md.
 //! A native game can also run it in-process to host on its own network (`run_embedded`).
 
 #![allow(non_snake_case, non_camel_case_types, non_upper_case_globals, static_mut_refs, dead_code)]
@@ -24,6 +24,7 @@ use std::time::Duration;
 use switch::Switch;
 use websocket::Event;
 
+/// True when a relay on `127.0.0.1:<port>` answers `/healthz` with 200.
 pub fn healthcheck(port: u16) -> bool {
     websocket::healthcheck(port)
 }

@@ -7,13 +7,17 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
+/// A WebSocket client, numbered from 1 in accept order.
 pub type ClientId = u64;
+/// Queues one frame to a WebSocket client.
 pub type Sink = Rc<dyn Fn(Vec<u8>)>;
 
 struct Client {
     sink: Sink,
+    /// The virtual address the client got in its `WELCOME`.
     host: [u8; 4],
     port: u16,
+    /// Its open virtual connections to the lobby.
     conns: HashSet<u16>,
 }
 
@@ -23,11 +27,14 @@ impl Client {
     }
 }
 
+/// Maps WebSocket clients and their virtual connections to lobby peers. Runs on the main thread.
 pub struct Switch {
     clients: HashMap<ClientId, Client>,
     by_host: HashMap<[u8; 4], ClientId>,
+    /// The low 24 bits of the last address handed out.
     next_address: u32,
     lobby: Rc<RefCell<LobbyIo>>,
+    /// Virtual connections allowed per client.
     max_conns: usize,
 }
 
@@ -36,7 +43,7 @@ impl Switch {
         Switch { clients: HashMap::new(), by_host: HashMap::new(), next_address: 0, lobby, max_conns }
     }
 
-    /// The next free address in 10.0.0.0/8 (never .0 or .255, never 127.0.0.1, which the game rewrites).
+    /// The next free address in 10.0.0.0/8, never ending in .0 or .255.
     fn allocate_host(&mut self) -> [u8; 4] {
         loop {
             self.next_address = (self.next_address + 1) & 0x00FF_FFFF;
@@ -48,6 +55,7 @@ impl Switch {
         }
     }
 
+    /// Registers a new client and sends it its virtual address in a `WELCOME`.
     pub fn open(&mut self, id: ClientId, sink: Sink) {
         let host = self.allocate_host();
         let port = 20000 + (self.next_address % 40000) as u16;
@@ -58,6 +66,7 @@ impl Switch {
         self.clients.insert(id, client);
     }
 
+    /// Forgets a client that went away and disconnects its lobby connections.
     pub fn close(&mut self, id: ClientId) {
         let Some(client) = self.clients.remove(&id) else { return };
         self.by_host.remove(&client.host);
@@ -67,6 +76,7 @@ impl Switch {
         println!("[relay] client {} left", id);
     }
 
+    /// Handles one frame from a client; unknown and malformed frames are ignored.
     pub fn receive(&mut self, id: ClientId, data: &[u8]) {
         let Some((kind, conn, payload)) = frame::decode(data) else { return };
         match kind {
@@ -87,6 +97,7 @@ impl Switch {
         }
     }
 
+    /// Accepts a connection to the lobby port only, up to `max_conns` per client, and refuses the rest.
     fn connect(&mut self, id: ClientId, conn: u16, payload: &[u8]) {
         let Some(client) = self.clients.get_mut(&id) else { return };
         let (sink, my_host, my_port) = (client.sink.clone(), client.host, client.port);
