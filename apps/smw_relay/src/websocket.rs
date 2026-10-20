@@ -55,25 +55,61 @@ impl Outbox {
     }
 }
 
-/// Binds `config.port` and serves it from background threads; lobby client events go to `events`.
-pub fn serve(config: &Config, events: Sender<Event>) -> io::Result<()> {
+/// Counts of the connections the relay serves, each under its own limit.
+#[derive(Clone, Default)]
+struct Counts {
+    connections: Arc<AtomicUsize>,
+    clients: Arc<AtomicUsize>,
+    signaling: Arc<AtomicUsize>,
+}
+
+/// One place under a limit, given back on drop.
+struct Slot(Arc<AtomicUsize>);
+
+impl Slot {
+    fn take(count: &Arc<AtomicUsize>, max: usize) -> Option<Slot> {
+        count.fetch_update(Ordering::SeqCst, Ordering::SeqCst, |n| (n < max).then_some(n + 1)).ok().map(|_| Slot(count.clone()))
+    }
+}
+
+impl Drop for Slot {
+    fn drop(&mut self) {
+        self.0.fetch_sub(1, Ordering::SeqCst);
+    }
+}
+
+/// Binds `config.port` and serves it from background threads; lobby client events go to `events`. Returns the port.
+pub fn serve(config: &Config, events: Sender<Event>) -> io::Result<u16> {
     let listener = TcpListener::bind(SocketAddr::from(([0, 0, 0, 0], config.port)))?;
+    let port = listener.local_addr()?.port();
     let config = Arc::new(config.clone());
-    let active = Arc::new(AtomicUsize::new(0));
+    let counts = Counts::default();
     thread::spawn(move || {
         let mut next_id: ClientId = 0;
+        let mut full = false;
         for stream in listener.incoming() {
             let Ok(stream) = stream else { continue };
+            let Some(slot) = Slot::take(&counts.connections, config.max_connections) else {
+                if !full {
+                    println!("[relay] refusing connections: {} open", config.max_connections);
+                }
+                full = true;
+                continue;
+            };
+            full = false;
             next_id += 1;
-            let (id, config, active, events) = (next_id, config.clone(), active.clone(), events.clone());
-            thread::spawn(move || handle_connection(stream, id, &config, &active, &events));
+            let (id, config, counts, events) = (next_id, config.clone(), counts.clone(), events.clone());
+            let _ = thread::Builder::new().spawn(move || {
+                let _slot = slot;
+                handle_connection(stream, id, &config, &counts, &events);
+            });
         }
     });
-    Ok(())
+    Ok(port)
 }
 
 /// Routes one TCP connection: signaling, `/healthz`, or a lobby WebSocket client.
-fn handle_connection(mut stream: TcpStream, id: ClientId, config: &Config, active: &AtomicUsize, events: &Sender<Event>) {
+fn handle_connection(mut stream: TcpStream, id: ClientId, config: &Config, counts: &Counts, events: &Sender<Event>) {
     let _ = stream.set_read_timeout(Some(HANDSHAKE_TIMEOUT));
     let _ = stream.set_write_timeout(Some(WRITE_TIMEOUT));
     let _ = stream.set_nodelay(true);
@@ -81,6 +117,10 @@ fn handle_connection(mut stream: TcpStream, id: ClientId, config: &Config, activ
     let Some((head, head_len)) = peek_request_head(&stream) else { return };
     let (path, upgrade) = parse_request_head(&head);
     if let Some(room) = path.strip_prefix("/signal/").filter(|r| upgrade && !r.is_empty()) {
+        let Some(_slot) = Slot::take(&counts.signaling, config.max_clients) else {
+            refuse_full(&mut stream, head_len, "signaling");
+            return;
+        };
         let room = room.split('?').next().unwrap_or_default().to_string();
         crate::signal::run(stream, room, config);
         return;
@@ -96,16 +136,18 @@ fn handle_connection(mut stream: TcpStream, id: ClientId, config: &Config, activ
         return;
     }
 
-    if active.fetch_add(1, Ordering::SeqCst) >= config.max_clients {
-        active.fetch_sub(1, Ordering::SeqCst);
-        println!("[relay] refused a client: {} clients connected", config.max_clients);
-        let mut consumed = vec![0; head_len];
-        let _ = stream.read_exact(&mut consumed);
-        respond(&mut stream, "503 Service Unavailable", "relay full\n");
+    let Some(_slot) = Slot::take(&counts.clients, config.max_clients) else {
+        refuse_full(&mut stream, head_len, "lobby");
         return;
-    }
+    };
     run_client(stream, id, config, events);
-    active.fetch_sub(1, Ordering::SeqCst);
+}
+
+fn refuse_full(stream: &mut TcpStream, head_len: usize, kind: &str) {
+    println!("[relay] refused a {kind} client: relay full");
+    let mut consumed = vec![0; head_len];
+    let _ = stream.read_exact(&mut consumed);
+    respond(stream, "503 Service Unavailable", "relay full\n");
 }
 
 /// One lobby client's WebSocket, until it closes, falls behind or goes quiet.
@@ -250,6 +292,100 @@ pub fn healthcheck(port: u16) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::mpsc::{channel, Receiver};
+    use tungstenite::stream::MaybeTlsStream;
+    use tungstenite::WebSocket;
+
+    fn relay(config: impl FnOnce(&mut Config)) -> (u16, Receiver<Event>) {
+        let mut c = Config::embedded(0);
+        config(&mut c);
+        let (tx, rx) = channel();
+        (serve(&c, tx).unwrap(), rx)
+    }
+
+    fn open(port: u16) -> TcpStream {
+        let stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
+        stream.set_read_timeout(Some(Duration::from_millis(500))).unwrap();
+        stream
+    }
+
+    /// Whether the relay closed `stream` rather than waiting for its request.
+    fn closed(stream: &mut TcpStream) -> bool {
+        match stream.read(&mut [0; 64]) {
+            Ok(0) => true,
+            Ok(_) => false,
+            Err(e) => !matches!(e.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut),
+        }
+    }
+
+    fn signal(port: u16, room: &str) -> Result<WebSocket<MaybeTlsStream<TcpStream>>, String> {
+        let stream = open(port);
+        stream.set_read_timeout(Some(Duration::from_secs(3))).unwrap();
+        tungstenite::client::client(format!("ws://127.0.0.1:{port}/signal/{room}"), MaybeTlsStream::Plain(stream))
+            .map(|(ws, _)| ws)
+            .map_err(|e| e.to_string())
+    }
+
+    fn read_text(ws: &mut WebSocket<MaybeTlsStream<TcpStream>>) -> Option<String> {
+        match ws.read() {
+            Ok(Message::Text(text)) => Some(text.to_string()),
+            _ => None,
+        }
+    }
+
+    #[test]
+    fn connections_over_the_limit_are_closed_at_once() {
+        let (port, _events) = relay(|c| c.max_connections = 2);
+        let mut held = [open(port), open(port)];
+        let mut extra = open(port);
+        assert!(closed(&mut extra));
+        assert!(!closed(&mut held[1]), "the relay waits for an open connection's request");
+
+        drop(held);
+        let deadline = Instant::now() + Duration::from_secs(3);
+        loop {
+            let mut retry = open(port);
+            if !closed(&mut retry) {
+                break;
+            }
+            assert!(Instant::now() < deadline, "closed connections free their places");
+        }
+    }
+
+    #[test]
+    fn signaling_peers_count_against_max_clients() {
+        let (port, _events) = relay(|c| c.max_clients = 1);
+        let mut first = signal(port, "limit-a").unwrap();
+        assert!(read_text(&mut first).unwrap().contains("IdAssigned"));
+        assert!(signal(port, "limit-b").unwrap_err().contains("503"));
+    }
+
+    #[test]
+    fn signaling_rooms_hold_four_peers() {
+        let (port, _events) = relay(|_| {});
+        let mut peers: Vec<_> = (0..4).map(|_| signal(port, "four").unwrap()).collect();
+        for peer in &mut peers {
+            assert!(read_text(peer).unwrap().contains("IdAssigned"));
+        }
+        let mut fifth = signal(port, "four").unwrap();
+        assert_eq!(read_text(&mut fifth), None);
+    }
+
+    #[test]
+    fn signaling_closes_on_an_oversize_message() {
+        let (port, _events) = relay(|_| {});
+        let mut peer = signal(port, "oversize").unwrap();
+        assert!(read_text(&mut peer).unwrap().contains("IdAssigned"));
+        let _ = peer.send(Message::Text("x".repeat(64 * 1024).into()));
+        let deadline = Instant::now() + Duration::from_secs(3);
+        while Instant::now() < deadline {
+            if let Err(error) = peer.read() {
+                assert!(!matches!(error, tungstenite::Error::Io(ref e) if matches!(e.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut)), "{error}");
+                return;
+            }
+        }
+        panic!("the relay kept the connection");
+    }
 
     #[test]
     fn request_heads() {

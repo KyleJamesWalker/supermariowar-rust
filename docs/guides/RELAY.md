@@ -39,10 +39,11 @@ The relay serves plain `ws://` and `GET /healthz`. Put a TLS proxy in front of i
 | `--port`, `SMW_RELAY_PORT` | `8080` |
 | `--config` | `serverconfig`, the lobby settings file |
 | `SMW_RELAY_ALLOWED_ORIGINS` | `https://www.kylejameswalker.com,http://localhost:8000`, or `*` |
-| `SMW_RELAY_MAX_CLIENTS` | `64` |
+| `SMW_RELAY_MAX_CLIENTS` | `64` lobby clients, and as many signaling peers |
+| `SMW_RELAY_MAX_CONNECTIONS` | `256` TCP connections of any kind, handshakes included |
 | `SMW_LOBBY_VERBOSE` | unset; `1` logs every room update, room list and lobby message |
 
-The relay refuses a WebSocket whose `Origin` is not in the list. It accepts one without `Origin`: browsers always send it, so that is a native game. It also caps each player at 8 virtual connections and each message at 64 KiB. It drops a client that is silent for 60 seconds or whose outgoing queue fills up. When a player leaves, the relay closes its virtual connections and the lobby removes it from its room.
+The relay refuses a WebSocket whose `Origin` is not in the list. It accepts one without `Origin`: browsers always send it, so that is a native game. It also caps each player at 8 virtual connections and each message at 64 KiB, and each signaling room at 4 peers and 16 KiB per message. It closes a connection over `SMW_RELAY_MAX_CONNECTIONS` as soon as it accepts it. It drops a client that is silent for 60 seconds or whose outgoing queue fills up. When a player leaves, the relay closes its virtual connections and the lobby removes it from its room.
 
 The browser build connects to `wss://smw-relay.vps.pocketsquirrel.com` unless the page has a `?relay=` parameter. Set `SMW_RELAY_URL` when you run `tools/package_web.sh` to change that default. The relay URL is the first entry in the saved server list. In every build, a saved entry without a scheme means `wss://<entry>`.
 
