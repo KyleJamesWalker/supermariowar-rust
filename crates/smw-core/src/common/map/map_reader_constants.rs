@@ -1,5 +1,6 @@
-//! Port of src/common/map/MapReaderConstants.h
+//! Lookup tables shared by the legacy map file readers.
 
+/// Background file per legacy background ID; 1.7.01 maps match on the part after the `_`.
 pub const g_szBackgroundConversion: [&str; 26] = [
     "Land_Classic.png",
     "Castle_Dungeon.png",

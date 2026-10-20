@@ -1,4 +1,4 @@
-//! Port of src/common/gfx/gfxSprite.cpp
+//! Sprites: a loaded image that draws with optional horizontal screen wrapping, and the builder that loads one.
 
 use crate::common::gfx::soft_surface::{Surface, SurfacePtr};
 use crate::common::gfx::soft_surface::Rect;
@@ -11,6 +11,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::ptr::null;
 
+/// Screen side past which [`gfxSprite::draw_clip`] hides a sprite.
 #[repr(i32)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum ClipEdge {
@@ -20,7 +21,7 @@ pub enum ClipEdge {
     Left,
 }
 
-/// Mirrors the C++ `throw std::format(...)`: loading failures are fatal unless a caller catches them.
+/// Panics with `msg`: loading failures are fatal unless a caller catches the unwind.
 fn throw(msg: String) -> ! {
     panic!("{}", msg)
 }
@@ -66,6 +67,7 @@ unsafe fn blit_surface(src: *mut Surface, srcArea: *const Rect, dst: *mut Surfac
     }
 }
 
+/// A drawable image; a default sprite holds no surface and must not be drawn.
 #[derive(Clone, Default)]
 pub struct gfxSprite {
     m_picture: SurfacePtr,
@@ -78,34 +80,34 @@ impl gfxSprite {
         gfxSprite { _alias: Aliased::new(), m_picture: SurfacePtr::null(), m_wrap_x: None }
     }
 
-    /// `gfxSprite(SurfacePtr image, wrap = 640)`
+    /// A sprite that draws `image`, wrapping around at `wrap` pixels when given.
     pub fn from_surface(image: SurfacePtr, wrap: Option<i32>) -> Self {
         gfxSprite { _alias: Aliased::new(), m_picture: image, m_wrap_x: wrap }
     }
 
-    /// `gfxSprite::blank(w, h)`: a screen-format surface with blending off.
+    /// A zeroed `w` x `h` surface in the screen's format with blending off, wrapping at 640.
     pub fn blank(g: &mut Game, w: u32, h: u32) -> Self {
         let screen_alpha = unsafe { (*g.screen).alpha };
         let surf = Surface { blend: BlendMode::None, alpha: screen_alpha, ..Surface::new(w as i32, h as i32) };
         Self::from_surface(SurfacePtr::new(surf), Some(640))
     }
 
-    /// `draw(Surface* dst, Vec2i dstPos)`: the whole sprite onto `dst`, no camera shake.
+    /// Draws the whole sprite onto `dst`, without camera shake.
     pub fn draw_to_pos(&self, dst: *mut Surface, dstX: i32, dstY: i32) {
         self.blit(null(), dst, dstX, dstY);
     }
 
-    /// `draw(Surface* dst, const Rect& dstRect)`: the whole sprite onto `dst`, no camera shake.
+    /// Draws the whole sprite onto `dst` at `dstRect`'s position, without camera shake; its size is ignored.
     pub fn draw_to(&self, dst: *mut Surface, dstRect: &Rect) {
         self.blit(null(), dst, dstRect.x, dstRect.y);
     }
 
-    /// `draw(const Rect& srcRect, Surface* dst, Vec2i dstPos)`: part of the sprite onto `dst`.
+    /// Draws `srcRect` of the sprite onto `dst`, without camera shake.
     pub fn draw_src_to_pos(&self, srcRect: &Rect, dst: *mut Surface, dstX: i32, dstY: i32) {
         self.blit(srcRect, dst, dstX, dstY);
     }
 
-    /// `draw(const Rect& srcRect, Surface* dst, const Rect& dstRect)`: part of the sprite onto `dst`.
+    /// Draws `srcRect` of the sprite onto `dst` at `dstRect`'s position, without camera shake; its size is ignored.
     pub fn draw_src_to(&self, srcRect: &Rect, dst: *mut Surface, dstRect: &Rect) {
         self.blit(srcRect, dst, dstRect.x, dstRect.y);
     }
@@ -119,32 +121,32 @@ impl gfxSprite {
 
             if let Some(wrap_x) = self.m_wrap_x {
                 if dstRect.x + self.get_width() >= wrap_x {
-                    dstRect = Rect { x: dstPosX - wrap_x, y: dstPosY, w: 0, h: 0 }; // SDL2 modifies the dst rect
+                    dstRect = Rect { x: dstPosX - wrap_x, y: dstPosY, w: 0, h: 0 }; // the blit above clipped dstRect
                     blit_surface(self.m_picture.get(), srcRect, dst, &mut dstRect);
                 } else if dstRect.x < 0 {
-                    dstRect = Rect { x: dstPosX + wrap_x, y: dstPosY, w: 0, h: 0 }; // SDL2 modifies the dst rect
+                    dstRect = Rect { x: dstPosX + wrap_x, y: dstPosY, w: 0, h: 0 }; // the blit above clipped dstRect
                     blit_surface(self.m_picture.get(), srcRect, dst, &mut dstRect);
                 }
             }
         }
     }
 
-    /// Draw the whole sprite at the given coordinate.
+    /// Draws the whole sprite onto `g.blitdest` at (`x`, `y`) plus camera shake.
     pub fn draw(&self, g: &mut Game, x: i32, y: i32) {
         self.blit(null(), g.blitdest, x + g.x_shake as i32, y + g.y_shake as i32);
     }
 
-    /// Draw part of the sprite at the given coordinate.
+    /// Draws `srcRect` of the sprite onto `g.blitdest` at (`x`, `y`) plus camera shake.
     pub fn draw_src(&self, g: &mut Game, x: i32, y: i32, srcRect: &Rect) {
         self.blit(srcRect, g.blitdest, x + g.x_shake as i32, y + g.y_shake as i32);
     }
 
-    /// `draw(x, y, srcx, srcy, w, h)` convenience used all over the C++ via `Rect{...}` temporaries.
+    /// [`draw_src`](Self::draw_src) with the source rectangle given as numbers.
     pub fn draw_part(&self, g: &mut Game, x: i32, y: i32, srcx: i32, srcy: i32, w: i32, h: i32) {
         self.draw_src(g, x, y, &Rect { x: srcx, y: srcy, w, h });
     }
 
-    /// Draw part of the sprite at the given coordinate, clipped along a given direction.
+    /// Like [`draw_src`](Self::draw_src), but hides the part beyond `clipTreshold` on the `clipEdge` side.
     pub fn draw_clip(&self, g: &mut Game, x: i32, y: i32, srcRect: &Rect, clipEdge: ClipEdge, clipTreshold: i32) {
         debug_assert!(!self.m_picture.is_null());
 
@@ -185,7 +187,7 @@ impl gfxSprite {
         }
     }
 
-    /// Draw a part of the sprite scaled to a destination area.
+    /// Stretches `srcRect` of the sprite onto `dstRect` of `dst`, without wrapping or camera shake.
     pub fn draw_stretch(&self, srcRect: &Rect, dst: *mut Surface, dstRect: &Rect) {
         debug_assert!(!self.m_picture.is_null());
 
@@ -197,6 +199,7 @@ impl gfxSprite {
         }
     }
 
+    /// Turns on blending with the whole sprite's alpha multiplied by `alpha`.
     pub fn setalpha(&mut self, alpha: u8) {
         debug_assert!(!self.m_picture.is_null());
 
@@ -214,10 +217,12 @@ impl gfxSprite {
         self.m_picture.h
     }
 
+    /// Raw pointer to the sprite's surface, null for an empty sprite.
     pub fn get_surface(&self) -> *mut Surface {
         self.m_picture.get()
     }
 
+    /// Wraps the sprite around at `wrapsize` pixels.
     pub fn set_wrap(&mut self, wrapsize: i16) {
         self.m_wrap_x = Some(wrapsize as i32);
     }
@@ -226,6 +231,7 @@ impl gfxSprite {
     }
 }
 
+/// Builder for loading a PNG as a sprite: magenta color key, no alpha and no wrapping by default.
 pub struct ImageLoader {
     m_path: PathBuf,
     m_optimize: bool,
@@ -254,22 +260,24 @@ impl ImageLoader {
         self
     }
 
-    /// `withWrapping(int wrap_x = 640)`
+    /// Draws a second copy shifted by `wrap_x` pixels when the sprite crosses the left edge or `wrap_x`.
     pub fn with_wrapping(mut self, wrap_x: i32) -> Self {
         self.m_wrap_x = Some(wrap_x);
         self
     }
 
+    /// Has no effect: images always load into the screen format.
     pub fn without_optimization(mut self) -> Self {
         self.m_optimize = false;
         self
     }
 
+    /// Loads the image; panics with the error message if it cannot be read.
     pub fn create(&self, g: &mut Game) -> gfxSprite {
         gfxSprite::from_surface(load_image(g, &self.m_path, self.m_optimize, self.m_color_key, self.m_alpha), self.m_wrap_x)
     }
 
-    /// `create()` for callers that catch the `std::string` the C++ throws on a load failure.
+    /// [`create`](Self::create) that returns load failures instead of panicking.
     pub fn try_create(&self, g: &mut Game) -> Result<gfxSprite, String> {
         Ok(gfxSprite::from_surface(try_load_image(g, &self.m_path, self.m_optimize, self.m_color_key, self.m_alpha)?, self.m_wrap_x))
     }
