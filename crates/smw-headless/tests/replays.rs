@@ -391,6 +391,64 @@ fn rollback_frenzy() {
     assert_eq!(rollback_mid_match("frenzy_cpu", Some(1200), 400, 7), 400);
 }
 
+/// Prints the average cost of a rollback save, a load of the copy GGRS hands back, and a plain tick over `ticks` ticks
+/// of the first match, from its 300th tick, played on `map` when given.
+fn snapshot_cost(name: &str, map: Option<&str>, ticks: u32) {
+    use smw::smw::rollback::{load, save};
+    use std::time::{Duration, Instant};
+
+    let out = std::env::temp_dir().join(format!("smw-headless-{}-snapshot-cost-{}", std::process::id(), name));
+    let mut replay = repo().join("tools").join("replays").join(format!("{}.txt", name));
+    if let Some(map) = map {
+        let text = std::fs::read_to_string(&replay).unwrap();
+        let text: String = text.lines().map(|l| if l.starts_with("#@ map=") { format!("#@ map={map}\n") } else { format!("{l}\n") }).collect();
+        replay = std::env::temp_dir().join(format!("smw-headless-{}-snapshot-cost-{}.txt", std::process::id(), name));
+        std::fs::write(&replay, text).unwrap();
+    }
+    let (mut saving, mut loading, mut ticking, mut ran) = (Duration::ZERO, Duration::ZERO, Duration::ZERO, 0);
+    sandboxed(&replay, &out, None, |argv, services| {
+        let g = smw::game::Game::create();
+        g.services = Some(services);
+        smw::globals::init_globals(g);
+        g.RootDataDirectory = argv[2].clone();
+        smw::smw::main::startup(g);
+        smw::smw::main::gameloop_start(g);
+        let mut in_match = 0;
+        while in_match < 300 && g.game_values.appstate != smw::common::game_values::AppState::Quit {
+            smw::smw::main::frame(g);
+            in_match = if g.gsm.currentState == smw::smw::game_state::StateId::Gameplay { in_match + 1 } else { 0 };
+        }
+        while ran < ticks && g.gsm.currentState == smw::smw::game_state::StateId::Gameplay {
+            let t = Instant::now();
+            let state = save(g);
+            saving += t.elapsed();
+            let t = Instant::now();
+            load(g, state.clone());
+            loading += t.elapsed();
+            let t = Instant::now();
+            smw::smw::main::frame(g);
+            ticking += t.elapsed();
+            ran += 1;
+        }
+        smw::smw::main::shutdown(g);
+    });
+    let _ = std::fs::remove_dir_all(&out);
+    if map.is_some() {
+        let _ = std::fs::remove_file(&replay);
+    }
+    let avg = |d: Duration| d.as_secs_f64() * 1000.0 / ran.max(1) as f64;
+    println!("SNAPSHOT {name} {}: {ran} ticks, save {:.4} ms, load {:.4} ms, tick {:.4} ms", map.unwrap_or("-"), avg(saving), avg(loading), avg(ticking));
+}
+
+/// Run with --ignored --nocapture. Log Balancing has animated tiles and four moving platforms.
+#[test]
+#[ignore]
+fn rollback_snapshot_cost() {
+    snapshot_cost("frenzy_cpu", None, 600);
+    snapshot_cost("cpu_greed", None, 600);
+    snapshot_cost("cpu_greed", Some("Log Balancing"), 600);
+}
+
 /// Every replay's first match under rollback; `SMW_ROLLBACK_SWEEP=<substring>` picks replays. Run with --ignored.
 #[test]
 #[ignore]
