@@ -4,7 +4,7 @@ use crate::game::Game;
 use crate::common::file_io::BinaryFile;
 use crate::common::game_values::default_powerup_setting;
 use crate::common::global_constants::*;
-use crate::common::map::map_reader::{checked_index, MapReader};
+use crate::common::map::map_reader::{check_object_type, checked_index, MapReader};
 use crate::common::map::map_reader_constants::g_szBackgroundConversion;
 use crate::common::map::{read_type_summary, CMap, ReadType};
 
@@ -45,6 +45,7 @@ impl MapReader {
                 if map.objectdata[i][j].iType == 6 {
                     map.objectdata[i][j].iType = -1;
                 }
+                check_object_type(map.objectdata[i][j].iType);
 
                 map.objectdata[i][j].fHidden = false;
 

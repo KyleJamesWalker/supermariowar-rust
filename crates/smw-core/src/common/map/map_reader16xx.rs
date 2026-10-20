@@ -4,7 +4,7 @@ use crate::game::Game;
 use crate::common::file_io::BinaryFile;
 use crate::common::game_values::default_powerup_setting;
 use crate::common::global_constants::*;
-use crate::common::map::map_reader::{check_warp, checked_count, checked_index, MapReader};
+use crate::common::map::map_reader::{check_object_type, check_warp, check_warp_exits, checked_count, checked_index, MapReader};
 use crate::common::map::{read_type_summary, CMap, ReadType, WarpEnterDirection, WarpExitDirection};
 use crate::common::tile_types::TileType;
 
@@ -58,6 +58,7 @@ impl MapReader {
                 if map.objectdata[i][j].iType == 6 {
                     map.objectdata[i][j].iType = -1;
                 }
+                check_object_type(map.objectdata[i][j].iType);
 
                 map.objectdata[i][j].fHidden = false;
 
@@ -87,7 +88,7 @@ impl MapReader {
         map.eyecandy[2] = mapfile.read_i32() as i16;
     }
 
-    /// Reads the warp exit list; entries past `MAXWARPS` are skipped and the count is capped.
+    /// Reads the warp exit list, after the warp entrances; entries past `MAXWARPS` are skipped and the count is capped.
     pub(super) fn read_warp_exits(&mut self, map: &mut CMap, mapfile: &mut BinaryFile) {
         map.maxConnection = 0;
 
@@ -128,6 +129,8 @@ impl MapReader {
         if map.numwarpexits as i32 > MAXWARPS {
             map.numwarpexits = MAXWARPS as i16;
         }
+
+        check_warp_exits(map);
     }
 
     pub(super) fn read_spawn_areas_1600(&mut self, map: &mut CMap, mapfile: &mut BinaryFile) {

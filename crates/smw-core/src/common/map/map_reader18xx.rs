@@ -3,7 +3,7 @@
 use crate::game::Game;
 use crate::common::file_io::BinaryFile;
 use crate::common::global_constants::*;
-use crate::common::map::map_reader::{check_platform_size, check_warp, checked_count, checked_index, MapReader};
+use crate::common::map::map_reader::{check_hazard, check_item, check_object_type, check_platform_size, check_warp, checked_count, checked_index, MapReader};
 use crate::common::map::{read_type_preview, read_type_summary, CMap, MapHazard, MapItem, MapItemType, ReadType, TilesetTile, WarpEnterDirection};
 use crate::common::movingplatform::MovingPlatform;
 use crate::common::tile_types::TileType;
@@ -101,6 +101,7 @@ impl MapReader {
                 }
 
                 map.objectdata[i][j].iType = mapfile.read_i8() as i16;
+                check_object_type(map.objectdata[i][j].iType);
                 map.objectdata[i][j].fHidden = mapfile.read_bool();
             }
         }
@@ -116,7 +117,9 @@ impl MapReader {
         let iNumMapItems = checked_count("item count", mapfile.read_i32(), MAXMAPITEMS);
 
         for _idx in 0..iNumMapItems {
-            let item = MapItem { itype: mapfile.read_i32() as MapItemType, ix: mapfile.read_i32() as i16, iy: mapfile.read_i32() as i16 };
+            let itype = mapfile.read_i32();
+            let item = MapItem { itype: itype as MapItemType, ix: mapfile.read_i32() as i16, iy: mapfile.read_i32() as i16 };
+            check_item(itype, item.ix, item.iy);
             map.mapitems.push(item);
         }
     }
@@ -138,6 +141,7 @@ impl MapReader {
                 hazard.dparam[iParam] = mapfile.read_float();
             }
 
+            check_hazard(&hazard);
             map.maphazards.push(hazard);
         }
     }

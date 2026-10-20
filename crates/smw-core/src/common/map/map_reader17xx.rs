@@ -4,7 +4,7 @@ use crate::game::Game;
 use crate::common::file_io::BinaryFile;
 use crate::common::game_values::default_powerup_setting;
 use crate::common::global_constants::*;
-use crate::common::map::map_reader::{check_platform_size, check_warp, checked_count, checked_index, MapReader};
+use crate::common::map::map_reader::{check_object_type, check_platform_size, check_warp, checked_count, checked_float, checked_index, MapReader};
 use crate::common::map::map_reader_constants::g_szBackgroundConversion;
 use crate::common::map::{read_type_preview, read_type_summary, CMap, ReadType, TilesetTile, WarpEnterDirection};
 use crate::common::math::vec2::Vec2f;
@@ -52,6 +52,7 @@ impl MapReader {
                 if map.objectdata[i][j].iType == 15 {
                     map.objectdata[i][j].iType = -1;
                 }
+                check_object_type(map.objectdata[i][j].iType);
 
                 map.objectdata[i][j].fHidden = false;
 
@@ -241,30 +242,31 @@ impl MapReader {
         iPathType: i16,
         fPreview: bool,
     ) -> Option<Box<dyn MovingPlatformPathTrait>> {
+        let mut read = || checked_float("platform path value", mapfile.read_float());
         if iPathType == 0 {
-            let startX = mapfile.read_float();
-            let startY = mapfile.read_float();
-            let endX = mapfile.read_float();
-            let endY = mapfile.read_float();
-            let speed = mapfile.read_float();
+            let startX = read();
+            let startY = read();
+            let endX = read();
+            let endY = read();
+            let speed = read();
 
             return Some(Box::new(StraightPath::new(speed, Vec2f::new(startX, startY), Vec2f::new(endX, endY), fPreview)));
         }
         if iPathType == 1 {
-            let startX = mapfile.read_float();
-            let startY = mapfile.read_float();
-            let angle = mapfile.read_float();
-            let speed = mapfile.read_float();
+            let startX = read();
+            let startY = read();
+            let angle = read();
+            let speed = read();
 
             return Some(Box::new(StraightPathContinuous::new(speed, Vec2f::new(startX, startY), angle, fPreview)));
         }
         if iPathType == 2 {
-            let radiusX = mapfile.read_float();
-            let radiusY = mapfile.read_float();
-            let centerX = mapfile.read_float();
-            let centerY = mapfile.read_float();
-            let angle = mapfile.read_float();
-            let speed = mapfile.read_float();
+            let radiusX = read();
+            let radiusY = read();
+            let centerX = read();
+            let centerY = read();
+            let angle = read();
+            let speed = read();
 
             return Some(Box::new(EllipsePath::new(speed, angle, Vec2f::new(radiusX, radiusY), Vec2f::new(centerX, centerY), fPreview)));
         }
