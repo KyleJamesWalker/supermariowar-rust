@@ -69,7 +69,8 @@ pub const DISPLAY_ERROR_NONE: DisplayError = 0;
 pub const DISPLAY_ERROR_READ_TOUR_FILE: DisplayError = 1;
 pub const DISPLAY_ERROR_READ_WORLD_FILE: DisplayError = 2;
 pub const DISPLAY_ERROR_MAP_FILTER: DisplayError = 3;
-pub const DISPLAY_ERROR_NET: DisplayError = 4;
+/// Shows `error_text`.
+pub const DISPLAY_ERROR_TEXT: DisplayError = 4;
 
 /// Which menu `MenuState` shows; the mode options menu's sub-menus are numbered by game mode.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -191,8 +192,8 @@ pub struct MenuState {
     /// Error banner shown, for `iDisplayErrorTimer` more frames.
     iDisplayError: DisplayError,
     iDisplayErrorTimer: i16,
-    /// Message shown with `DISPLAY_ERROR_NET`.
-    net_error: String,
+    /// Message shown with `DISPLAY_ERROR_TEXT`.
+    error_text: String,
     /// Frames on the servers menu; LAN servers merge into the list once a second.
     nearby_timer: u32,
     /// The new-room settings menu is open from a room, to pick the next match's map and mode.
@@ -252,7 +253,7 @@ impl MenuState {
             mNetRoomMenu: Slot::empty(),
             iDisplayError: DISPLAY_ERROR_NONE,
             iDisplayErrorTimer: 0,
-            net_error: String::new(),
+            error_text: String::new(),
             nearby_timer: 0,
             room_settings: false,
             fNeedMenuMusicReset: false,
@@ -1158,7 +1159,13 @@ impl MenuState {
             gfx_changefullscreen(g, g.game_values.fullscreen);
             g.blitdest = g.screen;
         } else if MENU_CODE_SHADER_CHANGED == code {
-            crate::smw::video_settings::apply_shader(g);
+            if let Err(message) = crate::smw::video_settings::apply_shader(g) {
+                let field = self.mGraphicsOptionsMenu.miShaderField;
+                let failed = *g.video.failed.last().unwrap();
+                g.ctl(field).set_current_value(0);
+                g.ctl(field).hide_item(failed, true);
+                self.show_error_text(&message);
+            }
         } else if MENU_CODE_INTEGER_SCALE_CHANGED == code {
             crate::smw::video_settings::apply_integer_scale(g);
         } else if MENU_CODE_TO_GAME_SETUP_MENU == code {
@@ -1305,6 +1312,9 @@ impl MenuState {
         } else if MENU_CODE_TO_GRAPHICS_OPTIONS_MENU == code {
             self.mCurrentMenu = MenuId::GraphicsOptions;
             self.current().reset_menu(g);
+            if let Some(message) = g.video.open_error.take() {
+                self.show_error_text(&message);
+            }
         } else if MENU_CODE_TO_EYECANDY_OPTIONS_MENU == code {
             self.mCurrentMenu = MenuId::EyeCandyOptions;
             self.current().reset_menu(g);
@@ -1500,9 +1510,7 @@ impl MenuState {
                 if crate::smw::net::host_on_this_device(g) {
                     self.mNetServersMenu.refresh_scroll(g);
                 } else {
-                    self.net_error = "Hosting needs a desktop or handheld build".to_string();
-                    self.iDisplayError = DISPLAY_ERROR_NET;
-                    self.iDisplayErrorTimer = (4 * TICKS_PER_SECOND) as i16;
+                    self.show_error_text("Hosting needs a desktop or handheld build");
                 }
             } else if MENU_CODE_TO_NET_ADDREMOVE_SERVER_MENU == code {
                 self.mCurrentMenu = MenuId::NetEditServers;
@@ -1636,15 +1644,11 @@ impl MenuState {
             }
 
             if let Some(error) = lobby_error.filter(|_| self.in_net_menu()) {
-                self.net_error = error.message().to_string();
-                self.iDisplayError = DISPLAY_ERROR_NET;
-                self.iDisplayErrorTimer = (4 * TICKS_PER_SECOND) as i16;
+                self.show_error_text(error.message());
             }
             if self.in_net_menu() {
                 if let Some(notice) = g.netplay.match_notice.take() {
-                    self.net_error = notice;
-                    self.iDisplayError = DISPLAY_ERROR_NET;
-                    self.iDisplayErrorTimer = (4 * TICKS_PER_SECOND) as i16;
+                    self.show_error_text(&notice);
                 }
             }
         }
@@ -1655,6 +1659,12 @@ impl MenuState {
 
 impl MenuState {
     /// Whether the current menu is one of the netplay menus.
+    fn show_error_text(&mut self, text: &str) {
+        self.error_text = text.to_string();
+        self.iDisplayError = DISPLAY_ERROR_TEXT;
+        self.iDisplayErrorTimer = (4 * TICKS_PER_SECOND) as i16;
+    }
+
     fn in_net_menu(&self) -> bool {
         matches!(
             self.mCurrentMenu,
@@ -1999,8 +2009,8 @@ impl GameState for MenuState {
                     gp.rm.menu_font_large.draw_centered(g, 320, 405, "Error Reading World File!");
                 } else if self.iDisplayError == DISPLAY_ERROR_MAP_FILTER {
                     gp.rm.menu_font_large.draw_centered(g, 320, 405, "No Maps Meet All Filter Conditions!");
-                } else if self.iDisplayError == DISPLAY_ERROR_NET {
-                    gp.rm.menu_font_large.draw_chop_centered(g, 320, 405, 470, &self.net_error);
+                } else if self.iDisplayError == DISPLAY_ERROR_TEXT {
+                    gp.rm.menu_font_large.draw_chop_centered(g, 320, 405, 470, &self.error_text);
                 }
 
                 self.iDisplayErrorTimer -= 1;

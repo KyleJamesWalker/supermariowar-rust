@@ -81,6 +81,9 @@ impl UI_GraphicsOptionsMenu {
                 let items: Vec<(&str, i16)> = names.iter().map(|(n, v)| (n.as_str(), *v)).collect();
                 this.miShaderField = select_field(spr_selectfield, 70, 360, "Shader", 500, 220, &items, &mut g.video.shader, g);
                 g.ctl(this.miShaderField).set_item_changed_code(MENU_CODE_SHADER_CHANGED);
+                for failed in g.video.failed.clone() {
+                    g.ctl(this.miShaderField).hide_item(failed, true);
+                }
                 this.miIntegerScaleField = select_field(spr_selectfield, 70, 400, "Integer Scaling", 500, 220,
                     &[("Off", false), ("On", true)],
                     &mut g.video.integer_scale, g);

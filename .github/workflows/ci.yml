@@ -173,6 +173,30 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo test --release --locked --package smw_relay --package smw-netplay
 
+  shaders:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+      - uses: ./.github/actions/setup-native
+      - run: sudo apt-get install -y xvfb xauth libgl1-mesa-dri
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: shaders
+      - run: cargo build --release --locked -p smw --features shaders
+      - name: Shader presenters on llvmpipe
+        env:
+          LIBGL_ALWAYS_SOFTWARE: '1'
+        run: xvfb-run -a -s '-screen 0 1280x1024x24' python3 tools/shader_shot_test.py "$RUNNER_TEMP/shader-shots"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: shader-shots
+          path: ${{ runner.temp }}/shader-shots
+          retention-days: 7
+
   peer:
     runs-on: ubuntu-24.04
     env:

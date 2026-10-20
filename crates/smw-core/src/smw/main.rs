@@ -712,6 +712,7 @@ pub fn startup(g: &mut Game) {
 
         crate::smw::video_settings::load(g);
         gfx_init(g, App::screenWidth, App::screenHeight, false); //initialize the graphics (SDL)
+        crate::smw::video_settings::check_open(g);
         g.blitdest = g.screen;
 
         sfx_init(g); //init the sound system

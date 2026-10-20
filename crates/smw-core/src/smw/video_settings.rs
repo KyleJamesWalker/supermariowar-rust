@@ -24,11 +24,15 @@ pub struct VideoSettings {
     /// The Graphics menu's choice: 0 is Off, `n` is `presets[n - 1]`.
     pub shader: i16,
     pub integer_scale: bool,
+    /// The menu values of the presets that failed to load this session, which the menu hides.
+    pub failed: Vec<i16>,
+    /// Why the preset the window opened with failed, until the Graphics menu shows it.
+    pub open_error: Option<String>,
 }
 
 impl VideoSettings {
     pub const fn new() -> Self {
-        VideoSettings { presets: Vec::new(), shader: 0, integer_scale: false }
+        VideoSettings { presets: Vec::new(), shader: 0, integer_scale: false, failed: Vec::new(), open_error: None }
     }
 
     /// The selected preset, if any.
@@ -92,7 +96,7 @@ pub fn load(g: &mut Game) {
     presets.extend(find_presets(&user_dir(g), "user"));
     let text = std::fs::read_to_string(get_home_directory(g) + FILE).unwrap_or_default();
     let (shader, integer_scale) = parse(&text, &presets);
-    g.video = VideoSettings { presets, shader, integer_scale };
+    g.video = VideoSettings { presets, shader, integer_scale, ..VideoSettings::new() };
     let path = g.video.preset().map(|p| p.path.clone());
     let _ = services(g).video.set_shader(path.as_deref());
     services(g).video.set_integer_scale(integer_scale);
@@ -121,14 +125,30 @@ fn save(g: &mut Game) {
     }
 }
 
-/// Switches the window to the menu's preset and saves it. A preset that fails to load reads as Off.
-pub fn apply_shader(g: &mut Game) {
-    let path = g.video.preset().map(|p| p.path.clone());
-    if let Err(e) = services(g).video.set_shader(path.as_deref()) {
-        eprintln!("[gfx] Shader preset unavailable: {e}");
-        g.video.shader = 0;
+/// After the window opens: a saved preset that failed to load reads as Off, and the Graphics menu says why.
+pub fn check_open(g: &mut Game) {
+    if let Some(e) = services(g).video.take_open_shader_error() {
+        g.video.open_error = Some(fail(g, &e));
+        save(g);
     }
+}
+
+/// Marks the selected preset failed and selects Off; the message for the menu.
+fn fail(g: &mut Game, error: &str) -> String {
+    eprintln!("[gfx] Shader preset unavailable: {error}");
+    let Some(name) = g.video.preset().map(|p| p.name.clone()) else { return "Could not load the shader".to_string() };
+    g.video.failed.push(g.video.shader);
+    g.video.shader = 0;
+    format!("Could not load shader {name}")
+}
+
+/// Switches the window to the menu's preset and saves it. A preset that fails to load reads as Off; Err is the
+/// message for the menu.
+pub fn apply_shader(g: &mut Game) -> Result<(), String> {
+    let path = g.video.preset().map(|p| p.path.clone());
+    let result = services(g).video.set_shader(path.as_deref()).map_err(|e| fail(g, &e));
     save(g);
+    result
 }
 
 pub fn apply_integer_scale(g: &mut Game) {
