@@ -67,7 +67,7 @@ pub struct V2Match {
     /// The host's match start (`checkpoint::capture_shared`); empty on a joiner.
     start: Vec<u8>,
     /// The match start parts a joiner has received so far.
-    parts: Vec<Option<Vec<u8>>>,
+    parts: StartParts,
     /// The joiners that sent `MSG_READY`; host only.
     ready: Vec<PeerId>,
     /// The match start is in place: from the outset on the host, after restoring it on a joiner.
@@ -155,7 +155,7 @@ pub fn match_starting(g: &mut Game) -> bool {
         host_peer: None,
         refused: Vec::new(),
         start,
-        parts: Vec::new(),
+        parts: StartParts::default(),
         ready: Vec::new(),
         restored: host,
         go: false,
@@ -400,6 +400,30 @@ fn parse_slot(token: &str) -> Option<KeySlot> {
     }
 }
 
+/// The parts of the host's match start a joiner has received.
+#[derive(Default)]
+struct StartParts(Vec<Option<Vec<u8>>>);
+
+impl StartParts {
+    /// Takes part `index` of `count`; the whole match start once every part is in. A count of 0, an index past it, or
+    /// a count that changes mid-transfer is an error.
+    fn add(&mut self, index: usize, count: usize, bytes: &[u8]) -> Result<Option<Vec<u8>>, String> {
+        if index >= count {
+            return Err(format!("the host sent match start part {index} of {count}"));
+        }
+        if self.0.is_empty() {
+            self.0 = vec![None; count];
+        } else if self.0.len() != count {
+            return Err(format!("the host's match start changed from {} to {count} parts", self.0.len()));
+        }
+        self.0[index] = Some(bytes.to_vec());
+        if !self.0.iter().all(Option::is_some) {
+            return Ok(None);
+        }
+        Ok(Some(self.0.iter().flatten().flatten().copied().collect()))
+    }
+}
+
 /// This player's `MSG_SLOT`.
 fn slot_message(slot: u8) -> [u8; 3] {
     [MSG_SLOT, HANDSHAKE_VERSION, slot]
@@ -490,17 +514,10 @@ impl V2Match {
                         Err(_) => {}
                     }
                 }
-                Some(&MSG_START_PART) if msg.len() >= 5 && from_host => {
+                Some(&MSG_START_PART) if msg.len() >= 5 && from_host && !self.restored => {
                     let index = u16::from_le_bytes([msg[1], msg[2]]) as usize;
                     let count = u16::from_le_bytes([msg[3], msg[4]]) as usize;
-                    if self.parts.len() != count {
-                        self.parts = vec![None; count];
-                    }
-                    if index < count {
-                        self.parts[index] = Some(msg[5..].to_vec());
-                    }
-                    if !self.restored && self.parts.iter().all(Option::is_some) {
-                        let bytes: Vec<u8> = self.parts.iter().flatten().flatten().copied().collect();
+                    if let Some(bytes) = self.parts.add(index, count, &msg[5..])? {
                         if self.rec.is_some() {
                             let data = harness::base64_encode(&crate::smw::network::file_compressor::deflate(&bytes));
                             note(&mut self.rec, format!("r{}.{data}", self.my_slot));
@@ -721,6 +738,23 @@ mod tests {
         assert_eq!(read_slot_message(&slot_message(2)), Ok(2));
         assert!(read_slot_message(&[MSG_SLOT, HANDSHAKE_VERSION + 1, 2]).is_err());
         assert!(read_slot_message(&[MSG_SLOT, 2]).is_err());
+    }
+
+    #[test]
+    fn start_parts_assemble_in_any_order() {
+        let mut parts = StartParts::default();
+        assert_eq!(parts.add(1, 2, b"cd"), Ok(None));
+        assert_eq!(parts.add(1, 2, b"cd"), Ok(None), "a resent part");
+        assert_eq!(parts.add(0, 2, b"ab"), Ok(Some(b"abcd".to_vec())));
+    }
+
+    #[test]
+    fn start_parts_refuse_bad_counts() {
+        assert!(StartParts::default().add(0, 0, b"").is_err(), "no parts");
+        assert!(StartParts::default().add(2, 2, b"x").is_err(), "an index past the count");
+        let mut parts = StartParts::default();
+        assert_eq!(parts.add(0, 3, b"a"), Ok(None));
+        assert!(parts.add(1, 2, b"b").is_err(), "a changed count");
     }
 
     #[test]
