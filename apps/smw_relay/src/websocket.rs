@@ -2,10 +2,11 @@
 //! messages to and from the main thread, which owns the lobby and the switch.
 
 use crate::config::Config;
+use crate::limits::{self, AddressLimits, AddressSlot};
 use crate::switch::{ClientId, Sink};
 use smw::common_netplay::relay_frame::{HEADER_LEN, MAX_MESSAGE_LEN};
 use std::io::{self, ErrorKind, Read, Write};
-use std::net::{SocketAddr, TcpListener, TcpStream};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpListener, TcpStream};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::mpsc::{sync_channel, Sender, SyncSender};
@@ -59,11 +60,12 @@ impl Outbox {
 }
 
 /// Counts of the connections the relay serves, each under its own limit.
-#[derive(Clone, Default)]
+#[derive(Clone)]
 struct Counts {
     connections: Arc<AtomicUsize>,
     clients: Arc<AtomicUsize>,
     signaling: Arc<AtomicUsize>,
+    addresses: Arc<AddressLimits>,
 }
 
 /// One place under a limit, given back on drop.
@@ -112,7 +114,12 @@ pub fn serve(config: &Config, events: Sender<Event>) -> io::Result<u16> {
     let listener = TcpListener::bind(SocketAddr::from(([0, 0, 0, 0], config.port)))?;
     let port = listener.local_addr()?.port();
     let config = Arc::new(config.clone());
-    let counts = Counts::default();
+    let counts = Counts {
+        connections: Default::default(),
+        clients: Default::default(),
+        signaling: Default::default(),
+        addresses: AddressLimits::new(config.max_per_address, config.connects_per_minute),
+    };
     thread::spawn(move || {
         let mut next_id: ClientId = 0;
         let mut full = false;
@@ -126,11 +133,20 @@ pub fn serve(config: &Config, events: Sender<Event>) -> io::Result<u16> {
                 continue;
             };
             full = false;
+            // A connection from a possible proxy is counted once its X-Forwarded-For has arrived.
+            let address = match stream.peer_addr().map(|a| a.ip()) {
+                Ok(ip) if !limits::may_proxy(ip) => match counts.addresses.open(ip, Instant::now()) {
+                    Ok(address) => Some(address),
+                    Err(_) => continue,
+                },
+                Ok(_) => None,
+                Err(_) => continue,
+            };
             next_id += 1;
             let (id, config, counts, events) = (next_id, config.clone(), counts.clone(), events.clone());
             let _ = thread::Builder::new().spawn(move || {
                 let _slot = slot;
-                handle_connection(stream, id, &config, &counts, &events);
+                handle_connection(stream, id, address, &config, &counts, &events);
             });
         }
     });
@@ -138,16 +154,37 @@ pub fn serve(config: &Config, events: Sender<Event>) -> io::Result<u16> {
 }
 
 /// Routes one TCP connection: signaling, `/healthz`, or a lobby WebSocket client.
-fn handle_connection(mut stream: TcpStream, id: ClientId, config: &Config, counts: &Counts, events: &Sender<Event>) {
+fn handle_connection(
+    mut stream: TcpStream,
+    id: ClientId,
+    address: Option<AddressSlot>,
+    config: &Config,
+    counts: &Counts,
+    events: &Sender<Event>,
+) {
     let _ = stream.set_read_timeout(Some(HANDSHAKE_TIMEOUT));
     let _ = stream.set_write_timeout(Some(WRITE_TIMEOUT));
     let _ = stream.set_nodelay(true);
 
     let Some((head, head_len)) = peek_request_head(&stream) else { return };
+    let _address = match address {
+        Some(address) => address,
+        None => {
+            let peer = stream.peer_addr().map_or(IpAddr::V4(Ipv4Addr::LOCALHOST), |a| a.ip());
+            match counts.addresses.open(limits::forwarded_for(&head).unwrap_or(peer), Instant::now()) {
+                Ok(address) => address,
+                Err(_) => {
+                    refuse(&mut stream, head_len, "429 Too Many Requests", "too many connections\n");
+                    return;
+                }
+            }
+        }
+    };
     let (path, upgrade) = parse_request_head(&head);
     if let Some(room) = path.strip_prefix("/signal/").filter(|r| upgrade && !r.is_empty()) {
         let Some(_slot) = Slot::take(&counts.signaling, config.max_clients) else {
-            refuse_full(&mut stream, head_len, "signaling");
+            println!("[relay] refused a signaling client: relay full");
+            refuse(&mut stream, head_len, "503 Service Unavailable", "relay full\n");
             return;
         };
         let room = room.split('?').next().unwrap_or_default().to_string();
@@ -166,17 +203,17 @@ fn handle_connection(mut stream: TcpStream, id: ClientId, config: &Config, count
     }
 
     let Some(_slot) = Slot::take(&counts.clients, config.max_clients) else {
-        refuse_full(&mut stream, head_len, "lobby");
+        println!("[relay] refused a lobby client: relay full");
+        refuse(&mut stream, head_len, "503 Service Unavailable", "relay full\n");
         return;
     };
     run_client(stream, id, config, events);
 }
 
-fn refuse_full(stream: &mut TcpStream, head_len: usize, kind: &str) {
-    println!("[relay] refused a {kind} client: relay full");
+fn refuse(stream: &mut TcpStream, head_len: usize, status: &str, body: &str) {
     let mut consumed = vec![0; head_len];
     let _ = stream.read_exact(&mut consumed);
-    respond(stream, "503 Service Unavailable", "relay full\n");
+    respond(stream, status, body);
 }
 
 /// One lobby client's WebSocket, until it closes, falls behind or goes quiet.
@@ -353,11 +390,19 @@ mod tests {
     }
 
     fn signal(port: u16, room: &str) -> Result<WebSocket<MaybeTlsStream<TcpStream>>, String> {
+        signal_from(port, room, None)
+    }
+
+    /// A signaling peer whose request says, as a proxy would, that it comes from `forwarded`.
+    fn signal_from(port: u16, room: &str, forwarded: Option<&str>) -> Result<WebSocket<MaybeTlsStream<TcpStream>>, String> {
+        use tungstenite::client::IntoClientRequest;
         let stream = open(port);
         stream.set_read_timeout(Some(Duration::from_secs(3))).unwrap();
-        tungstenite::client::client(format!("ws://127.0.0.1:{port}/signal/{room}"), MaybeTlsStream::Plain(stream))
-            .map(|(ws, _)| ws)
-            .map_err(|e| e.to_string())
+        let mut request = format!("ws://127.0.0.1:{port}/signal/{room}").into_client_request().unwrap();
+        if let Some(address) = forwarded {
+            request.headers_mut().insert("x-forwarded-for", address.parse().unwrap());
+        }
+        tungstenite::client::client(request, MaybeTlsStream::Plain(stream)).map(|(ws, _)| ws).map_err(|e| e.to_string())
     }
 
     fn read_text(ws: &mut WebSocket<MaybeTlsStream<TcpStream>>) -> Option<String> {
@@ -384,6 +429,15 @@ mod tests {
             }
             assert!(Instant::now() < deadline, "closed connections free their places");
         }
+    }
+
+    #[test]
+    fn a_forwarded_address_holds_at_most_max_per_address() {
+        let (port, _events) = relay(|c| c.max_per_address = 2);
+        let _held: Vec<_> = (0..2).map(|i| signal_from(port, &format!("addr-{i}"), Some("203.0.113.9")).unwrap()).collect();
+        assert!(signal_from(port, "addr-x", Some("203.0.113.9")).unwrap_err().contains("429"));
+        assert!(signal_from(port, "addr-y", Some("198.51.100.1")).is_ok(), "other addresses are not affected");
+        let _loopback: Vec<_> = (0..3).map(|i| signal(port, &format!("addr-lo-{i}")).unwrap()).collect();
     }
 
     #[test]

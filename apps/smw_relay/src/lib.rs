@@ -9,6 +9,7 @@ extern crate smw_netplay as smw;
 use smw::server;
 
 pub mod config;
+mod limits;
 mod lobby;
 mod signal;
 mod switch;

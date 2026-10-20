@@ -12,7 +12,12 @@ environment:
   SMW_RELAY_ALLOWED_ORIGINS  comma-separated page origins allowed to connect, or * for any; native games send none
                              (default: https://www.kylejameswalker.com,http://localhost:8000)
   SMW_RELAY_MAX_CLIENTS      simultaneous lobby clients, and separately signaling peers (default 64)
-  SMW_RELAY_MAX_CONNECTIONS  simultaneous TCP connections of any kind, handshakes included (default 256)";
+  SMW_RELAY_MAX_CONNECTIONS  simultaneous TCP connections of any kind, handshakes included (default 256)
+  SMW_RELAY_MAX_PER_ADDRESS  simultaneous connections from one client address, 0 for no limit (default 16)
+  SMW_RELAY_CONNECTS_PER_MINUTE  new connections one client address may open per minute, 0 for no limit (default 60)
+
+A connection from a loopback or private address may carry the client's address in X-Forwarded-For, as a reverse proxy
+sends it. Loopback clients are exempt from the per-address limits.";
 
 const DEFAULT_ORIGINS: &str = "https://www.kylejameswalker.com,http://localhost:8000";
 
@@ -30,6 +35,10 @@ pub struct Config {
     pub max_clients: usize,
     /// Simultaneous TCP connections of any kind; each holds a thread.
     pub max_connections: usize,
+    /// Simultaneous connections from one client address; 0 for no limit.
+    pub max_per_address: usize,
+    /// New connections one client address may open per minute; 0 for no limit.
+    pub connects_per_minute: u32,
     /// Virtual connections one client may hold open to the lobby.
     pub max_connections_per_client: usize,
     /// Overrides the lobby's `SMW_SIGNAL_URL`; `/signal` means this relay's own signaling.
@@ -52,6 +61,8 @@ impl Config {
             allowed_origins: parse_origins(&env::var("SMW_RELAY_ALLOWED_ORIGINS").unwrap_or_else(|_| DEFAULT_ORIGINS.to_string())),
             max_clients: 64,
             max_connections: 256,
+            max_per_address: 16,
+            connects_per_minute: 60,
             max_connections_per_client: 8,
             signal_url: env::var_os("SMW_SIGNAL_URL").is_none().then(|| "/signal".to_string()),
             log_file: true,
@@ -66,6 +77,12 @@ impl Config {
         }
         if let Ok(max) = env::var("SMW_RELAY_MAX_CONNECTIONS") {
             config.max_connections = max.parse().map_err(|_| format!("SMW_RELAY_MAX_CONNECTIONS: not a number: {max}"))?;
+        }
+        if let Ok(max) = env::var("SMW_RELAY_MAX_PER_ADDRESS") {
+            config.max_per_address = max.parse().map_err(|_| format!("SMW_RELAY_MAX_PER_ADDRESS: not a number: {max}"))?;
+        }
+        if let Ok(rate) = env::var("SMW_RELAY_CONNECTS_PER_MINUTE") {
+            config.connects_per_minute = rate.parse().map_err(|_| format!("SMW_RELAY_CONNECTS_PER_MINUTE: not a number: {rate}"))?;
         }
 
         let mut args = env::args().skip(1);
@@ -92,6 +109,8 @@ impl Config {
             allowed_origins: vec!["*".to_string()],
             max_clients: 8,
             max_connections: 32,
+            max_per_address: 0,
+            connects_per_minute: 0,
             max_connections_per_client: 8,
             signal_url: Some("/signal".to_string()),
             log_file: false,
@@ -133,6 +152,8 @@ mod tests {
             allowed_origins: parse_origins(origins),
             max_clients: 1,
             max_connections: 1,
+            max_per_address: 0,
+            connects_per_minute: 0,
             max_connections_per_client: 1,
             signal_url: None,
             log_file: true,
