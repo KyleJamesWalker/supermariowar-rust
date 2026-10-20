@@ -2,6 +2,7 @@
 
 use super::clock::time_now;
 use super::log::{log, log_close, log_init, log_silently};
+use super::log::verbose;
 use super::network_layer::NetworkLayer;
 use super::player::Player;
 use super::room::Room;
@@ -242,7 +243,7 @@ impl SMWServer {
             return;
         }
 
-        println!("Sending {} rooms:", self.rooms.len());
+        verbose!("Sending {} rooms:", self.rooms.len());
         for room in self.rooms.values() {
             // only visible if public and has valid map
             if room.visible && !room.mapPackage.empty() {
@@ -267,7 +268,7 @@ impl SMWServer {
 
                     roomInfo.gamemodeID = room.gamemodeID;
 
-                    println!(
+                    verbose!(
                         "  room {}: {{{}; pass?: {}; players: {}}}",
                         { roomInfo.roomID } as i32,
                         cstr_field(&roomInfo.name),
@@ -332,10 +333,10 @@ impl SMWServer {
 
         let pkg = JoinRoom::from_bytes(data);
 
-        println!("{} wants to join room {}", String::from_utf8_lossy(&player.name), { pkg.roomID });
+        verbose!("{} wants to join room {}", String::from_utf8_lossy(&player.name), { pkg.roomID });
 
         let Some(room) = self.rooms.get_mut(&{ pkg.roomID }).filter(|room| room.visible) else {
-            println!("No such room! ({})", { pkg.roomID });
+            verbose!("No such room! ({})", { pkg.roomID });
             player.send_code(NET_RESPONSE_ROOM_NOT_FOUND);
             return;
         };
@@ -392,15 +393,15 @@ impl SMWServer {
     }
 
     fn host_changes_map(&mut self, playerID: u64, data: &[u8]) {
-        println!("hostChangesMap");
+        verbose!("hostChangesMap");
         let Some(room) = self.hosted_room(playerID) else { return };
 
         room.change_and_send_map(data);
-        println!("room open!");
+        verbose!("room open!");
     }
 
     fn host_changes_game_mode_settings(&mut self, playerID: u64, data: &[u8]) {
-        println!("hostChangesGameModeSettings");
+        verbose!("hostChangesGameModeSettings");
         let Some(room) = self.hosted_room(playerID) else { return };
 
         room.change_and_send_game_mode_settings(data);
@@ -413,7 +414,7 @@ impl SMWServer {
         }
 
         player.set_skin(data);
-        println!("Player {} changed skin", String::from_utf8_lossy(&player.name));
+        verbose!("Player {} changed skin", String::from_utf8_lossy(&player.name));
 
         let roomID = player.currentRoomID;
         if roomID == 0 {
@@ -517,7 +518,7 @@ impl Drop for SMWServer {
 
 impl NetworkEventHandler for SMWServer {
     fn on_connect(&mut self, _: &mut (), new_client: Box<dyn NetPeer>) {
-        println!("Connect event [{}].", new_client.get_player_id());
+        verbose!("Connect event [{}].", new_client.get_player_id());
 
         // Is there a player already with this address+port?
         self.players.remove(&new_client.get_player_id());
@@ -537,7 +538,7 @@ impl NetworkEventHandler for SMWServer {
     }
 
     fn on_disconnect(&mut self, _: &mut (), client: &mut dyn NetPeer) {
-        println!("Disconnect event [{}].", client.get_player_id());
+        verbose!("Disconnect event [{}].", client.get_player_id());
         let playerID = client.get_player_id();
         if self.players.contains_key(&playerID) {
             self.player_leaves_room(playerID);
@@ -545,7 +546,7 @@ impl NetworkEventHandler for SMWServer {
             log(&format!("[info] {}@{} disconnected.", String::from_utf8_lossy(&player.name), player.network_client.as_ref().unwrap().address_as_string()));
             self.players.remove(&playerID);
         } else {
-            println!("No such player!");
+            verbose!("No such player!");
         }
     }
 
@@ -601,8 +602,7 @@ impl NetworkEventHandler for SMWServer {
             NET_G2L_START_ROOM => self.player_starts_room(playerID),
 
             _ => {
-                print!("Unknown: {}", messageType);
-                println!();
+                verbose!("Unknown: {}", messageType);
             }
         }
     }

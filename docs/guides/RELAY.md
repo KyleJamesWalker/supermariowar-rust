@@ -40,6 +40,7 @@ The relay serves plain `ws://` and `GET /healthz`. Put a TLS proxy in front of i
 | `--config` | `serverconfig`, the lobby settings file |
 | `SMW_RELAY_ALLOWED_ORIGINS` | `https://www.kylejameswalker.com,http://localhost:8000`, or `*` |
 | `SMW_RELAY_MAX_CLIENTS` | `64` |
+| `SMW_LOBBY_VERBOSE` | unset; `1` logs every room update, room list and lobby message |
 
 The relay refuses a WebSocket whose `Origin` is not in the list. It accepts one without `Origin`: browsers always send it, so that is a native game. It also caps each player at 8 virtual connections and each message at 64 KiB. It drops a client that is silent for 60 seconds or whose outgoing queue fills up. When a player leaves, the relay closes its virtual connections and the lobby removes it from its room.
 

@@ -3,6 +3,7 @@
 use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::os::raw::{c_char, c_int, c_long};
+use std::sync::OnceLock;
 
 #[repr(C)]
 struct tm {
@@ -82,3 +83,19 @@ pub fn log(message: &str) {
 pub fn log_silently(message: &str) {
     write_log(false, message);
 }
+
+/// Whether `SMW_LOBBY_VERBOSE` is set to anything but empty or `0`.
+pub fn is_verbose() -> bool {
+    static VERBOSE: OnceLock<bool> = OnceLock::new();
+    *VERBOSE.get_or_init(|| std::env::var_os("SMW_LOBBY_VERBOSE").is_some_and(|v| !v.is_empty() && v != "0"))
+}
+
+/// `println!` for per-message detail, shown only when [`is_verbose`].
+macro_rules! verbose {
+    ($($arg:tt)*) => {
+        if $crate::server::log::is_verbose() {
+            println!($($arg)*);
+        }
+    };
+}
+pub(crate) use verbose;
