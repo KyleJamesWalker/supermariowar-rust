@@ -134,9 +134,43 @@ pub fn save(g: &mut Game) -> MatchState {
     }
 }
 
+#[cfg(debug_assertions)]
+thread_local! {
+    static TICKS_RUNNING: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+}
+
+/// Held while a gameplay tick runs, which may hold the `&'static mut` that accessors hand out into the boxes `load`
+/// replaces. Debug builds count it; release builds compile it away.
+pub(crate) struct TickGuard(());
+
+impl TickGuard {
+    #[inline]
+    pub(crate) fn enter() -> TickGuard {
+        #[cfg(debug_assertions)]
+        TICKS_RUNNING.set(TICKS_RUNNING.get() + 1);
+        TickGuard(())
+    }
+}
+
+impl Drop for TickGuard {
+    #[inline]
+    fn drop(&mut self) {
+        #[cfg(debug_assertions)]
+        TICKS_RUNNING.set(TICKS_RUNNING.get() - 1);
+    }
+}
+
+/// Panics in a debug build when a gameplay tick is running.
+#[inline]
+fn assert_between_ticks() {
+    #[cfg(debug_assertions)]
+    assert_eq!(TICKS_RUNNING.get(), 0, "rollback::load inside a gameplay tick, which may hold references into what it frees");
+}
+
 /// Puts `s` back. Call it between ticks, never from inside the gameplay state's own update. Players and objects are
 /// copied over the live ones of the same type, which keeps their allocations.
 pub fn load(g: &mut Game, s: &MatchState) {
+    assert_between_ticks();
     *g.game_values = s.game_values.clone();
     *g.g_map = s.g_map.clone();
     g.noncolcontainer.clone_from(&s.noncolcontainer);
@@ -428,6 +462,23 @@ fn logged_save(g: &mut Game, frame: i32, checksum_every: i32) -> (MatchState, Op
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    #[cfg(debug_assertions)]
+    #[should_panic(expected = "inside a gameplay tick")]
+    fn a_load_inside_a_tick_panics_in_debug() {
+        let _tick = TickGuard::enter();
+        assert_between_ticks();
+    }
+
+    #[test]
+    fn a_load_after_nested_ticks_end_is_allowed() {
+        {
+            let _tick = TickGuard::enter();
+            let _nested = TickGuard::enter();
+        }
+        assert_between_ticks();
+    }
 
     #[test]
     fn request_tokens_round_trip() {
