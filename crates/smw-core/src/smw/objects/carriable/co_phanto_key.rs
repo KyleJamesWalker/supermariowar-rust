@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/carriable/CO_PhantoKey.cpp
+//! Key for chase mode: the phanto chases whoever holds it.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -19,13 +19,17 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class phanto key (for chase mode)
 //------------------------------------------------------------------------------
+/// Carriable key; relocates to a random spawn point after `ticks(1000)` lying loose.
 #[derive(Clone)]
 pub struct CO_PhantoKey {
     pub mo_carried_object: MO_CarriedObject,
 
+    /// Ticks lying loose.
     pub relocatetimer: i16,
 
+    /// Tick counter for the sparkle overlay; it steps a frame every 4 ticks.
     pub sparkleanimationtimer: i16,
+    /// X offset (pixels) of the current sparkle frame.
     pub sparkledrawframe: i16,
 }
 impl_base!(CO_PhantoKey => mo_carried_object: MO_CarriedObject);
@@ -55,6 +59,7 @@ impl CO_PhantoKey {
         o
     }
 
+    /// Moves the key to a random spawn point, trying up to 11 times.
     pub fn place_key(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
 

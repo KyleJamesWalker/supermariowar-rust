@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/carriable/CO_Flag.cpp
+//! Capture-the-flag flag: a team's own flag or the neutral center flag.
 
 use crate::smw::object_container::ObjectId;
 use crate::smw::players::PlayerId;
@@ -21,23 +21,32 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class flag (for Capture the Flag mode)
 //------------------------------------------------------------------------------
+/// Flag that sits in its base until an enemy carries it off; can return home on touch or after a timeout.
 #[derive(Clone)]
 pub struct CO_Flag {
     pub mo_carried_object: MO_CarriedObject,
 
+    /// Ticks lying loose; the flag returns home at the auto-return setting.
     pub timer: i16,
+    /// This flag's home base.
     pub flagbase: ObjectId,
+    /// Owning team, or -1 for the center flag.
     pub teamID: i16,
+    /// The last holder faced right; picks the sprite row.
     pub fLastFlagDirection: bool,
+    /// The flag is at home and follows its base.
     pub fInBase: bool,
+    /// Last holder, credited if the thrown flag reaches their base; cleared a second after release.
     pub owner_throw: PlayerId,
+    /// Ticks before `owner_throw` is cleared.
     pub owner_throw_timer: i16,
+    /// Neutral flag any team can score; respawns at a random spawn point.
     pub centerflag: bool,
 }
 impl_base!(CO_Flag => mo_carried_object: MO_CarriedObject);
 
 impl CO_Flag {
-    /// Returns the heap object: the constructor hands `this` to `flagbase->setFlag`, so it must not move afterwards.
+    /// Returns the flag boxed; `place_flag` runs here and registers it with its base.
     pub fn new(g: &mut Game, nspr: SpriteId, base: ObjectId, iTeamID: i16, iColorID: i16) -> Ptr<CO_Flag> {
         let mut o = Ptr::new_box(CO_Flag {
             mo_carried_object: MO_CarriedObject::new_anim(g, nspr, Vec2s::zero(), 4, 8, 30, 30, 1, 1, 0, ((iColorID as i32) << 6) as i16, 32, 32),
@@ -78,6 +87,7 @@ impl CO_Flag {
         self.teamID
     }
 
+    /// Returns the flag to its base, or the center flag to a random spawn point.
     pub fn place_flag(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
 

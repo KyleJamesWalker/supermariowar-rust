@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/carriable/CO_KuriboShoe.cpp
+//! Kuribo's shoe: landing on it puts the player in the shoe.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -25,6 +25,7 @@ use crate::smw::player_components::player_kuribo_shoe::{NORMAL, STICKY};
 pub struct CO_KuriboShoe {
     pub co_spring: CO_Spring,
 
+    /// Sticky variant: on the ground the shoe stands still instead of hopping.
     pub fSticky: bool,
 }
 impl_base!(CO_KuriboShoe => co_spring: CO_Spring);

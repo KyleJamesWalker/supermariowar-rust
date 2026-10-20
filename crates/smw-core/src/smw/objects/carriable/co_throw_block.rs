@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/carriable/CO_ThrowBlock.cpp
+//! Brick pulled from a throw block: held, then thrown along the floor to kill players.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -27,23 +27,35 @@ use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
 //------------------------------------------------------------------------------
 // State 1: Moving
 // State 2: Holding
+/// Thrown brick; how it breaks depends on `iType`.
 #[derive(Clone)]
 pub struct CO_ThrowBlock {
     pub mo_carried_object: MO_CarriedObject,
 
+    /// Blue breaks on any hit, gray on walls only, red bounces off walls.
     pub iType: ThrowBlockType,
 
+    /// Ticks after the last throw; the brick breaks at the blue block lifetime setting.
     pub iDeathTime: i16,
+    /// Breaks on hitting a wall (blue and gray).
     pub fDieOnBounce: bool,
+    /// Breaks after hitting a player (blue).
     pub fDieOnPlayerCollision: bool,
+    /// Ticks before another wall bounce shows the bounce effect.
     pub iBounceCounter: i16,
+    /// Ticks after a throw during which the brick spares its thrower unless moving toward them.
     pub iNoOwnerKillTime: i16,
 
+    /// Frozen in an ice block; touching it shatters it.
     pub frozen: bool,
+    /// Ticks left frozen.
     pub frozentimer: i16,
+    /// Horizontal speed restored when the ice thaws.
     pub frozenvelocity: f32,
+    /// Animation speed restored when the ice thaws.
     pub frozenanimationspeed: i16,
 
+    /// Spotlight that follows a moving brick while spotlights are on.
     pub sSpotlight: SpotlightId,
 }
 impl_base!(CO_ThrowBlock => mo_carried_object: MO_CarriedObject);
@@ -93,6 +105,7 @@ impl CO_ThrowBlock {
         o
     }
 
+    /// A player landed on the brick: a moving brick kills them, a held one is knocked out of its holder's hands.
     pub fn hit_top(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut player = player;
         if g.player(player).is_invincible() || g.player(player).shyguy {
@@ -120,6 +133,7 @@ impl CO_ThrowBlock {
         false
     }
 
+    /// Side contact with a moving or held brick kills the player.
     pub fn hit_other(&mut self, g: &mut Game, player: PlayerId) -> bool {
         if self.state == 1 {
             // Moving
@@ -151,6 +165,7 @@ impl CO_ThrowBlock {
         false
     }
 
+    /// Kills an unprotected player and credits the thrower; an invincible player breaks the brick.
     pub fn kill_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         if g.player(player).is_invincible() || g.player(player).shyguy {
             self.die(g);
@@ -163,11 +178,12 @@ impl CO_ThrowBlock {
 
         self.check_and_die(g);
 
-        // Find the player that shot this shell so we can attribute a kill
+        // Credit the kill to the player who threw the brick.
         player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::ThrowBlock, false, false);
         true
     }
 
+    /// Breaks a frozen brick into ice fragments.
     pub fn shatter_die(&mut self, g: &mut Game) {
         if self.dead {
             return;
@@ -185,6 +201,7 @@ impl CO_ThrowBlock {
         self.die_helper(g);
     }
 
+    /// Removes the brick and frees its holder.
     fn die_helper(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         self.dead = true;
@@ -424,17 +441,11 @@ impl MO_CarriedObjectTrait for CO_ThrowBlock {
             if fPlayerBonusVel > 0.0 {
                 fVel += fPlayerBonusVel;
             }
-
-            // if (fVel >= 9.0f)
-            //	fSmoking = true;
         } else {
             fVel = vel(-6.5);
             if fPlayerBonusVel < 0.0 {
                 fVel += fPlayerBonusVel;
             }
-
-            // if (fVel <= -9.0f)
-            //	fSmoking = true;
         }
 
         self.velx = fVel;

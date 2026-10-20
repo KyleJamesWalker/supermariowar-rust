@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/carriable/CO_Star.cpp
+//! Star for star mode: marks the star player, or the ztar to avoid holding.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -21,15 +21,22 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class star (for star mode)
 //------------------------------------------------------------------------------
+/// Star carried by the current star player; touching that player takes it over.
 #[derive(Clone)]
 pub struct CO_Star {
     pub mo_carried_object: MO_CarriedObject,
 
+    /// Ticks lying loose; the star returns to its star player after `ticks(300)`.
     pub timer: i16,
+    /// 0 ztar (bad to hold), 1 star.
     pub iType: i16,
+    /// Sprite row offset (pixels): the kind, or the holder's color after `set_player_color`.
     pub iOffsetY: i16,
+    /// Tick counter for the sparkle overlay; it steps a frame every 4 ticks.
     pub sparkleanimationtimer: i16,
+    /// X offset (pixels) of the current sparkle frame.
     pub sparkledrawframe: i16,
+    /// Index of this star in the star mode.
     pub iID: i16,
 }
 impl_base!(CO_Star => mo_carried_object: MO_CarriedObject);
@@ -76,10 +83,12 @@ impl CO_Star {
     pub fn get_type(&self) -> i16 {
         self.iType
     }
+    /// Shows the star in the holder's color.
     pub fn set_player_color(&mut self, iColor: i16) {
         self.iOffsetY = (64 + ((iColor as i32) << 5)) as i16;
     }
 
+    /// Moves the star to its current star player, matching their velocity.
     pub fn place_star(&mut self, g: &mut Game) {
         if g.mode().gamemode != game_mode_star {
             return;

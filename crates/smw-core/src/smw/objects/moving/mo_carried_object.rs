@@ -27,6 +27,7 @@ pub struct MO_CarriedObject {
 
     /// Player holding the object, or `PlayerId::NONE`.
     pub owner: PlayerId,
+    /// Shell smoke trail; a smoking shell wins shell-on-shell hits. Nothing sets it, so it stays false.
     pub fSmoking: bool,
 
     /// Kick speed added to the owner's velocity, horizontally and upward (pixels per tick).
