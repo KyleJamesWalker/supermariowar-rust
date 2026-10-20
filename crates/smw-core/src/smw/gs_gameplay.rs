@@ -77,7 +77,7 @@ pub static scorepowerupoffsets: [[i16; 3]; 3] = [[37, 0, 0], [71, 89, 0], [105, 
 /// Creates the gameplay globals: the spotlight manager.
 pub fn init_globals(g: &mut Game) {
     g.spotlightManager.init(SpotlightManager::new());
-    g.sfx.musicfinished = g.sfx.musicfinished;
+    g.sfx.musicfinished = musicfinished;
 }
 
 #[derive(Clone)]
