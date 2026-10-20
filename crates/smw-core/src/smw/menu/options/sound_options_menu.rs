@@ -29,8 +29,8 @@ const VOLUMES: &[(&str, i16)] = &[
     ("Max", 128),
 ];
 
-#[derive(Default)]
 /// Volume sliders, pack and playlist pickers for music and sound.
+#[derive(Default)]
 pub struct UI_SoundOptionsMenu {
     pub ui_menu: UI_Menu,
 

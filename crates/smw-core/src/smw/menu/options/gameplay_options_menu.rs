@@ -13,10 +13,7 @@ use crate::common::uimenu::UI_Menu;
 use crate::globals::*;
 use crate::smw::menu::options::{select_field, OFF_ON};
 
-/*
-    This menu is where you can change various gameplay-related
-    settings, such as respawn time, bot difficulty or warp locking.
-*/
+/// Gameplay settings such as respawn time, bot difficulty and warp locking.
 #[derive(Default)]
 pub struct UI_GameplayOptionsMenu {
     pub ui_menu: UI_Menu,

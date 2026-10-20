@@ -18,8 +18,8 @@ use crate::globals::*;
 use crate::smw::ui::mi_frenzy_mode_options::MI_FrenzyModeOptions;
 use crate::smw::ui::mi_powerup_slider::MI_PowerupSlider;
 
-#[derive(Default)]
 /// One settings menu per game mode plus the boss minigame; fields write `game_values.gamemodemenusettings`.
+#[derive(Default)]
 pub struct UI_ModeOptionsMenu {
     pub ui_menu: UI_Menu,
 

@@ -12,8 +12,8 @@ use crate::common_netplay::protocol_definitions::{NET_MAX_ROOM_NAME_LENGTH, NET_
 use crate::globals::Ptr;
 use crate::smw::ui::network_list_scroll::MI_NetworkListScroll;
 
-#[derive(Default)]
 /// Room list with search, refresh and new room, plus Joining and password dialogs.
+#[derive(Default)]
 pub struct UI_NetLobbyMenu {
     pub ui_menu: UI_Menu,
 

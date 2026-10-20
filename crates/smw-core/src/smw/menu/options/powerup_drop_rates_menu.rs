@@ -9,10 +9,7 @@ use crate::common::uimenu::UI_Menu;
 use crate::globals::*;
 use crate::smw::ui::mi_powerup_selection::MI_PowerupSelection;
 
-/*
-    In this menu you can set how frequently can various
-    powerups pop out of a [?] block.
-*/
+/// How often each powerup comes out of a [?] block.
 #[derive(Default)]
 pub struct UI_PowerupDropRatesMenu {
     pub ui_menu: UI_Menu,

@@ -7,8 +7,8 @@ use crate::common::uimenu::UI_Menu;
 use crate::globals::*;
 use crate::smw::ui::mi_bonus_wheel::MI_BonusWheel;
 
-#[derive(Default)]
 /// Holds only the bonus wheel; cancel sends `MENU_CODE_BONUS_DONE`.
+#[derive(Default)]
 pub struct UI_BonusWheelMenu {
     pub ui_menu: UI_Menu,
 

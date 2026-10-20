@@ -12,8 +12,8 @@ use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
 use crate::smw::gs_gameplay::lookup_team_id;
 
-#[cfg(not(target_os = "emscripten"))]
 /// Pauses 10 ms between thumbnail renders; a no-op on the web.
+#[cfg(not(target_os = "emscripten"))]
 fn small_delay(g: &mut Game) {
     let mut gp = g.ptr();
     crate::services::delay(gp.get(), 10);

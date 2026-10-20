@@ -12,8 +12,8 @@ use crate::common_netplay::protocol_definitions::{NET_MAX_ROOM_NAME_LENGTH, NET_
 use crate::globals::Ptr;
 use crate::smw::net::net_save_server_list;
 
-#[derive(Default)]
 /// Room name and optional password fields, and Create.
+#[derive(Default)]
 pub struct UI_NetNewRoomMenu {
     pub ui_menu: UI_Menu,
 

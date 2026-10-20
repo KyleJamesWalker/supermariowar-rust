@@ -38,8 +38,8 @@ const g_iAutoFilterIcons: [i16; NUM_AUTO_FILTERS as usize] = [37, 29, 33, 1, 0, 
 
 const GM_LAST: usize = GAMEMODE_LAST as usize;
 
-#[derive(Default)]
 /// Game setup for single games, tournaments, tours and worlds; Start launches the match.
+#[derive(Default)]
 pub struct UI_GameSettingsMenu {
     pub ui_menu: UI_Menu,
 

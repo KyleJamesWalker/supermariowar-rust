@@ -11,8 +11,8 @@ use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
 use crate::smw::gs_gameplay::lookup_team_id;
 
-#[derive(Clone, Debug, Default)]
 /// One list row.
+#[derive(Clone, Debug, Default)]
 pub struct NLS_ListItem {
     pub sLeft: String,  // Left-aligned text (eg. name)
     pub sRight: String, // Right-aligned text (eg. player count)

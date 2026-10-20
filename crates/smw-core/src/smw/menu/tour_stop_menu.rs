@@ -11,8 +11,8 @@ use crate::common::uimenu::UI_Menu;
 use crate::globals::*;
 use crate::smw::ui::mi_tour_stop::MI_TourStop;
 
-#[derive(Default)]
 /// The next tour stop's summary; cancel opens the Exit Tour dialog.
+#[derive(Default)]
 pub struct UI_TourStopMenu {
     pub ui_menu: UI_Menu,
 

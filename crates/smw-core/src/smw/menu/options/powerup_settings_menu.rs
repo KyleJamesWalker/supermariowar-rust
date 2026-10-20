@@ -30,10 +30,7 @@ const RESPAWN_TIMES: &[(&str, i16)] = &[
     ("60 Seconds", 3600),
 ];
 
-/*
-    In this menu, you can change some powerup settings,
-    like fire rate, reloading of [?] blocks and bonus items.
-*/
+/// Item use speed, item and hidden block respawn, swap style and the bonus wheel.
 #[derive(Default)]
 pub struct UI_PowerupSettingsMenu {
     pub ui_menu: UI_Menu,

@@ -10,8 +10,8 @@ use crate::common::uimenu::UI_Menu;
 use crate::globals::*;
 use crate::smw::ui::mi_tournament_scoreboard::MI_TournamentScoreboard;
 
-#[derive(Default)]
 /// Scoreboard plus a Next button; Next and cancel both return to game setup.
+#[derive(Default)]
 pub struct UI_TournamentScoreboardMenu {
     pub ui_menu: UI_Menu,
 

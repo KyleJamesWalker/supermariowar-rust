@@ -12,8 +12,8 @@ use crate::smw::stats::{clock, Lifetime};
 /// Label and value text rows laid out on screen.
 const ROWS: usize = 16;
 
-#[derive(Default)]
 /// Lifetime stats table with Reset Stats and a confirmation dialog.
+#[derive(Default)]
 pub struct UI_StatsMenu {
     pub ui_menu: UI_Menu,
     labels: Vec<Ctl<MI_Text>>,

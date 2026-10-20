@@ -13,8 +13,8 @@ use crate::globals::Ptr;
 use crate::smw::net::net_save_server_list;
 use crate::smw::ui::network_list_scroll::MI_NetworkListScroll;
 
-#[derive(Default)]
 /// Nickname, selected server, Connect, Add / Remove Server and Host on This Device.
+#[derive(Default)]
 pub struct UI_NetServersMenu {
     pub ui_menu: UI_Menu,
 

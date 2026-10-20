@@ -28,10 +28,7 @@ const LIMITS: &[(&str, i16)] = &[
     ("50", 50),
 ];
 
-/*
-    You can set the maximum number of uses of certain
-    projectile weapons and special player states.
-*/
+/// Sets the maximum uses of certain projectile weapons and special player states.
 #[derive(Default)]
 pub struct UI_ProjectileLimitsMenu {
     pub ui_menu: UI_Menu,

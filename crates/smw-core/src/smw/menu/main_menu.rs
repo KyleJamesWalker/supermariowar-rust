@@ -11,9 +11,7 @@ use crate::common::uimenu::UI_Menu;
 use crate::globals::*;
 use crate::smw::ui::mi_player_select::MI_PlayerSelect;
 
-/*
-    This is the main menu you see at the start of the game.
-*/
+/// The main menu shown at the start of the game.
 #[derive(Default)]
 pub struct UI_MainMenu {
     pub ui_menu: UI_Menu,

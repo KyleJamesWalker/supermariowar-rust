@@ -7,10 +7,7 @@ use crate::common::uimenu::UI_Menu;
 use crate::globals::*;
 use crate::smw::ui::mi_input_control_container::MI_InputControlContainer;
 
-/*
-    This is where the selected player (from PlayerControlsSelectMenu)
-    can set the preferred control device and keys.
-*/
+/// Lets the player picked in the controls menu set their device and keys.
 #[derive(Default)]
 pub struct UI_PlayerControlsMenu {
     pub ui_menu: UI_Menu,

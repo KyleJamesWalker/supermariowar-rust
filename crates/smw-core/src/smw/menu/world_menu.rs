@@ -12,8 +12,8 @@ use crate::globals::*;
 use crate::smw::ui::mi_tour_stop::MI_TourStop;
 use crate::smw::ui::mi_world::MI_World;
 
-#[derive(Default)]
 /// The world map with its stage popup; cancel opens the Exit World dialog.
+#[derive(Default)]
 pub struct UI_WorldMenu {
     pub ui_menu: UI_Menu,
 

@@ -18,8 +18,8 @@ use crate::smw::ui::mi_chat_message_box::MI_ChatMessageBox;
 use crate::smw::ui::mi_net_room_team_select::MI_NetRoomTeamSelect;
 use std::path::Path;
 
-#[derive(Default)]
 /// Player slots, chat, map preview and Start for a joined room.
+#[derive(Default)]
 pub struct UI_NetRoomMenu {
     pub ui_menu: UI_Menu,
 

@@ -3,8 +3,8 @@ use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 
-#[derive(Clone, Debug, Default)]
 /// One chat line: sender and text.
+#[derive(Clone, Debug, Default)]
 pub struct CMB_ChatMessage {
     pub playerName: String,
     pub message: String,

@@ -46,8 +46,8 @@ const LIFE_UNLIMITED_TO_30: &[(&str, i16)] = &[
     ("30 Seconds", 1800),
 ];
 
-#[derive(Default)]
 /// Per-weapon settings in two columns, each under a weapon name label.
+#[derive(Default)]
 pub struct UI_ProjectileOptionsMenu {
     pub ui_menu: UI_Menu,
 

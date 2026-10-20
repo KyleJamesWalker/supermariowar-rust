@@ -12,8 +12,8 @@ use crate::globals::Ptr;
 use crate::smw::net::{ServerAddress};
 use crate::smw::ui::mi_string_scroll::MI_StringScroll;
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
 /// Which button started the current edit; picking a list entry acts on it.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
 enum MenuState {
     #[default]
     DEFAULT,
@@ -22,8 +22,8 @@ enum MenuState {
     DELETE,
 }
 
-#[derive(Default)]
 /// Add, Edit and Remove buttons beside the saved server list, with an address dialog.
+#[derive(Default)]
 pub struct UI_NetEditServersMenu {
     pub ui_menu: UI_Menu,
 

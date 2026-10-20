@@ -10,11 +10,7 @@ use crate::common::uicontrol::{TextAlign};
 use crate::common::uimenu::UI_Menu;
 use crate::globals::*;
 
-/*
-    This is the main options menu, where you can select the
-    settings category you want to modify, or regenerate the
-    map cache.
-*/
+/// Picks a settings category, or regenerates the map thumbnail cache.
 #[derive(Default)]
 pub struct UI_OptionsMenu {
     pub ui_menu: UI_Menu,

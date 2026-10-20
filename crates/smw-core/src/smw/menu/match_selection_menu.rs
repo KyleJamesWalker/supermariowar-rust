@@ -14,8 +14,8 @@ use crate::common::uimenu::UI_Menu;
 use crate::globals::*;
 use crate::smw::ui::mi_world_preview_display::MI_WorldPreviewDisplay;
 
-#[derive(Default)]
 /// Match type picker; only the sub-field for the selected type is visible.
+#[derive(Default)]
 pub struct UI_MatchSelectionMenu {
     pub ui_menu: UI_Menu,
 

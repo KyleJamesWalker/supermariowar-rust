@@ -193,7 +193,7 @@ pub struct MenuState {
     fNeedMenuMusicReset: bool,
 
 
-    /// Progress through the minigame unlock code, whose check is disabled.
+    /// Progress through the minigame unlock code; nothing reads it.
     iUnlockMinigameOptionIndex: i16,
 
     /// Step of the AI setting up a tournament game: 1 map, 2 mode, 3 goal, 4 start; `iTournamentAITimer` frames apart.
@@ -1642,8 +1642,6 @@ impl MenuState {
             }
         }
 
-        /*if (code != MENU_CODE_NONE)
-            printf("Code: %d\n", code);*/
         false
     }
 }
@@ -1801,11 +1799,6 @@ impl GameState for MenuState {
                     }
                 }
             }
-            /*else if (game_values.tournamentwinner > -1) //World is completed
-            {
-                miBonusWheel->Reset(true);
-                mCurrentMenu = mBonusWheelMenu;
-            }*/
 
             crate::smw::gs_gameplay::update_score_board(g);
 
@@ -1967,13 +1960,6 @@ impl GameState for MenuState {
                     }
                 }
             }
-
-            //Watch for the konami code to unlock the minigames match type
-            /*
-            if (!game_values.minigameunlocked && mCurrentMenu == mMatchSelectionMenu) {
-                ... (commented out in the C++)
-            }
-            */
 
             if AppState::Menu == g.game_values.appstate {
                 let code = self.current().send_input(g, Ptr::from_mut(&mut gp.game_values.playerInput));

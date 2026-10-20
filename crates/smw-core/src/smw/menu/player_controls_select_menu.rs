@@ -10,9 +10,7 @@ use crate::common::uicontrol::{TextAlign};
 use crate::common::uimenu::UI_Menu;
 use crate::globals::*;
 
-/*
-    This menu leads to the control settings of player 1-4.
-*/
+/// Leads to the control settings of players 1 to 4.
 #[derive(Default)]
 pub struct UI_PlayerControlsSelectMenu {
     pub ui_menu: UI_Menu,

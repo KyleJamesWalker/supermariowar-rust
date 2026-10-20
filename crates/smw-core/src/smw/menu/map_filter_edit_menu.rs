@@ -7,8 +7,8 @@ use crate::common::uimenu::UI_Menu;
 use crate::globals::*;
 use crate::smw::ui::mi_map_browser::MI_MapBrowser;
 
-#[derive(Default)]
 /// Holds only the map browser; cancel sends `MENU_CODE_MAP_BROWSER_EXIT`.
+#[derive(Default)]
 pub struct UI_MapFilterEditMenu {
     pub ui_menu: UI_Menu,
 

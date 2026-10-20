@@ -14,10 +14,7 @@ use crate::globals::*;
 use crate::smw::menu::options::select_field;
 use crate::smw::ui::mi_packs_field::MI_PacksField;
 
-/*
-    You can switch between windowed and fullscreen mode,
-    as well as change the graphic packs here.
-*/
+/// Windowed or fullscreen mode, frame rate and the graphics packs.
 #[derive(Default)]
 pub struct UI_GraphicsOptionsMenu {
     pub ui_menu: UI_Menu,
