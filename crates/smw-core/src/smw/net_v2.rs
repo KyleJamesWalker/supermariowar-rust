@@ -12,8 +12,10 @@ use smw_peer::{PeerId, PeerSocket, RELIABLE};
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
 
-/// `[MSG_SLOT, slot]`: the sender's room slot. Reliable-channel messages start with one of these kinds.
+/// `[MSG_SLOT, HANDSHAKE_VERSION, slot]`: the sender's room slot. Reliable-channel messages start with one of these kinds.
 const MSG_SLOT: u8 = 1;
+/// The handshake's format; a peer announcing another one cannot play this build.
+const HANDSHAKE_VERSION: u8 = 1;
 /// `[MSG_START_PART, index u16 LE, count u16 LE, bytes]`: one part of the host's match start.
 const MSG_START_PART: u8 = 2;
 /// A joiner to the host: the match start is restored.
@@ -124,7 +126,7 @@ pub fn match_starting(g: &mut Game) -> bool {
             Err(e) => {
                 println!("[net] v2: cannot start the match: {e}");
                 for peer in socket.connected_peers().to_vec() {
-                    socket.send(RELIABLE, peer, &[MSG_SLOT, my_slot]);
+                    socket.send(RELIABLE, peer, &slot_message(my_slot));
                     socket.send(RELIABLE, peer, &[MSG_LEAVE]);
                 }
                 gp.netplay.client.linger(socket);
@@ -388,6 +390,20 @@ fn parse_slot(token: &str) -> Option<KeySlot> {
     }
 }
 
+/// This player's `MSG_SLOT`.
+fn slot_message(slot: u8) -> [u8; 3] {
+    [MSG_SLOT, HANDSHAKE_VERSION, slot]
+}
+
+/// The slot in a peer's `MSG_SLOT`, or why this build cannot play with that peer.
+fn read_slot_message(msg: &[u8]) -> Result<u8, String> {
+    match msg {
+        [MSG_SLOT, HANDSHAKE_VERSION, slot] => Ok(*slot),
+        [MSG_SLOT, version, _] => Err(format!("handshake version {version}, this build speaks {HANDSHAKE_VERSION}")),
+        _ => Err(format!("a handshake without a version, this build speaks {HANDSHAKE_VERSION}")),
+    }
+}
+
 /// Ends the match on this client and gives the joiner's own settings back.
 fn finish(g: &mut Game) {
     let mut gp = g.ptr();
@@ -415,8 +431,7 @@ impl V2Match {
 
     /// Sends this player's slot and, on the host, the match start in parts.
     fn announce(&mut self) {
-        let slot = [MSG_SLOT, self.my_slot];
-        self.send_all(&slot);
+        self.send_all(&slot_message(self.my_slot));
         if self.host {
             let parts: Vec<Vec<u8>> = self.start.chunks(PART_BYTES).map(|c| c.to_vec()).collect();
             let count = parts.len() as u16;
@@ -434,8 +449,9 @@ impl V2Match {
     fn receive_reliable(&mut self, g: &mut Game) -> Result<(), String> {
         for (peer, msg) in self.socket.receive(RELIABLE) {
             match msg.first() {
-                Some(&MSG_SLOT) if msg.len() == 2 => {
-                    self.slots.insert(peer, msg[1]);
+                Some(&MSG_SLOT) => {
+                    let slot = read_slot_message(&msg).map_err(|e| format!("peer {:08x}: {e}", peer.0 >> 96))?;
+                    self.slots.insert(peer, slot);
                 }
                 Some(&MSG_START_PART) if msg.len() >= 5 && !self.host => {
                     let index = u16::from_le_bytes([msg[1], msg[2]]) as usize;
@@ -655,5 +671,17 @@ impl V2Match {
         note(&mut self.rec, "d".to_string());
         draw_dialogs(g);
         true
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn slot_messages_carry_the_handshake_version() {
+        assert_eq!(read_slot_message(&slot_message(2)), Ok(2));
+        assert!(read_slot_message(&[MSG_SLOT, HANDSHAKE_VERSION + 1, 2]).is_err());
+        assert!(read_slot_message(&[MSG_SLOT, 2]).is_err());
     }
 }
