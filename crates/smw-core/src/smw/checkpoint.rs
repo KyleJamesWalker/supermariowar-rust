@@ -251,19 +251,13 @@ fn shared_name_ok(name: &str) -> bool {
     !rest.starts_with(['/', '\\', '~']) && !rest.contains(':') && !rest.split(['/', '\\']).any(|part| part == "..")
 }
 
-/// Loads a sound or track a checkpoint names; one this machine lacks plays as silence.
-fn load_audio<T>(g: &mut Game, name: &str, load: fn(&mut Game, &Path) -> Result<T, String>) -> Option<T> {
+/// Loads a sound or track a checkpoint names; one this machine lacks plays as silence of the same length.
+fn load_audio<T: Default>(g: &mut Game, name: &str, load: fn(&mut Game, &Path) -> T) -> T {
     if name.is_empty() {
-        return None;
+        return T::default();
     }
     let path = data_path(g, name);
-    match load(g, Path::new(&path)) {
-        Ok(audio) => Some(audio),
-        Err(e) => {
-            println!("[checkpoint] {e}; playing silence instead");
-            None
-        }
-    }
+    load(g, Path::new(&path))
 }
 
 /// Matches a checkpoint cannot start: a World's bonus house, which no replay covers yet.
@@ -528,7 +522,7 @@ fn walk(g: &mut Game, s: &mut Snap) {
             s.io(&mut paused);
             if s.load {
                 if (*t).name() != name {
-                    *t = load_audio(gp.get(), &name, sfxMusic::from_file).unwrap_or_default();
+                    *t = load_audio(gp.get(), &name, sfxMusic::from_file_or_silence);
                 }
                 (*t).set_paused(paused);
             }
@@ -542,7 +536,7 @@ fn walk(g: &mut Game, s: &mut Snap) {
             s.io(&mut last_start);
             if s.load {
                 if (*snd).name() != name {
-                    *snd = load_audio(gp.get(), &name, sfxSound::from_file).unwrap_or_default();
+                    *snd = load_audio(gp.get(), &name, sfxSound::from_file_or_silence);
                 }
                 (*snd).set_state(gp.get(), channels, last_start);
             }
