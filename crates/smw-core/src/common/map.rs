@@ -2911,36 +2911,6 @@ impl CMap {
             && !self.warplocked[warp1.connection as usize]
             && self.warpexits[warp1.id as usize].locktimer <= 0
     }
-
-    /// Moves solid tiles down into empty lower layers of the same cell.
-    pub fn optimize(&mut self, g: &mut Game) {
-        let mut gp = g.ptr();
-        for j in 0..MH {
-            for i in 0..MW {
-                for m in 1..ML {
-                    let tile = self.mapdata[i][j][m];
-                    let r#type = gp.g_tilesetmanager.tileset(g, tile.iID as isize as usize).tile_type(tile.iCol as usize, tile.iRow as usize);
-                    if r#type != TileType::NonSolid && r#type != TileType::Gap && r#type != TileType::SolidOnTop {
-                        let mut k = m as i32 - 1;
-                        while k >= 0 {
-                            let ku = k as usize;
-                            if self.mapdata[i][j][ku].iID as i32 == TILESETNONE {
-                                let fromTile = self.mapdata[i][j][ku + 1];
-                                self.mapdata[i][j][ku] = fromTile;
-
-                                self.mapdata[i][j][ku + 1].iID = TILESETNONE as i16;
-                                self.mapdata[i][j][ku + 1].iCol = 0;
-                                self.mapdata[i][j][ku + 1].iRow = 0;
-                            } else {
-                                break;
-                            }
-                            k -= 1;
-                        }
-                    }
-                }
-            }
-        }
-    }
 }
 
 #[cfg(test)]
