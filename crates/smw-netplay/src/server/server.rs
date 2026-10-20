@@ -54,6 +54,27 @@ impl V2Settings {
         let var = |name: &str| std::env::var(name).unwrap_or_default();
         V2Settings { signal_url: var("SMW_SIGNAL_URL"), turn_url: var("SMW_TURN_URL"), turn_secret: var("SMW_TURN_SECRET") }
     }
+
+    /// The `NET_L2P_MATCH_ROOM` for the player at `index` of `players` in signaling room `id`; None when it does not fit.
+    fn package(&self, id: &str, now_unix: u64, index: usize, players: u8) -> Option<MatchRoom> {
+        let url = format!("{}/{}", self.signal_url.trim_end_matches('/'), id);
+        let (username, credential) = if self.turn_url.is_empty() || self.turn_secret.is_empty() {
+            (String::new(), String::new())
+        } else {
+            match_room::turn_credentials(&self.turn_secret, now_unix, &format!("{}-{}", &id[..8], index))
+        };
+        let turn_url = if username.is_empty() { "" } else { self.turn_url.as_str() };
+        MatchRoom::with(players, &url, turn_url, &username, &credential)
+    }
+
+    /// Whether every match's `NET_L2P_MATCH_ROOM` fits these settings.
+    pub fn fit(&self) -> bool {
+        self.signal_url.is_empty() || self.package(&match_room::new_room_id(), unix_now(), 3, 4).is_some()
+    }
+}
+
+fn unix_now() -> u64 {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs())
 }
 
 impl SMWServer {
@@ -90,6 +111,11 @@ impl SMWServer {
         log_silently("-- Server started --");
 
         self.read_config(config_path);
+
+        if !self.v2.fit() {
+            log("[error] Netplay v2 settings too long for NET_L2P_MATCH_ROOM: SMW_SIGNAL_URL takes at most 126 bytes, SMW_TURN_URL 95.");
+            return false;
+        }
 
         if !self.netLayer.as_mut().is_some_and(|layer| layer.init(self.maxPlayerCount as u64)) {
             return false;
@@ -475,18 +501,11 @@ impl SMWServer {
             return false;
         }
         let id = match_room::new_room_id();
-        let url = format!("{}/{}", v2.signal_url.trim_end_matches('/'), id);
         let slots: Vec<usize> = (0..4).filter(|&p| !room.players[p].is_null()).collect();
-        let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs());
+        let now = unix_now();
         for (index, &slot) in slots.iter().enumerate() {
-            let (username, credential) = if v2.turn_url.is_empty() || v2.turn_secret.is_empty() {
-                (String::new(), String::new())
-            } else {
-                match_room::turn_credentials(&v2.turn_secret, now, &format!("{}-{}", &id[..8], index))
-            };
-            let turn_url = if username.is_empty() { "" } else { v2.turn_url.as_str() };
-            let Some(pkg) = MatchRoom::with(slots.len() as u8, &url, turn_url, &username, &credential) else {
-                log(&format!("[error] Netplay v2 settings too long for NET_L2P_MATCH_ROOM: {url}"));
+            let Some(pkg) = v2.package(&id, now, index, slots.len() as u8) else {
+                log(&format!("[error] Netplay v2 settings too long for NET_L2P_MATCH_ROOM: {}", v2.signal_url));
                 return false;
             };
             room.players[slot].send_data(pkg.as_bytes());
@@ -960,6 +979,15 @@ mod tests {
         server.on_connect(&mut (), Box::new(TestPeer { id: 2, outbox: refused.clone() }));
         assert_eq!(*refused.borrow(), [MessageHeader::new(NET_RESPONSE_CONNECT_SERVERFULL).as_bytes().to_vec(), Vec::new()]);
         assert!(!server.players.contains_key(&2));
+    }
+
+    #[test]
+    fn a_signaling_url_too_long_for_match_room_fails_init() {
+        let mut server = server();
+        server.v2 = V2Settings { signal_url: format!("wss://{}/signal", "x".repeat(120)), ..Default::default() };
+        assert!(!server.init_without_log_file(""));
+        server.v2.signal_url = format!("wss://{}/signal", "x".repeat(110));
+        assert!(server.init_without_log_file(""));
     }
 
     #[test]
