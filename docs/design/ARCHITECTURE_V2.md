@@ -122,7 +122,7 @@ pub trait Storage {
     fn settings_dir(&self) -> PathBuf;      // today ~/Library/Preferences/.smw on macOS
     fn data_dir(&self) -> PathBuf;          // GetRootDirectory() + "data", or --datadir
     fn persist(&mut self) {}                // web: IDBFS sync; elsewhere a no-op
-    fn list_dir(&self, dir: &Path) -> Vec<PathBuf>; // readdir order; smw-headless: APFS order on every OS
+    fn list_dir(&self, dir: &Path) -> Vec<PathBuf>; // APFS order on every OS
 }
 
 pub struct Services {

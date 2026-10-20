@@ -9,7 +9,7 @@ fn lowercase_ext(path: &Path) -> String {
     lowercase(ext)
 }
 
-/// A directory's entries in `Storage::list_dir` order, which by default is `readdir` order, unsorted.
+/// A directory's entries in `Storage::list_dir` order, the order a case-insensitive APFS volume lists them.
 pub struct DirIterator {
     m_entries: std::vec::IntoIter<PathBuf>,
 }
