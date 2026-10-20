@@ -4,7 +4,7 @@
 use smw_platform::{AudioOut, Clock, Events, Frame, Input, InputEvent, Overlay, PadChange, PadFamily, PadInfo, PadSlot, Pads, Services, SoundId, Storage, TrackId, Video, SCREEN_H, SCREEN_W};
 use std::cell::Cell;
 use std::collections::VecDeque;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 mod keys;
 pub use keys::HeadlessKeyboard;
@@ -168,43 +168,9 @@ impl Storage for HeadlessStorage {
     fn root_dir(&self) -> PathBuf {
         self.root_dir.clone()
     }
-
-    /// In the order a case-insensitive APFS volume lists them, as the goldens were made; the same on every OS.
-    fn list_dir(&self, dir: &Path) -> Vec<PathBuf> {
-        let mut entries: Vec<PathBuf> = std::fs::read_dir(dir).map(|e| e.filter_map(|e| e.ok()).map(|e| e.path()).collect()).unwrap_or_default();
-        entries.sort_by_cached_key(|p| apfs_key(&p.file_name().unwrap_or_default().to_string_lossy()));
-        entries
-    }
 }
 
-/// The reflected CRC-32C (Castagnoli) lookup table.
-const fn crc32c_table() -> [u32; 256] {
-    let mut table = [0; 256];
-    let mut i = 0;
-    while i < 256 {
-        let mut c = i as u32;
-        let mut bit = 0;
-        while bit < 8 {
-            c = if c & 1 != 0 { (c >> 1) ^ 0x82F6_3B78 } else { c >> 1 };
-            bit += 1;
-        }
-        table[i] = c;
-        i += 1;
-    }
-    table
-}
-
-/// `j_drec_hashed_key_t.name_len_and_hash` (tools/apfs_order.py). Names outside ASCII skip Unicode normalization.
-pub fn apfs_key(name: &str) -> u32 {
-    const CRC32C: [u32; 256] = crc32c_table();
-    let mut crc = 0xFFFF_FFFFu32;
-    for c in name.chars().flat_map(char::to_lowercase) {
-        for b in (c as u32).to_le_bytes() {
-            crc = CRC32C[((crc ^ b as u32) & 0xFF) as usize] ^ (crc >> 8);
-        }
-    }
-    ((crc & 0x3F_FFFF) << 10) | ((name.len() as u32 + 1) & 0x3FF)
-}
+pub use smw_platform::apfs_key;
 
 /// An in-memory queue: what the game pushes, it polls back, in SDL2's poll cycles. A poll marks the end of the queue
 /// (`SDL_POLLSENTINEL`) unless a mark is already in it, and returns `None` on reaching the mark, so input pushed after a
