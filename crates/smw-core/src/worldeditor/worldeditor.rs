@@ -80,12 +80,12 @@ pub const MAPTITLESTRING: &str = "World Editor";
 const szEditModes: [&str; 10] = [
     "Background Mode",
     "Foreground Mode",
-    "Path Sprite Mode",
-    "Stage Mode",
     "Path Mode",
+    "Start/Door Mode",
+    "Path Sprite Mode",
     "Vehicle Mode",
     "Warp Mode",
-    "Start/Door Mode",
+    "Water Mode",
     "Boundary Mode",
     "Stage Mode",
 ];
@@ -4503,7 +4503,7 @@ pub fn new_world(g: &mut Game) -> i32 {
     0
 }
 
-/// Asks for a size and resizes the world, dropping vehicles outside it and every warp, then saves.
+/// Asks for a size and resizes the world, dropping the vehicles and warp ends outside it, then saves.
 pub fn resize_world(g: &mut Game) -> i32 {
     let mut gp = g.ptr();
     let mut szWidth = String::new();
@@ -4533,7 +4533,15 @@ pub fn resize_world(g: &mut Game) -> i32 {
             }
         }
 
-        delete_all_vehicles_and_warps(g, false);
+        let outside: Vec<Vec2s> = ed(gp.get())
+            .warplist
+            .iter()
+            .flat_map(|w| [w.posA, w.posB])
+            .filter(|p| p.x >= 0 && (p.x >= iWidth || p.y >= iHeight))
+            .collect();
+        for end in outside {
+            RemoveWarpFromTile(g, end.x, end.y);
+        }
 
         g.g_worldmap.resize(iWidth, iHeight);
 
@@ -4544,7 +4552,7 @@ pub fn resize_world(g: &mut Game) -> i32 {
     0
 }
 
-/// Saves `worlds/screenshots/<world>.png`, `_preview.png` and `_thumb.png`, reloading the world from its file to draw each.
+/// Saves `worlds/screenshots/<world>.png`, `_preview.png` and `_thumb.png` of the world as edited.
 pub fn takescreenshot(g: &mut Game) {
         let mut gp = g.ptr();
     // SAFETY: `sScreenshot` is a live surface until it is freed at the end of its pass.
@@ -4553,8 +4561,7 @@ pub fn takescreenshot(g: &mut Game) {
 
         for iScreenshotSize in 0..3usize {
             let iTileSize: i16 = iTileSizes[iScreenshotSize];
-            let path = g.worldlist.at(g.game_values.worldindex as usize).to_string_lossy().into_owned();
-            *g.g_worldmap = WorldMap::new_path(g, &path, iTileSize);
+            g.g_worldmap.set_tile_size(iTileSize);
 
             let mut w: i16 = 0;
             let mut h: i16 = 0;
@@ -4616,8 +4623,7 @@ pub fn takescreenshot(g: &mut Game) {
             crate::common::gfx::soft_surface::free_surface(sScreenshot);
         }
 
-        let path = g.worldlist.at(g.game_values.worldindex as usize).to_string_lossy().into_owned();
-        *g.g_worldmap = WorldMap::new_path(g, &path, iTileSizes[0]);
+        g.g_worldmap.set_tile_size(TILESIZE as i16);
         g.blitdest = g.screen;
     }
 }

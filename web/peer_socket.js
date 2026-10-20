@@ -13,6 +13,10 @@ addToLibrary({
         peers: new Map(),
         changes: [],
         inbox: [[], []],
+        inboxBytes: [0, 0],
+        // Per channel, as in crates/smw-peer/src/native.rs: unreliable drops its oldest, reliable drops the peer.
+        inboxPackets: 8192,
+        inboxMaxBytes: 8 << 20,
         keepAlive: null,
 
         uuidToBytes: (uuid) => {
@@ -45,7 +49,15 @@ addToLibrary({
                 return;
             }
             socket.onmessage = (e) => {
-                if (SMWPeer.socket === socket && typeof e.data === 'string') SMWPeer.onEvent(JSON.parse(e.data));
+                if (SMWPeer.socket !== socket || typeof e.data !== 'string') return;
+                let event;
+                try {
+                    event = JSON.parse(e.data);
+                } catch (err) {
+                    console.warn('[net] signaling: ' + err.message);
+                    return;
+                }
+                if (event && typeof event === 'object') SMWPeer.onEvent(event);
             };
             socket.onclose = () => {
                 if (SMWPeer.socket === socket) SMWPeer.failed = true;
@@ -87,7 +99,7 @@ addToLibrary({
                     }
                 };
                 channel.onmessage = (e) => {
-                    if (!peer.gone && e.data instanceof ArrayBuffer) SMWPeer.inbox[index].push([id, new Uint8Array(e.data)]);
+                    if (!peer.gone && e.data instanceof ArrayBuffer) SMWPeer.deliver(index, id, new Uint8Array(e.data));
                 };
                 channel.onclose = () => SMWPeer.drop(id);
                 peer.channels.push(channel);
@@ -163,10 +175,24 @@ addToLibrary({
             const peer = SMWPeer.peers.get(id);
             if (!peer || peer.gone) return;
             peer.gone = true;
-            if (peer.connected) SMWPeer.changes.push([id, 0]);
+            SMWPeer.changes.push([id, 0]);
             peer.channels.forEach((channel) => channel.close());
             peer.pc.close();
             SMWPeer.peers.delete(id);
+        },
+
+        deliver: (channel, id, bytes) => {
+            const inbox = SMWPeer.inbox[channel];
+            const full = () =>
+                inbox.length >= SMWPeer.inboxPackets || SMWPeer.inboxBytes[channel] + bytes.length > SMWPeer.inboxMaxBytes;
+            if (channel === 0 && full()) {
+                console.warn('[net] peer ' + id + ' overflowed the reliable inbox; dropping it');
+                SMWPeer.drop(id);
+                return;
+            }
+            while (inbox.length && full()) SMWPeer.inboxBytes[channel] -= inbox.shift()[1].length;
+            SMWPeer.inboxBytes[channel] += bytes.length;
+            inbox.push([id, bytes]);
         },
 
         send: (channel, id, bytes) => {
@@ -187,6 +213,7 @@ addToLibrary({
             SMWPeer.id = null;
             SMWPeer.changes = [];
             SMWPeer.inbox = [[], []];
+            SMWPeer.inboxBytes = [0, 0];
         },
     },
 
@@ -217,10 +244,18 @@ addToLibrary({
     smw_peer_send: (channel, id, data, len) =>
         SMWPeer.send(channel, SMWPeer.bytesToUuid(HEAPU8.subarray(id, id + 16)), HEAPU8.slice(data, data + len)),
 
+    // The size of the next packet on `channel`, or -1 when there is none.
+    smw_peer_next_len__deps: ['$SMWPeer'],
+    smw_peer_next_len: (channel) => {
+        const message = SMWPeer.inbox[channel] && SMWPeer.inbox[channel][0];
+        return message ? message[1].length : -1;
+    },
+
     smw_peer_recv__deps: ['$SMWPeer'],
     smw_peer_recv: (channel, id, buf, cap) => {
         const message = SMWPeer.inbox[channel] && SMWPeer.inbox[channel].shift();
         if (!message) return -1;
+        SMWPeer.inboxBytes[channel] -= message[1].length;
         if (message[1].length > cap) return -2;
         HEAPU8.set(SMWPeer.uuidToBytes(message[0]), id);
         HEAPU8.set(message[1], buf);

@@ -130,7 +130,8 @@
 
 #Warps
 #location 1 x, y, location 2 x, y
-0
+1
+0,0,3,0
 
 #Vehicles
 #Sprite,Stage Type, Start Column, Start Row, Min Moves, Max Moves, Sprite Paces, Sprite Direction, Boundary

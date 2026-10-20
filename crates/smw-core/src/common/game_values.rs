@@ -3,8 +3,7 @@
 use crate::common::keys::*;
 use crate::game::Game;
 use crate::common::eyecandy_styles::{AwardStyle, ScoreboardStyle, SpawnStyle};
-use crate::common::file_io::{throw_runtime_error, BinaryFile};
-use crate::common::game::perror;
+use crate::common::file_io::{catch_runtime_error, throw_runtime_error, BinaryFile};
 use crate::common::game_mode::{CGameModeTrait, GAMEMODE_LAST};
 use crate::common::game_mode_settings::{GameModeSettings, GAMEMODESETTINGS_RAW_SIZE};
 use crate::common::gameplay_styles::{BoomerangStyle, ShieldStyle, TeamCollisionStyle, TournamentControlStyle, WarpLockStyle};
@@ -754,22 +753,6 @@ fn input_control_to_raw(c: &CInputPlayerControl, b: &mut [u8]) {
         for k in 0..NUM_KEYS {
             let o = 4 + (s * NUM_KEYS + k) * 4;
             b[o..o + 4].copy_from_slice(&c.inputGameControls[s].keys[k].to_le_bytes());
-        }
-    }
-}
-
-/// Runs `f`, printing the message of a `throw_runtime_error` panic in it to stderr; `None` when it panicked.
-fn catch_runtime_error<R>(f: impl FnOnce() -> R) -> Option<R> {
-    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)) {
-        Ok(r) => Some(r),
-        Err(e) => {
-            let what = e
-                .downcast_ref::<String>()
-                .cloned()
-                .or_else(|| e.downcast_ref::<&str>().map(|s| s.to_string()))
-                .unwrap_or_default();
-            perror(&what);
-            None
         }
     }
 }

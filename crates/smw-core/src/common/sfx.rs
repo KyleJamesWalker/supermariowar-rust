@@ -309,6 +309,23 @@ impl sfxSound {
         })
     }
 
+    /// `from_file`, or with a warning, when the file is missing or unreadable, a sound the virtual mixer plays for the
+    /// file's listed duration while the backend, which never loaded it, stays silent.
+    pub fn from_file_or_silence(g: &mut Game, path: &Path) -> Self {
+        let mut gp = g.ptr();
+        Self::from_file(g, path).unwrap_or_else(|e| {
+            println!("\n[sfx] {e}; playing silence instead");
+            let name = data_relative(&path.to_string_lossy());
+            sfxSound {
+                _alias: Aliased::new(),
+                m_sfx: MixChunkPtr(Some(SoundId(new_id(g))), gp),
+                m_duration_ms: sfx_durations::sound_ms(&name).unwrap_or(0),
+                m_name: name,
+                key: next_sound_key(),
+            }
+        })
+    }
+
     /// Starts the sound on a free channel; false if it started within the last 40 ms or no channel is free.
     pub fn play(&mut self, g: &mut Game) -> bool {
         let mut gp = g.ptr();
@@ -385,6 +402,26 @@ impl Default for sfxMusic {
 impl sfxMusic {
     pub const fn new() -> Self {
         sfxMusic { _alias: Aliased::new(), m_music: MixMusicPtr(None, Ptr::null()), m_duration: -1.0, m_name: String::new(), m_paused: false }
+    }
+
+    /// `from_file`, or with a warning, when the file is missing or unreadable, a track the virtual mixer plays for the
+    /// file's listed duration while the backend, which never loaded it, stays silent. An empty path is no track.
+    pub fn from_file_or_silence(g: &mut Game, path: &Path) -> Self {
+        let mut gp = g.ptr();
+        if path.as_os_str().is_empty() {
+            return Self::new();
+        }
+        Self::from_file(g, path).unwrap_or_else(|e| {
+            println!("\n[sfx] {e}; playing silence instead");
+            let name = data_relative(&path.to_string_lossy());
+            sfxMusic {
+                _alias: Aliased::new(),
+                m_music: MixMusicPtr(Some(TrackId(new_id(g))), gp),
+                m_duration: sfx_durations::track_seconds(&name).unwrap_or(-1.0),
+                m_name: name,
+                m_paused: false,
+            }
+        })
     }
 
     /// Loads and decodes a music file; `Err` holds the message to show.

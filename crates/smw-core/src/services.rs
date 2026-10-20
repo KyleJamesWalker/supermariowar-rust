@@ -27,7 +27,10 @@ pub fn ticks(g: &mut Game) -> u32 {
     services(g).clock.now_ms() as u32
 }
 
-/// Sleeps for `ms` milliseconds.
+/// Sleeps for `ms` milliseconds; returns at once in an unpaced replay (SMW_REPLAY with SMW_NOLIMIT).
 pub fn delay(g: &mut Game, ms: u32) {
+    if crate::smw::harness::replaying(g) && crate::smw::harness::no_limit(g) {
+        return;
+    }
     services(g).clock.sleep_ms(ms)
 }

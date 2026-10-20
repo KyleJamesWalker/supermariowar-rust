@@ -402,9 +402,9 @@ fn music_category(id: i16) -> MusicCategory {
     MusicCategory::ALL[id as usize]
 }
 
-/// Loads a music file; panics when it cannot.
+/// Loads a music file; one that cannot load plays as silence.
 fn load_music(g: &mut Game, path: &std::path::Path) -> sfxMusic {
-    sfxMusic::from_file(g, path).unwrap_or_else(|e| std::panic::panic_any(e))
+    sfxMusic::from_file_or_silence(g, path)
 }
 
 impl GameplayState {
@@ -2358,7 +2358,7 @@ pub fn play_music(g: &mut Game) {
     }
 
     //If no background music is playing, then play some
-    if !gp.backgroundmusic[0].is_playing(g) && !g.rm.sfx_invinciblemusic.is_playing(g) && !g.rm.sfx_timewarning.is_playing(g) && !g.mode().gameover {
+    if !g.musiclist.is_empty() && !gp.backgroundmusic[0].is_playing(g) && !g.rm.sfx_invinciblemusic.is_playing(g) && !g.rm.sfx_timewarning.is_playing(g) && !g.mode().gameover {
         if g.game_values.playnextmusic {
             let mapname = g.maplist.current_shortmapname().to_string();
             g.musiclist.set_next_music(music_category(g.g_map.musicCategoryID), &mapname, &g.g_map.szBackgroundFile);
