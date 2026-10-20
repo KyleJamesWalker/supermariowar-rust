@@ -133,6 +133,8 @@ pub struct Sdl2Video {
     /// The preset `set_shader` picked before `open`.
     #[cfg(feature = "gl")]
     pending_shader: Option<std::path::PathBuf>,
+    /// Why that preset did not load in `open`.
+    open_shader_error: Option<String>,
 }
 
 impl Sdl2Video {
@@ -151,6 +153,7 @@ impl Sdl2Video {
             lite: Option::None,
             #[cfg(feature = "gl")]
             pending_shader: Option::None,
+            open_shader_error: Option::None,
         }
     }
 }
@@ -312,6 +315,7 @@ impl Video for Sdl2Video {
             let preset: Option<std::path::PathBuf> = Option::None;
             if let Err(e) = self.create(fullscreen, preset.as_deref(), Option::None) {
                 eprintln!("[gfx] Shader preset unavailable, using the renderer: {e}");
+                self.open_shader_error = Some(e);
             }
         }
     }
@@ -325,6 +329,10 @@ impl Video for Sdl2Video {
         return crate::crt_lite::BUILTIN.iter().map(|s| s.to_string()).collect();
         #[cfg(any(not(feature = "gl"), feature = "shaders"))]
         Vec::new()
+    }
+
+    fn take_open_shader_error(&mut self) -> Option<String> {
+        self.open_shader_error.take()
     }
 
     fn set_shader(&mut self, preset: Option<&std::path::Path>) -> Result<(), String> {

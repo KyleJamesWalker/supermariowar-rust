@@ -32,7 +32,7 @@ Players get CRT and other display effects from the RetroArch shader collection, 
 
 - **Licensing:** most CRT shaders are GPL, the Royale blurs are MIT, crt-lottes is public domain, and librashader is MPL-2.0 or GPL-3.0. The game has no declared license. The release ships the shaders as unchanged source files with `SHADER_LICENSES.md`.
 - **BVM Monitor** is dark: crt-potato multiplies by a mask texture and has no parameters to brighten it.
-- **macOS:** OpenGL stops at 4.1 there, so presets that need GL 4.3 features, such as crt-geom (`GL_ARB_arrays_of_arrays`), fail to load. The menu should leave them out.
+- **macOS:** OpenGL stops at 4.1 there, so presets that need GL 4.3 features, such as crt-geom (`GL_ARB_arrays_of_arrays`), fail to load. Graphics Options then shows the error and hides the preset for the rest of the session.
 - **The 480-line source:** at 2x, each source line covers two screen rows, which is too few for strong scanlines. Presets tuned for 240-line games, such as CRT-Royale, look washed out unless tuned or shown at 3x and up.
 
 ## Rollout
