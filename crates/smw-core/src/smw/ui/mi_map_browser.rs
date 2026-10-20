@@ -21,6 +21,7 @@ fn small_delay(g: &mut Game) {
 #[cfg(target_os = "emscripten")]
 fn small_delay(_g: &mut Game) {}
 
+/// Full-screen grid of map thumbnails; [`Self::reset`] sets the mode before it opens.
 pub struct MI_MapBrowser {
     pub ui_control: UI_Control,
 

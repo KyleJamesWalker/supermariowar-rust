@@ -10,6 +10,7 @@ use crate::common::gfx::gfx_sprite::gfxSprite;
 
 const PTS: i16 = PREVIEWTILESIZE as i16;
 
+/// Shows `g_worldmap`, so [`Self::set_world`] replaces the shared world map.
 pub struct MI_WorldPreviewDisplay {
     pub ui_control: UI_Control,
 
@@ -52,6 +53,7 @@ crate::impl_base!(MI_WorldPreviewDisplay => ui_control: UI_Control);
 const ZERO_RECT: Rect = Rect { x: 0, y: 0, w: 0, h: 0 };
 
 impl MI_WorldPreviewDisplay {
+    /// `x`, `y` are in pixels; `cols` and `rows` are stored but unused.
     pub fn new(g: &mut Game, x: i16, y: i16, cols: i16, rows: i16) -> Self {
         let mut this = MI_WorldPreviewDisplay {
             ui_control: UI_Control::new(x, y),

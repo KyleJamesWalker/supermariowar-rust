@@ -10,6 +10,7 @@ use crate::common::uicontrol::UI_ControlTrait;
 use crate::globals::*;
 use crate::smw::ui::mi_announcer_field::MI_AnnouncerField;
 
+/// An announcer-style file list field that returns `itemChangedCode` when the pack changes.
 pub struct MI_PacksField {
     pub mi_announcer_field: MI_AnnouncerField,
 

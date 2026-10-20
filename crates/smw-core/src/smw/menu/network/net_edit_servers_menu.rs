@@ -23,6 +23,7 @@ enum MenuState {
 }
 
 #[derive(Default)]
+/// Add, Edit and Remove buttons beside the saved server list, with an address dialog.
 pub struct UI_NetEditServersMenu {
     pub ui_menu: UI_Menu,
 

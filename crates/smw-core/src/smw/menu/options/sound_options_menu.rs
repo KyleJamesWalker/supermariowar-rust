@@ -30,6 +30,7 @@ const VOLUMES: &[(&str, i16)] = &[
 ];
 
 #[derive(Default)]
+/// Volume sliders, pack and playlist pickers for music and sound.
 pub struct UI_SoundOptionsMenu {
     pub ui_menu: UI_Menu,
 

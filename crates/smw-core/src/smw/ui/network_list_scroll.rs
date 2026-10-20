@@ -56,6 +56,7 @@ pub struct MI_NetworkListScroll {
 crate::impl_base!(MI_NetworkListScroll => ui_control: UI_Control);
 
 impl MI_NetworkListScroll {
+    /// `x`, `y` and `width` are in pixels; `numlines` is the rows shown at once.
     #[allow(clippy::too_many_arguments)]
     pub fn new(nspr: SpriteId, x: i16, y: i16, width: i16, numlines: i16, title: &str, acceptCode: MenuCodeEnum, cancelCode: MenuCodeEnum) -> Self {
         MI_NetworkListScroll {

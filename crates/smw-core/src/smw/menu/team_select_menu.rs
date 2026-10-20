@@ -10,6 +10,7 @@ use crate::globals::*;
 use crate::smw::ui::mi_team_select::MI_TeamSelect;
 
 #[derive(Default)]
+/// Holds the team select control; cancel returns to match selection.
 pub struct UI_TeamSelectMenu {
     pub ui_menu: UI_Menu,
 

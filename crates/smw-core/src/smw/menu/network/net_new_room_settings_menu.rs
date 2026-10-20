@@ -17,6 +17,7 @@ use crate::smw::menu::game_settings_menu::UI_GameSettingsMenu;
 const GM_LAST: usize = GAMEMODE_LAST as usize;
 
 #[derive(Default)]
+/// Mode, goal, map and Random for a netplay room, before naming it or for the next match.
 pub struct UI_NetNewRoomSettingsMenu {
     pub ui_menu: UI_Menu,
 
@@ -103,6 +104,7 @@ impl UI_NetNewRoomSettingsMenu {
         }
     }
 
+    /// File path of the selected map.
     pub fn get_current_map_path(&self, g: &mut Game) -> String {
         g.ctl(self.miMapField).get_map_file_path(g)
     }

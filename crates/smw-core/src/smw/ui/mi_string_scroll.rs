@@ -61,6 +61,7 @@ pub struct MI_StringScroll {
 crate::impl_base!(MI_StringScroll => ui_control: UI_Control);
 
 impl MI_StringScroll {
+    /// `x`, `y` and `width` are in pixels; `numlines` is the rows shown at once.
     pub fn new(nspr: SpriteId, x: i16, y: i16, width: i16, numlines: i16) -> Self {
         MI_StringScroll {
             ui_control: UI_Control::new(x, y),
@@ -90,6 +91,7 @@ impl MI_StringScroll {
         self.iBottomStop = (self.items.len() as i64 - self.iNumLines as i64 + self.iTopStop as i64) as i16;
     }
 
+    /// Removes every entry and deactivates the list.
     pub fn clear_items(&mut self) {
         self.items.clear();
         self.current = 0;

@@ -19,6 +19,7 @@ const MWB: usize = MAX_WORLD_BONUSES_AWARDED as usize;
 /// X offset in pixels of each player sprite in a team row, by team size 1 to 3.
 const iScoreboardPlayerOffsetsX: [[i16; 3]; 3] = [[40, 0, 0], [19, 59, 0], [6, 40, 74]];
 
+/// One row per team; built by [`Self::create_scoreboard`] and updated after each game.
 pub struct MI_TournamentScoreboard {
     pub ui_control: UI_Control,
 
@@ -337,7 +338,7 @@ impl MI_TournamentScoreboard {
         }
     }
 
-    //Called by Tour -- Arranges players in terms of standings
+    /// Orders the tour rows by standing and shows each played stop's result icon.
     pub fn refresh_tour_scores(&mut self, g: &mut Game) {
         self.determine_scoreboard_winners(g);
 
@@ -431,7 +432,7 @@ impl MI_TournamentScoreboard {
         }
     }
 
-    //Called by Tournament -- Keeps players where they are and displays number of wins and mode type of win
+    /// Shows each team's wins as mode icons, swirling in the newest, and flags a team that reached `iNumGames`.
     pub fn refresh_tournament_scores(&mut self, g: &mut Game, gameWinner: i16) {
         let mut gp = g.ptr();
         self.iGameWinner = gameWinner;

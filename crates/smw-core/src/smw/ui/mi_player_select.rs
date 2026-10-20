@@ -10,6 +10,7 @@ use crate::common::ui::mi_image::MI_Image;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
 
+/// Writes `game_values.playercontrol` (0 none, 1 human, 2 CPU) for each player, keeping at least two in.
 pub struct MI_PlayerSelect {
     pub ui_control: UI_Control,
 
@@ -30,6 +31,7 @@ pub struct MI_PlayerSelect {
 crate::impl_base!(MI_PlayerSelect => ui_control: UI_Control);
 
 impl MI_PlayerSelect {
+    /// `x`, `y`, `width` and `indent` are in pixels.
     pub fn new(nspr: SpriteId, x: i16, y: i16, name: impl Into<String>, width: i16, indent: i16) -> Self {
         let ui_control = UI_Control::new(x, y);
         let mut miModifyImage = Box::new(MI_Image::new(nspr, ui_control.m_pos.x, ui_control.m_pos.y - 6, 32, 128, 78, 78, 4, 1, 8));

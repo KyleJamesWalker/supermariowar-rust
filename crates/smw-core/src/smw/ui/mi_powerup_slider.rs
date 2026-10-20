@@ -10,6 +10,7 @@ use crate::common::ui::mi_slider_field::MI_SliderField;
 use crate::common::uicontrol::UI_ControlTrait;
 use crate::globals::*;
 
+/// A slider field drawn with a 32-pixel powerup icon on its left.
 pub struct MI_PowerupSlider {
     pub mi_slider_field: MI_SliderField,
 
@@ -22,6 +23,7 @@ pub struct MI_PowerupSlider {
 crate::impl_base!(MI_PowerupSlider => mi_slider_field: MI_SliderField);
 
 impl MI_PowerupSlider {
+    /// `x`, `y` and `width` are in pixels; `powerupIndex` picks the icon.
     #[allow(clippy::too_many_arguments)]
     pub fn new(nspr: SpriteId, nsprSlider: SpriteId, nsprPowerup: SpriteId, x: i16, y: i16, width: i16, powerupIndex: i16) -> Self {
         let mut this = MI_PowerupSlider {

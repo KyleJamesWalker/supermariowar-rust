@@ -11,6 +11,7 @@ use crate::common::ui::mi_image::MI_Image;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
 
+/// Steps `musiclist`, the game music playlist, and restarts the menu music on each change.
 pub struct MI_PlaylistField {
     pub ui_control: UI_Control,
 
@@ -38,6 +39,7 @@ fn restart_menu_music(g: &mut Game) {
 }
 
 impl MI_PlaylistField {
+    /// `x`, `y`, `width` and `indent` are in pixels.
     pub fn new(nspr: SpriteId, x: i16, y: i16, name: impl Into<String>, width: i16, indent: i16) -> Self {
         let ui_control = UI_Control::new(x, y);
         let (px, py) = (ui_control.m_pos.x, ui_control.m_pos.y);

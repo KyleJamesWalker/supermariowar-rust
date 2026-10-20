@@ -49,6 +49,7 @@ pub struct MI_FrenzyModeOptions {
 crate::impl_base!(MI_FrenzyModeOptions => ui_control: UI_Control);
 
 impl MI_FrenzyModeOptions {
+    /// `numlines` is the slider rows shown at once; `width` is stored but unused.
     pub fn new(g: &mut Game, x: i16, y: i16, width: i16, numlines: i16) -> Self {
         let iNumLines = numlines;
         let iTopStop = (((iNumLines as i32 - 1) >> 1) + 3) as i16; // Plus 3 for the 3 fields at the top

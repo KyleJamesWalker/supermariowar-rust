@@ -10,6 +10,7 @@ use crate::common::ui::mi_button::MI_Button;
 use crate::common::uicontrol::{TextAlign, UI_ControlTrait};
 use crate::globals::*;
 
+/// A button that also draws each player's stored powerup at its right end.
 pub struct MI_StoredPowerupResetButton {
     pub mi_button: MI_Button,
 }

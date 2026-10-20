@@ -17,6 +17,7 @@ use crate::globals::*;
 pub const NUMBONUSITEMSONWHEEL: i32 = 10;
 const NB: usize = NUMBONUSITEMSONWHEEL as usize;
 
+/// Ten powerups around a ring with a spinning selector; Continue appears once it stops.
 pub struct MI_BonusWheel {
     pub ui_control: UI_Control,
 

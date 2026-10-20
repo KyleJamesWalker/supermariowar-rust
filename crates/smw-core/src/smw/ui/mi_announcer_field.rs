@@ -35,6 +35,7 @@ pub struct MI_AnnouncerField {
 crate::impl_base!(MI_AnnouncerField => ui_control: UI_Control);
 
 impl MI_AnnouncerField {
+    /// `x`, `y`, `width` and `indent` are in pixels; `pList` is the list to step.
     #[allow(clippy::too_many_arguments)]
     pub fn new(nspr: SpriteId, x: i16, y: i16, name: impl Into<String>, width: i16, indent: i16, pList: Ptr<SimpleFileList>) -> Self {
         let ui_control = UI_Control::new(x, y);
@@ -70,6 +71,7 @@ impl MI_AnnouncerField {
         MENU_CODE_MODIFY_ACCEPTED
     }
 
+    /// Steps the list on a direction or Random; select or cancel stops modifying. Shared with `MI_PacksField`.
     pub fn send_input_impl(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         for iPlayer in 0..4usize {
             let out = &playerInput.outputControls[iPlayer];

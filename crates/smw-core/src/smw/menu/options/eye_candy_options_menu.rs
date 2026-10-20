@@ -14,6 +14,7 @@ use crate::globals::*;
 use crate::smw::menu::options::{select_field, OFF_ON};
 
 #[derive(Default)]
+/// Visual options: spawn, award and scoreboard styles and on-screen notices.
 pub struct UI_EyeCandyOptionsMenu {
     pub ui_menu: UI_Menu,
 

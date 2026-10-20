@@ -1746,6 +1746,7 @@ impl UI_ModeOptionsMenu {
     pub fn get_options_menu(&mut self, iMode: i16) -> Ptr<UI_Menu> {
         Ptr::from_mut(&mut self.mModeSettingsMenu[iMode as usize])
     }
+    /// The boss minigame settings menu.
     pub fn get_boss_options_menu(&mut self) -> Ptr<UI_Menu> {
         Ptr::from_mut(&mut self.mBossSettingsMenu)
     }

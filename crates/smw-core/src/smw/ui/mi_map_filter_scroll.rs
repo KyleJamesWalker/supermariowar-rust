@@ -55,6 +55,7 @@ pub struct MI_MapFilterScroll {
 crate::impl_base!(MI_MapFilterScroll => ui_control: UI_Control);
 
 impl MI_MapFilterScroll {
+    /// `x`, `y` and `width` are in pixels; `numlines` is the rows shown at once.
     pub fn new(nspr: SpriteId, x: i16, y: i16, width: i16, numlines: i16) -> Self {
         MI_MapFilterScroll {
             ui_control: UI_Control::new(x, y),

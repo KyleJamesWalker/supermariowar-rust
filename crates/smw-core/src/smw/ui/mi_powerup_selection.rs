@@ -60,6 +60,7 @@ pub struct MI_PowerupSelection {
 crate::impl_base!(MI_PowerupSelection => ui_control: UI_Control);
 
 impl MI_PowerupSelection {
+    /// `numlines` is the slider rows shown at once; `width` is unused.
     pub fn new(g: &mut Game, x: i16, y: i16, width: i16, numlines: i16) -> Self {
         let _ = width;
         let iNumLines = numlines;

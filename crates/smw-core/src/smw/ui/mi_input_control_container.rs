@@ -359,6 +359,7 @@ fn key_ptr(g: &mut Game, iPlayerID: i16, iType: usize, iKey: usize) -> *mut Keyc
 }
 
 impl MI_InputControlContainer {
+    /// Builds the editor for player `playerID` (0 to 3) with fields placed from `x`, `y` in pixels.
     pub fn new(g: &mut Game, spr_button: SpriteId, x: i16, y: i16, playerID: i16) -> Self {
         let mut gp = g.ptr();
         unsafe {

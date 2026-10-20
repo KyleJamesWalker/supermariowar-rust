@@ -16,6 +16,7 @@ use crate::common::uicontrol::{TextAlign, UI_Control, UI_ControlTrait};
 use crate::globals::*;
 
 
+/// Disabled fields describing a stop, refreshed by [`Self::refresh`]; only Start takes input.
 pub struct MI_TourStop {
     pub ui_control: UI_Control,
 
@@ -43,6 +44,7 @@ pub struct MI_TourStop {
 crate::impl_base!(MI_TourStop => ui_control: UI_Control);
 
 impl MI_TourStop {
+    /// `fWorld` builds the world layout with its bonus row.
     pub fn new(g: &mut Game, x: i16, y: i16, fWorld: bool) -> Self {
         let mut gp = g.ptr();
         let fIsWorld = fWorld;

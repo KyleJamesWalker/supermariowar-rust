@@ -31,6 +31,7 @@ pub struct MI_ChatMessageBox {
 crate::impl_base!(MI_ChatMessageBox => ui_control: UI_Control);
 
 impl MI_ChatMessageBox {
+    /// `x`, `y` and `width` are in pixels; `numlines` is the height in 32-pixel rows.
     pub fn new(x: i16, y: i16, width: i16, numlines: i16) -> Self {
         MI_ChatMessageBox { ui_control: UI_Control::new(x, y), messages: Vec::new(), iNumLines: numlines, iWidth: width, iHeight: 0 }
     }
