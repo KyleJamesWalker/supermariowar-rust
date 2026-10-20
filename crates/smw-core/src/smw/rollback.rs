@@ -67,6 +67,7 @@ pub struct MatchState {
     bossgamemode: Option<CGM_Boss_MiniGame>,
     boxesgamemode: Option<CGM_Boxes_MiniGame>,
     currentgamemode: i16,
+    stats_page: bool,
     rng: RngState,
     sfx: SfxState,
     x_shake: i16,
@@ -104,6 +105,7 @@ pub fn save(g: &mut Game) -> MatchState {
         bossgamemode: g.bossgamemode.is_set().then(|| (*g.bossgamemode).clone()),
         boxesgamemode: g.boxesgamemode.is_set().then(|| (*g.boxesgamemode).clone()),
         currentgamemode: g.currentgamemode,
+        stats_page: g.main_loop.stats_page,
         rng: g.rng.clone(),
         sfx: g.sfx.clone(),
         x_shake: g.x_shake,
@@ -148,6 +150,7 @@ pub fn load(g: &mut Game, s: &MatchState) {
         *g.boxesgamemode = mode.clone();
     }
     g.currentgamemode = s.currentgamemode;
+    g.main_loop.stats_page = s.stats_page;
     g.rng = s.rng.clone();
     let audible = g.sfx.sfx_audible;
     g.sfx = s.sfx.clone();

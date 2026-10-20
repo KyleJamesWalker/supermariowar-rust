@@ -938,6 +938,10 @@ impl MenuState {
         } else if g.game_values.matchtype == MatchType::NetGame {
             // Net games use the mode settings the host sent at the sync, so every client plays the same match.
             crate::smw::net::reseed_for_match(g);
+            // Map & Mode sets only `currentgamemode`; the match plays `gamemode`, which joiners take from the host.
+            if g.netplay.theHostIsMe {
+                g.game_values.gamemode = Some(crate::common::game_mode::ModeId::Standard(g.currentgamemode as u8));
+            }
         } else {
             crate::smw::gs_gameplay::set_game_mode_settings_from_menu(g);
         }
