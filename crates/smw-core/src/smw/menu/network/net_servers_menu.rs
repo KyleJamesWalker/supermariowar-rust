@@ -1,4 +1,4 @@
-//! Port of src/smw/menu/network/NetServersMenu.cpp
+//! The multiplayer entry menu: nickname, server choice, connect, edit servers and host on this device.
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
 use crate::common::ui::menu_code::*;
@@ -25,6 +25,7 @@ pub struct UI_NetServersMenu {
     miNetServersNicknameField: Ctl<MI_TextField>,
     miNetServersBackButton: Ctl<MI_Button>,
 
+    /// Saved server picker popup; its selection writes `netplay.selectedServerIndex`.
     miNetServersScroll: Ctl<MI_NetworkListScroll>,
 
     miNetServersConnectingDialogImage: Ctl<MI_Image>,
@@ -131,6 +132,7 @@ impl UI_NetServersMenu {
         this
     }
 
+    /// Shows the selected server's hostname.
     pub fn refresh(&mut self, g: &mut Game) {
         if !g.netplay.savedServers.is_empty() {
             let nethostname = g.netplay.savedServers[g.netplay.selectedServerIndex as usize].hostname.clone();
@@ -138,6 +140,7 @@ impl UI_NetServersMenu {
         }
     }
 
+    /// Refills the server list, tagging servers seen on the LAN, and shows the selected one.
     pub fn refresh_scroll(&mut self, g: &mut Game) {
         g.ctl(self.miNetServersScroll).clear();
         for iServer in 0..g.netplay.savedServers.len() {
@@ -154,6 +157,7 @@ impl UI_NetServersMenu {
         }
     }
 
+    /// Connects to the selected server, saves the server list and shows the Connecting dialog.
     pub fn connect_in_progress(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         if g.netplay.savedServers.is_empty() {
@@ -174,6 +178,7 @@ impl UI_NetServersMenu {
         self.reset_menu(g);
     }
 
+    /// Opens the server picker popup with cancel disabled.
     pub fn open_server_list(&mut self, g: &mut Game) {
         g.netplay.connectSuccessful = false;
         g.ctl(self.miNetServersScroll).set_visible(true);
@@ -185,6 +190,7 @@ impl UI_NetServersMenu {
         self.reset_menu(g);
     }
 
+    /// Hides the picker and Connecting dialog and restores the remembered focus.
     pub fn restore(&mut self, g: &mut Game) {
         g.ctl(self.miNetServersScroll).set_visible(false);
         g.ctl(self.miNetServersConnectingDialogImage).set_visible(false);

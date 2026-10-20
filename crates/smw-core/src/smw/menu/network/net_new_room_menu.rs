@@ -1,4 +1,4 @@
-//! Port of src/smw/menu/network/NetNewRoomMenu.cpp
+//! Room name and password entry, then room creation.
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
 use crate::common::ui::menu_code::*;
@@ -85,6 +85,7 @@ impl UI_NetNewRoomMenu {
         this
     }
 
+    /// Sends the create room request and shows the Creating dialog; names of 2 characters or fewer are refused.
     pub fn create_in_progress(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         if g.netplay.newroom_name.len() > 2 {
@@ -105,11 +106,13 @@ impl UI_NetNewRoomMenu {
         }
     }
 
+    /// Stops waiting for the create answer and closes the dialog.
     pub fn abort_create(&mut self, g: &mut Game) {
         g.netplay.operationInProgress = false;
         self.restore(g);
     }
 
+    /// Hides the Creating dialog and focuses the room name.
     pub fn restore(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         g.ctl(self.miNetNewRoomCreatingDialogImage).set_visible(false);

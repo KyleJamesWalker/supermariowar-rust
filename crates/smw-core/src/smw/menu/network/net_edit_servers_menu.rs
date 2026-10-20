@@ -1,4 +1,4 @@
-//! Port of src/smw/menu/network/NetEditServersMenu.cpp
+//! Add, edit and remove entries in the saved server list.
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
 use crate::common::ui::menu_code::*;
@@ -13,6 +13,7 @@ use crate::smw::net::{ServerAddress};
 use crate::smw::ui::mi_string_scroll::MI_StringScroll;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+/// Which button started the current edit; picking a list entry acts on it.
 enum MenuState {
     #[default]
     DEFAULT,
@@ -42,6 +43,7 @@ pub struct UI_NetEditServersMenu {
     miDialogOK: Ctl<MI_Button>,
     miDialogCancel: Ctl<MI_Button>,
 
+    /// Backing text of the address field, at most 127 characters.
     dialogTextData: String,
 
     miLeftHeaderBar: Ctl<MI_Image>,
@@ -134,6 +136,7 @@ impl UI_NetEditServersMenu {
         this
     }
 
+    /// Refills the list from `netplay.savedServers`.
     fn reload_scroll(&mut self, g: &mut Game) {
         g.ctl(self.miServerScroll).clear_items();
         for iServer in 0..g.netplay.savedServers.len() {
@@ -156,6 +159,7 @@ impl UI_NetEditServersMenu {
         g.ctl(self.miDialogCancel).set_visible(false);
     }
 
+    /// Back to the button column: restores focus, hides the dialog and reloads the list.
     pub fn restore(&mut self, g: &mut Game) {
         if !self.m_savedCurrent.is_none() {
             self.restore_current(g);
@@ -171,6 +175,7 @@ impl UI_NetEditServersMenu {
         self.reload_scroll(g);
     }
 
+    /// Opens the address dialog for a new server.
     pub fn on_press_add(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         self.remember_current();
@@ -182,6 +187,7 @@ impl UI_NetEditServersMenu {
         self.set_cancel_code(MENU_CODE_TO_NET_ADDREMOVE_SERVER_MENU);
     }
 
+    /// Focuses the server list to pick the entry to edit; no-op on an empty list.
     pub fn on_press_edit(&mut self, g: &mut Game) {
         if g.netplay.savedServers.is_empty() {
             return;
@@ -199,6 +205,7 @@ impl UI_NetEditServersMenu {
         g.ctl(self.miInstructionsText2).set_text("to edit");
     }
 
+    /// Focuses the server list to pick entries to delete; no-op on an empty list.
     pub fn on_press_delete(&mut self, g: &mut Game) {
         if g.netplay.savedServers.is_empty() {
             return;
@@ -216,6 +223,7 @@ impl UI_NetEditServersMenu {
         g.ctl(self.miInstructionsText2).set_text("to delete");
     }
 
+    /// Edits or deletes the picked entry, per the current state; deleting stays in the list until it is empty.
     pub fn on_entry_select(&mut self, g: &mut Game) {
         let idx = g.ctl(self.miServerScroll).current_index() as usize;
         match self.currentState {
@@ -242,6 +250,7 @@ impl UI_NetEditServersMenu {
         }
     }
 
+    /// Saves the typed address as a new entry or over the edited one, then returns to the buttons.
     pub fn on_dialog_ok(&mut self, g: &mut Game) {
         let new_address = ServerAddress { hostname: self.dialogTextData.clone() };
 
