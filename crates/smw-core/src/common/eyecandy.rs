@@ -1,7 +1,5 @@
-//! Port of src/common/eyecandy.cpp
-//!
-//! Every class in the hierarchy below `EC_Animated` is a leaf, so `animate()` (virtual in C++)
-//! is resolved statically: each `update()` calls the `animate` of its own class.
+//! Eyecandy: cosmetic effects such as weather, corpses, award animations, spawn doors and spotlights. Each type's
+//! `update` calls its own `animate`; there is no dynamic dispatch below [`CEyecandyTrait`].
 
 use crate::common::resource_manager::{CResourceManager, SpriteId};
 use crate::common::gfx::soft_surface::Rect;
@@ -21,7 +19,7 @@ use std::ptr::null;
 const screenWidth: i32 = App::screenWidth;
 const screenHeight: i32 = App::screenHeight;
 
-// eyecandy base class
+/// Cloning for boxed eyecandy.
 pub trait CloneEyecandy {
     fn clone_box(&self) -> Box<dyn CEyecandyTrait>;
 }
@@ -38,12 +36,14 @@ impl Clone for Box<dyn CEyecandyTrait> {
     }
 }
 
+/// A cosmetic effect, updated and drawn each tick and removed once dead.
 pub trait CEyecandyTrait: CloneEyecandy {
     fn update(&mut self, g: &mut Game);
     fn draw(&self, g: &mut Game);
     fn is_dead(&self) -> bool;
 }
 
+/// State every eyecandy shares.
 #[derive(Clone, Default)]
 pub struct CEyecandy {
     pub dead: bool,
@@ -76,6 +76,7 @@ macro_rules! impl_eyecandy {
 //------------------------------------------------------------------------------
 // EC_StillImage
 //------------------------------------------------------------------------------
+/// A fixed sprite region drawn at (`ix`, `iy`); a zero width or height at creation uses the whole sprite's.
 #[derive(Clone)]
 pub struct EC_StillImage {
     pub c_eyecandy: CEyecandy,
@@ -122,6 +123,7 @@ impl EC_StillImage {
 //------------------------------------------------------------------------------
 // base class animated
 //------------------------------------------------------------------------------
+/// A sprite strip animation of frames `iAnimationW` wide, laid out left to right from `iAnimationX`.
 #[derive(Clone)]
 pub struct EC_Animated {
     pub c_eyecandy: CEyecandy,
@@ -131,10 +133,13 @@ pub struct EC_Animated {
     pub iAnimationY: i16,
     pub iAnimationW: i16,
     pub iAnimationH: i16,
+    /// Ticks per frame; 0 holds the first frame.
     pub iAnimationSpeed: i16,
+    /// Source x just past the last frame, in pixels.
     pub iAnimationFrames: i16,
 
     pub iAnimationTimer: i16,
+    /// Source x of the current frame, in pixels.
     pub iAnimationFrame: i16,
 
     pub ix: i16,
@@ -215,6 +220,7 @@ impl_eyecandy!(EC_Animated);
 //------------------------------------------------------------------------------
 // base class OscillatingAnimation
 //------------------------------------------------------------------------------
+/// An animation that plays forward, then backward, and repeats.
 #[derive(Clone)]
 pub struct EC_OscillatingAnimation {
     pub ec_animated: EC_Animated,
@@ -264,6 +270,7 @@ impl_eyecandy!(EC_OscillatingAnimation);
 //------------------------------------------------------------------------------
 // class cloud
 //------------------------------------------------------------------------------
+/// A cloud drifting sideways and wrapping around the screen.
 #[derive(Clone)]
 pub struct EC_Cloud {
     pub ec_still_image: EC_StillImage,
@@ -300,6 +307,7 @@ impl_eyecandy!(EC_Cloud);
 //------------------------------------------------------------------------------
 // class ghost
 //------------------------------------------------------------------------------
+/// An animated ghost drifting sideways and wrapping around the screen.
 #[derive(Clone)]
 pub struct EC_Ghost {
     pub ec_animated: EC_Animated,
@@ -344,6 +352,7 @@ impl_eyecandy!(EC_Ghost);
 //------------------------------------------------------------------------------
 // class leaf
 //------------------------------------------------------------------------------
+/// A leaf falling with the wind; it restarts at the opposite edge with a new look and speed.
 #[derive(Clone)]
 pub struct EC_Leaf {
     pub ec_oscillating_animation: EC_OscillatingAnimation,
@@ -429,6 +438,7 @@ impl_eyecandy!(EC_Leaf);
 //------------------------------------------------------------------------------
 // class snow
 //------------------------------------------------------------------------------
+/// A snowflake falling with the wind; `type` picks its row in the sprite.
 #[derive(Clone)]
 pub struct EC_Snow {
     pub ec_still_image: EC_StillImage,
@@ -489,6 +499,7 @@ impl_eyecandy!(EC_Snow);
 //------------------------------------------------------------------------------
 // class rain
 //------------------------------------------------------------------------------
+/// A rain drop falling down and to the left; it restarts from the top with a new look.
 #[derive(Clone)]
 pub struct EC_Rain {
     pub ec_still_image: EC_StillImage,
@@ -553,6 +564,7 @@ impl_eyecandy!(EC_Rain);
 //------------------------------------------------------------------------------
 // class bubble
 //------------------------------------------------------------------------------
+/// A bubble rising until it leaves the top, then restarting from the bottom.
 #[derive(Clone)]
 pub struct EC_Bubble {
     pub ec_oscillating_animation: EC_OscillatingAnimation,
@@ -621,6 +633,8 @@ impl_eyecandy!(EC_Bubble);
 //------------------------------------------------------------------------------
 // class corpse
 //------------------------------------------------------------------------------
+/// A dead player's body that falls to the ground and stays for `CORPSESTAY` ticks; `tx` and `tx2` are the tile
+/// columns under its edges.
 #[derive(Clone)]
 pub struct EC_Corpse {
     pub ec_still_image: EC_StillImage,
@@ -687,7 +701,7 @@ impl EC_Corpse {
             if nexty >= 0 {
                 let ty = (nexty as i32 / TILESIZE) as i16;
 
-                // FIXME: This seems to be wrong
+                // Compares tile flags with a `TileType` value; this works only because both encode solid-on-top as 2.
                 if g.g_map.map(self.tx as i32, ty as i32) == TileType::SolidOnTop.0 as i32
                     || g.g_map.map(self.tx2 as i32, ty as i32) == TileType::SolidOnTop.0 as i32
                 {
@@ -705,6 +719,7 @@ impl EC_Corpse {
                 let mut leftblock = g.map_block(self.tx, ty);
                 let mut rightblock = g.map_block(self.tx2, ty);
 
+                // 0x13 is solid, solid on top or death on bottom.
                 if (g.g_map.map(self.tx as i32, ty as i32) & 0x13) > 0
                     || (g.g_map.map(self.tx2 as i32, ty as i32) & 0x13) > 0
                     || (!leftblock.is_null() && !leftblock.is_transparent() && !leftblock.is_hidden())
@@ -743,6 +758,7 @@ impl_eyecandy!(EC_Corpse);
 //------------------------------------------------------------------------------
 // class EC_GravText
 //------------------------------------------------------------------------------
+/// Text centered on its start x, thrown with `vely` and falling until it leaves the screen.
 #[derive(Clone)]
 pub struct EC_GravText {
     pub c_eyecandy: CEyecandy,
@@ -789,6 +805,7 @@ impl_eyecandy!(EC_GravText);
 //------------------------------------------------------------------------------
 // class EC_Announcement
 //------------------------------------------------------------------------------
+/// A centered dialog box with text and an optional 32x32 icon, shown for `time` ticks.
 #[derive(Clone)]
 pub struct EC_Announcement {
     pub c_eyecandy: CEyecandy,
@@ -890,6 +907,7 @@ impl_eyecandy!(EC_Announcement);
 //------------------------------------------------------------------------------
 // class EC_FallingObject
 //------------------------------------------------------------------------------
+/// An animated sprite that falls until it leaves the screen.
 #[derive(Clone)]
 pub struct EC_FallingObject {
     pub ec_animated: EC_Animated,
@@ -950,6 +968,7 @@ impl_eyecandy!(EC_FallingObject);
 //------------------------------------------------------------------------------
 // class EC_SingleAnimation
 //------------------------------------------------------------------------------
+/// An animation that plays once and dies.
 #[derive(Clone)]
 pub struct EC_SingleAnimation {
     pub ec_animated: EC_Animated,
@@ -957,6 +976,7 @@ pub struct EC_SingleAnimation {
 impl_base!(EC_SingleAnimation => ec_animated: EC_Animated);
 
 impl EC_SingleAnimation {
+    /// Plays the whole sprite as `iframes` equal-width frames, `irate` ticks each.
     pub fn new(rm: &CResourceManager, nspr: SpriteId, x: i16, y: i16, iframes: i16, irate: i16) -> Self {
         let w = (rm.sprite(nspr).get_width() as i16 as i32 / iframes as i32) as i16;
         EC_SingleAnimation { ec_animated: EC_Animated::new(rm, nspr, x, y, 0, 0, w, 0, irate, iframes) }
@@ -985,6 +1005,7 @@ impl_eyecandy!(EC_SingleAnimation);
 //------------------------------------------------------------------------------
 // class EC_LoopingAnimation
 //------------------------------------------------------------------------------
+/// An animation that plays `loops` times, or forever when `loops` is 0.
 #[derive(Clone)]
 pub struct EC_LoopingAnimation {
     pub ec_animated: EC_Animated,
@@ -1022,7 +1043,7 @@ impl EC_LoopingAnimation {
 }
 impl_eyecandy!(EC_LoopingAnimation);
 
-/// `eyecandy[2].emplace<EC_SingleAnimation>(&rm->spr_fireballexplosion, x, y, 3, 8)`
+/// Adds a fireball explosion with its top left at (`x`, `y`) to the top eyecandy layer.
 fn emplace_fireball_explosion(g: &mut Game, x: i16, y: i16) {
     let spr = g.rm.spr_fireballexplosion;
     g.eyecandy[2].emplace(EC_SingleAnimation::new(&g.rm, spr, x, y, 3, 8));
@@ -1031,6 +1052,7 @@ fn emplace_fireball_explosion(g: &mut Game, x: i16, y: i16) {
 //------------------------------------------------------------------------------
 // class EC_ExplodingAward
 //------------------------------------------------------------------------------
+/// A 16x16 award icon that flies off and explodes after `timetolive` ticks.
 #[derive(Clone)]
 pub struct EC_ExplodingAward {
     pub c_eyecandy: CEyecandy,
@@ -1092,6 +1114,7 @@ impl_eyecandy!(EC_ExplodingAward);
 //------------------------------------------------------------------------------
 // class EC_SwirlingAward
 //------------------------------------------------------------------------------
+/// An award sprite spiraling out from a point, exploding after `timetolive` ticks.
 #[derive(Clone)]
 pub struct EC_SwirlingAward {
     pub c_eyecandy: CEyecandy,
@@ -1194,6 +1217,7 @@ impl_eyecandy!(EC_SwirlingAward);
 //------------------------------------------------------------------------------
 // class EC_RocketAward
 //------------------------------------------------------------------------------
+/// An award sprite launched upward under light gravity, exploding after `timetolive` ticks.
 #[derive(Clone)]
 pub struct EC_RocketAward {
     pub c_eyecandy: CEyecandy,
@@ -1300,8 +1324,9 @@ impl EC_RocketAward {
 impl_eyecandy!(EC_RocketAward);
 
 //------------------------------------------------------------------------------
-// class EC_FloatingAward
+// class EC_FloatingObject
 //------------------------------------------------------------------------------
+/// A sprite region moving at a fixed velocity, exploding after `timetolive` ticks.
 #[derive(Clone)]
 pub struct EC_FloatingObject {
     pub c_eyecandy: CEyecandy,
@@ -1375,6 +1400,8 @@ impl_eyecandy!(EC_FloatingObject);
 //------------------------------------------------------------------------------
 // class EC_SoulsAward
 //------------------------------------------------------------------------------
+/// A portal at a point that releases one soul rocket per entry of `id`, then closes. `speed` sets both the
+/// interval between souls and their launch speed.
 #[derive(Clone)]
 pub struct EC_SoulsAward {
     pub c_eyecandy: CEyecandy,
@@ -1511,8 +1538,9 @@ impl EC_SoulsAward {
 impl_eyecandy!(EC_SoulsAward);
 
 //------------------------------------------------------------------------------
-// class EC_DoorFront
+// class EC_Door
 //------------------------------------------------------------------------------
+/// A spawn door that rises, opens to show the player, closes and sinks; `iColor` picks the door's color row.
 #[derive(Clone)]
 pub struct EC_Door {
     pub c_eyecandy: CEyecandy,
@@ -1617,6 +1645,7 @@ impl_eyecandy!(EC_Door);
 //------------------------------------------------------------------------------
 // class EC_SuperStompExplosion
 //------------------------------------------------------------------------------
+/// The two-sided burst of a super stomp around (`ix`, `iy`), one frame every `iRate` ticks.
 #[derive(Clone)]
 pub struct EC_SuperStompExplosion {
     pub c_eyecandy: CEyecandy,
@@ -1633,6 +1662,7 @@ const fn r(x: i32, y: i32, w: i32, h: i32) -> Rect {
     Rect { x, y, w, h }
 }
 
+/// Super stomp frames: source rects in the sprite, and destination rects as offsets from the stomp point.
 static rectSuperStompLeftSrc: [Rect; 8] =
     [r(0, 0, 48, 40), r(0, 40, 54, 42), r(0, 82, 48, 58), r(0, 140, 42, 70), r(0, 210, 44, 78), r(108, 0, 44, 82), r(96, 82, 42, 76), r(88, 158, 34, 74)];
 static rectSuperStompRightSrc: [Rect; 8] =
@@ -1682,6 +1712,7 @@ impl_eyecandy!(EC_SuperStompExplosion);
 //------------------------------------------------------------------------------
 // class eyecandy_container
 //------------------------------------------------------------------------------
+/// One eyecandy layer.
 #[derive(Clone)]
 pub struct CEyecandyContainer {
     pub eyecandies: Vec<Box<dyn CEyecandyTrait>>,
@@ -1695,17 +1726,16 @@ impl Default for CEyecandyContainer {
 }
 
 impl CEyecandyContainer {
-    /// The C++ constructor only reserves MAXEYECANDY slots, which has no observable effect here.
     pub const fn new() -> Self {
         CEyecandyContainer { eyecandies: Vec::new(), _alias: Aliased::new() }
     }
 
-    /// `emplace<T>(args...)`: the caller constructs `T` with the same arguments.
+    /// Adds `ec` to the layer.
     pub fn emplace<T: CEyecandyTrait + 'static>(&mut self, ec: T) {
         self.eyecandies.push(Box::new(ec));
     }
 
-    /// Like the C++ range-for, elements emplaced into this container during the loop are not visited.
+    /// Updates every eyecandy; ones added during the update wait until the next one.
     pub fn update(&mut self, g: &mut Game) {
         let this: *mut CEyecandyContainer = self;
         let n = self.eyecandies.len();
@@ -1715,6 +1745,7 @@ impl CEyecandyContainer {
         }
     }
 
+    /// Draws every eyecandy, tagging each one's screen writes for the display list.
     pub fn draw(&self, g: &mut Game) {
         for ec in &self.eyecandies {
             crate::common::gfx::display_list::set_owner(crate::common::gfx::display_list::owner_of(&**ec));
@@ -1723,20 +1754,25 @@ impl CEyecandyContainer {
         crate::common::gfx::display_list::set_owner(crate::common::gfx::display_list::Owner::None);
     }
 
+    /// Removes every eyecandy.
     pub fn clean(&mut self) {
         self.eyecandies.clear();
     }
 
+    /// Removes the eyecandy that died this tick.
     pub fn clean_dead_objects(&mut self) {
         self.eyecandies.retain(|ec| !ec.is_dead());
     }
 }
 
+/// Spotlight hole per size step: width, half width, and source x and y in the overlay hole sprite.
 static iSpotlightValues: [[i16; 4]; 8] =
     [[16, 8, 240, 96], [32, 16, 336, 80], [48, 24, 416, 64], [64, 32, 416, 0], [80, 40, 336, 0], [96, 48, 240, 0], [112, 56, 128, 0], [128, 64, 0, 0]];
 
 #[derive(Clone)]
 
+/// A round hole in the darkness overlay. It grows to size step `iEndSize` (0 to 7), follows its owner, and
+/// shrinks away once the owner stops calling [`update_position`](Self::update_position).
 pub struct Spotlight {
     ix: i16,
     iy: i16,
@@ -1800,7 +1836,7 @@ impl Spotlight {
                 self.iSize += 1;
                 if self.iSize >= self.iEndSize {
                     self.iSize = self.iEndSize;
-                    self.iState = 1; // spotlight has reached it's full size
+                    self.iState = 1; // spotlight has reached its full size
                 }
 
                 self.apply_size();
@@ -1820,6 +1856,7 @@ impl Spotlight {
         }
     }
 
+    /// Moves the spotlight to (`x`, `y`) and keeps it alive this tick.
     pub fn update_position(&mut self, x: i16, y: i16) {
         self.ix = x;
         self.iy = y;
@@ -1827,6 +1864,7 @@ impl Spotlight {
         self.fUpdated = true;
     }
 
+    /// Cuts the spotlight's hole into the overlay, wrapping across the screen sides.
     pub fn draw(&mut self, g: &mut Game) {
         let (ix, iy, hw, w) = (self.ix as i32, self.iy as i32, self.iHalfWidth as i32, self.iWidth as i32);
         let rDst = Rect { x: ix - hw, y: iy - hw, w, h: w };
@@ -1867,6 +1905,7 @@ impl Default for SpotlightId {
     }
 }
 
+/// The spotlights cut into the darkness overlay, used when the spotlights option is on.
 #[derive(Clone, Default)]
 pub struct SpotlightManager {
     /// Draw order.
@@ -1881,6 +1920,7 @@ impl SpotlightManager {
         Self::default()
     }
 
+    /// Adds a spotlight that grows to size step `iSize`; returns [`SpotlightId::NONE`] when spotlights are off.
     pub fn add_spotlight(&mut self, g: &mut Game, ix: i16, iy: i16, iSize: i16) -> SpotlightId {
         if !g.game_values.spotlights {
             return SpotlightId::NONE;
@@ -1915,13 +1955,14 @@ impl SpotlightManager {
         }
     }
 
-    /// Does nothing for a removed spotlight, which the C++ wrote through a dangling pointer.
+    /// Moves spotlight `id` to (`x`, `y`), keeping it alive this tick; does nothing if it was removed.
     pub fn update_position(&mut self, id: SpotlightId, x: i16, y: i16) {
         if let Some(s) = self.get(id) {
             s.update_position(x, y);
         }
     }
 
+    /// Updates every spotlight, cuts them into the darkness overlay and draws it over the screen.
     pub fn draw_spotlights(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         unsafe {
@@ -1948,6 +1989,7 @@ impl SpotlightManager {
         gp.rm.sprite(gp.rm.spr_overlay).draw(g, 0, 0);
     }
 
+    /// Removes every spotlight.
     pub fn clear_spotlights(&mut self) {
         for id in std::mem::take(&mut self.spotlightList) {
             self.remove(id);
