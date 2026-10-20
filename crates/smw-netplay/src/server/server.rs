@@ -341,7 +341,7 @@ impl SMWServer {
 
         println!("{} wants to join room {}", String::from_utf8_lossy(&player.name), { pkg.roomID });
 
-        let Some(room) = self.rooms.get_mut(&{ pkg.roomID }) else {
+        let Some(room) = self.rooms.get_mut(&{ pkg.roomID }).filter(|room| room.visible) else {
             println!("No such room! ({})", { pkg.roomID });
             player.send_code(NET_RESPONSE_ROOM_NOT_FOUND);
             return;
@@ -389,15 +389,18 @@ impl SMWServer {
         player.lastActivityTime = time_now();
     }
 
+    /// The room `playerID` hosts, unless the player is playing.
+    fn hosted_room(&mut self, playerID: u64) -> Option<&mut Room> {
+        let player = self.player(playerID)?;
+        if player.isPlaying {
+            return None;
+        }
+        self.rooms.get_mut(&player.currentRoomID).filter(|room| room.is_host(player))
+    }
+
     fn host_changes_map(&mut self, playerID: u64, data: &[u8]) {
         println!("hostChangesMap");
-        let Some(player) = self.player(playerID) else { return };
-        let roomID = player.currentRoomID;
-        if roomID == 0 || player.isPlaying {
-            return;
-        }
-
-        let Some(room) = self.rooms.get_mut(&roomID) else { return };
+        let Some(room) = self.hosted_room(playerID) else { return };
 
         room.change_and_send_map(data);
         println!("room open!");
@@ -405,13 +408,7 @@ impl SMWServer {
 
     fn host_changes_game_mode_settings(&mut self, playerID: u64, data: &[u8]) {
         println!("hostChangesGameModeSettings");
-        let Some(player) = self.player(playerID) else { return };
-        let roomID = player.currentRoomID;
-        if roomID == 0 || player.isPlaying {
-            return;
-        }
-
-        let Some(room) = self.rooms.get_mut(&roomID) else { return };
+        let Some(room) = self.hosted_room(playerID) else { return };
 
         room.change_and_send_game_mode_settings(data);
     }
@@ -436,12 +433,9 @@ impl SMWServer {
 
     /// The room's host is back from a match: the room shows in the room list again, for the next one.
     fn host_reopens_room(&mut self, playerID: u64) {
-        let Some(player) = self.player(playerID) else { return };
-        let Some(room) = self.rooms.get_mut(&player.currentRoomID) else { return };
-        if room.players[room.hostPlayerNumber as usize] == player {
-            room.visible = true;
-            log(&format!("[info] Room #{} open again.", room.roomID as i32));
-        }
+        let Some(room) = self.hosted_room(playerID) else { return };
+        room.visible = true;
+        log(&format!("[info] Room #{} open again.", room.roomID as i32));
     }
 
     fn player_sends_chat_msg(&mut self, playerID: u64, data: &[u8]) {
@@ -469,19 +463,10 @@ impl SMWServer {
     fn player_starts_room(&mut self, playerID: u64) {
         let Some(mut player) = self.player(playerID) else { return };
         let roomID = player.currentRoomID;
-        if roomID == 0 || player.isPlaying {
-            return;
-        }
+        let v2 = self.v2.clone();
+        let Some(room) = self.hosted_room(playerID) else { return };
 
-        let Some(room) = self.rooms.get_mut(&roomID) else { return };
-        debug_assert!(room.hostPlayerNumber < 4);
-
-        // only host can start
-        if room.players[room.hostPlayerNumber as usize] != player {
-            return;
-        }
-
-        if !Self::send_match_room(&self.v2, room) {
+        if !Self::send_match_room(&v2, room) {
             log(&format!("[error] Room #{} cannot start: netplay needs SMW_SIGNAL_URL.", roomID as i32));
             return;
         }
@@ -890,6 +875,75 @@ mod tests {
         send(&mut server, 2, &guest, JoinRoom::with(room, "").as_bytes());
         assert_eq!(skins_from(&guest), [0], "the guest gets the host's skin, from slot 0");
         assert_eq!(skins_from(&host), [1], "the host gets the guest's skin, from slot 1");
+    }
+
+    fn map_change() -> Vec<u8> {
+        let mut data = MessageHeader::new(NET_NOTICE_MAP_CHANGE).as_bytes().to_vec();
+        data.extend_from_slice(&[0; 16]);
+        data
+    }
+
+    fn host_and_guest(server: &mut SMWServer) -> (u32, Outbox, Outbox) {
+        let host = connect(server, 1, "Host");
+        send(server, 1, &host, NewRoom::with("Room", "").as_bytes());
+        let created = host.borrow().iter().find(|m| m[2] == NET_RESPONSE_CREATE_OK).cloned().unwrap();
+        let room = NewRoomCreated::from_bytes(&created).roomID;
+        let guest = connect(server, 2, "Guest");
+        send(server, 2, &guest, JoinRoom::with(room, "").as_bytes());
+        host.borrow_mut().clear();
+        guest.borrow_mut().clear();
+        (room, host, guest)
+    }
+
+    #[test]
+    fn only_the_host_changes_the_map_and_mode_settings() {
+        let mut server = server();
+        let (_, host, guest) = host_and_guest(&mut server);
+        let mut settings = MessageHeader::new(NET_NOTICE_GAMEMODESETTINGS).as_bytes().to_vec();
+        settings.extend_from_slice(&[0; 16]);
+
+        send(&mut server, 2, &guest, &map_change());
+        send(&mut server, 2, &guest, &settings);
+        assert!(codes(&host).is_empty() && codes(&guest).is_empty());
+        let other = connect(&mut server, 3, "Other");
+        codes(&other);
+        send(&mut server, 3, &other, RoomList::new().as_bytes());
+        assert_eq!(codes(&other), [NET_RESPONSE_NO_ROOMS], "a joiner's map does not list the room");
+
+        send(&mut server, 1, &host, &map_change());
+        send(&mut server, 1, &host, &settings);
+        assert_eq!(codes(&guest), [NET_NOTICE_MAP_CHANGE, NET_NOTICE_GAMEMODESETTINGS]);
+    }
+
+    #[test]
+    fn only_the_host_starts_the_room() {
+        let mut server = server();
+        server.v2 = V2Settings { signal_url: "/signal".into(), ..Default::default() };
+        let (_, host, guest) = host_and_guest(&mut server);
+        send(&mut server, 2, &guest, StartRoom::new().as_bytes());
+        assert!(codes(&host).is_empty() && codes(&guest).is_empty());
+        send(&mut server, 1, &host, StartRoom::new().as_bytes());
+        assert_eq!(codes(&guest), [NET_L2P_MATCH_ROOM, NET_L2P_MATCH_START]);
+    }
+
+    #[test]
+    fn a_started_room_takes_no_joins_until_the_host_reopens_it() {
+        let mut server = server();
+        server.v2 = V2Settings { signal_url: "/signal".into(), ..Default::default() };
+        let (room, host, guest) = host_and_guest(&mut server);
+        send(&mut server, 1, &host, StartRoom::new().as_bytes());
+        let late = connect(&mut server, 3, "Late");
+        codes(&late);
+
+        send(&mut server, 3, &late, JoinRoom::with(room, "").as_bytes());
+        assert_eq!(codes(&late), [NET_RESPONSE_ROOM_NOT_FOUND]);
+        send(&mut server, 2, &guest, MessageHeader::new(NET_G2L_GAME_RESULTS).as_bytes());
+        send(&mut server, 3, &late, JoinRoom::with(room, "").as_bytes());
+        assert_eq!(codes(&late), [NET_RESPONSE_ROOM_NOT_FOUND], "only the host reopens the room");
+
+        send(&mut server, 1, &host, MessageHeader::new(NET_G2L_GAME_RESULTS).as_bytes());
+        send(&mut server, 3, &late, JoinRoom::with(room, "").as_bytes());
+        assert!(codes(&late).contains(&NET_RESPONSE_JOIN_OK));
     }
 
     #[test]

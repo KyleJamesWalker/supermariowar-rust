@@ -124,6 +124,10 @@ impl Room {
         player.skinPackage.set_player_id(0xFF);
     }
 
+    pub fn is_host(&self, player: Ptr<Player>) -> bool {
+        self.players.get(self.hostPlayerNumber as usize) == Some(&player)
+    }
+
     pub fn set_gamemode(&mut self, id: u8, goal: u16) {
         self.gamemodeID = id;
         self.gamemodeGoal = goal;
