@@ -208,18 +208,71 @@ fn shared_pause(g: &mut Game, keys: &[(KeySlot, Keys)], silent: bool) -> bool {
     g.game_values.flags.pausegame
 }
 
-/// FNV-1a over the match's harness dump (game mode, players, objects): what a desync check compares.
+/// FNV-1a over the match's harness dump (game mode, players, object counts) and the simulated state the dump leaves
+/// out: every object, every platform, the switches and the RNG. Floats go in as their bits, so every platform hashes
+/// the same state alike. What a desync check compares.
 pub fn checksum(g: &mut Game) -> u128 {
     let mut gp = g.ptr();
     let mut dump = Vec::new();
     if let Some(gameplay) = gp.gps.as_mut() {
         let _ = gameplay.harness_dump(g, &mut dump);
     }
-    let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
-    for byte in dump.iter().chain(&harness::frame(g).to_le_bytes()) {
-        hash = (hash ^ *byte as u64).wrapping_mul(0x0000_0100_0000_01b3);
+    let mut h = Fnv::new();
+    h.bytes(&dump);
+    h.bytes(&harness::frame(g).to_le_bytes());
+    for container in [&g.noncolcontainer, &g.objectcontainer[0], &g.objectcontainer[1], &g.objectcontainer[2]] {
+        h.u32(container.list().len() as u32);
+        for object in container.list() {
+            let o = object.obj();
+            h.u32(o.objectType as u32);
+            h.u32(o.state as u32);
+            h.u32(o.dead as u32);
+            h.u32(o.ix as u32);
+            h.u32(o.iy as u32);
+            h.f32s(&[o.fx, o.fy, o.velx, o.vely]);
+        }
     }
-    hash as u128
+    let map = &g.g_map;
+    for &id in map.platforms.iter().chain(&map.tempPlatforms) {
+        let p = map.platform(id);
+        h.u32(p.fDead as u32);
+        h.f32s(&[p.fx, p.fy, p.fVelX, p.fVelY]);
+    }
+    for switch in map.iSwitches {
+        h.u32(switch as u32);
+    }
+    if let Some((words, index)) = g.rng.generator_state() {
+        for word in words {
+            h.u32(word);
+        }
+        h.u32(index);
+    }
+    h.0 as u128
+}
+
+/// 64-bit FNV-1a.
+struct Fnv(u64);
+
+impl Fnv {
+    fn new() -> Fnv {
+        Fnv(0xcbf2_9ce4_8422_2325)
+    }
+
+    fn bytes(&mut self, bytes: &[u8]) {
+        for byte in bytes {
+            self.0 = (self.0 ^ *byte as u64).wrapping_mul(0x0000_0100_0000_01b3);
+        }
+    }
+
+    fn u32(&mut self, value: u32) {
+        self.bytes(&value.to_le_bytes());
+    }
+
+    fn f32s(&mut self, values: &[f32]) {
+        for value in values {
+            self.u32(value.to_bits());
+        }
+    }
 }
 
 /// The GGRS session parameters of a match: a player's keys per tick, addressed by peer.
