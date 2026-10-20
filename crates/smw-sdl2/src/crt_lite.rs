@@ -1,5 +1,5 @@
 //! The built-in presenter for platforms librashader does not reach (OpenGL ES 2 on Android, WebGL 1 in browsers):
-//! a GLSL port of EasyMode's CRT-Easymode, drawn straight to the window.
+//! GLSL ports of EasyMode's CRT-Easymode and Timothy Lottes' CRT shader, drawn straight to the window.
 
 use crate::gl_common::{drawable_size, letterbox, load_gl, save_shot, shot_frame, watch_mouse};
 use crate::shader_overlay::{link_program, Glsl, OverlayGl};
@@ -9,7 +9,7 @@ use smw_platform::{Frame, Overlay, SCREEN_H, SCREEN_W};
 use std::ffi::CStr;
 
 /// The built-in presets, as `set_shader` names them (`builtin:<name>`) and the menu shows them.
-pub const BUILTIN: [&str; 1] = ["CRT Easymode"];
+pub const BUILTIN: [&str; 2] = ["CRT Easymode", "CRT Lottes"];
 
 const VERTEX: &str = "attribute vec2 pos;
 varying vec2 vTexCoord;
@@ -21,7 +21,7 @@ void main() {
 
 // CRT-Easymode by EasyMode (libretro glsl-shaders, GPL), with its default parameters.
 // Scanlines need two output rows per source line, so they are off below that.
-const FRAGMENT: &str = "uniform sampler2D Source;
+const EASYMODE: &str = "uniform sampler2D Source;
 uniform vec4 SourceSize;
 uniform vec2 OutputSize;
 varying vec2 vTexCoord;
@@ -105,6 +105,152 @@ void main() {
 }
 ";
 
+// CRT Lottes by Timothy Lottes (libretro slang-shaders, public domain), with its default parameters.
+const LOTTES: &str = "uniform sampler2D Source;
+uniform vec4 SourceSize;
+uniform vec2 OutputSize;
+varying vec2 vTexCoord;
+
+#define HARD_SCAN -8.0
+#define HARD_PIX -3.0
+#define WARP_X 0.031
+#define WARP_Y 0.041
+#define MASK_DARK 0.5
+#define MASK_LIGHT 1.5
+#define BRIGHT_BOOST 1.0
+#define HARD_BLOOM_PIX -1.5
+#define HARD_BLOOM_SCAN -2.0
+#define BLOOM_AMOUNT 0.15
+
+float to_linear1(float c) {
+    return c <= 0.04045 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4);
+}
+
+vec3 to_linear(vec3 c) {
+    return vec3(to_linear1(c.r), to_linear1(c.g), to_linear1(c.b));
+}
+
+float to_srgb1(float c) {
+    return c < 0.0031308 ? c * 12.92 : 1.055 * pow(c, 0.41666) - 0.055;
+}
+
+vec3 to_srgb(vec3 c) {
+    return vec3(to_srgb1(c.r), to_srgb1(c.g), to_srgb1(c.b));
+}
+
+vec3 fetch(vec2 pos, vec2 off) {
+    pos = (floor(pos * SourceSize.xy + off) + vec2(0.5, 0.5)) * SourceSize.zw;
+    // The frame's B, G, R, A bytes arrive as R, G, B, A.
+    return to_linear(BRIGHT_BOOST * texture2D(Source, pos).bgr);
+}
+
+vec2 dist(vec2 pos) {
+    pos = pos * SourceSize.xy;
+    return -((pos - floor(pos)) - vec2(0.5));
+}
+
+// The preset's kernel shape is 2.0, so the original's pow(abs(pos), shape) is a square.
+float gaus(float pos, float scale) {
+    return exp2(scale * pos * pos);
+}
+
+vec3 horz3(vec2 pos, float off) {
+    vec3 b = fetch(pos, vec2(-1.0, off));
+    vec3 c = fetch(pos, vec2(0.0, off));
+    vec3 d = fetch(pos, vec2(1.0, off));
+    float dst = dist(pos).x;
+    float wb = gaus(dst - 1.0, HARD_PIX);
+    float wc = gaus(dst, HARD_PIX);
+    float wd = gaus(dst + 1.0, HARD_PIX);
+    return (b * wb + c * wc + d * wd) / (wb + wc + wd);
+}
+
+vec3 horz5(vec2 pos, float off, float scale) {
+    vec3 a = fetch(pos, vec2(-2.0, off));
+    vec3 b = fetch(pos, vec2(-1.0, off));
+    vec3 c = fetch(pos, vec2(0.0, off));
+    vec3 d = fetch(pos, vec2(1.0, off));
+    vec3 e = fetch(pos, vec2(2.0, off));
+    float dst = dist(pos).x;
+    float wa = gaus(dst - 2.0, scale);
+    float wb = gaus(dst - 1.0, scale);
+    float wc = gaus(dst, scale);
+    float wd = gaus(dst + 1.0, scale);
+    float we = gaus(dst + 2.0, scale);
+    return (a * wa + b * wb + c * wc + d * wd + e * we) / (wa + wb + wc + wd + we);
+}
+
+vec3 horz7(vec2 pos, float off) {
+    vec3 a = fetch(pos, vec2(-3.0, off));
+    vec3 b = fetch(pos, vec2(-2.0, off));
+    vec3 c = fetch(pos, vec2(-1.0, off));
+    vec3 d = fetch(pos, vec2(0.0, off));
+    vec3 e = fetch(pos, vec2(1.0, off));
+    vec3 f = fetch(pos, vec2(2.0, off));
+    vec3 g = fetch(pos, vec2(3.0, off));
+    float dst = dist(pos).x;
+    float wa = gaus(dst - 3.0, HARD_BLOOM_PIX);
+    float wb = gaus(dst - 2.0, HARD_BLOOM_PIX);
+    float wc = gaus(dst - 1.0, HARD_BLOOM_PIX);
+    float wd = gaus(dst, HARD_BLOOM_PIX);
+    float we = gaus(dst + 1.0, HARD_BLOOM_PIX);
+    float wf = gaus(dst + 2.0, HARD_BLOOM_PIX);
+    float wg = gaus(dst + 3.0, HARD_BLOOM_PIX);
+    return (a * wa + b * wb + c * wc + d * wd + e * we + f * wf + g * wg) / (wa + wb + wc + wd + we + wf + wg);
+}
+
+float scan(vec2 pos, float off, float scale) {
+    return gaus(dist(pos).y + off, scale);
+}
+
+vec3 tri(vec2 pos) {
+    vec3 a = horz3(pos, -1.0);
+    vec3 b = horz5(pos, 0.0, HARD_PIX);
+    vec3 c = horz3(pos, 1.0);
+    return a * scan(pos, -1.0, HARD_SCAN) + b * scan(pos, 0.0, HARD_SCAN) + c * scan(pos, 1.0, HARD_SCAN);
+}
+
+vec3 bloom(vec2 pos) {
+    vec3 a = horz5(pos, -2.0, HARD_BLOOM_PIX);
+    vec3 b = horz7(pos, -1.0);
+    vec3 c = horz7(pos, 0.0);
+    vec3 d = horz7(pos, 1.0);
+    vec3 e = horz5(pos, 2.0, HARD_BLOOM_PIX);
+    return a * scan(pos, -2.0, HARD_BLOOM_SCAN) + b * scan(pos, -1.0, HARD_BLOOM_SCAN) + c * scan(pos, 0.0, HARD_BLOOM_SCAN)
+        + d * scan(pos, 1.0, HARD_BLOOM_SCAN) + e * scan(pos, 2.0, HARD_BLOOM_SCAN);
+}
+
+vec2 warp(vec2 pos) {
+    pos = pos * 2.0 - 1.0;
+    pos *= vec2(1.0 + (pos.y * pos.y) * WARP_X, 1.0 + (pos.x * pos.x) * WARP_Y);
+    return pos * 0.5 + 0.5;
+}
+
+// The preset's stretched VGA shadow mask (shadowMask 3).
+vec3 mask(vec2 pos) {
+    vec3 m = vec3(MASK_DARK);
+    float x = fract((pos.x + pos.y * 3.0) * 0.166666666);
+    if (x < 0.333) {
+        m.r = MASK_LIGHT;
+    } else if (x < 0.666) {
+        m.g = MASK_LIGHT;
+    } else {
+        m.b = MASK_LIGHT;
+    }
+    return m;
+}
+
+void main() {
+    vec2 pos = warp(vTexCoord);
+    vec3 col = tri(pos) + bloom(pos) * BLOOM_AMOUNT;
+    col *= mask(vTexCoord * OutputSize * 1.000001);
+    if (pos.x <= 0.0001 || pos.x >= 0.9999 || pos.y <= 0.0001 || pos.y >= 0.9999) {
+        col = vec3(0.0);
+    }
+    gl_FragColor = vec4(to_srgb(col), 1.0);
+}
+";
+
 /// The language the built-in presenter's context runs.
 fn glsl() -> Glsl {
     if cfg!(any(target_os = "android", target_os = "emscripten")) {
@@ -145,7 +291,7 @@ impl CrtLite {
         if context.is_null() {
             return Err(format!("no OpenGL context: {}", CStr::from_ptr(SDL_GetError()).to_string_lossy()));
         }
-        match Self::with_context(context) {
+        match Self::with_context(context, if name == "CRT Lottes" { LOTTES } else { EASYMODE }) {
             Ok(lite) => {
                 println!("[gfx] Built-in shader {name} on OpenGL {}", lite.gl.get_parameter_string(glow::VERSION));
                 Ok(lite)
@@ -157,14 +303,14 @@ impl CrtLite {
         }
     }
 
-    unsafe fn with_context(context: SDL_GLContext) -> Result<Self, String> {
+    unsafe fn with_context(context: SDL_GLContext, fragment: &str) -> Result<Self, String> {
         SDL_GL_SetSwapInterval(if smw_platform::want_vsync() { 1 } else { 0 });
         let gl = load_gl();
         // A WebGL canvas keeps its one context, so the renderer's vertex arrays can still be enabled.
         for i in 0..gl.get_parameter_i32(glow::MAX_VERTEX_ATTRIBS) as u32 {
             gl.disable_vertex_attrib_array(i);
         }
-        let program = link_program(&gl, glsl(), VERTEX, FRAGMENT)?;
+        let program = link_program(&gl, glsl(), VERTEX, fragment)?;
         let es = glsl() == Glsl::Es100;
         let input = gl.create_texture()?;
         gl.bind_texture(glow::TEXTURE_2D, Some(input));
