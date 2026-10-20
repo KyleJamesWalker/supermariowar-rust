@@ -98,10 +98,15 @@ fn factor_blend(src: u32, dst: u32, factor: u32) -> u32 {
     out
 }
 
-/// `Blit8888to8888PixelAlpha` (blend, no alpha modulation, no color key).
+/// `Blit8888to8888PixelAlpha` (blend, no alpha modulation, no color key). `None` means the result is `dst`.
 #[inline]
-fn blend_pixel_alpha(src: u32, dst: u32) -> u32 {
-    factor_blend(src | 0xFF00_0000, dst, src >> 24)
+fn blend_pixel_alpha(src: u32, dst: u32) -> Option<u32> {
+    // The same result as the blend: factor 255 yields `src`, factor 0 yields `dst`.
+    match src >> 24 {
+        255 => Some(src),
+        0 => None,
+        a => Some(factor_blend(src | 0xFF00_0000, dst, a)),
+    }
 }
 
 /// `SDL_Blit_ARGB8888_ARGB8888_Modulate_Blend` (blend with alpha modulation, no color key).
@@ -424,18 +429,18 @@ fn lower_blit(src: &Pixels, state: &BlitState, sr: &Rect, dst: &mut PixelsMut, d
     let alpha_mod = state.alpha_mod as u32;
     let key = state.color_key.map(|k| k & RGB_MASK);
     match (state.blend == BlendMode::Blend, key, state.alpha_mod != 255) {
-        (false, key, false) => blit_rows(src, sr, dst, dx, dy, key, |s, _| s),
-        (false, key, true) => blit_rows(src, sr, dst, dx, dy, key, |s, _| (s & RGB_MASK) | (mult_div_255(s >> 24, alpha_mod) << 24)),
+        (false, key, false) => blit_rows(src, sr, dst, dx, dy, key, |s, _| Some(s)),
+        (false, key, true) => blit_rows(src, sr, dst, dx, dy, key, |s, _| Some((s & RGB_MASK) | (mult_div_255(s >> 24, alpha_mod) << 24))),
         (true, None, false) => blit_rows(src, sr, dst, dx, dy, None, blend_pixel_alpha),
-        (true, None, true) => blit_rows(src, sr, dst, dx, dy, None, |s, d| blend_modulate(s, d, alpha_mod)),
-        (true, key, false) => blit_rows(src, sr, dst, dx, dy, key, |s, d| blend_slow(s, d, None)),
-        (true, key, true) => blit_rows(src, sr, dst, dx, dy, key, |s, d| blend_slow(s, d, Some(alpha_mod))),
+        (true, None, true) => blit_rows(src, sr, dst, dx, dy, None, |s, d| Some(blend_modulate(s, d, alpha_mod))),
+        (true, key, false) => blit_rows(src, sr, dst, dx, dy, key, |s, d| Some(blend_slow(s, d, None))),
+        (true, key, true) => blit_rows(src, sr, dst, dx, dy, key, |s, d| Some(blend_slow(s, d, Some(alpha_mod)))),
     }
 }
 
 /// Picks the `blit_rows_with` instance for the color key and the two layouts.
 #[inline(always)]
-fn blit_rows(src: &Pixels, sr: &Rect, dst: &mut PixelsMut, dx: i32, dy: i32, key: Option<u32>, op: impl Fn(u32, u32) -> u32) {
+fn blit_rows(src: &Pixels, sr: &Rect, dst: &mut PixelsMut, dx: i32, dy: i32, key: Option<u32>, op: impl Fn(u32, u32) -> Option<u32>) {
     let k = key.unwrap_or(0);
     match (key.is_some(), src.alpha, dst.alpha) {
         (false, false, false) => blit_rows_with::<false, false, false>(src, sr, dst, dx, dy, k, op),
@@ -457,7 +462,7 @@ fn blit_rows_with<const KEYED: bool, const SRC_ALPHA: bool, const DST_ALPHA: boo
     dx: i32,
     dy: i32,
     key: u32,
-    op: impl Fn(u32, u32) -> u32,
+    op: impl Fn(u32, u32) -> Option<u32>,
 ) {
     for row in 0..sr.h {
         let s0 = (sr.y + row) as usize * src.pitch + sr.x as usize;
@@ -469,8 +474,11 @@ fn blit_rows_with<const KEYED: bool, const SRC_ALPHA: bool, const DST_ALPHA: boo
             if KEYED && s & RGB_MASK == key {
                 continue;
             }
-            let out = op(s, *d);
-            *d = if DST_ALPHA { out } else { out | 0xFF00_0000 };
+            match op(s, *d) {
+                Some(out) => *d = if DST_ALPHA { out } else { out | 0xFF00_0000 },
+                None if !DST_ALPHA => *d |= 0xFF00_0000,
+                None => {}
+            }
         }
     }
 }
@@ -762,6 +770,15 @@ mod tests {
                 SDL_FreeSurface(ssrc);
                 SDL_FreeSurface(sdst);
             }
+        }
+    }
+
+    #[test]
+    fn pixel_alpha_shortcut_matches_blend() {
+        let mut rng = Rng::new(0x5EED);
+        for _ in 0..1_000_000 {
+            let (s, d) = (rng.pixel(), rng.next());
+            assert_eq!(blend_pixel_alpha(s, d).unwrap_or(d), factor_blend(s | 0xFF00_0000, d, s >> 24), "src {s:08x} dst {d:08x}");
         }
     }
 
