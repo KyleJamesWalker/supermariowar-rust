@@ -830,8 +830,8 @@ impl WorldMap {
                     iReadType = 8;
                     iMapTileReadRow = 0;
 
-                                        //1 == |  2 == -  3 == -!  4 == L  5 == ,-  6 == -,  7 == -|  8 == -`-  9 == |-  10 == -,-  11 == +
-                                        //12, 13 == horizontal bridge open, closed;  14, 15 == vertical bridge open, closed
+                    //1 == |  2 == -  3 == -!  4 == L  5 == ,-  6 == -,  7 == -|  8 == -`-  9 == |-  10 == -,-  11 == +
+                    //12, 13 == horizontal bridge open, closed;  14, 15 == vertical bridge open, closed
                     for iRow in 0..this.iHeight {
                         for iCol in 0..this.iWidth {
                             this.set_tile_connections(iCol, iRow);

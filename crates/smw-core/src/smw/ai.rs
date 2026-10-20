@@ -183,9 +183,9 @@ pub struct CPlayerAI {
     pub attentionObjects: BTreeMap<i32, Box<AttentionObject>>,
     /// The goal the AI is going for and how many thinks it has spent on it.
     pub currentAttentionObject: AttentionObject,
-        /// Thinks in a row the AI has jumped at a wall it is walking into.
+    /// Thinks in a row the AI has jumped at a wall it is walking into.
     pub wall_frames: i16,
-        /// An opponent the AI gave up on behind a wall, and for how many more thinks.
+    /// An opponent the AI gave up on behind a wall, and for how many more thinks.
     pub ignored_player: (PlayerId, i16),
     /// The navigation graph, built on first use.
     pub nav: Option<NavGraph>,
