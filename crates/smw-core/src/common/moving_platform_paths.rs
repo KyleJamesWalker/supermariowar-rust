@@ -1,4 +1,4 @@
-//! Port of src/common/MovingPlatformPaths.cpp
+//! Paths that move platforms: back-and-forth lines, endless lines that wrap the screen, ellipses, and falling.
 
 use crate::game::Game;
 use crate::common::map::PlatformId;
@@ -12,6 +12,7 @@ use crate::common::object_base::cap_falling_velocity;
 use crate::globals::{Ptr, Aliased};
 use std::any::Any;
 
+/// Kind of platform path; the first three values are the map file's path type IDs.
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum PlatformPathType {
@@ -22,6 +23,7 @@ pub enum PlatformPathType {
     Falling,
 }
 
+/// Velocity of `speed` along `angle` (radians), with components under 0.01 snapped to 0.
 fn calc_velocity(speed: f32, angle: f32) -> Vec2f {
     let mut vel = Vec2f::new(speed * cosf(angle), speed * sinf(angle));
 
@@ -37,10 +39,13 @@ fn calc_velocity(speed: f32, angle: f32) -> Vec2f {
 
 #[derive(Clone)]
 
+/// State shared by every path. Each array holds two tracks: 0 is the platform's position, 1 a lookahead that
+/// runs ahead by the spawn animation's length so spawn checks see where the platform will be.
 pub struct MovingPlatformPath {
+    /// Start and end points in pixels; an ellipse keeps its center in `m_startPos`.
     pub m_startPos: Vec2f,
     pub m_endPos: Vec2f,
-    /// Map-file units, per original tick; motion scales it with `vel`.
+    /// Speed per 62.5 Hz tick as the map file stores it (pixels, or radians for an ellipse); motion scales it with `vel`.
     pub m_speed: f32,
 
     pub m_velocity: [Vec2f; 2],
@@ -48,6 +53,7 @@ pub struct MovingPlatformPath {
 }
 
 impl MovingPlatformPath {
+    /// A path base; `preview` halves positions and speed for the half-size map preview.
     pub fn new(speed: f32, startPos: Vec2f, endPos: Vec2f, preview: bool) -> Self {
         let mut p = MovingPlatformPath {
             m_startPos: startPos,
@@ -78,7 +84,7 @@ impl MovingPlatformPath {
     }
 }
 
-/// Virtual interface of `MovingPlatformPath`.
+/// Cloning for boxed paths.
 pub trait ClonePath {
     fn clone_box(&self) -> Box<dyn MovingPlatformPathTrait>;
 }
@@ -95,12 +101,13 @@ impl Clone for Box<dyn MovingPlatformPathTrait> {
     }
 }
 
+/// A platform path. `move` advances track `type` (0 or 1) one tick.
 pub trait MovingPlatformPathTrait: Any + ClonePath {
     fn path(&self) -> &MovingPlatformPath;
     fn path_mut(&mut self) -> &mut MovingPlatformPath;
     fn as_any(&mut self) -> &mut dyn Any;
 
-    /// C++ `typeId()`; renamed because `Any::type_id` takes the name.
+    /// The path's kind; not named `type_id` because `Any` already has one.
     fn path_type_id(&self) -> PlatformPathType;
     fn r#move(&mut self, g: &mut Game, r#type: i16, platform: Ptr<MovingPlatform>) -> bool;
     fn reset(&mut self, g: &mut Game, platform: Ptr<MovingPlatform>) {
@@ -121,6 +128,7 @@ impl std::ops::DerefMut for dyn MovingPlatformPathTrait {
     }
 }
 
+/// Advances the lookahead track by the spawn animation's length: 36 ticks for door spawns, 50 for swirl.
 pub fn moving_platform_path_reset<T: MovingPlatformPathTrait + ?Sized>(g: &mut Game, this: &mut T, platform: Ptr<MovingPlatform>) {
     if g.game_values.spawnstyle == SpawnStyle::Door {
         for _ in 0..36 {
@@ -147,7 +155,7 @@ macro_rules! path_plumbing {
     };
 }
 
-/// Which of `m_startPos` / `m_endPos` a C++ `Vec2f* m_goalPoint` points at.
+/// The end of a straight path a track is heading for.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum GoalPoint {
     Start,
@@ -160,6 +168,7 @@ pub enum GoalPoint {
 
 #[derive(Clone)]
 
+/// Moves back and forth between the start and end points.
 pub struct StraightPath {
     pub base: MovingPlatformPath,
     m_angle: f32,
@@ -266,6 +275,7 @@ impl MovingPlatformPathTrait for StraightPath {
 
 #[derive(Clone)]
 
+/// Moves from the start point along `m_angle` forever, wrapping around the screen edges.
 pub struct StraightPathContinuous {
     pub base: MovingPlatformPath,
     m_angle: f32,
@@ -373,6 +383,7 @@ impl MovingPlatformPathTrait for StraightPathContinuous {
 
 #[derive(Clone)]
 
+/// Circles an ellipse around the center, starting at `m_startAngle` (radians).
 pub struct EllipsePath {
     pub base: MovingPlatformPath,
     m_radius: Vec2f,
@@ -460,6 +471,7 @@ impl MovingPlatformPathTrait for EllipsePath {
 
 #[derive(Clone)]
 
+/// Falls under gravity until the platform leaves the bottom of the screen, then marks it dead.
 pub struct FallingPath {
     pub base: MovingPlatformPath,
     _alias: Aliased,
