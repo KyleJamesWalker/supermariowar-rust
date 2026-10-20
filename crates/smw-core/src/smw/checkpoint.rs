@@ -277,12 +277,15 @@ pub fn capture(g: &mut Game) -> Vec<u8> {
 
 /// The match start every netplay v2 peer restores, so all their simulations begin alike: an offline checkpoint plus
 /// the map file, which a peer may not have.
-pub fn capture_shared(g: &mut Game) -> Vec<u8> {
+pub fn capture_shared(g: &mut Game) -> Result<Vec<u8>, String> {
     let mut s = Snap::saver();
     s.put(MAGIC);
     s.put(&[SHARED_VERSION]);
     let source = data_path(g, &g.match_map.clone());
-    let mut map = std::fs::read(&source).unwrap_or_default();
+    let mut map = std::fs::read(&source).map_err(|e| format!("cannot read the map {source}: {e}"))?;
+    if map.is_empty() {
+        return Err(format!("the map {source} is empty"));
+    }
     s.io(&mut map);
     let mut frame = crate::smw::harness::frame(g);
     s.io(&mut frame);
@@ -290,7 +293,7 @@ pub fn capture_shared(g: &mut Game) -> Vec<u8> {
     let played = std::mem::replace(&mut g.match_map, shared);
     walk(g, &mut s);
     g.match_map = played;
-    s.buf
+    Ok(s.buf)
 }
 
 /// Restores `capture_shared`'s bytes and starts the match, leaving this peer's netplay state as it is.

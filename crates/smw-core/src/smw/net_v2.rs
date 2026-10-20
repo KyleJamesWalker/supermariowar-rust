@@ -111,18 +111,35 @@ pub fn match_starting(g: &mut Game) -> bool {
         start_replay(g);
         return !host;
     }
-    let Some((socket, others)) = gp.netplay.client.take_peer_socket() else {
+    let Some((mut socket, others)) = gp.netplay.client.take_peer_socket() else {
         println!("[net] v2: the lobby sent no WebRTC room");
         crate::smw::game_state::GameStateManager::instance(g).change_state_to(gp.get(), crate::smw::game_state::StateId::Menu);
         return true;
     };
     let host = g.netplay.theHostIsMe;
+    let my_slot = g.netplay.remotePlayerNumber as u8;
+    let start = if host {
+        match crate::smw::checkpoint::capture_shared(g) {
+            Ok(start) => start,
+            Err(e) => {
+                println!("[net] v2: cannot start the match: {e}");
+                for peer in socket.connected_peers().to_vec() {
+                    socket.send(RELIABLE, peer, &[MSG_SLOT, my_slot]);
+                    socket.send(RELIABLE, peer, &[MSG_LEAVE]);
+                }
+                gp.netplay.client.linger(socket);
+                to_menu(g, false);
+                return true;
+            }
+        }
+    } else {
+        Vec::new()
+    };
     g.netplay.v2_match = true;
-    let start = if host { crate::smw::checkpoint::capture_shared(g) } else { Vec::new() };
     let mut m = V2Match {
         socket,
         host,
-        my_slot: g.netplay.remotePlayerNumber as u8,
+        my_slot,
         others,
         slots: BTreeMap::new(),
         start,
