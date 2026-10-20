@@ -4,7 +4,7 @@ use crate::{IceConfig, PeerId, PeerState, RELIABLE, UNRELIABLE};
 use bytes::Bytes;
 use futures_util::{SinkExt, StreamExt};
 use serde_json::{json, Value};
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
@@ -51,15 +51,43 @@ impl Impairment {
     }
 }
 
+/// Most packets, and bytes, one channel's inbox holds until `receive` takes them.
+const INBOX_PACKETS: usize = 8192;
+const INBOX_BYTES: usize = 8 << 20;
+
 /// What the tokio thread hands the game thread.
 #[derive(Default)]
 struct Shared {
     id: Option<PeerId>,
     /// Peer state changes `update_peers` has not taken yet.
     changes: Vec<(PeerId, PeerState)>,
-    /// Packets per channel that `receive` has not taken yet.
-    inbox: [Vec<(PeerId, Vec<u8>)>; 2],
+    /// Packets per channel that `receive` has not taken yet, and their total size.
+    inbox: [VecDeque<(PeerId, Vec<u8>)>; 2],
+    inbox_bytes: [usize; 2],
     signaling_closed: bool,
+}
+
+impl Shared {
+    /// Queues a packet. A full unreliable inbox drops its oldest packets; a full reliable one refuses it and
+    /// returns false.
+    fn deliver(&mut self, channel: usize, peer: PeerId, data: Vec<u8>) -> bool {
+        let full = |s: &Shared| s.inbox[channel].len() >= INBOX_PACKETS || s.inbox_bytes[channel] + data.len() > INBOX_BYTES;
+        if channel == RELIABLE && full(self) {
+            return false;
+        }
+        while full(self) {
+            let Some((_, old)) = self.inbox[channel].pop_front() else { break };
+            self.inbox_bytes[channel] -= old.len();
+        }
+        self.inbox_bytes[channel] += data.len();
+        self.inbox[channel].push_back((peer, data));
+        true
+    }
+
+    fn take(&mut self, channel: usize) -> Vec<(PeerId, Vec<u8>)> {
+        self.inbox_bytes[channel] = 0;
+        std::mem::take(&mut self.inbox[channel]).into()
+    }
 }
 
 type SharedRef = Arc<Mutex<Shared>>;
@@ -129,7 +157,7 @@ impl Socket {
         if channel > UNRELIABLE || (channel == UNRELIABLE && self.unreliable_taken) {
             return Vec::new();
         }
-        std::mem::take(&mut lock(&self.shared).inbox[channel])
+        lock(&self.shared).take(channel)
     }
 
     pub fn take_unreliable(&mut self) -> Channel {
@@ -165,7 +193,7 @@ impl Channel {
     }
 
     pub fn receive(&mut self) -> Vec<(PeerId, Vec<u8>)> {
-        std::mem::take(&mut lock(&self.shared).inbox[UNRELIABLE])
+        lock(&self.shared).take(UNRELIABLE)
     }
 }
 
@@ -394,9 +422,12 @@ async fn new_peer(api: &API, context: &Context, id: PeerId, offerer: bool) -> Op
             }
             Box::pin(async {})
         }));
-        let shared = context.shared.clone();
+        let (shared, gone) = (context.shared.clone(), context.gone.clone());
         channel.on_message(Box::new(move |message| {
-            lock(&shared).inbox[index].push((id, message.data.to_vec()));
+            if !lock(&shared).deliver(index, id, message.data.to_vec()) {
+                eprintln!("[net] peer {:032x} overflowed the reliable inbox; dropping it", id.0);
+                let _ = gone.send(id);
+            }
             Box::pin(async {})
         }));
         let gone = context.gone.clone();
@@ -541,7 +572,7 @@ mod tests {
         assert!(shared.is_poisoned());
         lock(&shared).id = Some(PeerId(7));
         lock(&shared).changes.push((PeerId(7), PeerState::Connected));
-        lock(&shared).inbox[RELIABLE].push((PeerId(7), vec![1]));
+        assert!(lock(&shared).deliver(RELIABLE, PeerId(7), vec![1]));
 
         let (commands, _rx) = unbounded_channel();
         let mut socket = Socket { shared, commands, unreliable_taken: false };
@@ -549,6 +580,31 @@ mod tests {
         assert_eq!(socket.update_peers(), vec![(PeerId(7), PeerState::Connected)]);
         assert_eq!(socket.receive(RELIABLE), vec![(PeerId(7), vec![1])]);
         assert!(!socket.signaling_closed());
+    }
+
+    #[test]
+    fn a_full_unreliable_inbox_drops_its_oldest_packets() {
+        let mut shared = Shared::default();
+        for i in 0..INBOX_PACKETS as u32 + 2 {
+            assert!(shared.deliver(UNRELIABLE, PeerId(1), i.to_le_bytes().to_vec()));
+        }
+        let packets = shared.take(UNRELIABLE);
+        assert_eq!(packets.len(), INBOX_PACKETS);
+        assert_eq!(packets[0].1, 2u32.to_le_bytes());
+
+        assert!(shared.deliver(UNRELIABLE, PeerId(1), vec![0; INBOX_BYTES]));
+        assert!(shared.deliver(UNRELIABLE, PeerId(1), vec![1]));
+        assert_eq!(shared.take(UNRELIABLE), vec![(PeerId(1), vec![1])]);
+    }
+
+    #[test]
+    fn a_full_reliable_inbox_refuses_more() {
+        let mut shared = Shared::default();
+        assert!(shared.deliver(RELIABLE, PeerId(1), vec![0; INBOX_BYTES - 1]));
+        assert!(shared.deliver(RELIABLE, PeerId(1), vec![0]));
+        assert!(!shared.deliver(RELIABLE, PeerId(2), vec![0]));
+        assert_eq!(shared.take(RELIABLE).len(), 2);
+        assert!(shared.deliver(RELIABLE, PeerId(2), vec![0]));
     }
 
     #[test]
