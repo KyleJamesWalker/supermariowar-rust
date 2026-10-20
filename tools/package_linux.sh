@@ -29,6 +29,5 @@ readelf -d "$app/smw" | sed -n 's/.*(NEEDED).*\[\(.*\)\]/    \1/p'
 glibc="$(objdump -T "$app"/smw "$app"/leveleditor "$app"/worldeditor | grep -o 'GLIBC_[0-9.]*' | sort -u -V | tail -n 1)"
 echo "requires $glibc or newer"
 
-# The game lists some data directories unsorted; extracting onto FAT keeps the archive's order.
 tar --sort=name --owner=0 --group=0 --numeric-owner -C "$stage" -czf "$out" SuperMarioWar
 echo "wrote $out ($(du -h "$out" | cut -f 1))"

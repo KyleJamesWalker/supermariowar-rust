@@ -10,7 +10,7 @@ It targets the 64-bit H700 handhelds such as the RG35XX Plus, H, SP and 2024, wh
 2. On the device, open **Applications > Archive Manager** and select it. muOS extracts it to `<card>/MUOS/application/SuperMarioWar/`.
 3. Launch **Super Mario War** from **Applications**.
 
-To update, install the newer `.muxapp` the same way; it replaces the files it ships and leaves `home/` and `log.txt` alone. If the menus then show the Retro graphics instead of Classic, move `home/` aside, delete the folder, reinstall and put `home/` back: the game takes its default graphics pack from directory order, which an install over an older one keeps. To uninstall, delete `MUOS/application/SuperMarioWar/`.
+To update, install the newer `.muxapp` the same way; it replaces the files it ships and leaves `home/` and `log.txt` alone. To uninstall, delete `MUOS/application/SuperMarioWar/`.
 
 ## What is in the package
 
