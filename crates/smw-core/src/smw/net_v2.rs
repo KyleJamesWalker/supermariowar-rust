@@ -41,6 +41,8 @@ const DESYNC_INTERVAL: u32 = 30;
 const DISCONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 /// Silence after which GGRS reports a peer as interrupted.
 const INTERRUPTED_AFTER: Duration = Duration::from_secs(1);
+/// How long a notice stays over the match.
+const NOTICE_FRAMES: u32 = 4 * crate::common::global_constants::TICKS_PER_SECOND;
 
 /// Where a [`V2Match`] is: the start handshake, or the running GGRS session.
 enum Phase {
@@ -89,6 +91,11 @@ pub struct V2Match {
     desyncs: u32,
     /// Remote players GGRS dropped for good.
     gone: usize,
+    /// The room's player names by slot when the match started; the lobby drops a player who disconnects.
+    names: [String; 4],
+    /// Peers already named in a desync notice.
+    desynced: Vec<PeerId>,
+    notice: Notice,
     perf: V2Perf,
     /// This frame's `#@ v2` tokens, while recording.
     rec: Option<Vec<String>>,
@@ -111,6 +118,7 @@ pub fn match_starting(g: &mut Game) -> bool {
     if !g.netplay.active {
         return false;
     }
+    g.netplay.match_notice = None;
     if net_record::replaying(g) {
         if !net_record::has_v2(g) {
             return false;
@@ -132,6 +140,7 @@ pub fn match_starting(g: &mut Game) -> bool {
             Ok(start) => start,
             Err(e) => {
                 println!("[net] v2: cannot start the match: {e}");
+                g.netplay.match_notice = Some("Cannot read the map for this match".to_string());
                 for peer in socket.connected_peers().to_vec() {
                     socket.send(RELIABLE, peer, &slot_message(my_slot));
                     socket.send(RELIABLE, peer, &[MSG_LEAVE]);
@@ -168,6 +177,9 @@ pub fn match_starting(g: &mut Game) -> bool {
         rollback_ticks: 0,
         desyncs: 0,
         gone: 0,
+        names: g.netplay.currentRoom.playerNames.clone(),
+        desynced: Vec::new(),
+        notice: Notice::default(),
         perf: V2Perf::default(),
         rec: None,
     };
@@ -245,10 +257,53 @@ fn local_input(g: &mut Game, local_device: &mut COutputControl) -> bool {
     crate::smw::gs_gameplay::update_exit_pause_dialog(g, gameplay.countdown_state())
 }
 
-/// The end of a running match's frame: the pause or exit dialog, and the music.
-fn draw_dialogs(g: &mut Game) {
+/// A line shown over the match for a few seconds: a desync, or a player who dropped out or left.
+#[derive(Default)]
+struct Notice {
+    text: String,
+    frames: u32,
+}
+
+/// Logs `text`, shows it over the match and records it as an `n` token.
+fn notify(rec: &mut Option<Vec<String>>, notice: &mut Notice, text: String) {
+    println!("[net] v2: {text}");
+    note(rec, format!("n{}", harness::base64_encode(text.as_bytes())));
+    *notice = Notice { text, frames: NOTICE_FRAMES };
+}
+
+/// The room's name for the player in `slot`.
+fn player_name(names: &[String], slot: u8) -> String {
+    match names.get(slot as usize) {
+        Some(name) if !name.is_empty() && name != "(empty)" => name.clone(),
+        _ => format!("Player {}", slot as u32 + 1),
+    }
+}
+
+/// The room's name for the player on `peer`.
+fn peer_name(names: &[String], slots: &BTreeMap<PeerId, u8>, peer: PeerId) -> String {
+    slots.get(&peer).map_or_else(|| "A player".to_string(), |&slot| player_name(names, slot))
+}
+
+/// The room's occupied slots, other than `my_slot`, that are not in `heard`.
+fn missing_slots(names: &[String], my_slot: u8, heard: &[u8]) -> Vec<u8> {
+    (0..names.len() as u8).filter(|&slot| slot != my_slot && names[slot as usize] != "(empty)" && !heard.contains(&slot)).collect()
+}
+
+/// A match that ended early leaves its last notice for the room menu.
+fn keep_notice(g: &mut Game, notice: &Notice) {
+    if !notice.text.is_empty() {
+        g.netplay.match_notice = Some(notice.text.clone());
+    }
+}
+
+/// The end of a running match's frame: the pause or exit dialog, the notice, and the music.
+fn draw_dialogs(g: &mut Game, notice: &mut Notice) {
     if g.game_values.flags.pausegame || g.game_values.flags.exitinggame {
         crate::smw::gs_gameplay::draw_exit_pause_dialog(g);
+    }
+    if notice.frames > 0 {
+        notice.frames -= 1;
+        crate::smw::gs_menu::draw_message_bar(g, &notice.text);
     }
     if g.main_loop.stats_page {
         crate::smw::stats::draw_page(g);
@@ -273,6 +328,7 @@ pub struct V2Replay {
     targets: Vec<KeySlot>,
     local_device: COutputControl,
     saves: BTreeMap<i32, MatchState>,
+    notice: Notice,
 }
 
 fn start_replay(g: &mut Game) {
@@ -283,6 +339,7 @@ fn start_replay(g: &mut Game) {
         targets: Vec::new(),
         local_device: g.game_values.playerInput.outputControls[0],
         saves: BTreeMap::new(),
+        notice: Notice::default(),
     }));
 }
 
@@ -348,10 +405,19 @@ fn replay_tick(g: &mut Game, frame: u32) {
             ("i", _) => {
                 local_input(g, &mut r.local_device);
             }
-            ("d", _) => draw_dialogs(g),
+            ("d", _) => draw_dialogs(g, &mut r.notice),
+            ("n", data) => {
+                let Some(text) = harness::base64_decode(data).and_then(|b| String::from_utf8(b).ok()) else {
+                    harness::fail(format!("the replay's v2 notice at frame {frame} is damaged"));
+                };
+                r.notice = Notice { text, frames: NOTICE_FRAMES };
+            }
             ("e", kind) => {
                 match kind {
-                    "A" => to_menu(g, true),
+                    "A" => {
+                        keep_notice(g, &r.notice);
+                        to_menu(g, true)
+                    }
                     "L" => to_menu(g, false),
                     _ => {}
                 }
@@ -503,7 +569,11 @@ impl V2Match {
             let from_host = self.host_peer == Some(peer);
             match msg.first() {
                 Some(&MSG_SLOT) => {
-                    let slot = read_slot_message(&msg).map_err(|e| format!("peer {:08x}: {e}", peer.0 >> 96))?;
+                    let slot = read_slot_message(&msg).map_err(|e| {
+                        println!("[net] v2: peer {:08x}: {e}", peer.0 >> 96);
+                        let name = msg.get(2).map_or_else(|| "A player".to_string(), |&slot| player_name(&self.names, slot));
+                        format!("{name} runs another game version")
+                    })?;
                     match claim_slot(&mut self.slots, self.my_slot, peer, slot) {
                         Ok(()) if !self.host && slot == self.host_slot => self.host_peer = Some(peer),
                         Ok(()) => {}
@@ -535,7 +605,7 @@ impl V2Match {
                     }
                 }
                 Some(&MSG_GO) if from_host => self.go = true,
-                Some(&MSG_LEAVE) if from_host => return Err("the host left before the match started".to_string()),
+                Some(&MSG_LEAVE) if from_host => return Err("The host left before the match started".to_string()),
                 _ => {}
             }
         }
@@ -547,11 +617,14 @@ impl V2Match {
     fn start_step(&mut self, g: &mut Game) -> bool {
         self.socket.update_peers();
         if let Err(e) = self.receive_reliable(g) {
-            println!("[net] v2: {e}");
+            notify(&mut self.rec, &mut self.notice, e);
             return false;
         }
         if self.opened.elapsed() > START_DEADLINE {
             println!("[net] v2: the match did not start within {} s", START_DEADLINE.as_secs());
+            let missing = self.missing_players();
+            let text = if missing.is_empty() { "The match did not start in time".to_string() } else { format!("{} did not connect", missing.join(", ")) };
+            notify(&mut self.rec, &mut self.notice, text);
             return false;
         }
         self.ticks += 1;
@@ -584,9 +657,19 @@ impl V2Match {
             }
             Err(e) => {
                 println!("[net] v2: cannot start the GGRS session: {e}");
+                notify(&mut self.rec, &mut self.notice, "Cannot start the match".to_string());
                 false
             }
         }
+    }
+
+    /// The room's other players this peer has not heard from: no slot, or on the host, no READY.
+    fn missing_players(&self) -> Vec<String> {
+        let heard: Vec<u8> = match self.host {
+            true => self.ready.iter().filter_map(|peer| self.slots.get(peer).copied()).collect(),
+            false => self.slots.values().copied().collect(),
+        };
+        missing_slots(&self.names, self.my_slot, &heard).into_iter().map(|slot| player_name(&self.names, slot)).collect()
     }
 
     /// Builds the GGRS session; handles follow room slot order, so every peer numbers the players alike.
@@ -626,6 +709,7 @@ impl V2Match {
     /// False, for `tick`.
     fn abandon(&mut self, g: &mut Game) -> bool {
         self.send_all(&[MSG_LEAVE]);
+        keep_notice(g, &self.notice);
         note(&mut self.rec, "eA".to_string());
         to_menu(g, true);
         false
@@ -641,10 +725,15 @@ impl V2Match {
                 GgrsEvent::DesyncDetected { frame, local_checksum, remote_checksum, addr } => {
                     self.desyncs += 1;
                     println!("[net] v2: desync at frame {frame} with {:08x}: {local_checksum:x} vs {remote_checksum:x}", addr.0 >> 96);
+                    if !self.desynced.contains(&addr) {
+                        self.desynced.push(addr);
+                        notify(&mut self.rec, &mut self.notice, format!("Out of sync with {}", peer_name(&self.names, &self.slots, addr)));
+                    }
                 }
                 GgrsEvent::Disconnected { addr } => {
                     self.gone += 1;
                     println!("[net] v2: peer {:08x} disconnected", addr.0 >> 96);
+                    notify(&mut self.rec, &mut self.notice, format!("{} dropped out", peer_name(&self.names, &self.slots, addr)));
                 }
                 GgrsEvent::NetworkInterrupted { addr, disconnect_timeout } => {
                     println!("[net] v2: peer {:08x} silent; dropped in {} ms unless it returns", addr.0 >> 96, disconnect_timeout)
@@ -654,17 +743,17 @@ impl V2Match {
             }
         }
 
-        let mut others_left = false;
+        let mut leaver = None;
         for (peer, msg) in self.socket.receive(RELIABLE) {
             match msg.first() {
-                Some(&MSG_LEAVE) => others_left = true,
+                Some(&MSG_LEAVE) => leaver = Some(peer),
                 // A joiner repeats READY until it hears GO.
                 Some(&MSG_READY) if self.host && self.slots.contains_key(&peer) => self.socket.send(RELIABLE, peer, &[MSG_GO]),
                 _ => {}
             }
         }
-        if others_left {
-            println!("[net] v2: another player ended the match");
+        if let Some(peer) = leaver {
+            notify(&mut self.rec, &mut self.notice, format!("{} left the match", peer_name(&self.names, &self.slots, peer)));
             return self.abandon(g);
         }
         if self.gone >= self.others {
@@ -732,7 +821,7 @@ impl V2Match {
             return false;
         }
         note(&mut self.rec, "d".to_string());
-        draw_dialogs(g);
+        draw_dialogs(g, &mut self.notice);
         true
     }
 }
@@ -763,6 +852,23 @@ mod tests {
         let mut parts = StartParts::default();
         assert_eq!(parts.add(0, 3, b"a"), Ok(None));
         assert!(parts.add(1, 2, b"b").is_err(), "a changed count");
+    }
+
+    #[test]
+    fn missing_slots_skip_empty_and_own() {
+        let names = ["Ann", "(empty)", "Bo", "Cy"].map(String::from);
+        assert_eq!(missing_slots(&names, 0, &[]), vec![2, 3]);
+        assert_eq!(missing_slots(&names, 0, &[3]), vec![2]);
+        assert!(missing_slots(&names, 2, &[0, 3]).is_empty());
+    }
+
+    #[test]
+    fn notices_are_recorded_as_tokens() {
+        let (mut rec, mut notice) = (Some(Vec::new()), Notice::default());
+        notify(&mut rec, &mut notice, "Bo dropped out".to_string());
+        let token = &rec.unwrap()[0];
+        assert_eq!(harness::base64_decode(&token[1..]).as_deref(), Some(&b"Bo dropped out"[..]));
+        assert_eq!((notice.text.as_str(), notice.frames), ("Bo dropped out", NOTICE_FRAMES));
     }
 
     #[test]
