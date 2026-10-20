@@ -3154,10 +3154,145 @@ pub(crate) mod tests {
         assert!(maps.len() > 400, "found {} maps", maps.len());
         for f in &maps {
             for rt in [read_type_summary, read_type_preview, read_type_full] {
-                gp.g_map.load_map(g, f, rt);
+                assert!(gp.g_map.load_map(g, f, rt), "{f} failed to load");
                 let mut map = g.g_map.ptr();
                 let _ = dump(g, &mut map, rt);
             }
+        }
+    }
+
+    thread_local! {
+        static CAUGHT: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
+    }
+
+    /// Runs `f`, returning its result and the messages of the panics it caught, which are not printed.
+    fn caught_panics<R>(f: impl FnOnce() -> R) -> (R, Vec<String>) {
+        let previous = std::panic::take_hook();
+        std::panic::set_hook(Box::new(|info| {
+            let payload = info.payload();
+            let what = payload.downcast_ref::<String>().cloned().or_else(|| payload.downcast_ref::<&str>().map(|s| s.to_string()));
+            CAUGHT.with(|c| c.borrow_mut().push(what.unwrap_or_default()));
+        }));
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(f));
+        std::panic::set_hook(previous);
+        let caught = CAUGHT.with(|c| c.take());
+        match r {
+            Ok(r) => (r, caught),
+            Err(e) => std::panic::resume_unwind(e),
+        }
+    }
+
+    /// Loads `bytes` as a map file; the result and the errors that failed the load.
+    fn load_bytes(g: &mut Game, bytes: &[u8], rt: ReadType) -> (bool, Vec<String>) {
+        let mut gp = g.ptr();
+        let path = std::env::temp_dir().join(format!("smw_damaged_{}.map", std::process::id()));
+        std::fs::write(&path, bytes).unwrap();
+        let r = caught_panics(|| gp.g_map.load_map(g, path.to_str().unwrap(), rt));
+        let _ = std::fs::remove_file(&path);
+        r
+    }
+
+    /// Only a file read error or a range check may fail a load; anything else is a reader bug.
+    fn assert_clean_failure(what: &str, loaded: bool, caught: &[String]) {
+        for msg in caught {
+            assert!(msg.starts_with("File read error") || msg.starts_with("Damaged map:"), "{what}: {msg}");
+        }
+        assert_eq!(loaded, caught.is_empty(), "{what}: {caught:?}");
+    }
+
+    #[test]
+    fn damaged_maps_fail_to_load_cleanly() {
+        let g = map_game();
+        let _g = lock_globals();
+        let data = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/");
+        let maps = [
+            "worlds/Sky World/smb3 5-9.map",
+            "maps/4matsy_Cloud Props.map",
+            "maps/4matsy_Splitting Headache.map",
+            "maps/MrMister_MrIslandBattle.map",
+            "maps/special/two52_special_fireboss_minigame.map",
+        ];
+        // Older version headers make the older readers parse newer data as garbage.
+        let headers: [Option<[i32; 4]>; 7] = [None, Some([0, 0, 0, 0]), Some([1, 6, 0, 0]), Some([1, 6, 0, 10]), Some([1, 6, 1, 0]), Some([1, 7, 0, 0]), Some([1, 7, 0, 1])];
+        let mut seed: u32 = 1;
+        let mut next = move || {
+            seed = seed.wrapping_mul(1_103_515_245).wrapping_add(12_345);
+            (seed >> 8) as usize
+        };
+        for name in maps {
+            let original = std::fs::read(format!("{data}{name}")).unwrap();
+            for header in headers {
+                let mut bytes = original.clone();
+                if let Some(h) = header {
+                    for (k, v) in h.iter().enumerate() {
+                        bytes[k * 4..k * 4 + 4].copy_from_slice(&v.to_le_bytes());
+                    }
+                }
+                let mut cases: Vec<(String, Vec<u8>)> = (0..32).map(|k| bytes.len() * k / 32).map(|cut| (format!("cut at {cut}"), bytes[..cut].to_vec())).collect();
+                for k in 0..16 {
+                    let mut damaged = bytes.clone();
+                    for _ in 0..4 {
+                        let at = next() % damaged.len();
+                        damaged[at] = next() as u8;
+                    }
+                    cases.push((format!("damage {k}"), damaged));
+                }
+                for (case, bytes) in &cases {
+                    for rt in [read_type_preview, read_type_full] {
+                        let (loaded, caught) = load_bytes(g, bytes, rt);
+                        assert_clean_failure(&format!("{name} {header:?} {case} rt={rt}"), loaded, &caught);
+                    }
+                }
+                if header.is_none() {
+                    for (case, bytes) in cases.iter().take(32) {
+                        assert!(!load_bytes(g, bytes, read_type_full).0, "{name} {case} loaded");
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn out_of_range_values_fail_to_load() {
+        let g = map_game();
+        let mut gp = g.ptr();
+        let _g = lock_globals();
+        let base = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/maps/4matsy_Cloud Props.map");
+        let path = std::env::temp_dir().join(format!("smw_saved_{}.map", std::process::id()));
+        let path = path.to_str().unwrap();
+        // The base map saved after `edit`, so two saves differing in one field locate it past the summary header.
+        let mut saved = |edit: &dyn Fn(&mut CMap)| {
+            assert!(gp.g_map.load_map(g, base, read_type_full));
+            edit(&mut gp.g_map);
+            gp.g_map.save_map(g, path);
+            std::fs::read(path).unwrap()
+        };
+        let mut patched = |a: &dyn Fn(&mut CMap), b: &dyn Fn(&mut CMap), back: usize, value: &[u8]| {
+            let (x, y) = (saved(a), saved(b));
+            let header = 16 + 4 * (NUM_AUTO_FILTERS as usize + 1);
+            let at = header + x[header..].iter().zip(&y[header..]).position(|(p, q)| p != q).expect("the edits change the file") - back;
+            let mut bytes = x;
+            bytes[at..at + value.len()].copy_from_slice(value);
+            bytes
+        };
+        let switch_block = |setting: i16| move |m: &mut CMap| {
+            m.objectdata[0][0].iType = 11;
+            m.objectdata[0][0].iSettings[0] = setting;
+        };
+        let cases: Vec<(&str, Vec<u8>)> = vec![
+            ("music category", patched(&|m| m.musicCategoryID = 1, &|m| m.musicCategoryID = 2, 0, &200i32.to_le_bytes())),
+            ("item count", patched(&|m| m.mapitems = vec![MapItem::default(); 1], &|m| m.mapitems = vec![MapItem::default(); 2], 0, &(MAXMAPITEMS + 1).to_le_bytes())),
+            ("hazard count", patched(&|m| m.maphazards = vec![MapHazard::default(); 1], &|m| m.maphazards = vec![MapHazard::default(); 2], 0, &(MAXMAPHAZARDS + 1).to_le_bytes())),
+            ("switch block row", patched(&switch_block(0), &switch_block(1), 1, &[0xF0])),
+            ("switch block column", patched(&switch_block(0), &switch_block(1), 2, &[MAPWIDTH as u8])),
+            ("platform draw layer", patched(&|m| m.platform(m.platforms[0]).iDrawLayer = 1, &|m| m.platform(m.platforms[0]).iDrawLayer = 2, 0, &9i32.to_le_bytes())),
+        ];
+        let _ = std::fs::remove_file(path);
+        for (what, bytes) in cases {
+            let (loaded, caught) = load_bytes(g, &bytes, read_type_full);
+            assert!(!loaded, "{what} loaded");
+            assert!(caught.len() == 1 && caught[0].starts_with(&format!("Damaged map: {what} ")), "{what}: {caught:?}");
+            assert!(g.g_map.platforms.is_empty() && g.g_map.mapitems.is_empty() && g.g_map.numwarpexits == 0, "{what} left map data");
         }
     }
 
