@@ -74,6 +74,7 @@ pub const THUMBTILESIZE: i32 = 8;
 pub const MAXWARPS: i32 = 32;
 pub const MAXMAPITEMS: i32 = 32;
 pub const MAXMAPHAZARDS: i32 = 30;
+pub const MAXMAPPLATFORMS: i32 = 32;
 pub const NUMMAPHAZARDPARAMS: i32 = 5;
 pub const NUMSPAWNAREATYPES: i32 = 6;
 pub const MAXSPAWNAREAS: i32 = 128;

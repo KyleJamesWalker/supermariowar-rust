@@ -33,6 +33,7 @@ Start with `guides/` for how things work today. `design/` holds design docs with
 - `upstream/UPSTREAM_SYNC.md`: the pinned upstream commit and how to sync.
 - `upstream/prs/`: drafts and evidence for upstream PRs and issues.
 - `upstream/sdl2-compat-rle.md`, `upstream/sdl2-compat-convert-blend.md`: draft sdl2-compat issues, not filed.
+- `upstream/sdl3-simd-alignment-race.md`: draft SDL3 issue, not filed: first-use CPU detection races and misaligns surface pixels.
 
 ## Archive
 

@@ -13,13 +13,14 @@ use crate::smw::players::PlayerId;
 use crate::common::gfx::soft_surface::Surface;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
-use crate::common::file_io::BinaryFile;
+use crate::common::file_io::{catch_runtime_error, BinaryFile};
 use crate::common::game::App;
 use crate::common::gfx::gfx_sprite::{gfxSprite, ImageLoader};
 use crate::common::global::*;
 use crate::common::global_constants::*;
 use crate::common::io_block::IO_BlockTrait;
 use crate::common::map::map_reader::get_loader_by_version;
+use crate::common::map::map_reader_constants::g_szBackgroundConversion;
 use crate::common::math::trig::{cosf, sinf};
 use crate::common::moving_platform_paths::{EllipsePath, MovingPlatformPathTrait, PlatformPathType, StraightPath, StraightPathContinuous};
 use crate::common::movingplatform::MovingPlatform;
@@ -333,7 +334,7 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
             rDotDst.w = dot;
             rDotDst.h = dot;
 
-            gp.rm.sprite(gp.rm.spr_platformpath).draw_src(g, rDotDst.x, rDotDst.y, &Rect { x: rDotSrc.x, y: rDotSrc.y, w: rDotDst.w, h: rDotDst.h });
+            gp.rm.sprite(gp.rm.spr_platformpath).draw_src_to_pos(&Rect { x: rDotSrc.x, y: rDotSrc.y, w: rDotDst.w, h: rDotDst.h }, dst, rDotDst.x, rDotDst.y);
             dAngle += TWO_PI / iNumDots as f32;
         }
 
@@ -348,7 +349,7 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
                 + (ts >> 1)
                 - (fb >> 1)) as i16;
 
-            gp.rm.sprite(gp.rm.spr_hazard_fireball[s]).draw_src(g, x as i32, y as i32, &Rect { x: 0, y: 0, w: fb, h: fb });
+            gp.rm.sprite(gp.rm.spr_hazard_fireball[s]).draw_src_to_pos(&Rect { x: 0, y: 0, w: fb, h: fb }, dst, x as i32, y as i32);
         }
     } else if hazard.itype == 1 {
         let iNumDots: i16 = 16;
@@ -360,7 +361,7 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
             rDotDst.w = dot;
             rDotDst.h = dot;
 
-            gp.rm.sprite(gp.rm.spr_platformpath).draw_src(g, rDotDst.x, rDotDst.y, &Rect { x: rDotSrc.x, y: rDotSrc.y, w: rDotDst.w, h: rDotDst.h });
+            gp.rm.sprite(gp.rm.spr_platformpath).draw_src_to_pos(&Rect { x: rDotSrc.x, y: rDotSrc.y, w: rDotDst.w, h: rDotDst.h }, dst, rDotDst.x, rDotDst.y);
             dAngle += TWO_PI / iNumDots as f32;
         }
 
@@ -371,17 +372,12 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
             let x: i16 = (rPathDst.x + (dRadius * cosf(dAngle)) as i16 as i32) as i16;
             let y: i16 = (rPathDst.y + (dRadius * sinf(dAngle)) as i16 as i32) as i16;
 
-            gp.rm.sprite(gp.rm.spr_hazard_rotodisc[s]).draw_src(g, x as i32, y as i32, &Rect { x: 0, y: 0, w: ts, h: ts });
+            gp.rm.sprite(gp.rm.spr_hazard_rotodisc[s]).draw_src_to_pos(&Rect { x: 0, y: 0, w: ts, h: ts }, dst, x as i32, y as i32);
 
             dAngle += dSector;
         }
     } else if hazard.itype == 2 {
-        gp.rm.sprite(gp.rm.spr_hazard_bulletbill[s]).draw_src(
-            g,
-            rPathDst.x,
-            rPathDst.y,
-            &Rect { x: 0, y: if hazard.dparam[0] < 0.0 { 0 } else { ts }, w: ts, h: ts },
-        );
+        gp.rm.sprite(gp.rm.spr_hazard_bulletbill[s]).draw_src_to_pos(&Rect { x: 0, y: if hazard.dparam[0] < 0.0 { 0 } else { ts }, w: ts, h: ts }, dst, rPathDst.x, rPathDst.y);
 
         let mut iBulletPathX: i16 = (rPathDst.x - dot) as i16;
         if hazard.dparam[0] > 0.0 {
@@ -389,13 +385,11 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
         }
 
         let iBulletPathSpacing: i16 = (hazard.dparam[0] * dBulletBillFrequency[s]) as i16;
-        while iBulletPathX >= 0 && (iBulletPathX as i32) < get_screen_width(iSize as i32) {
+        while iBulletPathSpacing != 0 && iBulletPathX >= 0 && (iBulletPathX as i32) < get_screen_width(iSize as i32) {
             rDotDst = Rect { x: iBulletPathX as i32, y: rPathDst.y + ((ts - dot) >> 1), w: dot, h: dot };
             g.rm.sprite(g.rm.spr_platformpath).draw_src_to(&rDotSrc, dst, &rDotDst);
 
-            iBulletPathX = (iBulletPathX as i32
-                + if (hazard.iparam[0] as f32) < 0.0 { -(iBulletPathSpacing as i32) } else { iBulletPathSpacing as i32 })
-                as i16;
+            iBulletPathX = (iBulletPathX as i32 + iBulletPathSpacing as i32) as i16;
         }
     } else if hazard.itype == 3 {
         let rect = &g_rFlameRects[hazard.iparam[1] as usize][2];
@@ -409,12 +403,7 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
             iOffsetY = -(iTileSize << 1);
         }
 
-        gp.rm.sprite(gp.rm.spr_hazard_flame[s]).draw_src(
-            g,
-            rPathDst.x + iOffsetX as i32,
-            rPathDst.y + iOffsetY as i32,
-            &Rect { x: rect.x >> iSize, y: rect.y >> iSize, w: rect.w >> iSize, h: rect.h >> iSize },
-        );
+        gp.rm.sprite(gp.rm.spr_hazard_flame[s]).draw_src_to_pos(&Rect { x: rect.x >> iSize, y: rect.y >> iSize, w: rect.w >> iSize, h: rect.h >> iSize }, dst, rPathDst.x + iOffsetX as i32, rPathDst.y + iOffsetY as i32);
     } else if hazard.itype >= 4 && hazard.itype <= 7 {
         let rect = &g_rPirhanaRects[(hazard.itype - 4) as usize][hazard.iparam[1] as usize][0];
         let mut iOffsetX: i16 = 0;
@@ -434,12 +423,7 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
             }
         }
 
-        gp.rm.sprite(gp.rm.spr_hazard_pirhanaplant[s]).draw_src(
-            g,
-            rPathDst.x + iOffsetX as i32,
-            rPathDst.y + iOffsetY as i32,
-            &Rect { x: rect.x >> iSize, y: rect.y >> iSize, w: rect.w >> iSize, h: rect.h >> iSize },
-        );
+        gp.rm.sprite(gp.rm.spr_hazard_pirhanaplant[s]).draw_src_to_pos(&Rect { x: rect.x >> iSize, y: rect.y >> iSize, w: rect.w >> iSize, h: rect.h >> iSize }, dst, rPathDst.x + iOffsetX as i32, rPathDst.y + iOffsetY as i32);
     }
 }
 
@@ -968,8 +952,9 @@ impl CMap {
         self.animatedtiles.clear();
     }
 
-    /// Loads the map file `file`; `iReadType` limits how much is read. Logs and returns on a file that will not open.
-    pub fn load_map(&mut self, g: &mut Game, file: &str, iReadType: ReadType) {
+    /// Loads the map file `file`; `iReadType` limits how much is read. On a file that will not open or is damaged,
+    /// logs the error, leaves an empty map and returns `false`.
+    pub fn load_map(&mut self, g: &mut Game, file: &str, iReadType: ReadType) -> bool {
         let mut gp = g.ptr();
         self.iTileAnimationTimer = 0;
         self.iTileAnimationFrame = 0;
@@ -984,43 +969,83 @@ impl CMap {
         if !mapfile.is_open() {
             println!();
             println!(" ERROR: Couldn't open map");
-            return;
+            self.clear_failed_load(iReadType);
+            return false;
         }
 
-        let version = Version {
-            major: mapfile.read_i32() as u8,
-            minor: mapfile.read_i32() as u8,
-            patch: mapfile.read_i32() as u8,
-            build: mapfile.read_i32() as u8,
-        };
+        let loaded = catch_runtime_error(|| {
+            let version = Version {
+                major: mapfile.read_i32() as u8,
+                minor: mapfile.read_i32() as u8,
+                patch: mapfile.read_i32() as u8,
+                build: mapfile.read_i32() as u8,
+            };
 
-        if iReadType != read_type_summary {
-            print!("loading map {}", file);
+            if iReadType != read_type_summary {
+                print!("loading map {}", file);
 
-            if iReadType == read_type_preview {
-                print!(" (preview)");
+                if iReadType == read_type_preview {
+                    print!(" (preview)");
+                }
+
+                if version >= (Version { major: 1, minor: 6, patch: 0, build: 0 }) {
+                    print!(" [v{}.{}.{}.{}]", version.major, version.minor, version.patch, version.build);
+                } else {
+                    print!(" [v1.5]");
+                }
+
+                print!(" ...");
             }
 
-            if version >= (Version { major: 1, minor: 6, patch: 0, build: 0 }) {
-                print!(" [v{}.{}.{}.{}]", version.major, version.minor, version.patch, version.build);
-            } else {
-                print!(" [v1.5]");
-            }
+            let mut reader = get_loader_by_version(&version);
+            reader.load(gp.get(), self, &mut mapfile, iReadType)
+        });
 
-            print!(" ...");
+        if loaded.is_none() {
+            println!();
+            println!(" ERROR: Couldn't load map {}", file);
+            self.clear_failed_load(iReadType);
+            return false;
         }
-
-        let mut reader = get_loader_by_version(&version);
-        reader.load(gp.get(), self, &mut mapfile, iReadType);
-        drop(reader);
 
         if iReadType == read_type_summary {
-            return;
+            return true;
         }
 
         self.clear_warp_locks();
         println!(" done");
         let _ = std::io::stdout().flush();
+        true
+    }
+
+    /// After a failed load, clears the auto filters a summary reads, or else leaves an empty, playable map: no tiles,
+    /// objects, warps or platforms, and one spawn area.
+    fn clear_failed_load(&mut self, iReadType: ReadType) {
+        self.fAutoFilter = [false; NUM_AUTO_FILTERS as usize];
+        if iReadType == read_type_summary {
+            return;
+        }
+
+        self.clear_map();
+        self.clear_platforms();
+
+        self.szBackgroundFile = g_szBackgroundConversion[0].to_string();
+        self.backgroundID = 0;
+        self.musicCategoryID = 0;
+
+        self.numwarpexits = 0;
+        self.maxConnection = 0;
+        self.numdrawareas = 0;
+        self.iNumRaceGoals = 0;
+        self.iNumFlagBases = 0;
+
+        for iType in 0..NSPAWN {
+            self.numspawnareas[iType] = 1;
+            self.spawnareas[iType][0] = SpawnArea { left: 0, top: 1, width: 20, height: 12, size: 220 };
+            self.totalspawnsize[iType] = 220;
+        }
+
+        self.clear_warp_locks();
     }
 
     /// Recomputes [`TileType::Gap`] for every tile.
@@ -2896,36 +2921,6 @@ impl CMap {
             && !self.warplocked[warp1.connection as usize]
             && self.warpexits[warp1.id as usize].locktimer <= 0
     }
-
-    /// Moves solid tiles down into empty lower layers of the same cell.
-    pub fn optimize(&mut self, g: &mut Game) {
-        let mut gp = g.ptr();
-        for j in 0..MH {
-            for i in 0..MW {
-                for m in 1..ML {
-                    let tile = self.mapdata[i][j][m];
-                    let r#type = gp.g_tilesetmanager.tileset(g, tile.iID as isize as usize).tile_type(tile.iCol as usize, tile.iRow as usize);
-                    if r#type != TileType::NonSolid && r#type != TileType::Gap && r#type != TileType::SolidOnTop {
-                        let mut k = m as i32 - 1;
-                        while k >= 0 {
-                            let ku = k as usize;
-                            if self.mapdata[i][j][ku].iID as i32 == TILESETNONE {
-                                let fromTile = self.mapdata[i][j][ku + 1];
-                                self.mapdata[i][j][ku] = fromTile;
-
-                                self.mapdata[i][j][ku + 1].iID = TILESETNONE as i16;
-                                self.mapdata[i][j][ku + 1].iCol = 0;
-                                self.mapdata[i][j][ku + 1].iRow = 0;
-                            } else {
-                                break;
-                            }
-                            k -= 1;
-                        }
-                    }
-                }
-            }
-        }
-    }
 }
 
 #[cfg(test)]
@@ -3114,6 +3109,21 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn slow_bullet_bill_thumbnail_finishes() {
+        let g = map_game();
+        let _g = lock_globals();
+        let pack = convert_path(g, "gfx/packs/Classic");
+        *g.rm.sprite(g.rm.spr_hazard_bulletbill[2]) = ImageLoader::new(convert_path_pack(g, "gfx/packs/hazards/bulletbill_thumbnail.png", &pack)).create(g);
+        *g.rm.sprite(g.rm.spr_platformpath) = ImageLoader::new(convert_path_pack(g, "gfx/leveleditor/leveleditor_platform_path.png", &pack)).create(g);
+        let thumb = crate::common::gfx::soft_surface::alloc_surface(crate::common::gfx::soft_surface::Surface::new_xrgb(160, 120));
+        for velocity in [0.0, 0.3, -0.3] {
+            let mut hazard = MapHazard { itype: 2, ix: 10, iy: 10, ..Default::default() };
+            hazard.dparam[0] = velocity;
+            draw_map_hazard(g, &hazard, 2, false, thumb);
+        }
+    }
+
+    #[test]
     fn loads_every_map_without_panicking() {
         let g = map_game();
         let mut gp = g.ptr();
@@ -3122,11 +3132,191 @@ pub(crate) mod tests {
         assert!(maps.len() > 400, "found {} maps", maps.len());
         for f in &maps {
             for rt in [read_type_summary, read_type_preview, read_type_full] {
-                gp.g_map.load_map(g, f, rt);
+                assert!(gp.g_map.load_map(g, f, rt), "{f} failed to load");
                 let mut map = g.g_map.ptr();
                 let _ = dump(g, &mut map, rt);
             }
         }
+    }
+
+    thread_local! {
+        static CAUGHT: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
+    }
+
+    /// Runs `f`, returning its result and the messages of the panics it caught, which are not printed.
+    fn caught_panics<R>(f: impl FnOnce() -> R) -> (R, Vec<String>) {
+        let previous = std::panic::take_hook();
+        std::panic::set_hook(Box::new(|info| {
+            let payload = info.payload();
+            let what = payload.downcast_ref::<String>().cloned().or_else(|| payload.downcast_ref::<&str>().map(|s| s.to_string()));
+            CAUGHT.with(|c| c.borrow_mut().push(what.unwrap_or_default()));
+        }));
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(f));
+        std::panic::set_hook(previous);
+        let caught = CAUGHT.with(|c| c.take());
+        match r {
+            Ok(r) => (r, caught),
+            Err(e) => std::panic::resume_unwind(e),
+        }
+    }
+
+    /// Loads `bytes` as a map file; the result and the errors that failed the load.
+    fn load_bytes(g: &mut Game, bytes: &[u8], rt: ReadType) -> (bool, Vec<String>) {
+        let mut gp = g.ptr();
+        let path = std::env::temp_dir().join(format!("smw_damaged_{}.map", std::process::id()));
+        std::fs::write(&path, bytes).unwrap();
+        let r = caught_panics(|| gp.g_map.load_map(g, path.to_str().unwrap(), rt));
+        let _ = std::fs::remove_file(&path);
+        r
+    }
+
+    /// Only a file read error or a range check may fail a load; anything else is a reader bug.
+    fn assert_clean_failure(what: &str, loaded: bool, caught: &[String]) {
+        for msg in caught {
+            assert!(msg.starts_with("File read error") || msg.starts_with("Damaged map:"), "{what}: {msg}");
+        }
+        assert_eq!(loaded, caught.is_empty(), "{what}: {caught:?}");
+    }
+
+    #[test]
+    fn damaged_maps_fail_to_load_cleanly() {
+        let g = map_game();
+        let _g = lock_globals();
+        let data = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/");
+        let maps = [
+            "worlds/Sky World/smb3 5-9.map",
+            "maps/4matsy_Cloud Props.map",
+            "maps/4matsy_Splitting Headache.map",
+            "maps/MrMister_MrIslandBattle.map",
+            "maps/special/two52_special_fireboss_minigame.map",
+        ];
+        // Older version headers make the older readers parse newer data as garbage.
+        let headers: [Option<[i32; 4]>; 7] = [None, Some([0, 0, 0, 0]), Some([1, 6, 0, 0]), Some([1, 6, 0, 10]), Some([1, 6, 1, 0]), Some([1, 7, 0, 0]), Some([1, 7, 0, 1])];
+        let mut seed: u32 = 1;
+        let mut next = move || {
+            seed = seed.wrapping_mul(1_103_515_245).wrapping_add(12_345);
+            (seed >> 8) as usize
+        };
+        for name in maps {
+            let original = std::fs::read(format!("{data}{name}")).unwrap();
+            for header in headers {
+                let mut bytes = original.clone();
+                if let Some(h) = header {
+                    for (k, v) in h.iter().enumerate() {
+                        bytes[k * 4..k * 4 + 4].copy_from_slice(&v.to_le_bytes());
+                    }
+                }
+                let mut cases: Vec<(String, Vec<u8>)> = (0..32).map(|k| bytes.len() * k / 32).map(|cut| (format!("cut at {cut}"), bytes[..cut].to_vec())).collect();
+                for k in 0..16 {
+                    let mut damaged = bytes.clone();
+                    for _ in 0..4 {
+                        let at = next() % damaged.len();
+                        damaged[at] = next() as u8;
+                    }
+                    cases.push((format!("damage {k}"), damaged));
+                }
+                for (case, bytes) in &cases {
+                    for rt in [read_type_preview, read_type_full] {
+                        let (loaded, caught) = load_bytes(g, bytes, rt);
+                        assert_clean_failure(&format!("{name} {header:?} {case} rt={rt}"), loaded, &caught);
+                    }
+                }
+                if header.is_none() {
+                    for (case, bytes) in cases.iter().take(32) {
+                        assert!(!load_bytes(g, bytes, read_type_full).0, "{name} {case} loaded");
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn out_of_range_values_fail_to_load() {
+        let g = map_game();
+        let mut gp = g.ptr();
+        let _g = lock_globals();
+        let base = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/maps/4matsy_Cloud Props.map");
+        let path = std::env::temp_dir().join(format!("smw_saved_{}.map", std::process::id()));
+        let path = path.to_str().unwrap();
+        // The base map saved after `edit`, so two saves differing in one field locate it past the summary header.
+        let mut saved = |edit: &dyn Fn(&mut CMap)| {
+            assert!(gp.g_map.load_map(g, base, read_type_full));
+            edit(&mut gp.g_map);
+            gp.g_map.save_map(g, path);
+            std::fs::read(path).unwrap()
+        };
+        let mut patched = |a: &dyn Fn(&mut CMap), b: &dyn Fn(&mut CMap), back: usize, value: &[u8]| {
+            let (x, y) = (saved(a), saved(b));
+            let header = 16 + 4 * (NUM_AUTO_FILTERS as usize + 1);
+            let at = header + x[header..].iter().zip(&y[header..]).position(|(p, q)| p != q).expect("the edits change the file") - back;
+            let mut bytes = x;
+            bytes[at..at + value.len()].copy_from_slice(value);
+            bytes
+        };
+        let switch_block = |setting: i16| move |m: &mut CMap| {
+            m.objectdata[0][0].iType = 11;
+            m.objectdata[0][0].iSettings[0] = setting;
+        };
+        let item = |itype: MapItemType, ix: i16| move |m: &mut CMap| m.mapitems = vec![MapItem { itype, ix, iy: 1 }];
+        let hazard = |itype: i16, iy: i16, iparam: [i16; 2], dparam: f32| {
+            move |m: &mut CMap| m.maphazards = vec![MapHazard { itype, ix: 2, iy, iparam: [iparam[0], iparam[1], 0, 0, 0], dparam: [dparam, 0.0, 0.0, 0.0, 0.0] }]
+        };
+        let next = f32::from_bits(1.0f32.to_bits() + 1);
+        let path_speed = |speed: f32| {
+            move |m: &mut CMap| {
+                let path = StraightPath::new(speed, crate::common::math::vec2::Vec2f::new(64.0, 64.0), crate::common::math::vec2::Vec2f::new(128.0, 64.0), false);
+                m.platform(m.platforms[0]).pPath = Box::new(path);
+            }
+        };
+        let object = |iType: i16| move |m: &mut CMap| m.objectdata[0][0].iType = iType;
+        let cases: Vec<(&str, Vec<u8>)> = vec![
+            ("item type", patched(&item(0, 1), &item(1, 1), 0, &9i32.to_le_bytes())),
+            ("item column", patched(&item(0, 1), &item(0, 2), 0, &(MAPWIDTH + 5).to_le_bytes())),
+            ("hazard type", patched(&hazard(3, 1, [60, 0], 0.0), &hazard(4, 1, [60, 0], 0.0), 0, &9i32.to_le_bytes())),
+            ("hazard row", patched(&hazard(3, 1, [60, 0], 0.0), &hazard(3, 2, [60, 0], 0.0), 0, &(2 * MAPHEIGHT).to_le_bytes())),
+            ("hazard frequency", patched(&hazard(3, 1, [60, 0], 0.0), &hazard(3, 1, [61, 0], 0.0), 0, &0i32.to_le_bytes())),
+            ("hazard direction", patched(&hazard(3, 1, [60, 0], 0.0), &hazard(3, 1, [60, 1], 0.0), 0, &7i32.to_le_bytes())),
+            ("hazard count", patched(&hazard(0, 1, [5, 0], 0.0), &hazard(0, 1, [6, 0], 0.0), 0, &100i32.to_le_bytes())),
+            ("hazard parameter", patched(&hazard(0, 1, [5, 0], 1.0), &hazard(0, 1, [5, 0], next), 0, &f32::NAN.to_le_bytes())),
+            ("platform path value", patched(&path_speed(1.0), &path_speed(next), 0, &f32::INFINITY.to_le_bytes())),
+            ("object type", patched(&object(0), &object(2), 0, &[40])),
+            ("music category", patched(&|m| m.musicCategoryID = 1, &|m| m.musicCategoryID = 2, 0, &200i32.to_le_bytes())),
+            ("item count", patched(&|m| m.mapitems = vec![MapItem::default(); 1], &|m| m.mapitems = vec![MapItem::default(); 2], 0, &(MAXMAPITEMS + 1).to_le_bytes())),
+            ("hazard count", patched(&|m| m.maphazards = vec![MapHazard::default(); 1], &|m| m.maphazards = vec![MapHazard::default(); 2], 0, &(MAXMAPHAZARDS + 1).to_le_bytes())),
+            ("switch block row", patched(&switch_block(0), &switch_block(1), 1, &[0xF0])),
+            ("switch block column", patched(&switch_block(0), &switch_block(1), 2, &[MAPWIDTH as u8])),
+            ("platform draw layer", patched(&|m| m.platform(m.platforms[0]).iDrawLayer = 1, &|m| m.platform(m.platforms[0]).iDrawLayer = 2, 0, &9i32.to_le_bytes())),
+        ];
+        let _ = std::fs::remove_file(path);
+        for (what, bytes) in cases {
+            let (loaded, caught) = load_bytes(g, &bytes, read_type_full);
+            assert!(!loaded, "{what} loaded");
+            assert!(caught.len() == 1 && caught[0].starts_with(&format!("Damaged map: {what} ")), "{what}: {caught:?}");
+            assert!(g.g_map.platforms.is_empty() && g.g_map.mapitems.is_empty() && g.g_map.numwarpexits == 0, "{what} left map data");
+        }
+    }
+
+    #[test]
+    fn spawn_area_outside_the_map_fails_to_load() {
+        let area = SpawnArea { left: 15, top: 1, width: 6, height: 12, size: 84 };
+        let (checked, caught) = caught_panics(|| catch_runtime_error(|| map_reader::check_spawn_area(&area)));
+        assert!(checked.is_none());
+        assert_eq!(caught, ["Damaged map: spawn area width 6 is not in 0..=5"]);
+        assert!(catch_runtime_error(|| map_reader::check_spawn_area(&SpawnArea { width: 5, ..area })).is_some());
+    }
+
+    #[test]
+    fn warp_entrance_without_exit_fails_to_load() {
+        let g = map_game();
+        let mut gp = g.ptr();
+        let _g = lock_globals();
+        let base = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/maps/4matsy_Cloud Props.map");
+        assert!(gp.g_map.load_map(g, base, read_type_full));
+        assert!(gp.g_map.warpexits[..gp.g_map.numwarpexits as usize].iter().all(|e| e.connection != 9));
+        gp.g_map.warpdata[0][0] = Warp { direction: 0, connection: 9, id: 0 };
+        let (checked, caught) = caught_panics(|| catch_runtime_error(|| map_reader::check_warp_exits(&gp.g_map)));
+        assert!(checked.is_none());
+        assert_eq!(caught, ["Damaged map: warp connection 9 has no exit"]);
     }
 
     /// Same text as tools/ref/map_list_dump.cpp prints after `---`.

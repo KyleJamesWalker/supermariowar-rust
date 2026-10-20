@@ -2,6 +2,7 @@
 //! as `matchbox_server` speaks it, so a relay alone can pair a room's WebRTC peers, e.g. on a LAN without internet.
 
 use crate::config::Config;
+use crate::websocket::Poll;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::io::ErrorKind;
@@ -11,14 +12,17 @@ use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
 use tungstenite::handshake::server::{ErrorResponse, Request, Response};
 use tungstenite::http::StatusCode;
+use tungstenite::protocol::WebSocketConfig;
 use tungstenite::Message;
 
-/// How long a signaling thread waits for input before it sends what other peers queued.
-const POLL: Duration = Duration::from_millis(4);
 /// A signaling peer silent this long leaves its room.
 const IDLE_TIMEOUT: Duration = Duration::from_secs(60);
 /// Messages queued for one peer; more are dropped.
 const OUTBOX_LEN: usize = 256;
+/// The largest signaling message, in bytes: an SDP with every ICE candidate gathered is a few KiB.
+const MAX_MESSAGE_LEN: usize = 16 * 1024;
+/// A match has at most four players.
+const MAX_ROOM_PEERS: usize = 4;
 
 /// Each signaling room's peers, by peer ID, with the queue of messages to each.
 type Rooms = HashMap<String, HashMap<String, SyncSender<String>>>;
@@ -56,19 +60,28 @@ pub fn run(stream: TcpStream, room: String, config: &Config) {
         *refusal.status_mut() = StatusCode::FORBIDDEN;
         Err(refusal)
     };
-    let Ok(mut ws) = tungstenite::accept_hdr(stream, check_origin) else { return };
-    let _ = ws.get_ref().set_read_timeout(Some(POLL));
+    let ws_config = WebSocketConfig::default().max_message_size(Some(MAX_MESSAGE_LEN)).max_frame_size(Some(MAX_MESSAGE_LEN));
+    let Ok(mut ws) = tungstenite::accept_hdr_with_config(stream, check_origin, Some(ws_config)) else { return };
+    let mut poll = Poll::new(ws.get_ref());
 
     let me = new_peer_id();
     let (tx, outgoing) = sync_channel::<String>(OUTBOX_LEN);
     let _ = tx.try_send(json!({ "IdAssigned": me }).to_string());
     // Reading the room's peers and adding this one under one lock: two peers joining at once still pair up.
-    let others: Vec<SyncSender<String>> = {
+    let others: Option<Vec<SyncSender<String>>> = {
         let mut rooms = rooms().lock().unwrap();
         let peers = rooms.entry(room.clone()).or_default();
-        let others = peers.values().cloned().collect();
-        peers.insert(me.clone(), tx);
-        others
+        (peers.len() < MAX_ROOM_PEERS).then(|| {
+            let others = peers.values().cloned().collect();
+            peers.insert(me.clone(), tx);
+            others
+        })
+    };
+    let Some(others) = others else {
+        println!("[relay] refused a signaling peer: room full");
+        let _ = ws.close(None);
+        let _ = ws.flush();
+        return;
     };
     for other in others {
         let _ = other.try_send(json!({ "NewPeer": me }).to_string());
@@ -80,6 +93,7 @@ pub fn run(stream: TcpStream, room: String, config: &Config) {
             match ws.read() {
                 Ok(Message::Text(text)) => {
                     last_heard = Instant::now();
+                    poll.active();
                     let Ok(request) = serde_json::from_str::<Value>(&text) else { continue };
                     if let Some(signal) = request.get("Signal") {
                         let (Some(receiver), Some(data)) = (signal.get("receiver").and_then(Value::as_str), signal.get("data")) else { continue };
@@ -99,12 +113,16 @@ pub fn run(stream: TcpStream, room: String, config: &Config) {
             }
             wrote = true;
         }
-        if wrote && ws.flush().is_err() {
-            break;
+        if wrote {
+            poll.active();
+            if ws.flush().is_err() {
+                break;
+            }
         }
         if last_heard.elapsed() >= IDLE_TIMEOUT {
             break;
         }
+        poll.update(ws.get_ref());
     }
 
     let remaining: Vec<SyncSender<String>> = {

@@ -194,6 +194,7 @@ mod tests {
     /// Every PNG in `data/`, with and without the magenta key the game uses, against SDL_image and SDL.
     #[test]
     fn data_images_match_sdl() {
+        let _sdl = crate::common::gfx::soft_surface::tests::sdl_lock();
         let data = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data");
         let mut files = Vec::new();
         pngs(&data, &mut files);
