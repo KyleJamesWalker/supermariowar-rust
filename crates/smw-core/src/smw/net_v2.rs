@@ -1,6 +1,7 @@
 //! Netplay v2 matches: every peer restores the host's match start, then the match runs under a GGRS P2P session over
 //! the room's WebRTC connections. Recordings keep each frame as a `#@ v2` line, which a replay plays without the network.
 
+use crate::common::global_constants::MAX_PLAYERS;
 use crate::common::input::COutputControl;
 use crate::game::Game;
 use crate::smw::harness;
@@ -57,6 +58,12 @@ pub struct V2Match {
     others: usize,
     /// Each other peer's room slot, from its `MSG_SLOT`.
     slots: BTreeMap<PeerId, u8>,
+    /// The host's room slot (`hostPlayerNumber`).
+    host_slot: u8,
+    /// The peer whose `MSG_SLOT` claimed the host's slot; a joiner takes the match start, GO and LEAVE only from it.
+    host_peer: Option<PeerId>,
+    /// Peers whose slot claim was refused, so each is logged once.
+    refused: Vec<PeerId>,
     /// The host's match start (`checkpoint::capture_shared`); empty on a joiner.
     start: Vec<u8>,
     /// The match start parts a joiner has received so far.
@@ -144,6 +151,9 @@ pub fn match_starting(g: &mut Game) -> bool {
         my_slot,
         others,
         slots: BTreeMap::new(),
+        host_slot: g.netplay.hostPlayerNumber,
+        host_peer: None,
+        refused: Vec::new(),
         start,
         parts: Vec::new(),
         ready: Vec::new(),
@@ -395,6 +405,24 @@ fn slot_message(slot: u8) -> [u8; 3] {
     [MSG_SLOT, HANDSHAKE_VERSION, slot]
 }
 
+/// Records `peer`'s claim on room `slot`. Refuses a slot out of range, this player's own, one another peer holds, and
+/// a peer that changes its slot, so two GGRS handles never play one player.
+fn claim_slot(slots: &mut BTreeMap<PeerId, u8>, my_slot: u8, peer: PeerId, slot: u8) -> Result<(), String> {
+    if slot as i32 >= MAX_PLAYERS || slot == my_slot {
+        return Err(format!("slot {slot} is not another player's"));
+    }
+    if let Some((_, held)) = slots.iter().find(|&(&p, &s)| p != peer && s == slot) {
+        return Err(format!("slot {held} is already taken"));
+    }
+    match slots.insert(peer, slot) {
+        Some(old) if old != slot => {
+            slots.insert(peer, old);
+            Err(format!("slot {slot} after claiming slot {old}"))
+        }
+        _ => Ok(()),
+    }
+}
+
 /// The slot in a peer's `MSG_SLOT`, or why this build cannot play with that peer.
 fn read_slot_message(msg: &[u8]) -> Result<u8, String> {
     match msg {
@@ -448,12 +476,21 @@ impl V2Match {
     /// Handles the handshake messages; a joiner restores the match start once all its parts arrived.
     fn receive_reliable(&mut self, g: &mut Game) -> Result<(), String> {
         for (peer, msg) in self.socket.receive(RELIABLE) {
+            let from_host = self.host_peer == Some(peer);
             match msg.first() {
                 Some(&MSG_SLOT) => {
                     let slot = read_slot_message(&msg).map_err(|e| format!("peer {:08x}: {e}", peer.0 >> 96))?;
-                    self.slots.insert(peer, slot);
+                    match claim_slot(&mut self.slots, self.my_slot, peer, slot) {
+                        Ok(()) if !self.host && slot == self.host_slot => self.host_peer = Some(peer),
+                        Ok(()) => {}
+                        Err(e) if !self.refused.contains(&peer) => {
+                            self.refused.push(peer);
+                            println!("[net] v2: ignoring peer {:08x}: {e}", peer.0 >> 96);
+                        }
+                        Err(_) => {}
+                    }
                 }
-                Some(&MSG_START_PART) if msg.len() >= 5 && !self.host => {
+                Some(&MSG_START_PART) if msg.len() >= 5 && from_host => {
                     let index = u16::from_le_bytes([msg[1], msg[2]]) as usize;
                     let count = u16::from_le_bytes([msg[3], msg[4]]) as usize;
                     if self.parts.len() != count {
@@ -475,12 +512,13 @@ impl V2Match {
                         self.send_all(&ready);
                     }
                 }
-                Some(&MSG_READY) if self.host => {
+                Some(&MSG_READY) if self.host && self.slots.contains_key(&peer) => {
                     if !self.ready.contains(&peer) {
                         self.ready.push(peer);
                     }
                 }
-                Some(&MSG_GO) if !self.host => self.go = true,
+                Some(&MSG_GO) if from_host => self.go = true,
+                Some(&MSG_LEAVE) if from_host => return Err("the host left before the match started".to_string()),
                 _ => {}
             }
         }
@@ -683,5 +721,19 @@ mod tests {
         assert_eq!(read_slot_message(&slot_message(2)), Ok(2));
         assert!(read_slot_message(&[MSG_SLOT, HANDSHAKE_VERSION + 1, 2]).is_err());
         assert!(read_slot_message(&[MSG_SLOT, 2]).is_err());
+    }
+
+    #[test]
+    fn slot_claims_are_unique() {
+        let (a, b) = (PeerId(1), PeerId(2));
+        let mut slots = BTreeMap::new();
+        assert!(claim_slot(&mut slots, 0, a, 1).is_ok());
+        assert!(claim_slot(&mut slots, 0, a, 1).is_ok(), "a repeated claim");
+        assert!(claim_slot(&mut slots, 0, b, 1).is_err(), "another peer's slot");
+        assert!(claim_slot(&mut slots, 0, b, 0).is_err(), "this player's slot");
+        assert!(claim_slot(&mut slots, 0, b, MAX_PLAYERS as u8).is_err(), "out of range");
+        assert!(claim_slot(&mut slots, 0, a, 2).is_err(), "a changed slot");
+        assert!(claim_slot(&mut slots, 0, b, 2).is_ok());
+        assert_eq!(slots, BTreeMap::from([(a, 1), (b, 2)]));
     }
 }
