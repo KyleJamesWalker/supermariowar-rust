@@ -14,13 +14,11 @@ These items wait on a choice, not on work.
 
 ## After merge
 
-These follow-ups wait on open PRs.
+Follow-ups to the merged backlog PRs.
 
-- Once #248 and #265 are both merged, tag #248's reliable-overflow `gone.send` with the connection serial from #265.
-- Once #250 merges, enable the `bad_map` case of `tools/net_v2_adversarial_test.py` in CI.
-- Once #246 and #267 merge, switch the audio restore in `checkpoint.rs` to `from_file_or_silence`, so a joiner missing a file stays in sync.
-- Once #248 merges, run its SDL2 audio reload fix under AddressSanitizer.
-- Once each merges, check by hand what the headless tests cannot reach. These are the live level editor's Shift and Ctrl (#256), and the shader error banner and window restore (#261). Also open the sound options menu with no world music packs (#271).
+- Enable the `bad_map` case of `tools/net_v2_adversarial_test.py` in CI. It passes locally on `main` since #250.
+- Run #248's SDL2 audio reload fix under AddressSanitizer.
+- Check by hand what the headless tests cannot reach. These are the live level editor's Shift and Ctrl (#256), and the shader error banner and window restore (#261). Also open the sound options menu with no world music packs (#271).
 
 ## Maintenance
 
@@ -44,6 +42,7 @@ Possible bugs found while commenting the code in #232, and gaps the fix PRs left
   - The readers check platform path speed only for being finite and within 65536. A platform that moves more than a screen width per tick could carry a player past the one-screen wrap. The editor allows at most 4.16 px per tick, and 3000 fuzz cases did not hit it.
 - Netplay:
   - In the web build, dropping a `PeerSocket` leaves the browser connection open.
+  - After a v2 match, Start on the scoreboard opens the stats page only for the player who pressed it. The match's GGRS session has ended by then, so the other players stay on the scoreboard and never see the stats. Send the step to the peers, or advance every peer together.
 
 ## Review findings
 
@@ -80,7 +79,9 @@ A full-codebase review on 2026-10-19, at the head of the GPU shader stack, confi
 
 ## Performance
 
-A read-only profile on 2026-10-20 of a headless 4-CPU replay on an Apple-silicon Mac. None of these changes simulated gameplay unless the item says so. Device numbers are scaled from `design/NETPLAY_V2.md`, not measured.
+A read-only profile on 2026-10-20 of a headless 4-CPU replay on an Apple-silicon Mac. None of these changes simulated gameplay unless the item says so. Device numbers are scaled from `design/NETPLAY_V2.md` unless an item says it measured them.
+
+Two RG35XX handhelds measured the performance PRs (#255, #262, #263, #265, #284). Menus went from 9.3 to 3.2 ms of update and draw. A local Frenzy match went from 4.8 to 2.7 ms, on another map. A 3-player Greed netplay match on Log Balancing ran 5.4 to 5.9 ms on the host. Its GGRS frames took 1.1 to 1.3 ms, with no frame over budget and no desync. Present stays at 3.8 to 4.0 ms, now more than half of a match frame.
 
 - Every loaded image blits through the per-pixel alpha blend. `convert_to_screen` turns the color key into alpha 0 and sets no `color_key`, so the opaque 640x480 map layers blend too. The backmap blit takes 78% of gameplay samples: 255 us blended against 20 us copied. Mark a surface opaque when every pixel has alpha 255, clear the mark on any non-opaque write, and copy opaque sources. Output stays bit-identical (`soft_image.rs`, `soft_surface.rs`, M). #284 adds the alpha 0 and 255 shortcut inside the blend loop, about 1.8x on blended pixels.
 - Check whether keyed sprites can set `color_key` at load and take the key loop (66 us against 90 us for 300 sprites). This holds only if the alpha-0 pixels are exactly the key pixels. Confirm with `tools/blit_unverified.sh` (S).
@@ -88,6 +89,7 @@ A read-only profile on 2026-10-20 of a headless 4-CPU replay on an Apple-silicon
 - A Very Hard CPU rebuilds its navigation graph every 8 ticks on maps with platforms, with 300 or more allocations per build, and `route` allocates its scratch buffers per call. Reuse the buffers and store the edges as two flat vectors (`ai_nav.rs`, S). One graph shared by all CPUs per tick changes gameplay. Batch it with other AI work.
 - On a 60 Hz display, interpolation records each tick and replays it once per present, for no visual gain. Rasterize directly when the refresh rate is at or below the tick rate (`main.rs`, `gs_gameplay.rs`, S).
 - Small per-frame allocations: `draw_platforms` clones two vectors six times a frame (`map.rs`), `touch::overlay` clones the cutouts and builds a new quad vector every present (`touch.rs`), and `display_list::begin` regrows its command vector every tick (S each).
+- The map browser stalls on the RG35XX while it loads each map's preview (`mi_map_browser.rs`). Two 5 s reports averaged 78 ms and 113 ms per frame, with single frames up to 1.5 s. Cache the previews, or load them off the frame (M).
 - Startup on the device is unmeasured: about 230 PNGs decode through `flate2`'s Rust backend, and a missing `maps/cache/mapsummary.txt` loads every map. Log per-phase startup times first, then consider `zlib-rs` and shipping the cache (S).
 
 ## Parked
@@ -97,3 +99,4 @@ A read-only profile on 2026-10-20 of a headless 4-CPU replay on an Apple-silicon
   - Riding a moving platform along its path: the navigation graph sees a platform only where it is. Planning rides along the whole path was mixed in the benchmark.
   - Springs and breakable blocks in the navigation graph.
   - Note-block super jumps: they always rise to full height, so CPUs aiming at a lower ledge overshoot. Planning them as longer jump links, and letting go of jump above a lower target, were both mixed in the benchmark.
+  - The boss minigames: the AI has no notion of the boss, so CPUs play them as deathmatch and hunt the other players. The final hit on the boss wins. A CPU should mostly attack the boss, and stomp a rival only when that is cheap.
