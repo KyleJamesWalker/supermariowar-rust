@@ -4503,7 +4503,7 @@ pub fn new_world(g: &mut Game) -> i32 {
     0
 }
 
-/// Asks for a size and resizes the world, dropping vehicles outside it and every warp, then saves.
+/// Asks for a size and resizes the world, dropping the vehicles and warp ends outside it, then saves.
 pub fn resize_world(g: &mut Game) -> i32 {
     let mut gp = g.ptr();
     let mut szWidth = String::new();
@@ -4533,7 +4533,15 @@ pub fn resize_world(g: &mut Game) -> i32 {
             }
         }
 
-        delete_all_vehicles_and_warps(g, false);
+        let outside: Vec<Vec2s> = ed(gp.get())
+            .warplist
+            .iter()
+            .flat_map(|w| [w.posA, w.posB])
+            .filter(|p| p.x >= 0 && (p.x >= iWidth || p.y >= iHeight))
+            .collect();
+        for end in outside {
+            RemoveWarpFromTile(g, end.x, end.y);
+        }
 
         g.g_worldmap.resize(iWidth, iHeight);
 
