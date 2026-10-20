@@ -1,4 +1,4 @@
-//! Port of src/server/Room.cpp
+//! A lobby room: four player slots, the host's map and mode settings, and the messages the room sends its players.
 
 use super::blob::Blob;
 use super::clock::{time_now, TimePoint};
@@ -10,20 +10,26 @@ use smw::globals::Ptr;
 
 const REMOTE_PKG_SIZE_LIMIT: usize = 20000; /* bytes in worst case */
 
+/// A room of the lobby, owned by `SMWServer::rooms`.
 pub struct Room {
     pub roomID: u32,
     pub name: [u8; NET_MAX_ROOM_NAME_LENGTH],
+    /// NUL-terminated; a NUL first byte means no password.
     pub password: [u8; NET_MAX_ROOM_PASSWORD_LENGTH],
+    /// Listed in the room list; false from match start until the host reopens the room.
     pub visible: bool,
 
+    /// The players by slot, null for a free slot; they point into `SMWServer::players`.
     pub players: [Ptr<Player>; 4],
     pub hostPlayerNumber: u8, // 0-3 index in players[]
     pub playerCount: u8,
 
+    /// The host's last `NET_NOTICE_MAP_CHANGE` message, relayed as is; the room lists only once it has one.
     pub mapPackage: Blob,
 
     pub gamemodeID: u8,
     pub gamemodeGoal: u16,
+    /// The host's last `NET_NOTICE_GAMEMODESETTINGS` message, relayed as is.
     pub gamemodeSettingsBlob: Blob,
 
     pub createTime: TimePoint,
@@ -37,7 +43,7 @@ impl Room {
             roomID,
             name: [0; NET_MAX_ROOM_NAME_LENGTH],
             password: [0; NET_MAX_ROOM_PASSWORD_LENGTH],
-            visible: true, // TODO
+            visible: true,
             players: [Ptr::null(); 4],
             hostPlayerNumber: 0,
             playerCount: 1,
@@ -57,6 +63,7 @@ impl Room {
         room
     }
 
+    /// Seats `player` in the first free slot and sends it the room, map, settings and skins; a full room leaves its `currentRoomID` 0.
     pub fn try_adding_player(&mut self, mut player: Ptr<Player>) {
         let mut p: u8 = 0;
         while p < 4 && player.currentRoomID == 0 {
@@ -87,6 +94,7 @@ impl Room {
         }
     }
 
+    /// Frees `player`'s slot; if the host left, the remaining player in the lowest slot becomes host.
     pub fn remove_player(&mut self, mut player: Ptr<Player>) {
         let mut searching = true;
         let mut p: u8 = 0;
@@ -98,7 +106,6 @@ impl Room {
                 searching = false;
 
                 // if this player was the host and there are players in the room
-                // TODO: check for upload/download errors
                 if self.hostPlayerNumber == p && self.playerCount > 0 {
                     self.hostPlayerNumber = 0xFF;
                     let mut pnexthost: u8 = 0;
@@ -122,10 +129,8 @@ impl Room {
         self.gamemodeGoal = goal;
     }
 
+    /// Sends every player `NET_NOTICE_ROOM_CHANGE`, each with its own slot as `remotePlayerNumber`.
     pub fn send_room_update(&mut self) {
-        // TODO: error check
-
-        // Crete package
         let mut package = CurrentRoom::new();
         package.roomID = self.roomID;
         package.hostPlayerNumber = self.hostPlayerNumber;
@@ -159,13 +164,13 @@ impl Room {
         }
     }
 
+    /// Sends a chat message from `sender` to the whole room, `sender` included; an empty message is dropped.
     pub fn send_chat_message(&mut self, sender: Ptr<Player>, message: &[u8]) {
         let len = message.iter().position(|&c| c == 0).unwrap_or(message.len());
         if len == 0 {
             return;
         }
 
-        // TODO: verify
         let mut senderNum: u8 = 0xFF;
         for p in 0..4u8 {
             if self.players[p as usize] == sender {
@@ -179,7 +184,6 @@ impl Room {
         package.senderNum = senderNum;
         strncpy_sec(&mut package.message, message, NET_MAX_CHAT_MSG_LENGTH);
 
-        // Send every player information about the other players.
         for p in 0..4usize {
             if !self.players[p].is_null() {
                 self.players[p].send_data(package.as_bytes());
@@ -231,6 +235,7 @@ impl Room {
         }
     }
 
+    /// Sends one blob to the player in slot `index`, if there is one.
     pub fn send_blob_to(&mut self, index: u8, blob: BlobRef) {
         println!("  sendBlobTo {}", index);
         debug_assert!(self.hostPlayerNumber < 4);
@@ -247,14 +252,13 @@ impl Room {
         self.players[index as usize].send_data(&data);
     }
 
+    /// Stamps `sender`'s slot into its skin message and sends it to the room's other players.
     pub fn share_skin_of(&mut self, mut sender: Ptr<Player>) {
         debug_assert!(!sender.is_null());
 
         if sender.skinPackage.empty() {
             return;
         }
-
-        // TODO: verify
 
         // find out and set player id
         for p in 0..4u8 {
@@ -272,6 +276,7 @@ impl Room {
         }
     }
 
+    /// Tells every player the match starts and hides the room from the room list.
     pub fn send_match_start(&mut self) {
         let pkg = MessageHeader::new(NET_L2P_MATCH_START);
         for p in 0..4 {
@@ -285,7 +290,7 @@ impl Room {
     pub fn start_game_if_everybody_ready(&mut self) {}
 }
 
-/// `const Blob&` argument: which blob of the room (or of a player's skin) to send.
+/// Which blob to send: the room's map or mode settings, or a player's skin.
 #[derive(Clone, Copy)]
 pub enum BlobRef {
     Map,

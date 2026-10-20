@@ -1,7 +1,5 @@
-//! Port of src/common_netplay/ProtocolPackages.h
-//!
-//! Packages go on the wire as their raw C++ memory image, so each struct is `#[repr(C)]` with the
-//! clang layout; padding is spelled out as zeroed `_padN` fields (C++ sends whatever bytes were there).
+//! The lobby protocol's messages. Each goes on the wire as the raw bytes of its `#[repr(C)]` struct, so padding
+//! is spelled out as zeroed `_padN` fields and multi-byte fields are in native byte order.
 
 use super::protocol_definitions::*;
 
@@ -14,7 +12,7 @@ macro_rules! net_package {
                 unsafe { ::std::slice::from_raw_parts(self as *const Self as *const u8, ::std::mem::size_of::<Self>()) }
             }
 
-            /// `memcpy(&pkg, data, sizeof(pkg))`; bytes past the end of `data` read as zero.
+            /// The message in `data`; bytes past the end of `data` read as zero.
             pub fn from_bytes(data: &[u8]) -> Self {
                 let mut buf = [0u8; ::std::mem::size_of::<Self>()];
                 let n = data.len().min(buf.len());
@@ -25,7 +23,7 @@ macro_rules! net_package {
     )*};
 }
 
-/// `strncpy(dst, src, N); dst[last] = '\0';`
+/// Copies `src` up to its first NUL into `dst`, NUL-padded, then puts a NUL at `last`.
 pub fn strncpy_terminated(dst: &mut [u8], src: &str, last: usize) {
     let bytes = src.as_bytes();
     let mut i = 0;
@@ -40,12 +38,13 @@ pub fn strncpy_terminated(dst: &mut [u8], src: &str, last: usize) {
     dst[last] = 0;
 }
 
-/// A NUL-terminated C string field as a Rust string (reads past the array like C would stop at the array end).
+/// A NUL-terminated string field as a `String`; a field without a NUL is read whole.
 pub fn cstr_field(field: &[u8]) -> String {
     let end = field.iter().position(|&c| c == 0).unwrap_or(field.len());
     crate::common::file_io::cstr_bytes_to_string(&field[..end])
 }
 
+/// The first 3 bytes of every lobby message: the protocol version and the message type.
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct MessageHeader {
@@ -70,6 +69,7 @@ impl Default for MessageHeader {
     Connection packages
 */
 
+/// `NET_RESPONSE_SERVERINFO`: the server's name and player counts.
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct ServerInfo {
@@ -95,6 +95,7 @@ impl ServerInfo {
     }
 }
 
+/// `NET_REQUEST_CONNECT` with the name the player asks for.
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct ClientConnection {
@@ -131,6 +132,7 @@ impl ConnectOk {
     }
 }
 
+/// `NET_REQUEST_LEAVE_SERVER`.
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct ClientDisconnection {
@@ -147,6 +149,7 @@ impl ClientDisconnection {
     Room packages
 */
 
+/// `NET_REQUEST_ROOM_LIST`; the lobby answers with one `RoomInfo` per listed room, or `NET_RESPONSE_NO_ROOMS`.
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct RoomList {
@@ -159,6 +162,7 @@ impl RoomList {
     }
 }
 
+/// `NET_RESPONSE_ROOM_LIST_ENTRY`: one room of the room list.
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct RoomInfo {
@@ -187,6 +191,7 @@ impl RoomInfo {
     }
 }
 
+/// `NET_REQUEST_CREATE_ROOM` with the room's name, password and game mode.
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct NewRoom {
@@ -208,7 +213,7 @@ impl NewRoom {
         }
     }
 
-    /// Terminates the name at `NET_MAX_PLAYER_NAME_LENGTH - 1`, not the room-name length (C++ bug).
+    /// Cuts the name to `NET_MAX_PLAYER_NAME_LENGTH - 1` bytes, shorter than the room name field holds.
     pub fn with(name: &str, password: &str) -> Self {
         let mut s = NewRoom::new();
         strncpy_terminated(&mut s.name, name, NET_MAX_PLAYER_NAME_LENGTH - 1);
@@ -217,6 +222,7 @@ impl NewRoom {
     }
 }
 
+/// `NET_RESPONSE_CREATE_OK` with the new room's ID.
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct NewRoomCreated {
@@ -231,6 +237,7 @@ impl NewRoomCreated {
     }
 }
 
+/// `NET_REQUEST_JOIN_ROOM` with the room's ID and the password typed.
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct JoinRoom {
@@ -253,6 +260,7 @@ impl JoinRoom {
     }
 }
 
+/// `NET_REQUEST_LEAVE_ROOM`.
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct LeaveRoom {
@@ -265,6 +273,7 @@ impl LeaveRoom {
     }
 }
 
+/// `NET_NOTICE_ROOM_CHANGE`: the room as the receiving player, in slot `remotePlayerNumber`, sees it.
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct CurrentRoom {
@@ -299,6 +308,7 @@ impl CurrentRoom {
     }
 }
 
+/// `NET_NOTICE_ROOM_CHAT_MSG`; `senderNum` is the sender's room slot.
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct RoomChatMsg {
@@ -321,6 +331,7 @@ impl RoomChatMsg {
     }
 }
 
+/// `NET_G2L_START_ROOM`: the room's host asks the lobby to start the match.
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct StartRoom {
@@ -342,8 +353,11 @@ impl StartRoom {
 #[derive(Clone, Copy, Debug)]
 pub struct MatchRoom {
     pub header: MessageHeader,
+    /// Players in the match, the receiver included.
     pub playerCount: u8,
+    /// The signaling room's URL; one starting with `/` is on the lobby's server.
     pub roomURL: [u8; 160],
+    /// Empty when there is no TURN server.
     pub turnURL: [u8; 96],
     pub turnUsername: [u8; 64],
     pub turnCredential: [u8; 32],
@@ -446,7 +460,7 @@ mod tests {
     use super::*;
     use std::mem::{offset_of, size_of};
 
-    /// Values from tools/ref/net_layout.cpp compiled with clang against the C++ headers.
+    /// Pins every message's wire size and field offsets.
     #[test]
     fn layouts_match_clang() {
         assert_eq!(size_of::<MessageHeader>(), 3);
