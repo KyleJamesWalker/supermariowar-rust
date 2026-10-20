@@ -631,7 +631,7 @@ impl MusicPack {
             return self.m_all_songs[list[self.m_currentMusic]].clone();
         }
 
-        self.m_all_songs[4].clone()
+        self.music(4).clone()
     }
 
     /// The song after the last one picked, from the same list `random_music` would pick from.
@@ -663,7 +663,7 @@ impl MusicPack {
             return self.m_all_songs[list[self.m_currentMusic]].clone();
         }
 
-        self.m_all_songs[4].clone()
+        self.music(4).clone()
     }
 
     pub fn update_with_overrides(&mut self, overrides: &[MapMusicOverride]) {
@@ -677,13 +677,19 @@ impl MusicPack {
     }
 }
 
-/// The music packs in music/game/ and the selected one.
+/// The path of "no song", which a music load plays as silence.
+static NO_SONG: PathBuf = PathBuf::new();
+
+/// The music packs in music/game/ and the selected one. Without packs it has none selected and every song is
+/// `NO_SONG`.
 #[derive(Clone, Debug)]
 pub struct MusicList {
     /// The song the game is playing.
     m_currentMusic: PathBuf,
     m_entries: Vec<MusicPack>,
     m_currentIndex: usize,
+    /// The song index `song_state_mut` hands out while there are no packs.
+    m_noPackSong: usize,
     _alias: Aliased,
 }
 
@@ -691,7 +697,7 @@ impl MusicList {
     pub fn new(g: &mut Game) -> Self {
         let mut m_entries = Vec::new();
         let music = convert_path(g, "music/game/");
-        let mut dir = SubdirsIterator::new(g, music);
+        let mut dir = SubdirsIterator::new(g, music.clone());
         while let Some(path) = dir.next() {
             if let Some(pack) = MusicPack::load(g, &path) {
                 m_entries.push(pack);
@@ -699,15 +705,15 @@ impl MusicList {
         }
 
         if m_entries.is_empty() {
-            std::panic::panic_any("Could not load any map music!");
+            println!("[music] No game music packs in {}; matches play no music", music);
         }
 
-        MusicList { _alias: Aliased::new(), m_currentMusic: PathBuf::new(), m_entries, m_currentIndex: 0 }
+        MusicList { _alias: Aliased::new(), m_currentMusic: PathBuf::new(), m_entries, m_currentIndex: 0, m_noPackSong: 0 }
     }
 
     /// Song `musicID` of the selected pack.
     pub fn music(&self, musicID: usize) -> &PathBuf {
-        self.m_entries[self.m_currentIndex].music(musicID)
+        self.m_entries.get(self.m_currentIndex).map_or(&NO_SONG, |pack| pack.music(musicID))
     }
     pub fn current_music(&self) -> &PathBuf {
         &self.m_currentMusic
@@ -715,15 +721,24 @@ impl MusicList {
 
     /// The current song and its index in the current pack, for replay checkpoints (smw/checkpoint.rs).
     pub fn song_state_mut(&mut self) -> (&mut PathBuf, &mut usize) {
-        (&mut self.m_currentMusic, &mut self.m_entries[self.m_currentIndex].m_currentMusic)
+        match self.m_entries.get_mut(self.m_currentIndex) {
+            Some(pack) => (&mut self.m_currentMusic, &mut pack.m_currentMusic),
+            None => (&mut self.m_currentMusic, &mut self.m_noPackSong),
+        }
     }
 
     pub fn set_random_music(&mut self, g: &mut Game, category: MusicCategory, mapName: &str, background: &str) {
-        self.m_currentMusic = self.m_entries[self.m_currentIndex].random_music(g, category, mapName, background);
+        self.m_currentMusic = match self.m_entries.get_mut(self.m_currentIndex) {
+            Some(pack) => pack.random_music(g, category, mapName, background),
+            None => PathBuf::new(),
+        };
     }
 
     pub fn set_next_music(&mut self, category: MusicCategory, mapName: &str, background: &str) {
-        self.m_currentMusic = self.m_entries[self.m_currentIndex].next_music(category, mapName, background);
+        self.m_currentMusic = match self.m_entries.get_mut(self.m_currentIndex) {
+            Some(pack) => pack.next_music(category, mapName, background),
+            None => PathBuf::new(),
+        };
     }
 
     pub fn current_index(&self) -> usize {
@@ -733,20 +748,30 @@ impl MusicList {
         self.m_currentIndex = if index < self.m_entries.len() { index } else { 0 };
     }
     pub fn current_name(&self) -> &str {
-        self.m_entries[self.m_currentIndex].name()
+        self.m_entries.get(self.m_currentIndex).map_or("(none)", |pack| pack.name())
+    }
+    /// No pack loaded: nothing to play.
+    pub fn is_empty(&self) -> bool {
+        self.m_entries.is_empty()
     }
 
     pub fn next(&mut self) {
-        self.m_currentIndex = (self.m_currentIndex + 1) % self.m_entries.len();
+        if !self.m_entries.is_empty() {
+            self.m_currentIndex = (self.m_currentIndex + 1) % self.m_entries.len();
+        }
     }
 
     pub fn prev(&mut self) {
-        self.m_currentIndex = (if self.m_currentIndex == 0 { self.m_entries.len() } else { self.m_currentIndex }) - 1;
+        if !self.m_entries.is_empty() {
+            self.m_currentIndex = (if self.m_currentIndex == 0 { self.m_entries.len() } else { self.m_currentIndex }) - 1;
+        }
     }
 
     pub fn random(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        self.m_currentIndex = RANDOM_INT(gp.get(), self.m_entries.len() as i32) as usize;
+        if !self.m_entries.is_empty() {
+            self.m_currentIndex = RANDOM_INT(gp.get(), self.m_entries.len() as i32) as usize;
+        }
     }
 
     pub fn update_entries_with_overrides(&mut self, overrides: &[MapMusicOverride]) {
@@ -900,15 +925,14 @@ impl WorldMusicPack {
             }
         }
 
-        if !this.m_category_song.contains_key(&WorldMusicCategory::Grass) {
-            println!("Error: No Grass song in: {}", file_path.display());
+        if this.m_category_song.is_empty() && this.m_world_overrides.is_empty() {
+            println!("Error: No songs found in: {}", musicdirectory.display());
             return None;
         }
-
         Some(this)
     }
 
-    /// The world's override song, else the category's, else Grass's; `load` rejects a pack without Grass.
+    /// The world's override song, else the category's, else Grass's, else `NO_SONG`.
     pub fn music(&self, category: WorldMusicCategory, worldName: &str) -> &PathBuf {
         if let Some(p) = self.m_world_overrides.get(worldName) {
             return p;
@@ -917,7 +941,7 @@ impl WorldMusicPack {
         if let Some(p) = self.m_category_song.get(&category) {
             return p;
         }
-        &self.m_category_song[&WorldMusicCategory::Grass]
+        self.m_category_song.get(&WorldMusicCategory::Grass).unwrap_or(&NO_SONG)
     }
 
     pub fn name(&self) -> &str {
@@ -943,14 +967,14 @@ impl WorldMusicList {
     pub fn new(g: &mut Game) -> Self {
         let mut m_entries = Vec::new();
         let music = convert_path(g, "music/world/");
-        let mut dir = SubdirsIterator::new(g, music);
+        let mut dir = SubdirsIterator::new(g, music.clone());
         while let Some(path) = dir.next() {
             if let Some(pack) = WorldMusicPack::load(&path) {
                 m_entries.push(pack);
             }
         }
         if m_entries.is_empty() {
-            std::panic::panic_any("Could not load any world music!");
+            println!("[music] No world music packs in {}; the world map plays no music", music);
         }
         WorldMusicList { _alias: Aliased::new(), m_entries, m_currentIndex: 0 }
     }
@@ -962,26 +986,32 @@ impl WorldMusicList {
         self.m_currentIndex = if index < self.m_entries.len() { index } else { 0 };
     }
     pub fn current_name(&self) -> &str {
-        self.m_entries[self.m_currentIndex].name()
+        self.m_entries.get(self.m_currentIndex).map_or("(none)", |pack| pack.name())
     }
     pub fn current_music(&self, category: WorldMusicCategory, worldName: &str) -> &PathBuf {
-        self.m_entries[self.m_currentIndex].music(category, worldName)
+        self.m_entries.get(self.m_currentIndex).map_or(&NO_SONG, |pack| pack.music(category, worldName))
     }
     pub fn count(&self) -> usize {
         self.m_entries.len()
     }
 
     pub fn next(&mut self) {
-        self.m_currentIndex = (self.m_currentIndex + 1) % self.m_entries.len();
+        if !self.m_entries.is_empty() {
+            self.m_currentIndex = (self.m_currentIndex + 1) % self.m_entries.len();
+        }
     }
 
     pub fn prev(&mut self) {
-        self.m_currentIndex = (if self.m_currentIndex == 0 { self.m_entries.len() } else { self.m_currentIndex }) - 1;
+        if !self.m_entries.is_empty() {
+            self.m_currentIndex = (if self.m_currentIndex == 0 { self.m_entries.len() } else { self.m_currentIndex }) - 1;
+        }
     }
 
     pub fn random(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        self.m_currentIndex = RANDOM_INT(gp.get(), self.m_entries.len() as i32) as usize;
+        if !self.m_entries.is_empty() {
+            self.m_currentIndex = RANDOM_INT(gp.get(), self.m_entries.len() as i32) as usize;
+        }
     }
 
     pub fn update_entries_with_overrides(&mut self, overrides: &[WorldMusicOverride]) {

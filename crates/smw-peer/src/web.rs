@@ -10,11 +10,12 @@ extern "C" {
     fn smw_peer_id(id: *mut u8) -> i32;
     fn smw_peer_change(id: *mut u8) -> i32;
     fn smw_peer_send(channel: i32, id: *const u8, data: *const u8, len: usize) -> i32;
+    fn smw_peer_next_len(channel: i32) -> i32;
     fn smw_peer_recv(channel: i32, id: *mut u8, buf: *mut u8, cap: usize) -> i32;
     fn smw_peer_close();
 }
 
-/// The largest packet `receive` takes, in bytes; peer_socket.js drops larger ones.
+/// The largest packet `receive` takes, in bytes; larger ones are dropped.
 const MAX_PACKET: usize = 64 * 1024;
 
 fn json_string(s: &str) -> String {
@@ -50,17 +51,18 @@ fn ice_servers_json(ice: &IceConfig) -> String {
 
 fn receive(channel: usize) -> Vec<(PeerId, Vec<u8>)> {
     let mut packets = Vec::new();
-    let mut buf = vec![0u8; MAX_PACKET];
     loop {
+        let next = unsafe { smw_peer_next_len(channel as i32) };
+        if next < 0 {
+            return packets;
+        }
         let mut id = [0u8; 16];
+        let mut data = vec![0u8; (next as usize).min(MAX_PACKET)];
         let len =
-            unsafe { smw_peer_recv(channel as i32, id.as_mut_ptr(), buf.as_mut_ptr(), buf.len()) };
-        match len {
-            -1 => return packets,
-            n if n >= 0 => {
-                packets.push((PeerId(u128::from_be_bytes(id)), buf[..n as usize].to_vec()))
-            }
-            _ => {}
+            unsafe { smw_peer_recv(channel as i32, id.as_mut_ptr(), data.as_mut_ptr(), data.len()) };
+        if len >= 0 {
+            data.truncate(len as usize);
+            packets.push((PeerId(u128::from_be_bytes(id)), data));
         }
     }
 }
