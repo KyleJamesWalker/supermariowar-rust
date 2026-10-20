@@ -16,13 +16,14 @@ cpu_health - 600 49321615ee60a11d
 cpu_jail - 600 28ed874a19ab565e
 cpu_kingofthehill - 600 bc77b75d9428a30e
 cpu_owned - 600 8b4abed9dabb28f5
-cpu_race - 600 1556852c357fc985
+cpu_race - 600 4342c48a8da00d8a
 cpu_shyguytag - 600 4eada7010ee2958a
 cpu_star - 600 74d9d6ee96964057
 cpu_stomp - 600 a8128a53633efa43
 cpu_survival - 600 3b5e095393b50807
 cpu_tag - 600 d935e596b19d6e89
 cpu_timelimit - 600 e93a2566140df759
+display_list_patches - 600 fb0962c0ad43655c
 flow_tour - 600 665a4eefbdaacc34
 flow_tournament - 600 de02af3970ec0296
 flow_world - 600 5b6d79a895d85d32
