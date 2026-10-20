@@ -28,6 +28,7 @@ MAX_OFF = 0.002
 # Name, preset, window scale; CRT Easymode draws scanlines only from 2x up.
 CASES = [
     ("crt_easymode_builtin", "builtin:CRT Easymode", 2),
+    ("crt_lottes_builtin", "builtin:CRT Lottes", 1),
     ("crt_lottes", str(REPO / "shaders" / "presets" / "CRT Lottes.slangp"), 1),
 ]
 
