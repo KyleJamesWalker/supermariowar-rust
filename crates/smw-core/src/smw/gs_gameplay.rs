@@ -2647,8 +2647,8 @@ impl GameplayState {
         }
         let (state, offsets) = (self.iCountDownState, self.iScoreTextOffset);
         let check = crate::common::gfx::display_list::check_enabled();
-        // The exit dialog is drawn straight onto this frame, so a frame showing it is drawn, not recorded.
-        let dialog = g.game_values.flags.pausegame || g.game_values.flags.exitinggame;
+        // The exit dialog and the stats page are drawn straight onto this frame, so a frame showing one is drawn, not recorded.
+        let dialog = g.game_values.flags.pausegame || g.game_values.flags.exitinggame || g.main_loop.stats_page;
         let interpolate = g.main_loop.interpolate && !dialog;
         let record = interpolate || check;
         if record {

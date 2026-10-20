@@ -1093,6 +1093,8 @@ impl MenuState {
         if MENU_CODE_EXIT_APPLICATION == code {
             self.quit(g);
             return true;
+        } else if MENU_CODE_ASK_QUIT == code {
+            g.input.quit_dialog = Some(false);
         } else if MENU_CODE_TO_MAIN_MENU == code {
             self.iDisplayError = DISPLAY_ERROR_NONE;
             self.iDisplayErrorTimer = 0;

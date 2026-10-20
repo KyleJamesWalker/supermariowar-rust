@@ -114,6 +114,8 @@ pub const MENU_CODE_TO_STATS_MENU: MenuCodeEnum = 121;
 pub const MENU_CODE_STATS_RESET: MenuCodeEnum = 122;
 pub const MENU_CODE_STATS_RESET_YES: MenuCodeEnum = 123;
 pub const MENU_CODE_STATS_RESET_NO: MenuCodeEnum = 124;
+/// Opens the Quit Game dialog.
+pub const MENU_CODE_ASK_QUIT: MenuCodeEnum = 125;
 pub const MENU_CODE_NET_HOST_LAN: MenuCodeEnum = 119;
 pub const MENU_CODE_NET_ADDREMOVE_SERVER_ON_ADD_BTN: MenuCodeEnum = 102;
 pub const MENU_CODE_NET_ADDREMOVE_SERVER_ON_EDIT_BTN: MenuCodeEnum = 103;
