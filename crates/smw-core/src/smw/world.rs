@@ -663,18 +663,7 @@ impl WorldMap {
         let mut this = Self::blank();
         this.reset_draw_cycle();
 
-        this.iTileSize = tilesize;
-
-        if this.iTileSize as i32 == TILESIZE {
-            this.iTileSizeShift = 5;
-            this.iTileSheet = 0;
-        } else if this.iTileSize as i32 == PREVIEWTILESIZE {
-            this.iTileSizeShift = 4;
-            this.iTileSheet = 1;
-        } else if this.iTileSize as i32 == THUMBTILESIZE {
-            this.iTileSizeShift = 3;
-            this.iTileSheet = 2;
-        }
+        this.set_tile_size(tilesize);
 
         this.worldName = strip_path_and_extension(path);
 
@@ -1314,6 +1303,22 @@ impl WorldMap {
             for iCol in 0..self.iWidth {
                 self.draw_tile_to_surface(g, surface, iCol, iRow, 0, 0, true, 0, 0);
             }
+        }
+    }
+
+    /// Draws at `tilesize` from now on: `TILESIZE`, `PREVIEWTILESIZE` or `THUMBTILESIZE`.
+    pub fn set_tile_size(&mut self, tilesize: i16) {
+        self.iTileSize = tilesize;
+
+        if self.iTileSize as i32 == TILESIZE {
+            self.iTileSizeShift = 5;
+            self.iTileSheet = 0;
+        } else if self.iTileSize as i32 == PREVIEWTILESIZE {
+            self.iTileSizeShift = 4;
+            self.iTileSheet = 1;
+        } else if self.iTileSize as i32 == THUMBTILESIZE {
+            self.iTileSizeShift = 3;
+            self.iTileSheet = 2;
         }
     }
 

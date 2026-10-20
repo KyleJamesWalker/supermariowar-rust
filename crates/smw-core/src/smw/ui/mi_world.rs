@@ -337,8 +337,7 @@ impl MI_World {
         if self.iSleepTurns > 0 {
             self.iSleepTurns -= 1;
             if self.iSleepTurns <= 0 {
-                g.backgroundmusic[5] = sfxMusic::from_file(g, gp.worldmusiclist.current_music(g.g_worldmap.get_music_category(), g.g_worldmap.get_world_name()))
-                    .unwrap_or_else(|e| std::panic::panic_any(e));
+                g.backgroundmusic[5] = sfxMusic::from_file_or_silence(g, gp.worldmusiclist.current_music(g.g_worldmap.get_music_category(), g.g_worldmap.get_world_name()));
                 gp.backgroundmusic[5].play(g, false, false);
             }
         } else {
@@ -490,7 +489,7 @@ impl MI_World {
             fUsedItem = true;
             if_sound_on_play(g, &mut gp.rm.sfx_collectpowerup);
 
-            g.backgroundmusic[5] = sfxMusic::from_file(g, gp.worldmusiclist.current_music(WorldMusicCategory::Sleep, "")).unwrap_or_else(|e| std::panic::panic_any(e));
+            g.backgroundmusic[5] = sfxMusic::from_file_or_silence(g, gp.worldmusiclist.current_music(WorldMusicCategory::Sleep, ""));
             gp.backgroundmusic[5].play(g, false, false);
         } else if p == NUM_POWERUPS + 1 {
             //Cloud (allows player to skip stages)
