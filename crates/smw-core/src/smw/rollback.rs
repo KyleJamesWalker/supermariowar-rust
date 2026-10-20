@@ -222,7 +222,8 @@ fn shared_pause(g: &mut Game, keys: &[(KeySlot, Keys)], silent: bool) -> bool {
 }
 
 /// FNV-1a over the match's harness dump (game mode, players, object counts) and the simulated state the dump leaves
-/// out: the mode's own state, scores, every object and block with its type's own state, every platform, the switches and the RNG. Floats go in as their bits, so every platform hashes the same state
+/// out: the gameplay state and flags, the mode's own state, scores, every object and block with its type's own state,
+/// every platform, the switches and the RNG. Floats go in as their bits, so every platform hashes the same state
 /// alike. What a desync check compares.
 pub fn checksum(g: &mut Game) -> u128 {
     let mut gp = g.ptr();
@@ -233,6 +234,25 @@ pub fn checksum(g: &mut Game) -> u128 {
     let mut h = Fnv::new();
     h.bytes(&dump);
     h.bytes(&harness::frame(g).to_le_bytes());
+    if let Some(gameplay) = gp.gps.as_ref() {
+        gameplay.harness_hash(&mut h);
+    }
+    let f = &g.game_values.flags;
+    h.i16s(&[
+        f.pauseowner,
+        f.noexittimer,
+        f.forceexittimer,
+        f.teamdeadcounter,
+        f.screenshaketimer,
+        f.screenshakeplayerid,
+        f.screenshaketeamid,
+        f.screenshakekillscount,
+        f.slowdownon,
+        f.slowdowncounter,
+        f.swapplayersblinkcount,
+    ]);
+    h.f32s(&[f.swapplayersposition, f.gamewindx, f.gamewindy]);
+    h.bools(&[f.pausegame, f.noexit, f.screenshakekillinair, f.swapplayers, f.swapplayersblink, f.windaffectsplayers, f.spinscreen, f.reversewalk]);
     g.mode().get().harness_hash(&mut h);
     for score in &g.score[..g.score_cnt.max(0) as usize] {
         h.i16s(&[score.score]);
