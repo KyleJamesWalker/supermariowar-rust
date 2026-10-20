@@ -173,8 +173,11 @@ impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
     pub fn current_value(&self) -> T {
         self.current_item().value
     }
-    /// A random item from the good-random ones; does not change the current item.
+    /// A random item from the good-random ones, else the current value; does not change the current item.
     pub fn random_value(&self, g: &mut Game) -> T {
+        if self.m_goodRandomIndices.is_empty() {
+            return self.current_value();
+        }
         let mut gp = g.ptr();
         let idx = self.m_goodRandomIndices[RANDOM_INT(gp.get(), self.m_goodRandomIndices.len() as i32) as usize];
         self.m_items[idx].value
