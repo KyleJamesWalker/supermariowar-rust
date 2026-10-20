@@ -4275,9 +4275,6 @@ pub fn dialog(g: &mut Game, title: &str, instructions: &str, input: &mut String,
                             currentChar -= 1;
                         }
                     } else {
-                        /* I realize the if statement below is long and can be substituted with
-                        the function isalnum(event.key_sym()) but I did it this way because
-                        isalnum acts funny (ie wrong) when the number pad is pressed. */
                         let isdigit = (b'0' as i32..=b'9' as i32).contains(&sym);
                         if (isdigit || sym == 45 || sym == 32 || sym == 61 || (sym >= 95 && sym <= 122)) && currentChar < (inputsize as u32).wrapping_sub(1) {
                             //insert character into fileName and onScreenText and increment current char
