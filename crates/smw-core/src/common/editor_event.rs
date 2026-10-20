@@ -4,6 +4,7 @@
 use crate::common::keys::*;
 use smw_platform::{DeviceChange, Input, InputEvent, MouseEvent, TouchPhase};
 
+/// The editors' last input event, read through accessors named after SDL2's `SDL_Event` fields.
 pub struct EditorEvent(Input);
 
 impl EditorEvent {
@@ -12,6 +13,7 @@ impl EditorEvent {
         EditorEvent(Input { timestamp: 0, event: InputEvent::Other(0) })
     }
 
+    /// Replaces the event, as `SDL_PollEvent` writing into it.
     pub fn set(&mut self, input: Input) {
         self.0 = input;
     }
@@ -20,6 +22,7 @@ impl EditorEvent {
         &self.0
     }
 
+    /// SDL2's event type; a remapped joystick reads as removed, since SDL2 has no joystick remap event.
     pub fn type_(&self) -> u32 {
         let device = |change: DeviceChange, added, removed, remapped| match change {
             DeviceChange::Added => added,
@@ -77,18 +80,22 @@ impl EditorEvent {
         }
     }
 
+    /// `key.keysym.sym`.
     pub fn key_sym(&self) -> i32 {
         self.words()[1] as i32
     }
 
+    /// `key.keysym.mod`.
     pub fn key_mod(&self) -> u16 {
         self.words()[2] as u16
     }
 
+    /// `button.button`.
     pub fn button_button(&self) -> u8 {
         self.words()[0] as u8
     }
 
+    /// `button.x` and `button.y`.
     pub fn button_x(&self) -> i32 {
         self.words()[1] as i32
     }
@@ -97,10 +104,12 @@ impl EditorEvent {
         self.words()[2] as i32
     }
 
+    /// `motion.state`, the button mask.
     pub fn motion_state(&self) -> u32 {
         self.words()[0]
     }
 
+    /// `motion.x` and `motion.y`.
     pub fn motion_x(&self) -> i32 {
         self.words()[1] as i32
     }
