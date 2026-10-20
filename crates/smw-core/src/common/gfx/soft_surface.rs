@@ -421,31 +421,56 @@ fn blit_or_clip(src: &Pixels, state: &BlitState, src_rect: Option<&Rect>, dst: &
 
 /// `SDL_LowerBlit` on rectangles already clipped by `blit`.
 fn lower_blit(src: &Pixels, state: &BlitState, sr: &Rect, dst: &mut PixelsMut, dx: i32, dy: i32) {
-    let blend = state.blend == BlendMode::Blend;
-    let modulate = state.alpha_mod != 255;
     let alpha_mod = state.alpha_mod as u32;
     let key = state.color_key.map(|k| k & RGB_MASK);
+    match (state.blend == BlendMode::Blend, key, state.alpha_mod != 255) {
+        (false, key, false) => blit_rows(src, sr, dst, dx, dy, key, |s, _| s),
+        (false, key, true) => blit_rows(src, sr, dst, dx, dy, key, |s, _| (s & RGB_MASK) | (mult_div_255(s >> 24, alpha_mod) << 24)),
+        (true, None, false) => blit_rows(src, sr, dst, dx, dy, None, blend_pixel_alpha),
+        (true, None, true) => blit_rows(src, sr, dst, dx, dy, None, |s, d| blend_modulate(s, d, alpha_mod)),
+        (true, key, false) => blit_rows(src, sr, dst, dx, dy, key, |s, d| blend_slow(s, d, None)),
+        (true, key, true) => blit_rows(src, sr, dst, dx, dy, key, |s, d| blend_slow(s, d, Some(alpha_mod))),
+    }
+}
 
+/// Picks the `blit_rows_with` instance for the color key and the two layouts.
+#[inline(always)]
+fn blit_rows(src: &Pixels, sr: &Rect, dst: &mut PixelsMut, dx: i32, dy: i32, key: Option<u32>, op: impl Fn(u32, u32) -> u32) {
+    let k = key.unwrap_or(0);
+    match (key.is_some(), src.alpha, dst.alpha) {
+        (false, false, false) => blit_rows_with::<false, false, false>(src, sr, dst, dx, dy, k, op),
+        (false, false, true) => blit_rows_with::<false, false, true>(src, sr, dst, dx, dy, k, op),
+        (false, true, false) => blit_rows_with::<false, true, false>(src, sr, dst, dx, dy, k, op),
+        (false, true, true) => blit_rows_with::<false, true, true>(src, sr, dst, dx, dy, k, op),
+        (true, false, false) => blit_rows_with::<true, false, false>(src, sr, dst, dx, dy, k, op),
+        (true, false, true) => blit_rows_with::<true, false, true>(src, sr, dst, dx, dy, k, op),
+        (true, true, false) => blit_rows_with::<true, true, false>(src, sr, dst, dx, dy, k, op),
+        (true, true, true) => blit_rows_with::<true, true, true>(src, sr, dst, dx, dy, k, op),
+    }
+}
+
+#[inline(always)]
+fn blit_rows_with<const KEYED: bool, const SRC_ALPHA: bool, const DST_ALPHA: bool>(
+    src: &Pixels,
+    sr: &Rect,
+    dst: &mut PixelsMut,
+    dx: i32,
+    dy: i32,
+    key: u32,
+    op: impl Fn(u32, u32) -> u32,
+) {
     for row in 0..sr.h {
         let s0 = (sr.y + row) as usize * src.pitch + sr.x as usize;
         let d0 = (dy + row) as usize * dst.pitch + dx as usize;
         let srow = &src.pixels[s0..s0 + sr.w as usize];
         let drow = &mut dst.pixels[d0..d0 + sr.w as usize];
         for (s, d) in srow.iter().zip(drow.iter_mut()) {
-            let s = if src.alpha { *s } else { *s | 0xFF00_0000 };
-            if let Some(k) = key {
-                if s & RGB_MASK == k {
-                    continue;
-                }
+            let s = if SRC_ALPHA { *s } else { *s | 0xFF00_0000 };
+            if KEYED && s & RGB_MASK == key {
+                continue;
             }
-            let out = match (blend, key.is_some(), modulate) {
-                (false, _, false) => s,
-                (false, _, true) => (s & RGB_MASK) | (mult_div_255(s >> 24, alpha_mod) << 24),
-                (true, false, false) => blend_pixel_alpha(s, *d),
-                (true, false, true) => blend_modulate(s, *d, alpha_mod),
-                (true, true, m) => blend_slow(s, *d, m.then_some(alpha_mod)),
-            };
-            *d = if dst.alpha { out } else { out | 0xFF00_0000 };
+            let out = op(s, *d);
+            *d = if DST_ALPHA { out } else { out | 0xFF00_0000 };
         }
     }
 }
