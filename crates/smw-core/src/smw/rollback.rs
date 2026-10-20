@@ -2,7 +2,7 @@
 //! tick itself with given keys, and a state checksum. GGRS decides when to save, load and re-run.
 
 use crate::common::eyecandy::{CEyecandyContainer, SpotlightManager};
-use crate::common::game_mode::CGameModeTrait;
+use crate::common::game_mode::{CGameModeTrait, ModeId};
 use crate::common::game_values::CGameValues;
 use crate::common::input::COutputControl;
 use crate::common::map::CMap;
@@ -61,11 +61,7 @@ pub struct MatchState {
     players: Players,
     score: [CScore; 4],
     score_cnt: i16,
-    gamemodes: Vec<Option<Box<dyn CGameModeTrait>>>,
-    bonushousemode: Option<CGM_Bonus>,
-    pipegamemode: Option<CGM_Pipe_MiniGame>,
-    bossgamemode: Option<CGM_Boss_MiniGame>,
-    boxesgamemode: Option<CGM_Boxes_MiniGame>,
+    mode: Option<ModeState>,
     currentgamemode: i16,
     stats_page: bool,
     rng: RngState,
@@ -80,6 +76,16 @@ pub struct MatchState {
     gps: Option<GameplayState>,
     /// The harness frame counter, which the virtual sound clock and [`checksum`] read.
     frame: u32,
+}
+
+/// The game mode a match plays, the only one its ticks change.
+#[derive(Clone)]
+enum ModeState {
+    Standard(usize, Box<dyn CGameModeTrait>),
+    BonusHouse(CGM_Bonus),
+    Pipe(CGM_Pipe_MiniGame),
+    Boss(CGM_Boss_MiniGame),
+    Boxes(CGM_Boxes_MiniGame),
 }
 
 impl Clone for Box<dyn CGameModeTrait> {
@@ -99,11 +105,14 @@ pub fn save(g: &mut Game) -> MatchState {
         players: g.players.clone(),
         score: std::array::from_fn(|i| (*g.score[i]).clone()),
         score_cnt: g.score_cnt,
-        gamemodes: g.gamemodes.iter().map(|m| m.is_set().then(|| m.clone_box())).collect(),
-        bonushousemode: g.bonushousemode.is_set().then(|| (*g.bonushousemode).clone()),
-        pipegamemode: g.pipegamemode.is_set().then(|| (*g.pipegamemode).clone()),
-        bossgamemode: g.bossgamemode.is_set().then(|| (*g.bossgamemode).clone()),
-        boxesgamemode: g.boxesgamemode.is_set().then(|| (*g.boxesgamemode).clone()),
+        mode: match g.game_values.gamemode {
+            None => None,
+            Some(ModeId::Standard(i)) => g.gamemodes[i as usize].is_set().then(|| ModeState::Standard(i as usize, g.gamemodes[i as usize].clone_box())),
+            Some(ModeId::BonusHouse) => g.bonushousemode.is_set().then(|| ModeState::BonusHouse((*g.bonushousemode).clone())),
+            Some(ModeId::Pipe) => g.pipegamemode.is_set().then(|| ModeState::Pipe((*g.pipegamemode).clone())),
+            Some(ModeId::Boss) => g.bossgamemode.is_set().then(|| ModeState::Boss((*g.bossgamemode).clone())),
+            Some(ModeId::Boxes) => g.boxesgamemode.is_set().then(|| ModeState::Boxes((*g.boxesgamemode).clone())),
+        },
         currentgamemode: g.currentgamemode,
         stats_page: g.main_loop.stats_page,
         rng: g.rng.clone(),
@@ -132,22 +141,13 @@ pub fn load(g: &mut Game, s: &MatchState) {
         **live = saved.clone();
     }
     g.score_cnt = s.score_cnt;
-    for (live, saved) in g.gamemodes.iter_mut().zip(&s.gamemodes) {
-        if let Some(mode) = saved {
-            live.set(mode.clone_box());
-        }
-    }
-    if let Some(mode) = &s.bonushousemode {
-        *g.bonushousemode = mode.clone();
-    }
-    if let Some(mode) = &s.pipegamemode {
-        *g.pipegamemode = mode.clone();
-    }
-    if let Some(mode) = &s.bossgamemode {
-        *g.bossgamemode = mode.clone();
-    }
-    if let Some(mode) = &s.boxesgamemode {
-        *g.boxesgamemode = mode.clone();
+    match &s.mode {
+        None => {}
+        Some(ModeState::Standard(i, mode)) => g.gamemodes[*i].set(mode.clone_box()),
+        Some(ModeState::BonusHouse(mode)) => *g.bonushousemode = mode.clone(),
+        Some(ModeState::Pipe(mode)) => *g.pipegamemode = mode.clone(),
+        Some(ModeState::Boss(mode)) => *g.bossgamemode = mode.clone(),
+        Some(ModeState::Boxes(mode)) => *g.boxesgamemode = mode.clone(),
     }
     g.currentgamemode = s.currentgamemode;
     g.main_loop.stats_page = s.stats_page;
