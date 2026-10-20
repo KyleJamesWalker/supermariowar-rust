@@ -1035,6 +1035,10 @@ impl CGameConfig {
         }
     }
 
+    pub fn read_controls_bytes(&mut self, g: &mut Game, controls: Vec<u8>) {
+        catch_runtime_error(|| self.read_controls(g, &mut BinaryFile::memory("controls.sdl2.bin", controls)));
+    }
+
     pub fn write_config(&self, g: &mut Game) {
         let mut gp = g.ptr();
         let ok = catch_runtime_error(|| {
