@@ -309,11 +309,20 @@ impl sfxSound {
         })
     }
 
-    /// `from_file`, or a silent sound with a warning when the file is missing or unreadable.
+    /// `from_file`, or with a warning, when the file is missing or unreadable, a sound the virtual mixer plays for the
+    /// file's listed duration while the backend, which never loaded it, stays silent.
     pub fn from_file_or_silence(g: &mut Game, path: &Path) -> Self {
+        let mut gp = g.ptr();
         Self::from_file(g, path).unwrap_or_else(|e| {
             println!("\n[sfx] {e}; playing silence instead");
-            Self::new()
+            let name = data_relative(&path.to_string_lossy());
+            sfxSound {
+                _alias: Aliased::new(),
+                m_sfx: MixChunkPtr(Some(SoundId(new_id(g))), gp),
+                m_duration_ms: sfx_durations::sound_ms(&name).unwrap_or(0),
+                m_name: name,
+                key: next_sound_key(),
+            }
         })
     }
 
