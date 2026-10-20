@@ -13,13 +13,14 @@ use crate::smw::players::PlayerId;
 use crate::common::gfx::soft_surface::Surface;
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
-use crate::common::file_io::BinaryFile;
+use crate::common::file_io::{catch_runtime_error, BinaryFile};
 use crate::common::game::App;
 use crate::common::gfx::gfx_sprite::{gfxSprite, ImageLoader};
 use crate::common::global::*;
 use crate::common::global_constants::*;
 use crate::common::io_block::IO_BlockTrait;
 use crate::common::map::map_reader::get_loader_by_version;
+use crate::common::map::map_reader_constants::g_szBackgroundConversion;
 use crate::common::math::trig::{cosf, sinf};
 use crate::common::moving_platform_paths::{EllipsePath, MovingPlatformPathTrait, PlatformPathType, StraightPath, StraightPathContinuous};
 use crate::common::movingplatform::MovingPlatform;
@@ -967,8 +968,9 @@ impl CMap {
         self.animatedtiles.clear();
     }
 
-    /// Loads the map file `file`; `iReadType` limits how much is read. Logs and returns on a file that will not open.
-    pub fn load_map(&mut self, g: &mut Game, file: &str, iReadType: ReadType) {
+    /// Loads the map file `file`; `iReadType` limits how much is read. On a file that will not open or is damaged,
+    /// logs the error, leaves an empty map and returns `false`.
+    pub fn load_map(&mut self, g: &mut Game, file: &str, iReadType: ReadType) -> bool {
         let mut gp = g.ptr();
         self.iTileAnimationTimer = 0;
         self.iTileAnimationFrame = 0;
@@ -983,43 +985,83 @@ impl CMap {
         if !mapfile.is_open() {
             println!();
             println!(" ERROR: Couldn't open map");
-            return;
+            self.clear_failed_load(iReadType);
+            return false;
         }
 
-        let version = Version {
-            major: mapfile.read_i32() as u8,
-            minor: mapfile.read_i32() as u8,
-            patch: mapfile.read_i32() as u8,
-            build: mapfile.read_i32() as u8,
-        };
+        let loaded = catch_runtime_error(|| {
+            let version = Version {
+                major: mapfile.read_i32() as u8,
+                minor: mapfile.read_i32() as u8,
+                patch: mapfile.read_i32() as u8,
+                build: mapfile.read_i32() as u8,
+            };
 
-        if iReadType != read_type_summary {
-            print!("loading map {}", file);
+            if iReadType != read_type_summary {
+                print!("loading map {}", file);
 
-            if iReadType == read_type_preview {
-                print!(" (preview)");
+                if iReadType == read_type_preview {
+                    print!(" (preview)");
+                }
+
+                if version >= (Version { major: 1, minor: 6, patch: 0, build: 0 }) {
+                    print!(" [v{}.{}.{}.{}]", version.major, version.minor, version.patch, version.build);
+                } else {
+                    print!(" [v1.5]");
+                }
+
+                print!(" ...");
             }
 
-            if version >= (Version { major: 1, minor: 6, patch: 0, build: 0 }) {
-                print!(" [v{}.{}.{}.{}]", version.major, version.minor, version.patch, version.build);
-            } else {
-                print!(" [v1.5]");
-            }
+            let mut reader = get_loader_by_version(&version);
+            reader.load(gp.get(), self, &mut mapfile, iReadType)
+        });
 
-            print!(" ...");
+        if loaded != Some(true) {
+            println!();
+            println!(" ERROR: Couldn't load map {}", file);
+            self.clear_failed_load(iReadType);
+            return false;
         }
-
-        let mut reader = get_loader_by_version(&version);
-        reader.load(gp.get(), self, &mut mapfile, iReadType);
-        drop(reader);
 
         if iReadType == read_type_summary {
-            return;
+            return true;
         }
 
         self.clear_warp_locks();
         println!(" done");
         let _ = std::io::stdout().flush();
+        true
+    }
+
+    /// After a failed load, clears the auto filters a summary reads, or else leaves an empty, playable map: no tiles,
+    /// objects, warps or platforms, and one spawn area.
+    fn clear_failed_load(&mut self, iReadType: ReadType) {
+        self.fAutoFilter = [false; NUM_AUTO_FILTERS as usize];
+        if iReadType == read_type_summary {
+            return;
+        }
+
+        self.clear_map();
+        self.clear_platforms();
+
+        self.szBackgroundFile = g_szBackgroundConversion[0].to_string();
+        self.backgroundID = 0;
+        self.musicCategoryID = 0;
+
+        self.numwarpexits = 0;
+        self.maxConnection = 0;
+        self.numdrawareas = 0;
+        self.iNumRaceGoals = 0;
+        self.iNumFlagBases = 0;
+
+        for iType in 0..NSPAWN {
+            self.numspawnareas[iType] = 1;
+            self.spawnareas[iType][0] = SpawnArea { left: 0, top: 1, width: 20, height: 12, size: 220 };
+            self.totalspawnsize[iType] = 220;
+        }
+
+        self.clear_warp_locks();
     }
 
     /// Recomputes [`TileType::Gap`] for every tile.

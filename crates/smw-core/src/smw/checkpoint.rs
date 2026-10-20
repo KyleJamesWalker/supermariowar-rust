@@ -36,7 +36,7 @@ pub struct Snap {
     buf: Vec<u8>,
     /// Read position in `buf`.
     pos: usize,
-    /// A read ran past the end or met an impossible length.
+    /// A read ran past the end or met an impossible length, or the map in it did not load.
     damaged: bool,
 }
 
@@ -460,7 +460,9 @@ fn walk(g: &mut Game, s: &mut Snap) {
         if s.load {
             g.maplist.set_current(map_index);
             let path = data_path(g, &map);
-            gp.g_map.load_map(g, &path, crate::common::map::read_type_full);
+            if !gp.g_map.load_map(g, &path, crate::common::map::read_type_full) {
+                s.damaged = true;
+            }
             note_match_map(g, &map);
             crate::common::global::load_current_map_background(g);
         }
