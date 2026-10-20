@@ -335,16 +335,16 @@ impl Fnv {
         }
     }
 
+    /// Hashes the slot only: generations count allocations, which differ between a live session and its replay.
     pub fn player(&mut self, id: PlayerId) {
-        let (slot, generation) = id.raw();
-        self.bytes(&[slot, generation]);
+        self.bytes(&[id.raw().0]);
     }
 
+    /// Hashes the container and slot only, as `player` does.
     pub fn object(&mut self, id: ObjectId) {
-        let (container, slot, generation) = id.raw();
+        let (container, slot, _) = id.raw();
         self.bytes(&[container]);
         self.bytes(&slot.to_le_bytes());
-        self.u32(generation);
     }
 }
 
