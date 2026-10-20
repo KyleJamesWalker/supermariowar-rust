@@ -51,7 +51,7 @@ Each variable is a no-op when unset or empty. The Rust binary must honour the sa
 | `SMW_SHOT_RANGE=<a>-<b>` | Limit `SMW_SHOT_EVERY` to frames `a..=b` (`a-` runs to the end); alone, it saves every frame in the range. `SMW_SHOT_FRAMES` still applies outside it. |
 | `SMW_SHOT_STREAM=<file>` | Append the frames `SMW_SHOT_EVERY`/`SMW_SHOT_RANGE` select to this file (or pipe) as raw 640x480 ARGB8888 rows, 1,228,800 bytes each, instead of writing BMPs. `SMW_SHOT_FRAMES` still writes BMPs. |
 | `SMW_SHADER=<preset.slangp>` | With the `shaders` feature, present each frame through that RetroArch shader preset (`design/SHADERS.md`). |
-| `SMW_SHADER_SHOT=<n>` | With `SMW_SHADER`, save the shader output of present `n` as `shader_<n>.bmp` in `SMW_SHOT_DIR`. |
+| `SMW_SHADER_SHOT=<n>` | With `SMW_SHADER`, save the window after present `n`, overlay and letterbox included, as `shader_<n>.bmp` in `SMW_SHOT_DIR`. |
 | `SMW_WINDOW_SCALE=<n>` | Open the window at `n` times 640x480. |
 | `SMW_WINDOW_DISPLAY=<n>` | Open the window centered on display `n` (0 is the primary display). |
 | `SMW_MAP=<name>` | Select the start map when the menu is created (see below). |

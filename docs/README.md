@@ -25,7 +25,7 @@ Start with `guides/` for how things work today. `design/` holds design docs with
 | `design/CPU_AI.md`: CPU AI overhaul | in progress |
 | `design/NETPLAY_V2.md`: rollback over WebRTC | done |
 | `design/GAMEPLAY_STATS.md`: match and lifetime stats | first cut |
-| `design/SHADERS.md`: RetroArch shader presets on the GPU | in progress |
+| `design/SHADERS.md`: RetroArch shader presets on the GPU | done |
 
 ## Upstream
 

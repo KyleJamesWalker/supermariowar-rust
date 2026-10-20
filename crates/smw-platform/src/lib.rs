@@ -67,6 +67,24 @@ pub trait Video {
     fn vsync(&self) -> bool {
         false
     }
+    /// Whether `set_shader` can present through a shader preset.
+    fn supports_shaders(&self) -> bool {
+        false
+    }
+    /// Presents through the RetroArch `.slangp` preset at `preset`, or without a shader for `None`. Before `open`,
+    /// it picks the preset `open` starts with. Err leaves the window presenting without a shader.
+    fn set_shader(&mut self, preset: Option<&std::path::Path>) -> Result<(), String> {
+        match preset {
+            Some(_) => Err("this backend has no shader support".to_string()),
+            None => Ok(()),
+        }
+    }
+    /// The shaders built into the backend, which `set_shader` takes as `builtin:<name>`.
+    fn builtin_shaders(&self) -> Vec<String> {
+        Vec::new()
+    }
+    /// Scales the picture only by whole multiples of 640x480 when `on`.
+    fn set_integer_scale(&mut self, _on: bool) {}
 }
 
 /// The platform's input event queue.

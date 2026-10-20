@@ -5,8 +5,10 @@ use librashader::presets::ShaderFeatures;
 use librashader::runtime::gl::{FilterChain, FilterChainOptions, GLImage};
 use librashader::runtime::{Size, Viewport};
 use sdl2::sys::*;
-use smw_platform::{Frame, SCREEN_H, SCREEN_W};
-use std::ffi::{CStr, CString};
+use crate::gl_common::{drawable_size, letterbox, load_gl, save_shot, shot_frame, watch_mouse};
+use crate::shader_overlay::{Glsl, OverlayGl};
+use smw_platform::{Frame, Overlay, SCREEN_H, SCREEN_W};
+use std::ffi::CStr;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -34,6 +36,7 @@ pub struct ShaderPresenter {
     output: Option<(glow::Texture, Size<u32>)>,
     /// Attaches `output` so it can be blitted to the window.
     read_fbo: glow::Framebuffer,
+    overlay: OverlayGl,
     frame_count: usize,
     /// `SMW_SHADER_SHOT`: the present whose output is saved as `shader_<n>.bmp` in `SMW_SHOT_DIR`.
     shot: Option<usize>,
@@ -58,18 +61,17 @@ impl ShaderPresenter {
     /// Safety: `context` is current.
     unsafe fn with_context(context: SDL_GLContext, preset: &Path) -> Result<Self, String> {
         SDL_GL_SetSwapInterval(if smw_platform::want_vsync() { 1 } else { 0 });
-        let gl = Arc::new(glow::Context::from_loader_function(|name| {
-            let name = CString::new(name).unwrap_or_default();
-            SDL_GL_GetProcAddress(name.as_ptr()) as *const _
-        }));
+        let gl = Arc::new(load_gl());
         let options = FilterChainOptions { glsl_version: 330, use_dsa: false, force_no_mipmaps: false, disable_cache: false };
         let chain = FilterChain::load_from_path(preset, ShaderFeatures::NONE, gl.clone(), Some(&options))
             .map_err(|e| format!("{}: {e:?}", preset.display()))?;
         let input = single_level_texture(&gl, SCREEN_W as i32, SCREEN_H as i32, glow::BGRA)?;
         let read_fbo = gl.create_framebuffer()?;
+        let overlay = OverlayGl::new(&gl, Glsl::Core330)?;
         println!("[gfx] Shader preset {} on OpenGL {}", preset.display(), gl.get_parameter_string(glow::VERSION));
-        let shot = std::env::var("SMW_SHADER_SHOT").ok().and_then(|n| n.parse().ok());
-        Ok(ShaderPresenter { context, gl, chain, input, output: Option::None, read_fbo, frame_count: 0, shot })
+        let shot = shot_frame();
+        watch_mouse(true);
+        Ok(ShaderPresenter { context, gl, chain, input, output: Option::None, read_fbo, overlay, frame_count: 0, shot })
     }
 
     pub fn vsync(&self) -> bool {
@@ -92,9 +94,9 @@ impl ShaderPresenter {
     }
 
     /// Safety: `window` is the window `new` was given.
-    pub unsafe fn present(&mut self, window: *mut SDL_Window, frame: Frame<'_>) {
+    pub unsafe fn present(&mut self, window: *mut SDL_Window, frame: Frame<'_>, overlay: Option<&Overlay>) {
         let (dw, dh) = drawable_size(window);
-        let scale = (dw as f32 / SCREEN_W as f32).min(dh as f32 / SCREEN_H as f32);
+        let (scale, _, _) = letterbox(dw, dh);
         let size = Size::new((SCREEN_W as f32 * scale) as u32, (SCREEN_H as f32 * scale) as u32);
         if size.width == 0 || size.height == 0 {
             return;
@@ -127,9 +129,7 @@ impl ShaderPresenter {
         if let Err(e) = self.chain.frame(&input, &viewport, self.frame_count, Option::None) {
             eprintln!("[gfx] Shader frame {}: {e:?}", self.frame_count);
         }
-        if self.shot == Some(self.frame_count) {
-            self.save_shot(out, size);
-        }
+        let shot = self.shot == Some(self.frame_count);
         self.frame_count += 1;
 
         let (x0, y0) = ((dw - size.width as i32) / 2, (dh - size.height as i32) / 2);
@@ -143,43 +143,24 @@ impl ShaderPresenter {
         let (w, h) = (size.width as i32, size.height as i32);
         gl.blit_framebuffer(0, 0, w, h, x0, y0 + h, x0 + w, y0, glow::COLOR_BUFFER_BIT, glow::NEAREST);
         gl.bind_framebuffer(glow::READ_FRAMEBUFFER, Option::None);
-        SDL_GL_SwapWindow(window);
-    }
-}
-
-impl ShaderPresenter {
-    /// Writes the chain's output as a BMP; its first row is the frame's top row, as the blit's flip implies.
-    unsafe fn save_shot(&self, out: glow::Texture, size: Size<u32>) {
-        let gl = &self.gl;
-        let (w, h) = (size.width as usize, size.height as usize);
-        let mut rgba = vec![0u8; w * h * 4];
-        gl.bind_framebuffer(glow::READ_FRAMEBUFFER, Some(self.read_fbo));
-        gl.framebuffer_texture_2d(glow::READ_FRAMEBUFFER, glow::COLOR_ATTACHMENT0, glow::TEXTURE_2D, Some(out), 0);
-        gl.read_pixels(0, 0, w as i32, h as i32, glow::RGBA, glow::UNSIGNED_BYTE, glow::PixelPackData::Slice(Some(&mut rgba)));
-        gl.bind_framebuffer(glow::READ_FRAMEBUFFER, Option::None);
-        let dir = std::env::var("SMW_SHOT_DIR").unwrap_or_else(|_| ".".to_string());
-        let path = CString::new(format!("{dir}/shader_{}.bmp", self.frame_count)).unwrap_or_default();
-        let format = SDL_PixelFormatEnum::SDL_PIXELFORMAT_ABGR8888 as u32;
-        let surface = SDL_CreateRGBSurfaceWithFormatFrom(rgba.as_mut_ptr() as *mut _, w as i32, h as i32, 32, (w * 4) as i32, format);
-        if surface.is_null() || SDL_SaveBMP_RW(surface, SDL_RWFromFile(path.as_ptr(), c"wb".as_ptr()), 1) != 0 {
-            eprintln!("[gfx] Could not save {}: {}", path.to_string_lossy(), CStr::from_ptr(SDL_GetError()).to_string_lossy());
+        if let Some(overlay) = overlay {
+            self.overlay.draw(gl, overlay, dw, dh);
         }
-        SDL_FreeSurface(surface);
+        if shot {
+            save_shot(gl, dw, dh, self.frame_count - 1);
+        }
+        SDL_GL_SwapWindow(window);
     }
 }
 
 impl Drop for ShaderPresenter {
     fn drop(&mut self) {
-        // SAFETY: the context was created in `new` and is deleted once, after the chain's GL objects.
-        unsafe { SDL_GL_DeleteContext(self.context) };
+        // SAFETY: the watch and the context were made in `new` and are removed once.
+        unsafe {
+            watch_mouse(false);
+            SDL_GL_DeleteContext(self.context);
+        }
     }
-}
-
-/// The window's size in physical pixels.
-pub unsafe fn drawable_size(window: *mut SDL_Window) -> (i32, i32) {
-    let (mut w, mut h) = (0, 0);
-    SDL_GL_GetDrawableSize(window, &mut w, &mut h);
-    (w, h)
 }
 
 /// An RGBA8 texture with one mip level and nearest filtering.

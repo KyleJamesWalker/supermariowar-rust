@@ -1080,6 +1080,14 @@ This will take you to a menu where you can change various screen settings. We ar
 
 This allows you to select custom graphics packs if you have any installed on your machine. Graphics packs are installed by unzipping them into the gfx/packs subfolder of the game. (Make sure that when you unzip the files, they stay in their original directories; otherwise the game will not recognize the new packs!)
 
+#### Shader
+
+This shows the game through a shader preset, such as a CRT effect. On Android and in the browser, the one choice is CRT Easymode. Off draws the game without one. On desktop, the bundled presets are BVM Monitor, CRT Easymode, CRT Guest, CRT Lottes, CRT Royale (3x and up) and CRT Trinitron 240p. CRT Royale needs the game at three times its size or more, such as fullscreen on a 1440p screen. The list holds the bundled presets, then any `.slangp` presets you add under `shaders/` in the settings folder (`~/Library/Preferences/.smw/shaders/` on macOS and Linux, `%USERPROFILE%\.smw\shaders\` on Windows). A preset that fails to load switches the setting back to Off.
+
+#### Integer Scaling
+
+On, the game is scaled only by whole multiples of 640x480, with black borders around it. CRT presets look most even this way.
+
 ### Eye Candy
 
 #### Spawn Style

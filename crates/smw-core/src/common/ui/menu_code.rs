@@ -117,6 +117,9 @@ pub const MENU_CODE_STATS_RESET_NO: MenuCodeEnum = 124;
 /// Opens the Quit Game dialog.
 pub const MENU_CODE_ASK_QUIT: MenuCodeEnum = 125;
 pub const MENU_CODE_NET_HOST_LAN: MenuCodeEnum = 119;
+/// The Graphics menu changed the shader preset or integer scaling.
+pub const MENU_CODE_SHADER_CHANGED: MenuCodeEnum = 126;
+pub const MENU_CODE_INTEGER_SCALE_CHANGED: MenuCodeEnum = 127;
 pub const MENU_CODE_NET_ADDREMOVE_SERVER_ON_ADD_BTN: MenuCodeEnum = 102;
 pub const MENU_CODE_NET_ADDREMOVE_SERVER_ON_EDIT_BTN: MenuCodeEnum = 103;
 pub const MENU_CODE_NET_ADDREMOVE_SERVER_ON_DELETE_BTN: MenuCodeEnum = 104;

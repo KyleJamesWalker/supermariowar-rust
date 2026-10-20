@@ -6,12 +6,14 @@ Publishing a GitHub Release runs `.github/workflows/release.yml`: it builds ever
 
 | File | Built by | Contents |
 |---|---|---|
-| `SuperMarioWar-<tag>-linux-x86_64.tar.gz`, `-linux-aarch64.tar.gz` | `build_linux.yml` | `smw`, `leveleditor`, `worldeditor`, `data/`, README, CREDITS; links the system SDL2 |
-| `SuperMarioWar-<tag>-macos-universal.zip` | `build_macos.yml` | `Super Mario War.app`, arm64 and x86_64, dylibs bundled, ad-hoc signed |
-| `SuperMarioWar-<tag>-windows-x86_64.zip` | `build_windows.yml` | the four `.exe` files, SDL2 DLLs and licenses, `data/` |
+| `SuperMarioWar-<tag>-linux-x86_64.tar.gz`, `-linux-aarch64.tar.gz` | `build_linux.yml` | `smw`, `leveleditor`, `worldeditor`, `data/`, `shaders/`, README, CREDITS; links the system SDL2 |
+| `SuperMarioWar-<tag>-macos-universal.zip` | `build_macos.yml` | `Super Mario War.app`, arm64 and x86_64, dylibs bundled, ad-hoc signed, `shaders/` in `Contents/Resources` |
+| `SuperMarioWar-<tag>-windows-x86_64.zip` | `build_windows.yml` | the four `.exe` files, SDL2 DLLs and licenses, `data/`, `shaders/` |
 | `SuperMarioWar-<tag>-web.zip` | `build_web.yml` | the `tools/package_web.sh` bundle for any static web server |
 | `SuperMarioWar-<tag>.muxapp` | `build_muxapp.yml` | the muOS package (`device/muos/README.md`) |
 | `SuperMarioWar-<tag>.apk` | `build_android.yml` | the Android APK, signed with the project's debug key from the repository secrets (`android/README.md`, Install) |
+
+The desktop builds use the `shaders` feature. `tools/shader_bundle.py` copies the presets in `shaders/presets/`, the upstream files they use, and `SHADER_LICENSES.md` into `shaders/`.
 | `SHA256SUMS` | `release.yml` | checksums of the files above |
 
 ## Cutting a release

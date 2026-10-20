@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds "dist/Super Mario War.app": release binary, data/ in Contents/Resources (SDL's base path inside a
+# Builds "dist/Super Mario War.app": release binary, data/ and shaders/ in Contents/Resources (SDL's base path inside a
 # bundle), and every non-system dylib copied into Contents/Frameworks with rewritten install names.
 # Usage: tools/package_macos.sh
 set -euo pipefail
@@ -8,13 +8,14 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 app="$root/dist/Super Mario War.app"
 version="$(sed -n 's/^version *= *"\(.*\)"/\1/p' "$root/Cargo.toml" | head -n 1)"
 
-cargo build --release --bin smw --manifest-path "$root/Cargo.toml"
-git -C "$root" submodule update --init data
+cargo build --release --bin smw --features shaders --manifest-path "$root/Cargo.toml"
+git -C "$root" submodule update --init data shaders/slang-shaders
 
 rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources" "$app/Contents/Frameworks"
 cp "$root/target/release/smw" "$app/Contents/MacOS/smw"
 rsync -a --exclude .git --exclude maps/cache/mapsummary.txt "$root/data/" "$app/Contents/Resources/data/"
+python3 "$root/tools/shader_bundle.py" "$app/Contents/Resources/shaders"
 
 # sdl2-compat dlopen()s SDL3 as @loader_path/libSDL3.dylib, so otool never lists it.
 frameworks="$app/Contents/Frameworks"

@@ -6,7 +6,8 @@ description = "Super Mario War - the SDL2 backend: smw-platform's traits over SD
 publish.workspace = true
 
 [features]
-shaders = ["dep:librashader", "dep:glow"]
+gl = ["dep:glow"]
+shaders = ["gl", "dep:librashader"]
 
 [dependencies]
 smw-platform = { path = "../smw-platform" }

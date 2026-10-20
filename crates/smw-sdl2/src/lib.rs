@@ -11,8 +11,14 @@ pub mod keymap;
 #[cfg(not(target_os = "emscripten"))]
 mod pad;
 mod pads;
+#[cfg(feature = "gl")]
+mod crt_lite;
+#[cfg(feature = "gl")]
+mod gl_common;
 #[cfg(feature = "shaders")]
 mod shader;
+#[cfg(feature = "gl")]
+mod shader_overlay;
 mod video;
 pub use audio::Sdl2Audio;
 pub use pads::Sdl2Pads;

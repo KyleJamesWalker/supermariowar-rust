@@ -17,7 +17,7 @@ out="$repo/dist/web"
 # remapped, and the data package name the file packager derives from the output path is reset.
 cargo_home="${CARGO_HOME:-$HOME/.cargo}"
 RUSTFLAGS="--remap-path-prefix=$cargo_home=cargo --remap-path-prefix=$repo=." \
-    cargo build --release --target wasm32-unknown-emscripten --bin smw \
+    cargo build --release --target wasm32-unknown-emscripten --bin smw --features smw/gl \
     --manifest-path "$repo/Cargo.toml" --target-dir "$target_dir"
 
 build="$target_dir/wasm32-unknown-emscripten/release"

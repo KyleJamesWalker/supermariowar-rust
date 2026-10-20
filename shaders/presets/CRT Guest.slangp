@@ -1,0 +1,2 @@
+#reference "../slang-shaders/crt/crt-guest-advanced.slangp"
+inter = "800.0"
