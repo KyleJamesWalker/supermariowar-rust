@@ -1,4 +1,4 @@
-//! Port of src/smw/ui/MI_WorldPreviewDisplay.cpp
+//! A 320x240 miniature of the selected world that pans around worlds larger than 20x15 tiles.
 
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -13,29 +13,37 @@ const PTS: i16 = PREVIEWTILESIZE as i16;
 pub struct MI_WorldPreviewDisplay {
     pub ui_control: UI_Control,
 
+    /// The world's tiles drawn at preview size, larger than the view so it can pan.
     map_sprite: gfxSprite,
 
     iCols: i16,
     iRows: i16,
 
+    /// Pixel offset into the current tile while panning, 0 to `PREVIEWTILESIZE`; likewise `iMapOffsetY`.
     iMapOffsetX: i16,
     iMapOffsetY: i16,
     iMapGlobalOffsetX: i16,
     iMapGlobalOffsetY: i16,
+    /// First tile column drawn into `map_sprite`.
     iMapDrawOffsetCol: i16,
+    /// First tile row drawn into `map_sprite`.
     iMapDrawOffsetRow: i16,
 
+    /// Pan direction: -1 none, 0 right, 1 down, 2 left, 3 up.
     iMoveDirection: i16,
 
     iAnimationTimer: i16,
     iAnimationFrame: i16,
 
+    /// Tile columns beyond the 20-column view.
     iScrollCols: i16,
+    /// Tile rows beyond the 15-row view.
     iScrollRows: i16,
 
     rectSrcSurface: Rect,
     rectDstSurface: Rect,
 
+    /// Frames between 1-pixel pan steps; worlds with less to pan move slower.
     iScrollSpeed: i16,
     iScrollSpeedTimer: i16,
 }
@@ -70,6 +78,7 @@ impl MI_WorldPreviewDisplay {
         this
     }
 
+    /// Resets the pan and sizes the view to `g_worldmap`, centring worlds smaller than 20x15.
     fn init(&mut self, g: &mut Game) {
         self.iMapOffsetX = 0;
         self.iMapOffsetY = 0;
@@ -121,6 +130,7 @@ impl MI_WorldPreviewDisplay {
         }
     }
 
+    /// Loads `game_values.worldindex` into the shared `g_worldmap` at preview size and restarts the pan.
     pub fn set_world(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         let (mut w, mut h): (i16, i16) = (0, 0);
@@ -135,6 +145,7 @@ impl MI_WorldPreviewDisplay {
         self.update_map_surface(g, true);
     }
 
+    /// Redraws `map_sprite` from `g_worldmap` at the current offsets.
     fn update_map_surface(&mut self, g: &mut Game, fFullRefresh: bool) {
         let mut gp = g.ptr();
         gp.g_worldmap.draw_map_to_surface(g, -1, fFullRefresh, self.map_sprite.get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);

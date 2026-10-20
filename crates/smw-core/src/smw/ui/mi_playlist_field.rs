@@ -1,4 +1,4 @@
-//! Port of src/smw/ui/MI_PlaylistField.cpp
+//! A field that cycles the game music playlist and plays the chosen one in the menu.
 
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
@@ -18,6 +18,7 @@ pub struct MI_PlaylistField {
 
     pub szName: String,
     pub iWidth: i16,
+    /// Pixels from the left edge to where the value is drawn.
     pub iIndent: i16,
 
     pub miModifyImageLeft: Box<MI_Image>,
@@ -25,7 +26,7 @@ pub struct MI_PlaylistField {
 }
 crate::impl_base!(MI_PlaylistField => ui_control: UI_Control);
 
-/// The music switch shared by every scroll direction.
+/// Restarts the menu music from the newly selected playlist.
 fn restart_menu_music(g: &mut Game) {
     let mut gp = g.ptr();
     gp.backgroundmusic[2].stop(g);

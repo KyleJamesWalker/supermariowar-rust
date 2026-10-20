@@ -1,13 +1,13 @@
-//! Port of src/smw/ui/MI_ChatMessageBox.cpp
+//! The netplay room chat log box.
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 
 #[derive(Clone, Debug, Default)]
+/// One chat line: sender and text.
 pub struct CMB_ChatMessage {
     pub playerName: String,
     pub message: String,
-    // time?
 }
 
 impl CMB_ChatMessage {
@@ -16,10 +16,13 @@ impl CMB_ChatMessage {
     }
 }
 
+/// Draws the newest lines of `netplay.chat` that fit in the box.
 pub struct MI_ChatMessageBox {
     pub ui_control: UI_Control,
 
+    /// Not drawn; the box reads `netplay.chat`.
     pub messages: Vec<CMB_ChatMessage>,
+    /// Box height in 32-pixel rows, not in text lines.
     pub iNumLines: i16,
 
     pub iWidth: i16,

@@ -1,4 +1,4 @@
-//! Port of src/smw/ui/MI_MapBrowser.cpp
+//! A 3x3 page of map thumbnails, for choosing a filter's maps or picking the current map.
 
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -13,6 +13,7 @@ use crate::globals::*;
 use crate::smw::gs_gameplay::lookup_team_id;
 
 #[cfg(not(target_os = "emscripten"))]
+/// Pauses 10 ms between thumbnail renders; a no-op on the web.
 fn small_delay(g: &mut Game) {
     let mut gp = g.ptr();
     crate::services::delay(gp.get(), 10);
@@ -23,20 +24,26 @@ fn small_delay(_g: &mut Game) {}
 pub struct MI_MapBrowser {
     pub ui_control: UI_Control,
 
+    /// Page of 9 maps shown.
     iPage: i16,
     iSelectedCol: i16,
     iSelectedRow: i16,
+    /// Selected map's index in the list being browsed.
     iSelectedIndex: i16,
 
+    /// Thumbnails of the page's maps, row-major.
     mapSurfaces: [gfxSprite; 9],
     mapNames: [String; 9],
-    /// Also stands in for `mapListNodes[i]`, which is `&(*mapListItr[i]).second`.
+    /// Map list node of each thumbnail on the page.
     mapListItr: [usize; 9],
 
     iFilterTagAnimationTimer: i16,
+    /// X offset in pixels of the filter tag frame in `menu_map_filter`.
     iFilterTagAnimationFrame: i16,
 
+    /// 0 toggles maps in the selected filter; 1 picks the current map from the filtered list.
     iType: i16,
+    /// Maps in the list being browsed: all maps for type 0, filtered maps for type 1.
     iMapCount: i16,
 
     srcRectBackground: Rect,
@@ -64,6 +71,7 @@ impl MI_MapBrowser {
         }
     }
 
+    /// Opens the browser in mode `type_` (see `iType`) on the page of the current map.
     pub fn reset(&mut self, g: &mut Game, type_: i16) {
         self.iType = type_;
 
@@ -86,6 +94,7 @@ impl MI_MapBrowser {
         self.load_page(g, self.iPage, self.iType == 1);
     }
 
+    /// Loads the thumbnails of `page`, rendering and caching under `maps/cache/` any that are missing.
     fn load_page(&mut self, g: &mut Game, page: i16, fUseFilters: bool) {
         let mut gp = g.ptr();
         for iMap in 0..9i16 {
@@ -121,7 +130,7 @@ impl MI_MapBrowser {
         }
     }
 
-    /// `mapListNodes[i]->pfFilters[game_values.selectedmapfilter]`
+    /// Whether the map in slot `i` is in the selected filter.
     fn node_filter(&self, g: &mut Game, i: usize) -> bool {
         g.maplist.node_at(self.mapListItr[i]).pfFilters[g.game_values.selectedmapfilter as usize]
     }

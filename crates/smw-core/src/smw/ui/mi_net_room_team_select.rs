@@ -1,4 +1,4 @@
-//! Port of src/smw/ui/MI_NetRoomTeamSelect.cpp
+//! A netplay room player slot: the player's sprite, and skin cycling for the local player.
 
 
 use crate::common::global_constants::ticks;
@@ -11,23 +11,27 @@ use crate::common::ui::mi_image::MI_Image;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
 
+/// Skin picker for one room slot; input is read from the first local player only.
 pub struct MI_NetRoomTeamSelect {
     pub ui_control: UI_Control,
 
     x: i16,
     y: i16,
+    /// Room slot 0 to 3 whose skin this edits.
     owner_player: i16,
 
     iAnimationTimer: i16,
     iAnimationFrame: i16,
     iRandomAnimationFrame: i16,
 
+    /// 1 once up or down has been held long enough to auto-repeat.
     iFastScroll: i16,
     iFastScrollTimer: i16,
 
     miModifyImage: Box<MI_Image>,
     miHoverImage: Box<MI_Image>,
 
+    /// Called when the player confirms or cancels, to send the skin to the room.
     onChangeAccepted: Box<dyn FnMut(&mut Game)>,
 }
 crate::impl_base!(MI_NetRoomTeamSelect => ui_control: UI_Control);
@@ -56,7 +60,7 @@ impl MI_NetRoomTeamSelect {
         }
     }
 
-    /// `do { step } while (!rm->LoadMenuSkin(...))`
+    /// Applies `step` to the skin ID until a skin loads, skipping invalid ones.
     fn cycle_skin(&mut self, g: &mut Game, step: impl Fn(&mut i16)) {
         let mut gp = g.ptr();
         let p = self.owner_player as usize;

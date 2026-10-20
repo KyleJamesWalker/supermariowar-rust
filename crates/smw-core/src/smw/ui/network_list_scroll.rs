@@ -1,4 +1,4 @@
-//! Port of src/smw/ui/NetworkListScroll.cpp
+//! A scrolling two-column list for netplay servers and rooms.
 
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
@@ -12,6 +12,7 @@ use crate::globals::*;
 use crate::smw::gs_gameplay::lookup_team_id;
 
 #[derive(Clone, Debug, Default)]
+/// One list row.
 pub struct NLS_ListItem {
     pub sLeft: String,  // Left-aligned text (eg. name)
     pub sRight: String, // Right-aligned text (eg. player count)
@@ -23,6 +24,7 @@ impl NLS_ListItem {
     }
 }
 
+/// Returns `iAcceptCode` on select and `iCancelCode` on cancel; the selection can mirror into a remote index.
 pub struct MI_NetworkListScroll {
     pub ui_control: UI_Control,
 
@@ -34,15 +36,21 @@ pub struct MI_NetworkListScroll {
 
     sTitle: String,
     iNumLines: i16,
+    /// Highlighted row on screen, or -1 while focus is elsewhere.
     iSelectedLine: i16,
+    /// Row to highlight again when focus comes back.
     iSelectedLineBackup: i16,
+    /// Index of the selected row.
     iIndex: u16,
-    /// Null means `&iIndex` (the C++ default).
+    /// External copy of `iIndex` kept in sync on every move; null means none.
     iRemoteIndex: *mut u16,
     iWidth: i16,
+    /// Index of the first row shown.
     iOffset: i16,
 
+    /// Selection index past which the list scrolls instead of moving the highlight.
     iTopStop: i16,
+    /// Selection index after which the list stops scrolling and the highlight moves again.
     iBottomStop: i16,
 }
 crate::impl_base!(MI_NetworkListScroll => ui_control: UI_Control);
@@ -69,6 +77,7 @@ impl MI_NetworkListScroll {
         }
     }
 
+    /// The remote index, or `iIndex` when none is set.
     fn remote_index_mut(&mut self) -> &mut u16 {
         if self.iRemoteIndex.is_null() {
             &mut self.iIndex
@@ -77,6 +86,7 @@ impl MI_NetworkListScroll {
         }
     }
 
+    /// Appends a row; resets `iIndex` to 0 but not the remote index.
     pub fn add(&mut self, left: &str, right: &str) {
         self.items.push(NLS_ListItem::new(left, right));
 
@@ -87,6 +97,7 @@ impl MI_NetworkListScroll {
         self.iBottomStop = (self.items.len() as i64 - self.iNumLines as i64 + self.iTopStop as i64) as i16;
     }
 
+    /// Removes every row and zeroes the selection and remote index.
     pub fn clear(&mut self) {
         self.items.clear();
         self.iIndex = 0;
@@ -96,6 +107,7 @@ impl MI_NetworkListScroll {
         *self.remote_index_mut() = 0;
     }
 
+    /// Selects the next row; false at the end of the list.
     pub fn move_next(&mut self) -> bool {
         if self.items.is_empty() {
             return false;
@@ -118,6 +130,7 @@ impl MI_NetworkListScroll {
         true
     }
 
+    /// Selects the previous row; false at the start of the list.
     pub fn move_prev(&mut self) -> bool {
         if self.items.is_empty() {
             return false;
@@ -157,6 +170,7 @@ impl MI_NetworkListScroll {
         }
     }
 
+    /// Mirrors the selection into `index`, which must outlive this control.
     pub fn remote_index(&mut self, index: *mut u16) {
         self.iRemoteIndex = index;
     }

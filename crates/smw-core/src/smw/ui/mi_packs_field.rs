@@ -1,4 +1,4 @@
-//! Port of src/smw/ui/MI_PacksField.cpp
+//! A file list field for graphics and sound packs that reports a code when the pack changes.
 
 use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
@@ -13,6 +13,7 @@ use crate::smw::ui::mi_announcer_field::MI_AnnouncerField;
 pub struct MI_PacksField {
     pub mi_announcer_field: MI_AnnouncerField,
 
+    /// Returned when a step moves to a different pack, so the menu can reload it.
     pub itemChangedCode: MenuCodeEnum,
 }
 crate::impl_base!(MI_PacksField => mi_announcer_field: MI_AnnouncerField);

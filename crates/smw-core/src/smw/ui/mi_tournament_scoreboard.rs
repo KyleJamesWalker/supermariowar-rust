@@ -1,4 +1,4 @@
-//! Port of src/smw/ui/MI_TournamentScoreboard.cpp
+//! The scoreboard between games of a tournament, tour or world, with the winner celebration.
 
 use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
@@ -16,6 +16,7 @@ use crate::globals::*;
 
 const MWB: usize = MAX_WORLD_BONUSES_AWARDED as usize;
 
+/// X offset in pixels of each player sprite in a team row, by team size 1 to 3.
 const iScoreboardPlayerOffsetsX: [[i16; 3]; 3] = [[40, 0, 0], [19, 59, 0], [6, 40, 74]];
 
 pub struct MI_TournamentScoreboard {
@@ -24,15 +25,19 @@ pub struct MI_TournamentScoreboard {
     fCreated: bool,
 
     miTeamImages: Vec<Box<MI_Image>>,
+    /// Per team, one icon per game won or tour stop played.
     miIconImages: Vec<Vec<Box<MI_Image>>>,
     miPlayerImages: Vec<Vec<Box<MI_Image>>>,
 
     iNumTeams: i16,
+    /// Tournament wins needed, tour stop count, or 0 for a world.
     iNumGames: i16,
 
+    /// Winning team, -1 while undecided, -2 for a tie.
     iTournamentWinner: i16,
     iGameWinner: i16,
 
+    /// Team and game of the icon swirling in for the latest win, or -1.
     iSwirlIconTeam: i16,
     iSwirlIconGame: i16,
 
@@ -47,6 +52,7 @@ pub struct MI_TournamentScoreboard {
     iTeamCounts: [i16; 4],
 
     tourScores: [Option<Box<MI_ScoreText>>; 4],
+    /// Tours only: points of each stop above the rows; tours hold at most 10 stops.
     tourPoints: [Option<Box<MI_ScoreText>>; 10],
     miTourPointBar: Option<Box<MI_Image>>,
     tourBonus: [Option<Box<MI_Image>>; 10],
@@ -60,7 +66,6 @@ pub struct MI_TournamentScoreboard {
 crate::impl_base!(MI_TournamentScoreboard => ui_control: UI_Control);
 
 impl MI_TournamentScoreboard {
-    //Call with x = 70 and y == 80
     pub fn new(spr_background: SpriteId, x: i16, y: i16) -> Self {
         MI_TournamentScoreboard {
             ui_control: UI_Control::new(x, y),
@@ -93,10 +98,12 @@ impl MI_TournamentScoreboard {
         }
     }
 
+    /// Screen y in pixels of the row for place `iPlace`, centred for the team count.
     fn get_y_from_place(&self, iPlace: i16) -> i16 {
         (self.m_pos.y as i32 + iPlace as i32 * 69 + (4 - self.iNumTeams as i32) * 35) as i16
     }
 
+    /// Gap in pixels between game icons across a 372-pixel row.
     fn get_icon_spacing(&self) -> f32 {
         (372 - self.iNumGames as i32 * 32) as f32 / (self.iNumGames as i32 + 1) as f32
     }
@@ -123,6 +130,7 @@ impl MI_TournamentScoreboard {
         self.worldScoreModifier = None;
     }
 
+    /// Rebuilds the rows for the current match type from `game_values.teamids`/`teamcounts`.
     pub fn create_scoreboard(&mut self, g: &mut Game, numTeams: i16, numGames: i16, spr_icons_ref: SpriteId) {
         self.free_scoreboard();
 
@@ -244,11 +252,9 @@ impl MI_TournamentScoreboard {
                 let dSpacing = self.get_icon_spacing();
                 let iTourPointX = (x + 105 + dSpacing as i16 as i32 + (iGame as f32 * (32.0f32 + dSpacing)) as i16 as i32) as i16;
                 let mut points = Box::new(MI_ScoreText::new(iTourPointX, self.get_y_from_place(0)));
-                // TODO(world_tour_stop): tourPoints[iGame]->SetScore(game_values.tourstops[iGame]->iPoints); and create tourBonus[iGame] when game_values.tourstops[iGame]->iBonusType
+                // TODO(world_tour_stop): set each stop's points, or a bonus image for bonus stops.
                 let _ = &mut points;
                 self.tourPoints[iGame as usize] = Some(points);
-                //else
-                //	tourBonus[iGame] = new MI_Image(sprBackground, iTourPointX - 11, GetYFromPlace(0) - 3, 448, 128, 22, 22, 1, 1, 0);
             }
 
             self.miTourPointBar = Some(Box::new(MI_Image::new(self.sprBackground, (x + 88) as i16, self.get_y_from_place(0) - 8, 0, 128, 372, 32, 1, 1, 0)));
@@ -257,11 +263,11 @@ impl MI_TournamentScoreboard {
         self.fCreated = true;
     }
 
+    /// Orders the world rows by standing and marks `gameWinner`'s stage score and place, or hides them for -1.
     pub fn refresh_world_scores(&mut self, g: &mut Game, gameWinner: i16) {
         self.iGameWinner = gameWinner;
         self.determine_scoreboard_winners(g);
 
-        // TODO(world_tour_stop): TourStop * tourStop = game_values.tourstops[game_values.tourstopcurrent];
 
         let x = self.m_pos.x as i32;
         for iTeam in 0..self.iNumTeams {
@@ -291,7 +297,7 @@ impl MI_TournamentScoreboard {
             if self.iGameWinner == iTeam {
                 let ws = self.worldScore.as_mut().unwrap();
                 ws.set_position((x + 350) as i16, iTeamY + 24);
-                // TODO(world_tour_stop): worldScore->SetScore(tourStop->iPoints);
+                // TODO(world_tour_stop): show the stage's points in worldScore.
                 ws.set_visible(true);
 
                 self.miTeamImages[t].set_image(0, 160, 496, 64);
@@ -317,7 +323,7 @@ impl MI_TournamentScoreboard {
         let iBonusCounts: [i16; 4] = [0, 0, 0, 0];
 
         if gameWinner >= 0 {
-            // TODO(world_tour_stop): award loop over tourStop->wsbBonuses[0..iNumBonuses] (shows worldBonus images, increments iBonusCounts).
+            // TODO(world_tour_stop): show the stage bonuses each team won and count them in iBonusCounts.
         }
 
         for iTeam in 0..self.iNumTeams as usize {
@@ -367,7 +373,6 @@ impl MI_TournamentScoreboard {
                 icon.set_visible(true);
             }
 
-            // TODO(world_tour_stop): C++ upper bound is game_values.tourstops.size(); CreateScoreboard sized the row with it.
             for iGame in g.game_values.tourstopcurrent..self.iNumGames as usize {
                 self.miIconImages[t][iGame].set_visible(false);
             }
@@ -378,6 +383,7 @@ impl MI_TournamentScoreboard {
         }
     }
 
+    /// Breaks tied standings for display and, once the match is over, sets the winner or a tie and flashes the winners.
     pub fn determine_scoreboard_winners(&mut self, g: &mut Game) {
         //Detect a Tie
         let mut iNumWinningTeams: i16 = 0;
@@ -466,6 +472,7 @@ impl MI_TournamentScoreboard {
         }
     }
 
+    /// Lands the swirling icon at once.
     pub fn stop_swirl(&mut self) {
         if self.iSwirlIconTeam >= 0 {
             self.miIconImages[self.iSwirlIconTeam as usize][self.iSwirlIconGame as usize].stop_swirl();
@@ -528,7 +535,7 @@ impl UI_ControlTrait for MI_TournamentScoreboard {
 
                         let iRandomColor = RANDOM_INT(gp.get(), self.iTeamCounts[w] as i32) as i16;
                         let _ = (iRandX, iRandY, dVelX, dVelY, g.game_values.colorids[self.iTeamIDs[w][iRandomColor as usize] as usize] << 4);
-                        // TODO(eyecandy): m_parentMenu->AddEyeCandy<EC_FallingObject>(&rm->spr_bonus, iRandX, iRandY, dVelX, dVelY, 4, 2, 0, game_values.colorids[iTeamIDs[iTournamentWinner][iRandomColor]] << 4, 16, 16);
+                        // TODO(eyecandy): throw a winner-colored bonus block from iRandX, iRandY at dVelX, dVelY.
                         dAngle -= PI / 14.0f32;
                     }
                 } else {
@@ -539,7 +546,7 @@ impl UI_ControlTrait for MI_TournamentScoreboard {
                     let iRandomColor = RANDOM_INT(gp.get(), self.iTeamCounts[w] as i32) as i16;
 
                     let _ = (iRandX, iRandY, g.game_values.colorids[self.iTeamIDs[w][iRandomColor as usize] as usize] << 6);
-                    // TODO(eyecandy): m_parentMenu->AddEyeCandy<EC_SingleAnimation>(&rm->spr_fireworks, iRandX, iRandY, 8, 4, 0, game_values.colorids[iTeamIDs[iTournamentWinner][iRandomColor]] << 6, 64, 64);
+                    // TODO(eyecandy): draw winner-colored fireworks at iRandX, iRandY.
                 }
             }
 
@@ -561,7 +568,7 @@ impl UI_ControlTrait for MI_TournamentScoreboard {
                 let iRandY = (RANDOM_INT(gp.get(), App::screenHeight - 100) + 100) as i16;
 
                 let _ = (iRandX, iRandY, -VELJUMP);
-                // TODO(eyecandy): m_parentMenu->AddEyeCandy<EC_GravText>(&rm->menu_font_large, iRandX, iRandY, szWinnerText, -VELJUMP);
+                // TODO(eyecandy): bounce szWinnerText up from iRandX, iRandY.
             }
         }
     }
