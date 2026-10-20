@@ -1,4 +1,4 @@
-//! Port of src/smw/player_components/PlayerAwardEffects.cpp
+//! Kill streak awards: announcer calls, text and the configured award eyecandy.
 
 use crate::smw::players::PlayerId;
 use crate::common::gfx::soft_surface::Rect;
@@ -14,12 +14,14 @@ use crate::globals::*;
 use crate::smw::objectgame::check_secret;
 use crate::smw::player::CPlayer;
 
+/// Streak name shown by the text award style.
 struct STextAward {
     name: &'static str,
     large: bool,
 }
 
 const PAWARD_LAST: i16 = 9;
+/// Streak names indexed by kills in a row minus 2, capped at the last entry.
 const awardtexts: [STextAward; PAWARD_LAST as usize] = [
     STextAward { name: "Double Kill", large: false },
     STextAward { name: "Triple Kill", large: false },
@@ -34,7 +36,9 @@ const awardtexts: [STextAward; PAWARD_LAST as usize] = [
 
 #[derive(Clone, Default)]
 pub struct PlayerAwardEffects {
+    /// Rotation of the halo award ring, in radians.
     pub awardangle: f32,
+    /// Per streak kill, the icon to show: the kill style for halo, a soul id for souls.
     pub awards: [i16; MAXAWARDS as usize],
     pub _alias: Aliased,
 }
@@ -44,6 +48,7 @@ impl PlayerAwardEffects {
         Self::default()
     }
 
+    /// Draws the rotating halo of streak icons around the player.
     pub fn draw_ring_award(&mut self, g: &mut Game, player: &mut CPlayer) {
         let mut gp = g.ptr();
         unsafe {
@@ -211,6 +216,7 @@ impl PlayerAwardEffects {
         }
     }
 
+    /// Bursts the dying player's streak icons (halo or souls style) and ends their streaks.
     pub fn add_death_award(&mut self, g: &mut Game, player: &mut CPlayer) {
         if g.game_values.awardstyle == AwardStyle::Halo {
             self.add_exploding(g, player);
@@ -231,6 +237,8 @@ impl PlayerAwardEffects {
         player.killsinrowinair = 0;
     }
 
+    /// Extends the killer's streak and plays its announcer call and award effect.
+    /// `killed` is `NONE` for enemy kills.
     pub fn add_killer_award(&mut self, g: &mut Game, killer: &mut CPlayer, killed: PlayerId, style: KillStyle) {
         let mut gp = g.ptr();
         killer.killsinrow += 1;
@@ -343,6 +351,7 @@ impl PlayerAwardEffects {
         }
     }
 
+    /// Sprays bonus sparks for consecutive airborne kills and records it for secret 0.
     pub fn add_kills_in_row_in_air_award(&mut self, g: &mut Game, player: &mut CPlayer) {
         let mut angle: f32 = 0.0f32;
         for k in 0..15i16 {

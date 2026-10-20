@@ -1,9 +1,9 @@
-//! Port of src/common/FileIO.cpp
+//! Little-endian binary file reading and writing for map, world, options and other data files.
 
 use std::fs::{File, OpenOptions};
 use std::io::{BufReader, BufWriter, Cursor, Read, Seek, SeekFrom, Write};
 
-/// C++ `throw std::runtime_error(...)`; caught by `catch_unwind` at the C++ `catch` sites.
+/// Raises a file error as a panic carrying `what` as a `String`; loaders catch it with `catch_unwind`.
 pub fn throw_runtime_error(what: &str) -> ! {
     std::panic::panic_any(what.to_string())
 }
@@ -14,6 +14,7 @@ enum Handle {
     M(Cursor<Vec<u8>>),
 }
 
+/// A binary file or an in-memory buffer; read and write errors panic through `throw_runtime_error`.
 pub struct BinaryFile {
     m_path: String,
     fp: Option<Handle>,
@@ -23,13 +24,14 @@ extern "C" {
     fn strerror(errnum: i32) -> *const std::ffi::c_char;
 }
 
-/// The C `std::strerror` text for an IO error that `std::ferror` would flag (not end of file).
+/// The OS error text for `err`, or `None` when it has no OS code (such as an early end of file).
 fn system_message(err: &std::io::Error) -> Option<String> {
     let code = err.raw_os_error()?;
     Some(unsafe { std::ffi::CStr::from_ptr(strerror(code)).to_string_lossy().into_owned() })
 }
 
 impl BinaryFile {
+    /// Opens `path` to read if `options` has `r`, to append if `a`, else to write from empty; check `is_open`.
     pub fn new(path: &str, options: &str) -> Self {
         let fp = if options.contains('r') {
             File::open(path).ok().map(|f| Handle::R(BufReader::new(f)))
@@ -41,11 +43,12 @@ impl BinaryFile {
         BinaryFile { m_path: path.to_string(), fp }
     }
 
-    /// Not in the C++: reads from or writes to memory (replay checkpoints, smw/checkpoint.rs).
+    /// Reads from or writes to memory (replay checkpoints, smw/checkpoint.rs).
     pub fn memory(name: &str, bytes: Vec<u8>) -> Self {
         BinaryFile { m_path: name.to_string(), fp: Some(Handle::M(Cursor::new(bytes))) }
     }
 
+    /// The memory buffer's bytes; empty for a file.
     pub fn into_bytes(self) -> Vec<u8> {
         match self.fp {
             Some(Handle::M(m)) => m.into_inner(),
@@ -70,6 +73,7 @@ impl BinaryFile {
         }
     }
 
+    /// The byte offset, -1 if seeking failed, 0 if not open.
     pub fn pos(&mut self) -> i64 {
         match &mut self.fp {
             Some(Handle::R(r)) => r.stream_position().map(|p| p as i64).unwrap_or(-1),
@@ -144,8 +148,7 @@ impl BinaryFile {
         self.fwrite_or_exception(&value.to_le_bytes());
     }
 
-    /// Writes an i32 that tells the byte length of the string data *including*
-    /// a terminating null byte, then the text data itself, plus a null byte
+    /// Writes the byte length plus one as an `i32`, the bytes, then a null byte; panics past 255 bytes.
     pub fn write_string_long(&mut self, string: &str) {
         let mut bytes = string.as_bytes().to_vec();
         if bytes.len() > 255 {
@@ -214,8 +217,7 @@ impl BinaryFile {
         f32::from_le_bytes(b)
     }
 
-    /// Uses 32 bits to store the length of the string, then the text data,
-    /// including a terminating null byte. Reads at most `maxlen` bytes and always drops the last one.
+    /// Reads an `i32` length, then at most `maxlen` of those bytes, and drops the last one (the null when not truncated).
     pub fn read_string_long(&mut self, maxlen: usize) -> String {
         let stored_len = self.read_i32();
         if stored_len <= 0 {

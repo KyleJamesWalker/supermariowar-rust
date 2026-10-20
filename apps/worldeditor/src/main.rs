@@ -1,3 +1,5 @@
+//! The world editor on the SDL2 backend.
+
 #![cfg_attr(windows, windows_subsystem = "windows")]
 
 fn main() {

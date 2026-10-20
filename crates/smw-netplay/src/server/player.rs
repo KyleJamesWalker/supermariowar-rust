@@ -1,4 +1,4 @@
-//! Port of src/server/Player.cpp
+//! A lobby player: its connection, name, room and skin.
 
 use super::blob::Blob;
 use super::clock::{time_now, TimePoint};
@@ -7,6 +7,7 @@ use smw::common_netplay::protocol_packages::{ConnectOk, MessageHeader};
 
 const SKINPKG_SIZE_LIMIT: usize = 20000; /* bytes in worst case */
 
+/// A player's last `NET_NOTICE_SKIN_CHANGE` message; byte 3 carries the sender's room slot.
 #[derive(Default)]
 pub struct PlayerSkin {
     pub blob: Blob,
@@ -26,6 +27,7 @@ impl std::ops::DerefMut for PlayerSkin {
 }
 
 impl PlayerSkin {
+    /// Stamps the sender's room slot into the message; 0xFF outside a room.
     pub fn set_player_id(&mut self, id: u8) {
         if self.get_size() < 4 {
             return;
@@ -35,10 +37,13 @@ impl PlayerSkin {
     }
 }
 
+/// A connected player, owned by `SMWServer::players`.
 pub struct Player {
+    /// The name the lobby gave this player, unique ignoring ASCII case.
     pub name: Vec<u8>,
     pub network_client: Option<Box<dyn NetPeer>>,
 
+    /// The player's room, 0 for none.
     pub currentRoomID: u32,
     pub isPlaying: bool,
     pub playerNumberInRoom: u8,
@@ -113,6 +118,7 @@ impl Player {
     }
 
     // Network stuff
+    /// Sends reliably; false without a connection or for data shorter than a message header.
     pub fn send_data(&mut self, data: &[u8]) -> bool {
         if self.network_client.is_none() || data.len() < 3 {
             return false;

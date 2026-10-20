@@ -1,4 +1,4 @@
-//! Port of src/smw/gamemodes/Frag.cpp
+//! Frag limit mode: first team to the kill goal wins.
 
 use crate::smw::players::PlayerId;
 use crate::game::Game;
@@ -12,14 +12,13 @@ use crate::impl_base;
 use crate::smw::gamemodes::game_mode::*;
 use crate::smw::player::CPlayer;
 
-//Fraglimit
+/// Frag limit mode. Its scoring functions are shared with frenzy.
 #[derive(Clone)]
 pub struct CGM_Frag {
     pub cgame_mode: CGameMode,
 }
 impl_base!(CGM_Frag => cgame_mode: CGameMode);
 
-//fraglimit:
 impl CGM_Frag {
     pub fn new() -> Self {
         let mut this = CGM_Frag { cgame_mode: CGameMode::new() };
@@ -48,13 +47,15 @@ impl CGameModeTrait for CGM_Frag {
     }
 }
 
+/// Scores the kill (-1 for a teammate) and checks for a winner.
+/// In shield death style, the victim keeps playing behind a fresh shield.
 pub fn cgm_frag_playerkilledplayer<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T, mut inflictor: PlayerId, mut other: PlayerId, style: KillStyle) -> PlayerKillType {
         let mut gp = g.ptr();
     if this.gm().gameover {
         return PlayerKillType::Normal;
     }
 
-    //Don't score if "sumo" style scoring is turned on
+    // Under `PushOnly` scoring only push kills score; modes built on frag always score.
     if g.mode().gamemode != game_mode_frag || g.game_values.gamemodesettings.frag.scoring == ScoringStyle::AllKills || style == KillStyle::Push {
         //Penalize killing your team mates
         if g.player(inflictor).get_team_id() == g.player(other).get_team_id() {
@@ -75,6 +76,7 @@ pub fn cgm_frag_playerkilledplayer<T: CGameModeTrait + ?Sized>(g: &mut Game, thi
     iRet
 }
 
+/// Costs the player's team a point.
 pub fn cgm_frag_playerkilledself<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: PlayerId, style: KillStyle) -> PlayerKillType {
         let mut gp = g.ptr();
     cgamemode_playerkilledself(g, this, player, style);
@@ -99,6 +101,7 @@ pub fn cgm_frag_playerextraguy<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &
     }
 }
 
+/// Ends the match when the player's team reaches the goal; warns 2 kills before it.
 pub fn cgm_frag_check_winner<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: PlayerId) -> PlayerKillType {
     let this = this.gm_mut();
     if this.goal > -1 {

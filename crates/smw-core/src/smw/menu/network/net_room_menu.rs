@@ -1,4 +1,4 @@
-//! Port of src/smw/menu/network/NetRoomMenu.cpp
+//! A netplay room: players and skins, chat, map preview, and Start for the host.
 
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
@@ -18,19 +18,23 @@ use crate::smw::ui::mi_chat_message_box::MI_ChatMessageBox;
 use crate::smw::ui::mi_net_room_team_select::MI_NetRoomTeamSelect;
 use std::path::Path;
 
+/// Player slots, chat, map preview and Start for a joined room.
 #[derive(Default)]
 pub struct UI_NetRoomMenu {
     pub ui_menu: UI_Menu,
 
     miNetRoomName: Ctl<MI_Text>,
     miNetRoomPlayerName: [Ctl<MI_Text>; 4],
+    /// One per player slot; a change sends this client's skin to the room.
     miSkinSelector: [Ctl<MI_NetRoomTeamSelect>; 4],
 
     miNetRoomMessages: Ctl<MI_ChatMessageBox>,
     miNetRoomMessageField: Ctl<MI_TextField>,
+    /// Map and mode settings; visible to the host only.
     miNetRoomSettingsButton: Ctl<MI_Button>,
     miNetRoomMapPreview: Ctl<MI_MapPreview>,
 
+    /// Reads Start for the host once another player joined, else "(waiting)".
     miNetRoomStartButton: Ctl<MI_Button>,
     miNetRoomSendButton: Ctl<MI_Button>,
     miNetRoomBackButton: Ctl<MI_Button>,
@@ -137,6 +141,7 @@ impl UI_NetRoomMenu {
         g.ctl(self.miNetRoomMessageField).clear();
     }
 
+    /// Redraws the room from `netplay.currentRoom`: names, skins, host-only controls and the map preview.
     pub fn refresh(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         let name = g.netplay.currentRoom.name.clone();
@@ -154,6 +159,7 @@ impl UI_NetRoomMenu {
             let pname = g.netplay.currentRoom.playerNames[p as usize].clone();
             g.ctl(self.miNetRoomPlayerName[p as usize]).set_text(pname);
 
+            // Other players' skins are the files the client wrote when their skin messages arrived.
             let path = format!("{}net_skin{}.bmp", get_home_directory(g), p);
             if p == g.netplay.remotePlayerNumber as i16 {
                 println!("  player {} -> local", p);
@@ -179,6 +185,7 @@ impl UI_NetRoomMenu {
         self.set_preview_map_path(g, &path);
     }
 
+    /// Host only, with 2 or more players: sends the start request and shows the Starting dialog.
     pub fn start_in_progress(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         if g.netplay.theHostIsMe && g.netplay.currentRoom.player_count() > 1 {
@@ -196,6 +203,7 @@ impl UI_NetRoomMenu {
         }
     }
 
+    /// Hides the Starting dialog and focuses the chat field.
     pub fn restore(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         g.ctl(self.miNetRoomStartingDialogImage).set_visible(false);
@@ -206,6 +214,7 @@ impl UI_NetRoomMenu {
         self.set_cancel_code(MENU_CODE_TO_NET_LOBBY_MENU);
     }
 
+    /// Loads the map at `path` into the preview.
     pub fn set_preview_map_path(&mut self, g: &mut Game, path: &str) {
         g.ctl(self.miNetRoomMapPreview).load_map(g, path);
     }

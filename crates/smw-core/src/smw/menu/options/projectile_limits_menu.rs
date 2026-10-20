@@ -1,4 +1,4 @@
-//! Port of src/smw/menu/options/ProjectileLimitsMenu.cpp
+//! Weapon use limits: how many times each projectile weapon or special state can be used.
 
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
@@ -12,6 +12,7 @@ use crate::common::uimenu::UI_Menu;
 use crate::globals::*;
 use crate::smw::menu::options::select_field;
 
+/// Use limit choices; 0 is unlimited.
 const LIMITS: &[(&str, i16)] = &[
     ("Unlimited", 0),
     ("2", 2),
@@ -27,10 +28,7 @@ const LIMITS: &[(&str, i16)] = &[
     ("50", 50),
 ];
 
-/*
-    You can set the maximum number of uses of certain
-    projectile weapons and special player states.
-*/
+/// Sets the maximum uses of certain projectile weapons and special player states.
 #[derive(Default)]
 pub struct UI_ProjectileLimitsMenu {
     pub ui_menu: UI_Menu,

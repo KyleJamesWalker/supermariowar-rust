@@ -1,15 +1,19 @@
-//! Port of src/common/CmdArgs.cpp
+//! Command-line parsing, help text, and console attachment on Windows.
 
+/// The parsed command line.
 #[derive(Clone, Debug, Default)]
 pub struct Args {
+    /// False when an option was missing its value or had a bad one; the caller should exit.
     pub success: bool,
     pub show_help: bool,
     pub debug: bool,
+    /// `--datadir`; empty for the default.
     pub data_root: String,
-    /// Not in the C++: `--replay <file>` watches a session recording (see docs/guides/REPLAY.md, "Recordings").
+    /// `--replay <file>` watches a session recording (see docs/guides/REPLAY.md, "Recordings").
     pub replay: String,
+    /// `--replay-speed`: playback speed multiplier, positive.
     pub replay_speed: Option<f32>,
-    /// `--segment <k>` with `--replay`: watch only match k, started from its checkpoint.
+    /// `--segment <k>` with `--replay`: watch only match k (from 1), started from its checkpoint.
     pub segment: Option<u32>,
 }
 
@@ -83,6 +87,7 @@ mod win_console {
     }
 }
 
+/// Prints the usage text, headed by `title` and `version`.
 pub fn print_help(title: &str, version: &str) {
     print!("{} {}\n\n", title, version);
     print!(
@@ -99,6 +104,7 @@ pub fn print_help(title: &str, version: &str) {
     println!("      --segment <K>       With --replay: watch only match K of the recording");
 }
 
+/// Parses `argv`, skipping the program name; unknown arguments are ignored.
 pub fn parse_args(argv: &[String]) -> Args {
     let mut result = Args::default();
     let argc = argv.len();

@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/moving/MO_Explosion.cpp
+//! Bob-omb explosion: kills players it touches and breaks bomb-breakable blocks on its first tick.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -24,7 +24,9 @@ use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
 pub struct MO_Explosion {
     pub io_moving_object: IO_MovingObject,
 
+    /// Ticks alive; the explosion ends at `ticks(48)`.
     pub timer: i16,
+    /// Kill style credited to the player who set off the explosion.
     pub iStyle: KillStyle,
 }
 impl_base!(MO_Explosion => io_moving_object: IO_MovingObject);
@@ -117,7 +119,6 @@ impl CObjectTrait for MO_Explosion {
             }
         }
 
-        // RFC: why 48?
         self.timer += 1;
         if self.timer as i32 >= ticks(48) {
             self.dead = true;

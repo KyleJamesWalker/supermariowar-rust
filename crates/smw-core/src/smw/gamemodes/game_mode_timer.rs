@@ -1,4 +1,4 @@
-//! Port of src/smw/gamemodes/GameModeTimer.cpp
+//! On-screen match clock used by timed game modes.
 
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -6,20 +6,28 @@ use crate::common::eyecandy_styles::ScoreboardStyle;
 use crate::common::global_constants::TICKS_PER_SECOND;
 use crate::globals::*;
 
+/// Match clock in whole seconds, with the HUD digit layout for drawing it.
 #[derive(Clone, Default)]
 pub struct GameTimerDisplay {
+    /// Seconds shown on the clock; remaining time when counting down, elapsed time otherwise.
     pub timeleft: i16,
+    /// Counts down to zero when true, up without limit when false.
     pub countdown: bool,
 
+    /// Ticks left until the clock changes by one second.
     pub framesleft_persecond: i16,
+    /// Source x of each digit in the score digit strip, 16 px per digit; zero means digit 0.
     pub iDigitLeftSrcX: i16,
     pub iDigitMiddleSrcX: i16,
     pub iDigitRightSrcX: i16,
+    /// Screen x of each drawn digit, recomputed with the source x so leading zeros are skipped.
     pub iDigitLeftDstX: i16,
     pub iDigitMiddleDstX: i16,
     pub iDigitRightDstX: i16,
+    /// Screen x of the clock panel, set by the scoreboard style.
     pub iScoreOffsetX: i16,
 
+    /// Ticks per clock second.
     pub iFramesPerSecond: i16,
     pub _alias: Aliased,
 }
@@ -29,6 +37,7 @@ impl GameTimerDisplay {
         GameTimerDisplay { iFramesPerSecond: TICKS_PER_SECOND as i16, ..Default::default() }
     }
 
+    /// Starts the clock at `iTime` seconds and places it for the current scoreboard style.
     pub fn init(&mut self, g: &mut Game, iTime: i16, fCountDown: bool) {
         self.timeleft = iTime;
         self.countdown = fCountDown;
@@ -46,6 +55,7 @@ impl GameTimerDisplay {
         self.framesleft_persecond = self.iFramesPerSecond;
     }
 
+    /// Advances one tick. Returns the new time when a second elapses, otherwise -1.
     pub fn run_clock(&mut self) -> i16 {
         if self.timeleft > 0 || !self.countdown {
             self.framesleft_persecond -= 1;
@@ -80,6 +90,7 @@ impl GameTimerDisplay {
         }
     }
 
+    /// Recomputes digit sprites and positions; only the last three digits are shown.
     fn set_digit_counters(&mut self) {
         let mut iDigits: i16 = self.timeleft;
         while iDigits > 999 {

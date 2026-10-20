@@ -1,4 +1,4 @@
-//! Port of src/smw/net.cpp
+//! The netplay client's lobby side: the server list, rooms, chat, map, skin and mode settings exchange, and match start.
 
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::common::gfx::soft_surface::Rect;
@@ -26,6 +26,7 @@ use crate::smw::ui::network_list_scroll::MI_NetworkListScroll;
 use std::collections::VecDeque;
 use std::path::Path;
 
+/// The network layer this build reaches the lobby with.
 #[cfg(feature = "no_network")]
 pub type NetworkHandler = crate::smw::platform::network::null::network_layer_null::NetworkLayerNULL;
 #[cfg(not(feature = "no_network"))]
@@ -33,23 +34,26 @@ pub type NetworkHandler = crate::smw::platform::network::websocket::network_laye
 
 
 
-/// Constructs the statics C++ builds before `main`.
+/// Creates the network layer and the netplay state.
 pub fn init_globals(g: &mut Game) {
     g.networkHandler.init(NetworkHandler::default());
     g.netplay.init(Networking::new());
 }
 
+/// A message type and the `net_ticks` time in ms when it was sent or received.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct LastMessage {
     pub packageType: u8,
     pub timestamp: u32,
 }
 
+/// A Servers menu entry: a relay URL, or a bare host name that means `wss://<host>`.
 #[derive(Clone, Debug, Default)]
 pub struct ServerAddress {
     pub hostname: String,
 }
 
+/// One room of the lobby's room list.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct RoomListEntry {
     pub roomID: u32,
@@ -58,10 +62,12 @@ pub struct RoomListEntry {
     pub passwordRequired: bool,
 }
 
+/// The room this player is in, as the lobby last described it.
 #[derive(Clone, Debug)]
 pub struct Room {
     pub roomID: u32,
     pub name: String,
+    /// By slot; `(empty)` marks a free slot.
     pub playerNames: [String; 4],
     pub hostPlayerNumber: u8,
     pub gamemodeID: u8,
@@ -85,10 +91,10 @@ impl Room {
     }
 }
 
-/// `union GameModeSettingsUnion`: the raw bytes of one mode's settings struct, zero-padded to the largest member.
+/// The settings bytes of a `NET_NOTICE_GAMEMODESETTINGS`: one mode's settings, zero-padded to the largest mode's.
 const GMS_UNION_SIZE: usize = 44;
 
-/// (offset, size) of each mode's settings inside the `GameModeSettings` raw image (clang layout).
+/// (offset, size) of each mode's settings inside the `GameModeSettings` raw image.
 fn gms_member(mode: GameModeType) -> Option<(usize, usize)> {
     Some(match mode {
         game_mode_classic => (0, 2),
@@ -116,6 +122,7 @@ fn gms_member(mode: GameModeType) -> Option<(usize, usize)> {
     })
 }
 
+/// One mode's settings as `NET_NOTICE_GAMEMODESETTINGS` carries them.
 struct GameModeSettingsUnion {
     bytes: [u8; GMS_UNION_SIZE],
 }
@@ -125,6 +132,7 @@ impl GameModeSettingsUnion {
         GameModeSettingsUnion { bytes: [0; GMS_UNION_SIZE] }
     }
 
+    /// Writes these bytes over `mode`'s current settings.
     fn set_global(&self, g: &mut Game, mode: GameModeType) {
         let Some((off, size)) = gms_member(mode) else {
             return;
@@ -134,6 +142,7 @@ impl GameModeSettingsUnion {
         g.game_values.gamemodesettings.from_raw_bytes(&raw);
     }
 
+    /// Reads `mode`'s current settings into these bytes.
     fn read_global(&mut self, g: &mut Game, mode: GameModeType) {
         let Some((off, size)) = gms_member(mode) else {
             return;
@@ -143,6 +152,7 @@ impl GameModeSettingsUnion {
     }
 }
 
+/// Milliseconds now: the virtual clock in a seeded run, the real one otherwise.
 fn ticks(g: &mut Game) -> u32 {
     crate::smw::harness::net_ticks(g)
 }
@@ -282,6 +292,7 @@ fn lan_host() -> String {
     Session
 ****************************/
 
+/// Opens a lobby session, ending any earlier one, and saves the player controls it will change.
 pub fn net_start_session(g: &mut Game) -> bool {
         let mut gp = g.ptr();
     net_end_session(g);
@@ -294,6 +305,7 @@ pub fn net_start_session(g: &mut Game) -> bool {
     gp.netplay.client.start(g)
 }
 
+/// Closes the lobby session and restores the player controls.
 pub fn net_end_session(g: &mut Game) {
         let mut gp = g.ptr();
     if g.netplay.active {
@@ -371,10 +383,9 @@ impl LobbyError {
     }
 }
 
-/// How long the host waits for its joiners to load, and a joiner for the host's go, before playing anyway.
 const START_TIMEOUT_MS: u32 = 5000;
 
-/// Not in the C++: every client draws in step from the start of the match, whatever its menus drew since the sync.
+/// Reseeds the RNG with the host's match seed, so every client draws in step whatever its menus drew.
 pub fn reseed_for_match(g: &mut Game) {
     let mut gp = g.ptr();
     RandomNumberGenerator::generator(gp.get()).reseed(g.netplay.common_random_seed);
@@ -415,12 +426,15 @@ fn host_to_string(host: u32) -> String {
  * NetClient
  ********************************************************************/
 
+/// The lobby connection, its pending requests and the room's WebRTC socket for the match.
 pub struct NetClient {
     pub lastSentMessage: LastMessage,
+    /// `lastSentMessage` and this note the latest message each way.
     pub lastReceivedMessage: LastMessage,
     /// The reply a waiting menu acts on; later messages in the same poll cannot overwrite it.
     pub lastReply: LastMessage,
     lobby_error: Option<LobbyError>,
+    /// A lobby connection is opening and has not reported in yet.
     lobby_connecting: bool,
     /// Menu frames left to wait for the pending request's reply; 0 when nothing is pending.
     deadline: u32,
@@ -434,12 +448,16 @@ pub struct NetClient {
     room_list_keep: Option<u32>,
     shown_filter: String,
 
+    /// The room's WebRTC mesh from `NET_L2P_MATCH_ROOM`, until the match takes it.
     peer_probe: Option<PeerProbe>,
+    /// The running live v2 match.
     pub v2: Option<Box<crate::smw::net_v2::V2Match>>,
+    /// The v2 match a replay is playing back.
     pub v2_replay: Option<Box<crate::smw::net_v2::V2Replay>>,
     /// A finished match's socket, kept open until this frame count so its last messages go out.
     lingering: Option<(smw_peer::PeerSocket, u32)>,
 
+    /// The lobby connection; null when there is none.
     foreign_lobbyserver: Ptr<dyn NetPeer>,
 
     uiRoomList: Ctl<MI_NetworkListScroll>,
@@ -503,6 +521,7 @@ impl NetClient {
         true
     }
 
+    /// Restarts the network layer for a new session.
     pub fn start(&mut self, g: &mut Game) -> bool {
         let mut gp = g.ptr();
         net_record::value_bool(g, "client_restart", || net_layer(gp.get()).client_restart(gp.get()))
@@ -513,10 +532,12 @@ impl NetClient {
         self.peer_probe.take().map(PeerProbe::into_socket)
     }
 
+    /// Keeps a finished match's socket open for `LINGER_FRAMES` more frames.
     pub fn linger(&mut self, socket: smw_peer::PeerSocket) {
         self.lingering = Some((socket, LINGER_FRAMES));
     }
 
+    /// Once per frame: the lingering socket, the lobby connection's events and the room's peers.
     pub fn update(&mut self, g: &mut Game) {
         if let Some((socket, frames)) = &mut self.lingering {
             socket.update_peers();
@@ -532,6 +553,7 @@ impl NetClient {
         }
     }
 
+    /// Drops the match sockets, says goodbye to the lobby and shuts the network layer down.
     pub fn stop(&mut self, g: &mut Game) {
         self.peer_probe = None;
         self.v2 = None;
@@ -596,6 +618,7 @@ impl NetClient {
         Phase 1: Connect
     ****************************/
 
+    /// Connects to the selected server; the lobby's answer arrives in a later frame. False when it is unreachable.
     pub fn send_connect_request_to_selected_server(&mut self, g: &mut Game) -> bool {
         let hostname = g.netplay.savedServers[g.netplay.selectedServerIndex as usize].hostname.clone();
         self.lobby_error = None;
@@ -635,6 +658,7 @@ impl NetClient {
         Phase 2: Join room
     ****************************/
 
+    /// Clears the shown rooms and asks for the list.
     pub fn request_room_list(&mut self, g: &mut Game) {
         self.rooms.clear();
         g.netplay.currentRooms.clear();
@@ -764,6 +788,7 @@ impl NetClient {
         }
     }
 
+    /// The host asks the lobby to start the room's match.
     pub fn send_start_room_message(&mut self, g: &mut Game) {
         let pkg = pkgs::StartRoom::new();
         self.send_message_to_lobby_server(g, pkg.as_bytes());
@@ -775,6 +800,7 @@ impl NetClient {
         self.send_game_mode_settings_change_message(g);
     }
 
+    /// Asks to join the selected room.
     pub fn send_join_room_message(&mut self, g: &mut Game, password: &str) {
         let entry = g.netplay.currentRooms[g.netplay.selectedRoomIndex as usize].clone();
         println!(
@@ -849,6 +875,7 @@ impl NetClient {
         self.send_message_to_lobby_server(g, pkg.as_bytes());
     }
 
+    /// Sends the map file at `mapfilepath`, compressed, to the room through the lobby.
     pub fn send_map_change_message(&mut self, g: &mut Game) {
         let mapfilepath = g.netplay.mapfilepath.clone();
         println!("[net] Sending map: {}", mapfilepath);
@@ -915,6 +942,7 @@ impl NetClient {
         }
     }
 
+    /// Sends this player's skin, compressed; the lobby fills in the slot byte (0xFF here) before relaying it.
     pub fn send_skin_change(&mut self, g: &mut Game) {
         let skinpath = g.skinlist.at(g.game_values.skinids[g.netplay.remotePlayerNumber as usize] as usize).path.to_string_lossy().into_owned();
         println!("[net] Sending skin: {}", skinpath);
@@ -983,6 +1011,7 @@ impl NetClient {
         Phase 3: Play
     ****************************/
 
+    /// Marks this client out of the match; it sends nothing.
     pub fn send_leave_game_message(&mut self, g: &mut Game) {
         g.netplay.gameRunning = false;
     }
@@ -997,7 +1026,7 @@ impl NetClient {
         net_record::value_bool(g, "connect_lobby", || net_layer(gp.get()).connect_to_lobby_server(gp.get(), hostname, port))
     }
 
-    /// Every client message goes reliably: a lost lobby request or start handshake leaves the client waiting forever.
+    /// Sends reliably and notes the message type; false without a connection.
     fn send_to(&mut self, g: &mut Game, mut peer: Ptr<dyn NetPeer>, data: &[u8]) -> bool {
         if peer.is_null() || !peer.send_reliable(data) {
             return false;
@@ -1012,6 +1041,7 @@ impl NetClient {
         self.send_to(g, peer, data)
     }
 
+    /// Sending a request clears the reply its menu waits for.
     pub fn set_as_last_sent_message(&mut self, g: &mut Game, packageType: u8) {
         self.lastSentMessage.packageType = packageType;
         self.lastSentMessage.timestamp = ticks(g);
@@ -1020,6 +1050,7 @@ impl NetClient {
         }
     }
 
+    /// A reply a menu waits for becomes `lastReply` and ends the request's deadline.
     pub fn set_as_last_received_message(&mut self, g: &mut Game, packageType: u8) {
         self.lastReceivedMessage.packageType = packageType;
         self.lastReceivedMessage.timestamp = ticks(g);
@@ -1103,7 +1134,7 @@ impl NetworkEventHandler<Game> for NetClient {
                 } else {
                     g.netplay.myPlayerName.clone()
                 };
-                // Not in the C++: the Servers menu moves on only if the skin goes out no earlier than this receive.
+                // The reply is noted before the skin goes out, and not again below, so the Servers menu sees the skin sent.
                 self.set_as_last_received_message(g, packageType);
                 g.netplay.connectSuccessful = true;
                 self.send_skin_change(g);
@@ -1213,18 +1244,26 @@ pub const PLAYING: NetworkState = 4;
 
 #[derive(Clone)]
 
+/// The netplay state (`Game::netplay`).
 pub struct Networking {
+    /// A lobby session is open.
     pub active: bool,
 
+    /// The lobby accepted this player.
     pub connectSuccessful: bool,
+    /// This player is in a room.
     pub joinSuccessful: bool,
+    /// The room's match has started and not ended.
     pub gameRunning: bool,
 
+    /// The room or server list changed; the menu refreshes and clears it.
     pub currentMenuChanged: bool,
+    /// A lobby request is waiting for its reply.
     pub operationInProgress: bool,
 
     pub client: NetClient,
     pub myPlayerName: String,
+    /// A v2 match, live or replayed, is running.
     pub v2_match: bool,
     /// The name the lobby server gave this player: `myPlayerName`, numbered if another player has it.
     pub lobby_name: String,
@@ -1247,20 +1286,21 @@ pub struct Networking {
     pub mapfilepath: String,
 
     pub theHostIsMe: bool,
+    /// This player's slot in the room.
     pub remotePlayerNumber: u8,
     pub hostPlayerNumber: u8,
+    /// The keys of the room's players by slot, as the v2 match applies them.
     pub netPlayerInput: CPlayerInput,
 
     /// The host's seed for the match (`prepare_match`).
     pub common_random_seed: u32,
-    /// The host's "Randomize" room setting: roll the mode settings at the sync instead of playing the menu's.
+    /// The host's "Randomize" room setting: roll the mode settings at match start instead of playing the menu's.
     pub randomize_settings: bool,
 
     pub _alias: Aliased,
 }
 
 impl Networking {
-    /// Zero-initialized like the C++ global, plus the member constructors.
     pub fn new() -> Self {
         Networking {
             active: false,

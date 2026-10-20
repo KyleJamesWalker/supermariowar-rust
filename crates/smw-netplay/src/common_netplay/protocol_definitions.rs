@@ -1,10 +1,13 @@
-//! Port of src/common_netplay/ProtocolDefinitions.h
+//! The lobby protocol's version, limits and message types (the third byte of every message).
 
+/// Client and lobby must match in both parts; the lobby answers any other version with `NET_RESPONSE_BADPROTOCOL`.
 pub const NET_PROTOCOL_VERSION_MAJOR: u8 = 0;
 pub const NET_PROTOCOL_VERSION_MINOR: u8 = 9;
 pub const NET_MAX_MESSAGE_SIZE: usize = 128;
+/// The port a lobby connection targets; the relay's switch refuses connections to any other.
 pub const NET_LOBBYSERVER_PORT: u16 = 12521;
 pub const NET_GAMEHOST_PORT: u16 = 12522;
+/// Field sizes in bytes, the terminating NUL included.
 pub const NET_MAX_PLAYER_NAME_LENGTH: usize = 16;
 pub const NET_MAX_ROOM_NAME_LENGTH: usize = 32;
 pub const NET_MAX_ROOM_PASSWORD_LENGTH: usize = 16;
@@ -41,14 +44,18 @@ pub const NET_RESPONSE_WRONG_PASSWORD: u8 = 43;
 // L: lobby server
 // G: game host player
 // P: regular players
+/// The host asks the lobby to start the room's match.
 pub const NET_G2L_START_ROOM: u8 = 50;
 pub const NET_L2P_GAMEHOST_INFO: u8 = 51;
 pub const NET_L2G_CLIENTS_INFO: u8 = 52;
+/// The match's signaling room and TURN server (`MatchRoom`), sent before `NET_L2P_MATCH_START`.
 pub const NET_L2P_MATCH_ROOM: u8 = 53;
+/// The room's match starts.
 pub const NET_L2P_MATCH_START: u8 = 54;
 pub const NET_G2P_SYNC: u8 = 55;
 pub const NET_P2G_SYNC_OK: u8 = 56;
 pub const NET_G2E_GAME_START: u8 = 57;
+/// The host is back in the room after a match; the lobby lists the room again.
 pub const NET_G2L_GAME_RESULTS: u8 = 58;
 pub const NET_P2G_LEAVE_GAME: u8 = 70;
 pub const NET_P2G_LOCAL_KEYS: u8 = 71;
@@ -59,10 +66,7 @@ pub const NET_G2P_START_POWERUP: u8 = 75;
 pub const NET_G2P_TRIGGER_POWERUP: u8 = 76;
 pub const NET_G2P_TRIGGER_MAPCOLL: u8 = 77;
 pub const NET_G2P_TRIGGER_P2PCOLL: u8 = 78;
-// Not in the C++ protocol: the game host decides random outcomes (docs/guides/DEVIATIONS.md, Netplay deviations). 92 is unused.
 pub const NET_G2P_RANDOM_EVENT: u8 = 93;
-// Not in the C++ protocol: the start barrier (docs/guides/DEVIATIONS.md, Netplay deviations).
 pub const NET_P2G_LOADED: u8 = 94;
 pub const NET_G2P_GO: u8 = 95;
-// Not in the C++ protocol: the match's map name, for the preview before it starts.
 pub const NET_G2P_MATCH_MAP: u8 = 96;

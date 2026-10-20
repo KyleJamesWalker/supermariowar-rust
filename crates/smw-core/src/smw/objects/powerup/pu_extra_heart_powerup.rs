@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/powerup/PU_ExtraHeartPowerup.cpp
+//! Heart powerup for health mode: restores one point of health, up to the mode's maximum.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;

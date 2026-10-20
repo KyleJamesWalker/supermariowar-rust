@@ -1,4 +1,4 @@
-//! Port of src/smw/menu/network/NetLobbyMenu.cpp
+//! The server lobby: room list, search, refresh, new room and the join and password dialogs.
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
 use crate::common::ui::menu_code::*;
@@ -12,10 +12,12 @@ use crate::common_netplay::protocol_definitions::{NET_MAX_ROOM_NAME_LENGTH, NET_
 use crate::globals::Ptr;
 use crate::smw::ui::network_list_scroll::MI_NetworkListScroll;
 
+/// Room list with search, refresh and new room, plus Joining and password dialogs.
 #[derive(Default)]
 pub struct UI_NetLobbyMenu {
     pub ui_menu: UI_Menu,
 
+    /// Room list; the netplay client fills it and its selection writes `netplay.selectedRoomIndex`.
     miNetLobbyScroll: Ctl<MI_NetworkListScroll>,
     miNetLobbyNewRoomButton: Ctl<MI_Button>,
     miNetLobbyFilterField: Ctl<MI_TextField>,
@@ -29,7 +31,9 @@ pub struct UI_NetLobbyMenu {
     miNetLobbyPasswordField: Ctl<MI_TextField>,
     miNetLobbyPasswordOK: Ctl<MI_Button>,
     miNetLobbyPasswordCancel: Ctl<MI_Button>,
+    /// Backing text of the password field.
     passwordData: String,
+    /// Room the password dialog is for, kept by ID since the room list can refresh meanwhile.
     passwordRoomID: u32,
 
     miNetLobbyLeftHeaderBar: Ctl<MI_Image>,
@@ -150,6 +154,7 @@ impl UI_NetLobbyMenu {
         self.send_join(g, "");
     }
 
+    /// Sends the join for the password dialog's room, or closes the dialogs if that room is gone.
     pub fn join_with_password(&mut self, g: &mut Game) {
         self.show_password_dialog(g, false);
         let password = std::mem::take(&mut self.passwordData);
@@ -163,6 +168,7 @@ impl UI_NetLobbyMenu {
         }
     }
 
+    /// Sends the join request and shows the Joining dialog until the server answers.
     fn send_join(&mut self, g: &mut Game, password: &str) {
         let mut gp = g.ptr();
         if g.netplay.currentRooms.get(g.netplay.selectedRoomIndex as usize).is_none() {
@@ -181,11 +187,13 @@ impl UI_NetLobbyMenu {
         self.reset_menu(g);
     }
 
+    /// Stops waiting for a join answer and closes the dialogs.
     pub fn abort_join(&mut self, g: &mut Game) {
         g.netplay.operationInProgress = false;
         self.restore(g);
     }
 
+    /// Hides the Joining and password dialogs and focuses New room.
     pub fn restore(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         g.ctl(self.miNetLobbyJoiningDialogImage).set_visible(false);

@@ -1,4 +1,4 @@
-//! Port of src/smw/ui/MI_PowerupSlider.cpp
+//! A 0 to 10 slider with a powerup icon, used for item weights.
 
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
@@ -10,16 +10,20 @@ use crate::common::ui::mi_slider_field::MI_SliderField;
 use crate::common::uicontrol::UI_ControlTrait;
 use crate::globals::*;
 
+/// A slider field drawn with a 32-pixel powerup icon on its left.
 pub struct MI_PowerupSlider {
     pub mi_slider_field: MI_SliderField,
 
     pub m_sprPowerup: SpriteId,
+    /// Icon column in `m_sprPowerup`, 32 pixels per powerup.
     pub m_powerupIndex: i16,
+    /// Width in pixels of the left half of the background.
     pub m_halfWidth: i16,
 }
 crate::impl_base!(MI_PowerupSlider => mi_slider_field: MI_SliderField);
 
 impl MI_PowerupSlider {
+    /// `x`, `y` and `width` are in pixels; `powerupIndex` picks the icon.
     #[allow(clippy::too_many_arguments)]
     pub fn new(nspr: SpriteId, nsprSlider: SpriteId, nsprPowerup: SpriteId, x: i16, y: i16, width: i16, powerupIndex: i16) -> Self {
         let mut this = MI_PowerupSlider {
@@ -82,7 +86,6 @@ impl UI_ControlTrait for MI_PowerupSlider {
             iSpot = iSpot.wrapping_add(iSpacing);
         }
 
-        // size_t arithmetic in C++, truncated to int at the call
         let knobX = x.wrapping_add((self.m_index as i32).wrapping_mul(iSpacing as i32)).wrapping_add(54);
         g.rm.sprite(self.m_sprSlider).draw_src(g, knobX, y + 8, &Rect { x: 168, y: 0, w: 8, h: 16 });
         g.rm.sprite(self.m_sprSlider).draw_src(g, x + width - 34, y + 8, &Rect { x: self.m_index as i32 * 16, y: 16, w: 16, h: 16 });

@@ -1,4 +1,4 @@
-//! Port of src/smw/gamemodes/GameMode.cpp
+//! Shared game mode behavior: scoreboard ranking, team removal and the default `CGameModeTrait` hooks.
 
 use crate::smw::players::PlayerId;
 use crate::game::Game;
@@ -31,6 +31,7 @@ macro_rules! impl_cgamemode_plumbing {
     };
 }
 
+/// Marks every player not on `teamid` as dead.
 pub fn remove_players_but_team(g: &mut Game, teamid: i16) {
     for i in 0..g.players.len() {
         let mut player = g.players[i];
@@ -40,6 +41,7 @@ pub fn remove_players_but_team(g: &mut Game, teamid: i16) {
     }
 }
 
+/// Marks every player whose team score is below the best team score as dead.
 pub fn remove_players_but_highest_scoring(g: &mut Game) {
     let mut iMaxScore: i16 = -1;
 
@@ -59,6 +61,8 @@ pub fn remove_players_but_highest_scoring(g: &mut Game) {
     }
 }
 
+/// Ranks team scores into `place` and `displayorder`, and drops world-mode winner bonus chests.
+/// With `fOrderMatters` false, tied scores share a place; ties are otherwise broken by `order`.
 pub fn setup_score_board(g: &mut Game, fOrderMatters: bool) {
         let mut gp = g.ptr();
     let mut doneWithScore: [bool; 4] = [false, false, false, false];
@@ -129,6 +133,7 @@ pub fn setup_score_board(g: &mut Game, fOrderMatters: bool) {
     }
 }
 
+/// Starts the end-of-match scoreboard: sets each score's slide target and switches to the scoreboard music.
 pub fn show_score_board(g: &mut Game) {
     let mut gp = g.ptr();
     g.game_values.flags.showscoreboard = true;
@@ -156,6 +161,8 @@ pub fn show_score_board(g: &mut Game) {
     }
 }
 
+/// Kills every player on `teamid` and records its elimination order in `CScore::order`.
+/// Returns true once only one team remains.
 pub fn remove_team(g: &mut Game, teamid: i16) -> bool {
     let mut gp = g.ptr();
     //If we have already removed this team then return
@@ -214,6 +221,7 @@ impl CGameMode {
         this
     }
 
+    /// Spawns "Winner!" text over every player on the winning team.
     pub fn displayplayertext(&mut self, g: &mut Game) {
         if self.winningteam > -1 {
             for i in 0..g.players.len() {
@@ -225,6 +233,7 @@ impl CGameMode {
         }
     }
 
+    /// Plays the near-goal warning once per match, stopping the background and invincibility music.
     pub fn playwarningsound(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         if self.playedwarningsound {
@@ -241,6 +250,8 @@ impl CGameMode {
         if_sound_on_play(g, &mut gp.rm.sfx_timewarning);
     }
 
+    /// Sets the mode and goal names and fills the goal options with multiples of `iGoalSpacing`.
+    /// The last option is "Unlimited", stored as -1.
     pub fn setup_mode_strings(&mut self, szMode: &str, szGoal: &str, iGoalSpacing: i16) {
         self.szModeName = szMode.to_string();
         self.szGoalName = szGoal.to_string();
@@ -256,6 +267,7 @@ impl CGameMode {
         }
     }
 
+    /// Returns a living player with the highest (or lowest) score, picking randomly among ties.
     pub fn get_highest_score_player(&mut self, g: &mut Game, fGetHighest: bool) -> PlayerId {
         let mut gp = g.ptr();
         let mut count: i16 = 1;
@@ -293,7 +305,8 @@ impl CGameMode {
         g.players[tiedplayers[RANDOM_INT(gp.get(), count as i32) as usize] as usize]
     }
 
-    //Returns number of players in list
+    /// Fills `outPlayers` with living players sorted by score and returns how many it wrote.
+    /// Equal scores are shuffled randomly.
     pub fn get_score_ranked_player_list(&mut self, g: &mut Game, outPlayers: &mut [PlayerId; 4], fGetHighest: bool) -> i16 {
         let mut gp = g.ptr();
         let mut iNumPlayersInList: i16 = 0;
@@ -335,6 +348,7 @@ impl CGameMode {
         iNumPlayersInList
     }
 
+    /// Returns the finite goal option nearest to `iGoal`.
     pub fn get_closest_goal(&mut self, iGoal: i16) -> i16 {
         let mut iDifference: i16 = 16000;
         let mut iOptionValue: i16 = 0;
@@ -357,6 +371,7 @@ impl Default for CGameMode {
     }
 }
 
+/// Default `CGameModeTrait::init`: clamps the goal to 999, clears the winner and zeroes all scores.
 pub fn cgamemode_init<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T) {
         let mut gp = g.ptr();
     let this = this.gm_mut();
@@ -373,6 +388,7 @@ pub fn cgamemode_init<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T) {
     }
 }
 
+/// Default `CGameModeTrait::think`: shows winner text once the game is over.
 pub fn cgamemode_think<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T) {
         let mut gp = g.ptr();
     if this.gm().gameover {
@@ -380,6 +396,7 @@ pub fn cgamemode_think<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T) {
     }
 }
 
+/// Default kill scoring: +1 for killing an opponent, -1 for killing a teammate.
 pub fn cgamemode_playerkilledplayer<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T, mut inflictor: PlayerId, other: PlayerId, _style: KillStyle) -> PlayerKillType {
     //Penalize killing your team mates
     if !this.gm().gameover {
@@ -393,6 +410,7 @@ pub fn cgamemode_playerkilledplayer<T: CGameModeTrait + ?Sized>(g: &mut Game, th
     PlayerKillType::Normal
 }
 
+/// Default self-kill handling: no score change; bob-omb players leave a bob-omb corpse.
 pub fn cgamemode_playerkilledself<T: CGameModeTrait + ?Sized>(g: &mut Game, _this: &mut T, mut player: PlayerId, _style: KillStyle) -> PlayerKillType {
     if g.player(player).is_bobomb() {
         g.player(player).set_corpse_type(2); //flag to use bobomb corpse sprite
@@ -401,6 +419,7 @@ pub fn cgamemode_playerkilledself<T: CGameModeTrait + ?Sized>(g: &mut Game, _thi
     PlayerKillType::Normal
 }
 
+/// Default extra-life pickup: adds `iType` to the player's team score.
 pub fn cgamemode_playerextraguy<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: PlayerId, iType: i16) {
     if !this.gm().gameover {
         g.player(player).score(g).adjust_score(g, iType);

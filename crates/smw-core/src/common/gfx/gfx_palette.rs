@@ -1,4 +1,4 @@
-//! Port of src/common/gfx/gfxPalette.cpp
+//! Player color palettes: per-team and per-state replacements for the key colors in player sprites.
 
 use crate::game::Game;
 use crate::globals::Aliased;
@@ -9,6 +9,7 @@ use crate::common::gfx::gfx_sprite::ImageLoader;
 use std::collections::HashMap;
 use std::path::Path;
 
+/// Row within a team's block of a palette image: the player state whose colors to use.
 pub type PlayerPalette = i32;
 pub const normal: PlayerPalette = 0;
 pub const invincibility_1: PlayerPalette = 1;
@@ -19,8 +20,10 @@ pub const tagged: PlayerPalette = 5;
 pub const ztarred: PlayerPalette = 6;
 pub const got_shine: PlayerPalette = 7;
 pub const frozen: PlayerPalette = 8;
+/// Number of player palette states per team.
 pub const COUNT: PlayerPalette = 9;
 
+/// Replacement colors for one key color, indexed by `team * COUNT + state`.
 #[derive(Clone, Copy)]
 pub struct ColorSheet {
     pub replacements: [RGB; MAX_PLAYERS as usize * COUNT as usize],
@@ -33,12 +36,14 @@ impl Default for ColorSheet {
 }
 
 impl ColorSheet {
+    /// Replacement color for team `teamIdx` (0 to `MAX_PLAYERS - 1`) in `playerState`.
     pub fn replacement_for(&self, teamIdx: usize, playerState: PlayerPalette) -> RGB {
         let idx = teamIdx * COUNT as usize + playerState as usize;
         self.replacements[idx]
     }
 }
 
+/// Color sheets keyed by the sprite color they replace.
 #[derive(Clone, Default)]
 pub struct gfxPalette {
     m_colorsheets: HashMap<RGB, ColorSheet>,
@@ -54,10 +59,13 @@ impl gfxPalette {
         &self.m_colorsheets
     }
 
+    /// Replacement for `keyColor`, or `None` when the palette does not recolor it.
     pub fn replacement_for(&self, keyColor: RGB, teamIndex: usize, playerState: PlayerPalette) -> Option<RGB> {
         self.m_colorsheets.get(&keyColor).map(|sheet| sheet.replacement_for(teamIndex, playerState))
     }
 
+    /// Loads a palette image: row 0 holds key colors, and below each key its column holds `MAX_PLAYERS * COUNT`
+    /// replacements in [`ColorSheet`] order. Replaces any loaded palette and always returns `true`.
     pub fn load(&mut self, g: &mut Game, path: &Path) -> bool {
         let mut gp = g.ptr();
         self.m_colorsheets.clear();
@@ -76,7 +84,7 @@ impl gfxPalette {
                 }
             }
 
-            // unordered_map::emplace keeps the first entry for a duplicate key
+            // The first column with a given key color wins.
             self.m_colorsheets.entry(key).or_insert(sheet);
         }
         true

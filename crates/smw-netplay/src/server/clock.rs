@@ -1,4 +1,4 @@
-//! Port of src/server/Clock.h
+//! The lobby server's monotonic clock.
 
 pub type TimePoint = std::time::Instant;
 

@@ -1,3 +1,5 @@
+//! The relay's settings, from the command line and the environment.
+
 use std::env;
 
 const USAGE: &str = "usage: smw_relay [--port <n>] [--config <lobby config file>] [--healthcheck]
@@ -15,21 +17,30 @@ const DEFAULT_ORIGINS: &str = "https://www.kylejameswalker.com,http://localhost:
 
 #[derive(Clone, Debug)]
 pub struct Config {
+    /// TCP port for lobby clients, signaling and `/healthz`.
     pub port: u16,
+    /// The lobby's config file; `<path>.txt` is tried too.
     pub lobby_config: String,
+    /// Probe a running relay's `/healthz` and exit instead of serving.
     pub healthcheck: bool,
+    /// Normalized page origins browsers may connect from; `*` allows any.
     pub allowed_origins: Vec<String>,
+    /// Simultaneous lobby WebSocket clients; signaling connections do not count.
     pub max_clients: usize,
+    /// Virtual connections one client may hold open to the lobby.
     pub max_connections_per_client: usize,
     /// Overrides the lobby's `SMW_SIGNAL_URL`; `/signal` means this relay's own signaling.
     pub signal_url: Option<String>,
+    /// Whether the lobby writes `serverlog.txt`.
     pub log_file: bool,
-    /// The lobby's player and room limits when set here instead of in its config file.
+    /// The lobby's player limit, overriding its config file.
     pub lobby_max_players: Option<u32>,
+    /// The lobby's room limit; `None` for no limit.
     pub lobby_max_rooms: Option<usize>,
 }
 
 impl Config {
+    /// The environment, then the arguments; the error is the usage text or names the bad value.
     pub fn from_args_and_env() -> Result<Config, String> {
         let mut config = Config {
             port: 8080,
@@ -65,6 +76,7 @@ impl Config {
         Ok(config)
     }
 
+    /// The settings of the relay a game runs to host on its own network.
     pub fn embedded(port: u16) -> Config {
         Config {
             port,
@@ -80,6 +92,7 @@ impl Config {
         }
     }
 
+    /// Whether a WebSocket handshake with this `Origin` header may proceed.
     pub fn origin_allowed(&self, origin: Option<&str>) -> bool {
         if self.allowed_origins.iter().any(|o| o == "*") {
             return true;

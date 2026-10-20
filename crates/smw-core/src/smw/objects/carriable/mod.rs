@@ -1,3 +1,5 @@
+//! Objects players can pick up, carry and throw: shells, blocks, bombs, springs and mode items.
+
 pub mod co_bomb;
 pub mod co_egg;
 pub mod co_flag;

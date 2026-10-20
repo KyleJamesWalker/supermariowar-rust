@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/powerup/PU_BoomerangPowerup.cpp
+//! Boomerang powerup: gives the player the boomerang-throwing power.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;

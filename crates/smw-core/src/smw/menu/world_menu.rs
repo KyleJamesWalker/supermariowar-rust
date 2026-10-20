@@ -1,4 +1,4 @@
-//! Port of src/smw/menu/WorldMenu.cpp
+//! The world map screen, with its stage start popup and Exit World dialog.
 
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
@@ -12,11 +12,13 @@ use crate::globals::*;
 use crate::smw::ui::mi_tour_stop::MI_TourStop;
 use crate::smw::ui::mi_world::MI_World;
 
+/// The world map with its stage popup; cancel opens the Exit World dialog.
 #[derive(Default)]
 pub struct UI_WorldMenu {
     pub ui_menu: UI_Menu,
 
     pub miWorld: Ctl<MI_World>,
+    /// Stage start popup for the stage a team entered, hidden until [`Self::open_stage_start`].
     pub miWorldStop: Ctl<MI_TourStop>,
 
     pub miWorldExitDialogImage: Ctl<MI_Image>,
@@ -74,6 +76,7 @@ impl UI_WorldMenu {
         this
     }
 
+    /// Shows the stage popup for `game_values.tourstopcurrent` and focuses it.
     pub fn open_stage_start(&mut self, g: &mut Game) {
         g.ctl(self.miWorldStop).refresh(g, g.game_values.tourstopcurrent as i16);
         g.ctl(self.miWorldStop).set_visible(true);
@@ -87,6 +90,7 @@ impl UI_WorldMenu {
         self.reset_menu(g);
     }
 
+    /// Hides the stage popup and restores the remembered focus.
     pub fn close_stage_start(&mut self, g: &mut Game) {
         g.ctl(self.miWorldStop).set_visible(false);
 
@@ -97,6 +101,7 @@ impl UI_WorldMenu {
         self.restore_current(g);
     }
 
+    /// Opens the Exit World dialog with No focused and cancel disabled.
     pub fn open_exit_dialog(&mut self, g: &mut Game) {
         g.ctl(self.miWorldExitDialogImage).set_visible(true);
         g.ctl(self.miWorldExitDialogExitTourText).set_visible(true);
@@ -111,6 +116,7 @@ impl UI_WorldMenu {
         self.reset_menu(g);
     }
 
+    /// Hides the Exit World dialog and restores the remembered focus.
     pub fn close_exit_dialog(&mut self, g: &mut Game) {
         g.ctl(self.miWorldExitDialogImage).set_visible(false);
         g.ctl(self.miWorldExitDialogExitTourText).set_visible(false);

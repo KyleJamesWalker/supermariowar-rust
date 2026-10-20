@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/carriable/CO_Egg.cpp
+//! Egg for egg mode: carry or throw it into the yoshi of the same color to score.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -22,22 +22,30 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class egg (for egg mode)
 //------------------------------------------------------------------------------
+/// Egg that relocates when left alone and, with the explode setting, blows up on a countdown.
 #[derive(Clone)]
 pub struct CO_Egg {
     pub mo_carried_object: MO_CarriedObject,
 
+    /// Ticks lying loose; the egg relocates after `ticks(1500)`.
     pub relocatetimer: i16,
+    /// Countdown digit in seconds; the egg explodes when it passes zero.
     pub explosiondrawframe: i16,
+    /// Ticks left in the current countdown second.
     pub explosiondrawtimer: i16,
 
+    /// Last holder, credited if the thrown egg reaches its yoshi; cleared a second after release.
     pub owner_throw: PlayerId,
+    /// Ticks before `owner_throw` is cleared.
     pub owner_throw_timer: i16,
 
     pub sparkleanimationtimer: i16,
     pub sparkledrawframe: i16,
 
+    /// Color of the yoshi that accepts this egg; also its sprite row.
     pub color: i16,
 
+    /// Animation speed for each countdown digit; the egg wobbles faster near zero.
     pub egganimationrates: [i16; 6],
 }
 impl_base!(CO_Egg => mo_carried_object: MO_CarriedObject);
@@ -89,6 +97,7 @@ impl CO_Egg {
         self.color
     }
 
+    /// Restarts the countdown and moves the egg to a random spawn point at least 250 pixels from any yoshi.
     pub fn place_egg(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
 

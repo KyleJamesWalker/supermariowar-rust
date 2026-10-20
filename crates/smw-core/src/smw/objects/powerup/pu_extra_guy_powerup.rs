@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/powerup/PU_ExtraGuyPowerup.cpp
+//! 1-up mushroom: the game mode awards extra lives or points.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -22,6 +22,7 @@ use crate::smw::player::CPlayer;
 pub struct PU_ExtraGuyPowerup {
     pub mo_powerup: MO_Powerup,
 
+    /// Lives awarded: 1, 2, 3 or 5. Also sets the walking speed.
     pub iType: i16,
 }
 impl_base!(PU_ExtraGuyPowerup => mo_powerup: MO_Powerup);

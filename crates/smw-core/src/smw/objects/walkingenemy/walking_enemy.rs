@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/walkingenemy/WalkingEnemy.cpp
+//! Shared walking-enemy behavior: spawn-in effect, ledge turning, freezing, burnup and weapon hits.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -30,29 +30,43 @@ use std::ops::{Deref, DerefMut};
 //------------------------------------------------------------------------------
 // class walking enemy (base class for goomba and koopa)
 //------------------------------------------------------------------------------
+/// Base state for walking enemies. `state` 0 is the spawn-in effect (no collisions), 1 is active.
 #[derive(Clone)]
 pub struct MO_WalkingEnemy {
     pub io_moving_object: IO_MovingObject,
 
+    /// Radius (pixels) of the ring of spawn icons; the enemy goes active once it shrinks below 10.
     pub spawnradius: f32,
+    /// Rotation (radians) of the ring of spawn icons.
     pub spawnangle: f32,
 
+    /// X offset (pixels) of this enemy's 16x16 icon in the spawn-effect sprite.
     pub iSpawnIconOffset: i16,
+    /// Kill style credited to a player who kills this enemy.
     pub killStyle: KillStyle,
 
+    /// Ticks spent at terminal fall speed; smokes after `ticks(20)` and dies after `ticks(80)`.
     pub burnuptimer: i16,
+    /// Fireballs, hammers and boomerangs kill this enemy even when it is not frozen.
     pub fKillOnWeakWeapon: bool,
+    /// Winged variant that hops; the first stomp only clips its wings.
     pub fBouncing: bool,
+    /// Walks off ledges; when false the enemy turns around at gaps and deadly tiles.
     pub fFallOffLedges: bool,
 
+    /// Frozen in an ice block by an ice blast; any player or weapon hit shatters it.
     pub frozen: bool,
+    /// Ticks left frozen.
     pub frozentimer: i16,
+    /// Horizontal speed restored when the ice thaws.
     pub frozenvelocity: f32,
+    /// Animation speed restored when the ice thaws.
     pub frozenanimationspeed: i16,
 }
 impl_base!(MO_WalkingEnemy => io_moving_object: IO_MovingObject);
 
 impl MO_WalkingEnemy {
+    /// Places the enemy at a random enemy spawn point and starts the spawn-in effect.
     #[allow(clippy::too_many_arguments)]
     pub fn new(g: &mut Game, 
         nspr: SpriteId,
@@ -134,7 +148,7 @@ impl MO_WalkingEnemy {
 
         o.fFallOffLedges = fallOffLedges;
 
-        // Virtual call during construction: always MO_WalkingEnemy::place
+        // Always the base placement; a subclass `place` does not run here.
         mo_walking_enemy_place(g, &mut o);
         o
     }
@@ -144,6 +158,7 @@ impl MO_WalkingEnemy {
     }
 }
 
+/// Draws the ring of spawn icons while spawning, else the sprite plus the ice block when frozen.
 pub fn mo_walking_enemy_draw<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, this: &mut T) {
         let mut gp = g.ptr();
     if this.we().state == 0 {
@@ -175,6 +190,7 @@ pub fn mo_walking_enemy_draw<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, thi
     }
 }
 
+/// Thaws, runs the spawn-in or map physics, burns up at terminal velocity, and turns around at ledges.
 pub fn mo_walking_enemy_update<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, this: &mut T) {
     {
         let o = this.we_mut();
@@ -300,6 +316,7 @@ pub fn mo_walking_enemy_update<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, t
     }
 }
 
+/// Touching an invincible player, or being frozen, kills the enemy; otherwise a stomp calls `hittop_player`, any other touch `hitother`.
 pub fn mo_walking_enemy_collide_player<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, this: &mut T, player: PlayerId) -> bool {
         let mut gp = g.ptr();
     let mut player = player;
@@ -333,6 +350,7 @@ pub fn mo_walking_enemy_collide_player<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut
     false
 }
 
+/// Default side contact: kills an unshielded player.
 pub fn mo_walking_enemy_hitother<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, _this: &mut T, player: PlayerId) -> bool {
     let mut player = player;
     if g.player(player).is_shielded() {
@@ -342,6 +360,7 @@ pub fn mo_walking_enemy_hitother<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game,
     g.player(player).kill_player_map_hazard(g, false, KillStyle::Environment, false, -1) != PlayerKillType::NonKill
 }
 
+/// Handles weapons and thrown objects: kills, credits the thrower in stomp mode, or freezes on an ice blast.
 pub fn mo_walking_enemy_collide_object<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, this: &mut T, object: Ptr<dyn IO_MovingObjectTrait>) {
         let mut gp = g.ptr();
     let mut object = object;
@@ -430,6 +449,7 @@ pub fn mo_walking_enemy_collide_object<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut
     }
 }
 
+/// Moves the enemy to a random spawn point, trying up to 11 times.
 pub fn mo_walking_enemy_place(g: &mut Game, this: &mut MO_WalkingEnemy) {
     let mut gp = g.ptr();
     let mut ix = this.ix;
@@ -448,6 +468,7 @@ pub fn mo_walking_enemy_place(g: &mut Game, this: &mut MO_WalkingEnemy) {
     this.fy = this.iy as f32;
 }
 
+/// Breaks a frozen enemy into ice fragments.
 pub fn mo_walking_enemy_shatter_die<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Game, this: &mut T) {
         let mut gp = g.ptr();
     if_sound_on_play(g, &mut gp.rm.sfx_breakblock);
@@ -465,7 +486,7 @@ pub fn mo_walking_enemy_shatter_die<T: MO_WalkingEnemyTrait + ?Sized>(g: &mut Ga
     g.game_values.unlocksecret2part2 += 1;
 }
 
-/// Virtual interface added by `MO_WalkingEnemy`. `hittop(CPlayer*)` is `hittop_player` (pure).
+/// Virtual interface added by `MO_WalkingEnemy`; implementors must provide `hittop_player`.
 /// Implementors forward `CObjectTrait::draw`, `update`, `collide_player`, `collide_object` to the
 /// `mo_walking_enemy_*` functions unless overridden, and implement `IO_MovingObjectTrait::die`
 /// (a no-op in `MO_WalkingEnemy`).
@@ -477,7 +498,9 @@ pub trait MO_WalkingEnemyTrait: IO_MovingObjectTrait {
         mo_walking_enemy_place(g, self.we_mut())
     }
 
+    /// Handles a player landing on top; returns true if the player died.
     fn hittop_player(&mut self, g: &mut Game, player: PlayerId) -> bool;
+    /// Handles any non-stomp player contact; returns true if the player died.
     fn hitother(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut gp = g.ptr();
         mo_walking_enemy_hitother(gp.get(), self, player)
@@ -486,6 +509,7 @@ pub trait MO_WalkingEnemyTrait: IO_MovingObjectTrait {
     fn shatter_die(&mut self, g: &mut Game) {
         mo_walking_enemy_shatter_die(g, self)
     }
+    /// Kills the enemy and leaves a shell behind, or shatters it if frozen.
     fn die_and_drop_shell(&mut self, g: &mut Game, fBounce: bool, fFlip: bool) {
         if self.we().frozen {
             self.shatter_die(g);
@@ -494,6 +518,7 @@ pub trait MO_WalkingEnemyTrait: IO_MovingObjectTrait {
         self.we_mut().dead = true;
         self.drop_shell(g, fBounce, fFlip);
     }
+    /// Spawns this enemy's shell, if it has one.
     fn drop_shell(&mut self, g: &mut Game, _fBounce: bool, _fFlip: bool) {}
 }
 

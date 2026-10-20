@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/overmap/WO_BowserFire.cpp
+//! Bowser fire for survival mode: a flame that flies straight across the screen.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -23,8 +23,11 @@ use crate::smw::player::{get_player_from_global_id, player_killed_player, CPlaye
 pub struct OMO_BowserFire {
     pub io_over_map_object: IO_OverMapObject,
 
+    /// Global ID of the owning player, or -1 for the survival hazard.
     pub iPlayerID: i16,
+    /// Owner's team, or -1.
     pub iTeamID: i16,
+    /// Sprite row offset (pixels): 64 per owner color, row 0 for the hazard.
     pub iColorOffsetY: i16,
 }
 impl_base!(OMO_BowserFire => io_over_map_object: IO_OverMapObject);
@@ -84,7 +87,7 @@ impl CObjectTrait for OMO_BowserFire {
         }
 
         if g.player(player).globalID != self.iPlayerID && (g.game_values.teamcollision == TeamCollisionStyle::On || self.iTeamID != g.player(player).teamID) && !g.player(player).is_invincible() && !g.player(player).is_shielded() {
-            // Find the player that made this explosion so we can attribute a kill
+            // Credit the kill to the fire's owner, if any.
             player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Fireball, false, false);
             return true;
         }

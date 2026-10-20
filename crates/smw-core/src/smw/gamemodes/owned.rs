@@ -1,4 +1,4 @@
-//! Port of src/smw/gamemodes/Owned.cpp
+//! Owned mode: kill opponents to own them; owned players earn their owner points over time.
 
 use crate::smw::players::PlayerId;
 use crate::game::Game;
@@ -12,12 +12,12 @@ use crate::smw::gamemodes::game_mode::{self as gm, remove_players_but_team, setu
 use crate::smw::player::CPlayer;
 use std::any::Any;
 
-//Owned:
-//Players rack up points like domination for each player they have "owned"
+/// Owned mode. Each owned player is worth a point every `ticks(pointspeed)` ticks; killing a
+/// player you already own is worth 5, and dying frees everyone you own.
 #[derive(Clone)]
 pub struct CGM_Owned {
     pub cgame_mode: CGameMode,
-    /// Frames toward the next point; never reset between games, like the C++ function-local static.
+    /// Ticks toward the next point payout; `init` does not reset it.
     counter: i16,
 }
 impl_base!(CGM_Owned => cgame_mode: CGameMode);

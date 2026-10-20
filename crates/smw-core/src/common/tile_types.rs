@@ -1,6 +1,6 @@
-//! Port of src/common/TileTypes.cpp
+//! Tile collision types and the collision flag bits they map to.
 
-/// May hold any `u8`: map and tileset files cast arbitrary integers into it.
+/// Collision type of a map tile; may hold any `u8`, since map and tileset files cast arbitrary integers into it.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Hash)]
 pub struct TileType(pub u8);
 
@@ -27,12 +27,13 @@ impl TileType {
     pub const PlayerDeath: TileType = TileType(18);
     pub const Gap: TileType = TileType(19);
 
-    /// `static_cast<TileType>(int)`
+    /// Truncates `v` to its low byte; out-of-range values are kept, not rejected.
     pub const fn from_i32(v: i32) -> TileType {
         TileType(v as u8)
     }
 }
 
+/// Bit set of `tile_flag_*` constants describing how a tile collides.
 pub type TileTypeFlag = i32;
 pub const tile_flag_nonsolid: TileTypeFlag = 0;
 pub const tile_flag_solid: TileTypeFlag = 1;
@@ -42,11 +43,14 @@ pub const tile_flag_death_on_top: TileTypeFlag = 8;
 pub const tile_flag_death_on_bottom: TileTypeFlag = 16;
 pub const tile_flag_death_on_left: TileTypeFlag = 32;
 pub const tile_flag_death_on_right: TileTypeFlag = 64;
+/// Non-solid, but players moving at turbo speed run across it.
 pub const tile_flag_gap: TileTypeFlag = 128;
+/// Super death kills players regardless of invincibility and destroys objects that die on super death tiles.
 pub const tile_flag_super_death_top: TileTypeFlag = 256;
 pub const tile_flag_super_death_bottom: TileTypeFlag = 512;
 pub const tile_flag_super_death_left: TileTypeFlag = 1024;
 pub const tile_flag_super_death_right: TileTypeFlag = 2048;
+/// Non-solid tile that kills players like super death; objects pass through.
 pub const tile_flag_player_death: TileTypeFlag = 4096;
 
 pub const tile_flag_has_regular_death: TileTypeFlag =
@@ -61,7 +65,7 @@ pub const tile_flag_super_or_player_death_left: TileTypeFlag = tile_flag_player_
 pub const tile_flag_super_or_player_death_right: TileTypeFlag = tile_flag_player_death | tile_flag_super_death_right;
 pub const tile_flag_player_or_death_on_bottom: TileTypeFlag = tile_flag_player_death | tile_flag_death_on_bottom;
 
-/// Returns `unsigned short` like C++; callers widen it to `int`.
+/// Collision flags for `tiletype`; unknown types are non-solid. Callers widen the result to [`TileTypeFlag`].
 pub const fn tile_to_flags(tiletype: TileType) -> u16 {
     (match tiletype {
         TileType::NonSolid => tile_flag_nonsolid,
@@ -92,6 +96,7 @@ pub const fn tile_to_flags(tiletype: TileType) -> u16 {
     }) as u16
 }
 
+/// Cycle order for the editor's next/previous tile type; excludes [`TileType::Gap`].
 const ordered_tile_types: [TileType; 19] = [
     TileType::NonSolid,
     TileType::Solid,
@@ -114,6 +119,7 @@ const ordered_tile_types: [TileType; 19] = [
     TileType::PlayerDeath,
 ];
 
+/// Tile type after `type` in editor cycle order, wrapping; types not in the cycle return [`TileType::NonSolid`].
 pub fn next_tile_type(r#type: TileType) -> TileType {
     let Some(it) = ordered_tile_types.iter().position(|&t| t == r#type) else {
         return TileType::NonSolid;
@@ -127,6 +133,7 @@ pub fn next_tile_type(r#type: TileType) -> TileType {
     }
 }
 
+/// Tile type before `type` in editor cycle order, wrapping; types not in the cycle return [`TileType::NonSolid`].
 pub fn prev_tile_type(r#type: TileType) -> TileType {
     let Some(it) = ordered_tile_types.iter().position(|&t| t == r#type) else {
         return TileType::NonSolid;

@@ -1,9 +1,10 @@
-//! Port of src/common_netplay/NetworkInterface.h
+//! The interface between a network layer and the lobby client or server that handles its events.
 
 use std::any::Any;
 
-/// `class NetPeer`. `same_peer` compares the underlying connection.
+/// One connection of a network layer. `same_peer` compares the underlying connection.
 pub trait NetPeer: Any {
+    /// Sends one message; false when it could not be queued.
     fn send(&mut self, data: &[u8]) -> bool;
     fn send_reliable(&mut self, data: &[u8]) -> bool;
     fn disconnect(&mut self);
@@ -13,8 +14,10 @@ pub trait NetPeer: Any {
     fn address_port(&self) -> u16;
     fn address_as_string(&self) -> String;
 
+    /// Round-trip time in ms; 0 where the layer does not measure it.
     fn average_rtt(&self) -> u32;
 
+    /// The lobby's key for this connection's player.
     fn get_player_id(&self) -> u64;
 
     /// Tells this peer apart from the layer's other peers, as `same_peer` does.
@@ -32,7 +35,7 @@ impl PartialEq for dyn NetPeer {
     }
 }
 
-/// `class NetworkEventHandler`. `on_connect` takes ownership of the C++ `new`ed peer.
+/// Receives a network layer's events. `on_connect` takes ownership of the new peer.
 /// `ctx` is the state the handler works on besides its own: the game for a player, nothing for a server.
 pub trait NetworkEventHandler<C: ?Sized = ()> {
     fn on_connect(&mut self, ctx: &mut C, peer: Box<dyn NetPeer>);

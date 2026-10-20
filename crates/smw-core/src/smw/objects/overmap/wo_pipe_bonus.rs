@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/overmap/WO_PipeBonus.cpp
+//! Bonus item launched from the pipe in the coin pipe minigame.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -20,12 +20,16 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class pipe powerup (for coin pipe minigame)
 //------------------------------------------------------------------------------
+/// Bonus that pops out of the pipe and falls; collecting it starts a timed pipe effect for the team.
 #[derive(Clone)]
 pub struct OMO_PipeBonus {
     pub io_over_map_object: IO_OverMapObject,
 
+    /// Pipe effect index, or 5 for a fireball that kills the collector.
     pub iType: i16,
+    /// Length of the effect, passed to the pipe mode.
     pub iDuration: i16,
+    /// Ticks before it can be collected; it is clipped to the pipe mouth meanwhile.
     pub iUncollectableTime: i16,
 }
 impl_base!(OMO_PipeBonus => io_over_map_object: IO_OverMapObject);

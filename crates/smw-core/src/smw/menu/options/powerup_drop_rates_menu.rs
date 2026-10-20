@@ -1,4 +1,4 @@
-//! Port of src/smw/menu/options/PowerupDropRatesMenu.cpp
+//! Item selection: how often each powerup comes out of a [?] block, with presets.
 
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
@@ -9,19 +9,13 @@ use crate::common::uimenu::UI_Menu;
 use crate::globals::*;
 use crate::smw::ui::mi_powerup_selection::MI_PowerupSelection;
 
-/*
-    In this menu you can set how frequently can various
-    powerups pop out of a [?] block.
-*/
+/// How often each powerup comes out of a [?] block.
 #[derive(Default)]
 pub struct UI_PowerupDropRatesMenu {
     pub ui_menu: UI_Menu,
 
     pub miPowerupSelection: Ctl<MI_PowerupSelection>,
 
-    // MI_PowerupSlider * miPowerupSlider[NUM_POWERUPS];
-    // MI_Button * miPowerupSelectionBackButton;
-    // MI_Button * miPowerupSelectionRestoreDefaultsButton;
     pub miPowerupSelectionLeftHeaderBar: Ctl<MI_Image>,
     pub miPowerupSelectionMenuRightHeaderBar: Ctl<MI_Image>,
     pub miPowerupSelectionMenuHeaderText: Ctl<MI_Text>,

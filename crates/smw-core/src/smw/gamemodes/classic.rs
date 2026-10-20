@@ -1,4 +1,4 @@
-//! Port of src/smw/gamemodes/Classic.cpp
+//! Classic mode: each team starts with a number of lives and is removed at zero.
 
 use crate::smw::players::PlayerId;
 use crate::game::Game;
@@ -13,14 +13,13 @@ use crate::smw::gamemodes::game_mode::*;
 
 use crate::smw::player::CPlayer;
 
-//mariowar classic
+/// Classic mode. With an unlimited goal, scores count deaths upward instead (reverse scoring).
 #[derive(Clone)]
 pub struct CGM_Classic {
     pub cgame_mode: CGameMode,
 }
 impl_base!(CGM_Classic => cgame_mode: CGameMode);
 
-//mariowar (x lives - counting down)
 impl CGM_Classic {
     pub fn new() -> Self {
         let mut this = CGM_Classic { cgame_mode: CGameMode::new() };
@@ -49,6 +48,7 @@ impl CGameModeTrait for CGM_Classic {
     }
 }
 
+/// Sets every team's score to the life count, or to 0 when the goal is unlimited.
 pub fn cgm_classic_init(g: &mut Game, this: &mut CGM_Classic) {
         let mut gp = g.ptr();
     cgamemode_init(g, this);
@@ -64,13 +64,15 @@ pub fn cgm_classic_init(g: &mut Game, this: &mut CGM_Classic) {
     }
 }
 
+/// Takes a life from the victim's team and removes the team at zero.
+/// In shield death style, the victim keeps playing behind a fresh shield.
 pub fn cgm_classic_playerkilledplayer(g: &mut Game, this: &mut CGM_Classic, mut inflictor: PlayerId, mut other: PlayerId, style: KillStyle) -> PlayerKillType {
         let mut gp = g.ptr();
     if this.gameover {
         return PlayerKillType::Normal;
     }
 
-    //If we are playing classic "sumo" mode, then only score hazard kills
+    // Under `PushOnly` scoring only push kills cost a life; modes built on classic always score.
     if g.mode().gamemode != game_mode_classic || g.game_values.gamemodesettings.classic.scoring == ScoringStyle::AllKills || style == KillStyle::Push {
         if this.fReverseScoring {
             g.player(other).score(g).adjust_score(g, 1);
@@ -108,6 +110,7 @@ pub fn cgm_classic_playerkilledplayer(g: &mut Game, this: &mut CGM_Classic, mut 
     PlayerKillType::Normal
 }
 
+/// Takes a life from the player's team; otherwise like [`cgm_classic_playerkilledplayer`].
 pub fn cgm_classic_playerkilledself(g: &mut Game, this: &mut CGM_Classic, mut player: PlayerId, style: KillStyle) -> PlayerKillType {
         let mut gp = g.ptr();
     cgamemode_playerkilledself(g, this, player, style);
@@ -159,6 +162,7 @@ pub fn cgm_classic_playerkilledself(g: &mut Game, this: &mut CGM_Classic, mut pl
     PlayerKillType::Normal
 }
 
+/// Adds `iType` lives (removes deaths under reverse scoring).
 pub fn cgm_classic_playerextraguy(g: &mut Game, this: &mut CGM_Classic, mut player: PlayerId, iType: i16) {
     if !this.gameover {
         if this.fReverseScoring {

@@ -1,5 +1,6 @@
-//! Port of src/common/EyecandyStyles.h
+//! Option enums for cosmetic effects: kill-streak awards, scoreboard placement and player spawning.
 
+/// Effect shown when a player gets a kill streak.
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum AwardStyle {
@@ -12,6 +13,7 @@ pub enum AwardStyle {
     Text,
 }
 
+/// Where the in-game scoreboard is drawn.
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum ScoreboardStyle {
@@ -21,6 +23,7 @@ pub enum ScoreboardStyle {
     Corners,
 }
 
+/// Animation played when a player spawns.
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum SpawnStyle {

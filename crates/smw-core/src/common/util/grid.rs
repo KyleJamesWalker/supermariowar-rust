@@ -1,5 +1,6 @@
-//! Port of src/common/util/Grid.h
+//! A fixed-size 2D array stored row by row.
 
+/// A `width` by `height` grid stored row-major; `at(x, y)` panics outside it.
 #[derive(Clone, Debug, Default)]
 pub struct Grid<T> {
     width: usize,

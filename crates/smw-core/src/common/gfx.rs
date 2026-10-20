@@ -1,4 +1,4 @@
-//! Port of src/common/gfx.cpp
+//! Graphics entry points: window and screen calls, player skin loading and recoloring, and clipped preview drawing.
 
 pub mod blit;
 pub mod display_list;
@@ -21,18 +21,20 @@ use crate::common::global_constants::PGFX_LAST;
 use crate::globals::*;
 use std::path::Path;
 
+/// A player's skin frames, indexed by the `PGFX_*` constants.
 pub type SpriteStrip = [gfxSprite; PGFX_LAST as usize];
 
 pub fn new_sprite_strip() -> SpriteStrip {
     std::array::from_fn(|_| gfxSprite::new())
 }
 
-/// Constructors of the globals defined in gfx.cpp, in definition order.
+/// Creates the graphics and palette globals.
 pub fn init_globals(g: &mut Game) {
     g.gfx.init(GraphicsSDL::new());
     g.gfx_palette.init(gfxPalette::new());
 }
 
+/// Pixel value at (`x`, `y`) of `surf` in its own format; panics outside the surface.
 pub unsafe fn get_raw_pixel(surf: *mut Surface, x: i32, y: i32) -> u32 {
     assert!(!surf.is_null());
     assert!(0 <= x && x < (*surf).w);
@@ -49,7 +51,8 @@ unsafe fn set_rgb(surf: *mut Surface, x: i32, y: i32, color: &RGB) {
     s.pixels[(y * s.w + x) as usize] = value;
 }
 
-/// Makes team-colored skin surface frame from a loaded sprite strip.
+/// Recolors 32x32 frame `sourceFrame` of a skin for `team`: one frame per palette state side by side when `allStates`,
+/// else the normal state only.
 fn create_skin_surface(g: &mut Game, source: &gfxSprite, sourceFrame: usize, team: usize, allStates: bool, mirrored: bool) -> gfxSprite {
     unsafe {
         //Take the loaded skin and colorize it for each state (normal, 3 frames of invincibility, shielded, tagged, ztarred, got shine, frozen)
@@ -85,10 +88,12 @@ fn create_skin_surface(g: &mut Game, source: &gfxSprite, sourceFrame: usize, tea
     }
 }
 
+/// A skin image is six 32x32 frames in a row.
 fn valid_skin_surface(skin: &gfxSprite) -> bool {
     skin.get_width() == 192 && skin.get_height() == 32
 }
 
+/// Color of the pixel at (`x`, `y`) of `surf`; panics outside the surface.
 pub fn get_rgb(surf: *mut Surface, x: i32, y: i32) -> RGB {
     unsafe {
         assert!(!surf.is_null());
@@ -97,6 +102,7 @@ pub fn get_rgb(surf: *mut Surface, x: i32, y: i32) -> RGB {
     }
 }
 
+/// Opens the game window; `w` and `h` are unused, the screen is always 640x480.
 pub fn gfx_init(g: &mut Game, w: i32, h: i32, fullscreen: bool) -> bool {
         let mut gp = g.ptr();
     (*gp.gfx).init(g, fullscreen)
@@ -117,6 +123,7 @@ pub fn gfx_settitle(g: &mut Game, title: &str) {
     gp.gfx.set_title(g, title)
 }
 
+/// Logs and shows a crash dialog that includes `error` when it is not empty.
 pub fn gfx_show_catched_error(g: &mut Game, error: &str) {
     let mut gp = g.ptr();
     let mut message = String::from(
@@ -141,12 +148,13 @@ pub fn gfx_take_screenshot(g: &mut Game) {
 
 pub fn gfx_close() {}
 
+/// Loads the player color palette image; see [`gfxPalette::load`].
 pub fn gfx_loadpalette(g: &mut Game, palette_path: &Path) -> bool {
     let mut gp = g.ptr();
     gp.gfx_palette.load(g, palette_path)
 }
 
-/// Not in the C++: writes `screen` as a BMP for the differential replay harness.
+/// Writes `screen` as a BMP for the differential replay harness; returns whether it succeeded.
 pub fn gfx_save_screen_bmp(g: &mut Game, path: &str) -> bool {
     unsafe { (*g.screen).save_bmp(Path::new(path)).is_ok() }
 }
@@ -168,7 +176,8 @@ fn load_skin(g: &mut Game, path: &Path) -> Result<gfxSprite, String> {
     Ok(skin)
 }
 
-/// Returns `Err` where the C++ throws a `std::string`.
+/// Recolored menu frames of a skin for team `colorScheme`: frames 0 and 1 at strip indices 0 and 2, and their
+/// mirrored copies at 1 and 3 when `fLoadBothDirections`. `Err` holds the load error.
 pub fn gfx_loadmenuskin(g: &mut Game, path: &Path, colorScheme: i16, fLoadBothDirections: bool) -> Result<SpriteStrip, String> {
     let skin = load_skin(g, path)?;
 
@@ -189,7 +198,8 @@ pub fn gfx_loadmenuskin(g: &mut Game, path: &Path, colorScheme: i16, fLoadBothDi
     Ok(strip)
 }
 
-/// Returns `Err` where the C++ throws a `std::string`.
+/// All recolored frames of a skin for team `colorScheme`: frame `k` (0-3) at index `k * 2`, mirrored at `k * 2 + 1`,
+/// then the dead-flying and dead-stomped frames at 8 and 9. `Err` holds the load error.
 pub fn gfx_loadfullskin(g: &mut Game, path: &Path, colorScheme: i16) -> Result<SpriteStrip, String> {
     let skin = load_skin(g, path)?;
 
@@ -213,6 +223,8 @@ pub fn gfx_loadfullskin(g: &mut Game, path: &Path, colorScheme: i16) -> Result<S
     Ok(strip)
 }
 
+/// Clips `dstRect` to `clipArea`, moving its origin and shrinking `srcRect` to match; a destination entirely
+/// outside zeroes `srcRect`'s size. `dstRect`'s size is not updated.
 pub fn gfx_cliprect(srcRect: &mut Rect, dstRect: &mut Rect, clipArea: &Rect) {
     if dstRect.x >= clipArea.x + clipArea.w
         || dstRect.x + dstRect.w < clipArea.x
@@ -304,6 +316,7 @@ pub fn gfx_adjusthiddenrects(g: &mut Game, src: &mut Rect, dst: &mut Rect, edge:
     false
 }
 
+/// Draws part of a half-scale map preview clipped to `clipRect`, wrapping across its sides (320 pixels) when `wrap`.
 pub fn gfx_drawpreview(g: &mut Game, 
     sprite: &gfxSprite,
     dstX: i16,
@@ -366,6 +379,7 @@ pub fn gfx_drawpreview(g: &mut Game,
     }
 }
 
+/// Sets `player`'s controller LED to their team color scaled by `brightness` (clamped to 0-1).
 pub fn gfx_setjoystickteamcolor(g: &mut Game, player: i32, team: i16, mut brightness: f32) {
     if team < 0 {
         // A non-playing user has no team

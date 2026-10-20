@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/powerup/PU_TreasureChestBonus.cpp
+//! Treasure chest dropped at the end of a world bonus stage; opening it shows the bonus item and unlocks the exit.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -20,22 +20,30 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class treasure chest powerup
 //------------------------------------------------------------------------------
+/// Chest whose `state` runs 2 bouncing, 1 waiting to be opened, 3 item rising, 4 done.
 #[derive(Clone)]
 pub struct PU_TreasureChestBonus {
     pub mo_powerup: MO_Powerup,
 
+    /// Item shown on opening: a powerup index, or `NUM_POWERUPS` plus a world item index.
     pub bonusitem: i16,
+    /// Bounces left before the chest settles and can be opened.
     pub numbounces: i16,
+    /// Tick counter for the sparkle overlay; it steps a frame every 4 ticks.
     pub sparkleanimationtimer: i16,
+    /// X offset (pixels) of the current sparkle frame.
     pub sparkledrawframe: i16,
+    /// Position (pixels) of the item rising out of the opened chest.
     pub drawbonusitemx: i16,
     pub drawbonusitemy: i16,
     pub drawbonusitemfy: f32,
+    /// Ticks left before the rising item disappears.
     pub drawbonusitemtimer: i16,
 }
 impl_base!(PU_TreasureChestBonus => mo_powerup: MO_Powerup);
 
 impl PU_TreasureChestBonus {
+    /// Places the chest at a random item spawn point.
     #[allow(clippy::too_many_arguments)]
     pub fn new(g: &mut Game, nspr: SpriteId, iNumSpr: i16, aniSpeed: i16, iCollisionWidth: i16, iCollisionHeight: i16, iCollisionOffsetX: i16, iCollisionOffsetY: i16, iBonusItem: i16) -> Self {
         let mut gp = g.ptr();
@@ -142,10 +150,6 @@ impl CObjectTrait for PU_TreasureChestBonus {
         let mut gp = g.ptr();
         if self.state == 1 {
             if_sound_on_play(g, &mut gp.rm.sfx_treasurechest);
-            // if (game_values.worldpowerupcount[player->teamID] < 32)
-            //     game_values.worldpowerups[player->teamID][game_values.worldpowerupcount[player->teamID]++] = bonusitem;
-            // else
-            //	game_values.worldpowerups[player->teamID][31] = bonusitem;
 
             self.state = 3;
 

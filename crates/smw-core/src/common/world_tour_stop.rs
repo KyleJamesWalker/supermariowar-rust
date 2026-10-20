@@ -1,4 +1,4 @@
-//! Port of src/common/WorldTourStop.cpp
+//! Tour and world stage lines: parsing, writing, and the `strtok`-style tokenizer they use.
 
 use crate::game::Game;
 use crate::common::game_mode::*;
@@ -15,39 +15,53 @@ use crate::globals::{Ptr, Aliased};
 const DELIM_EMPTY: &str = "";
 const DELIM_COMMA: &str = ",";
 const DELIM_PIPE: &str = "|";
+/// The map name of a stage that has none, such as a minigame.
 const UNKNOWN_MAP_NAME: &str = "-";
 
+/// An item a world stage awards to a finishing place, or one bonus house chest.
 #[derive(Clone, Debug, Default)]
 pub struct WorldStageBonus {
+    /// The 0-based place that wins it, or -1 for a bonus house chest.
     pub iWinnerPlace: i16,
+    /// The world item index: powerups, then world powerups, then score bonuses.
     pub iBonus: i16,
+    /// The bonus as written in the file, which `write_tour_stop_line` writes back.
     pub szBonusString: String,
 }
 
+/// One stop of a tour or one stage of a world: a game to play, or a bonus house.
 #[derive(Clone, Debug, Default)]
 pub struct TourStop {
+    /// The map's short name, or `UNKNOWN_MAP_NAME`.
     pub pszMapFile: String,
+    /// The `game_mode_*` id.
     pub iMode: i16,
     pub iGoal: i16,
+    /// Tour points the winner earns.
     pub iPoints: i16,
+    /// In a tour, whether the bonus wheel follows (0 off); in a bonus house, the chest ordering, 0 or 1.
     pub iBonusType: i16,
     pub szName: String,
 
+    /// Finishing this world stage ends the world.
     pub fEndStage: bool,
     pub iNumBonuses: i16,
     pub wsbBonuses: [WorldStageBonus; 10],
+    /// 0 for a game stage, 1 for a bonus house.
     pub iStageType: i16,
 
+    /// The line carries mode settings; `iNumUsedSettings` of them, which `gmsSettings` holds.
     pub fUseSettings: bool,
     pub iNumUsedSettings: i16,
     pub gmsSettings: GameModeSettings,
 
+    /// The bonus house's sign text.
     pub iBonusTextLines: i16,
     pub szBonusText: [String; 5],
     pub _alias: Aliased,
 }
 
-/// C `strtok` over a NUL-terminated byte buffer; positions are indices into `buf`.
+/// A `strtok`-style tokenizer over a NUL-terminated copy of a line; tokens are indices into `buf`.
 pub struct Strtok {
     pub buf: Vec<u8>,
     next: Option<usize>,
@@ -61,7 +75,7 @@ impl Strtok {
         Strtok { buf, next: Some(0) }
     }
 
-    /// `strtok(first ? buffer : NULL, delims)`
+    /// The next token, skipping leading delimiters and NUL-terminating it in place; `None` at the end.
     pub fn tok(&mut self, delims: &[u8]) -> Option<usize> {
         let mut p = self.next?;
         while self.buf[p] != 0 && delims.contains(&self.buf[p]) {
@@ -90,15 +104,17 @@ impl Strtok {
         crate::common::file_io::cstr_bytes_to_string(&self.buf[p..end])
     }
 
+    /// The byte at `p`, or 0 past the end.
     pub fn at(&self, p: usize) -> u8 {
         self.buf.get(p).copied().unwrap_or(0)
     }
 
+    /// The integer at `p`, parsed like C `atoi`.
     pub fn atoi(&self, p: usize) -> i32 {
         crate::common::map_list::atoi(&self.cstr(p))
     }
 
-    /// `strstr(p, needle)` for a single-byte needle.
+    /// The index of the first `c` at or after `p`, before the NUL.
     pub fn strchr(&self, p: usize, c: u8) -> Option<usize> {
         let mut i = p;
         while self.buf[i] != 0 {
@@ -111,7 +127,8 @@ impl Strtok {
     }
 }
 
-/// `ParseTourStopLine(char* buffer, ...)`; `buffer` is the line as read by `fgets`, without the NUL.
+/// Parses one stage line from a file of `version`; `buffer` holds the line with its newline and no NUL.
+/// A missing or unknown map, mode or goal is picked with `RANDOM_INT`.
 pub fn parse_tour_stop_line(g: &mut Game, buffer: &[u8], version: &Version, fIsWorld: bool) -> TourStop {
     let mut gp = g.ptr();
     let mut st = Strtok::new(buffer);
@@ -353,6 +370,7 @@ pub fn parse_tour_stop_line(g: &mut Game, buffer: &[u8], version: &Version, fIsW
     ts
 }
 
+/// The stage as one line of a tour or world file, newline included.
 pub fn write_tour_stop_line(ts: &TourStop, fIsWorld: bool) -> String {
     let mut fields: Vec<String> = Vec::new();
 
@@ -430,6 +448,7 @@ pub fn write_tour_stop_line(ts: &TourStop, fIsWorld: bool) -> String {
     out
 }
 
+/// Clears the loaded tour.
 pub fn reset_tour_stops(g: &mut Game) {
     g.game_values.tourstopcurrent = 0;
 

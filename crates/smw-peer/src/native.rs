@@ -21,6 +21,7 @@ use webrtc::peer_connection::policy::ice_transport_policy::RTCIceTransportPolicy
 use webrtc::peer_connection::sdp::session_description::RTCSessionDescription;
 use webrtc::peer_connection::RTCPeerConnection;
 
+/// How often an open signaling connection sends `KeepAlive`.
 const KEEP_ALIVE: Duration = Duration::from_secs(10);
 
 /// Test conditions for the unreliable channel: `SMW_PEER_LAG_MS` delays each packet, `SMW_PEER_LOSS` drops that
@@ -50,21 +51,26 @@ impl Impairment {
     }
 }
 
+/// What the tokio thread hands the game thread.
 #[derive(Default)]
 struct Shared {
     id: Option<PeerId>,
+    /// Peer state changes `update_peers` has not taken yet.
     changes: Vec<(PeerId, PeerState)>,
+    /// Packets per channel that `receive` has not taken yet.
     inbox: [Vec<(PeerId, Vec<u8>)>; 2],
     signaling_closed: bool,
 }
 
 type SharedRef = Arc<Mutex<Shared>>;
 
+/// What the game thread asks of the tokio thread.
 enum Command {
     Send(usize, PeerId, Vec<u8>),
     Close,
 }
 
+/// The game thread's side of a room connection; its tokio thread runs until `close` or drop.
 pub struct Socket {
     shared: SharedRef,
     commands: UnboundedSender<Command>,
@@ -140,6 +146,7 @@ impl Drop for Socket {
     }
 }
 
+/// The unreliable channel, handed to GGRS.
 pub struct Channel {
     shared: SharedRef,
     commands: UnboundedSender<Command>,
@@ -167,6 +174,7 @@ fn parse_uuid(value: &Value) -> Option<PeerId> {
         .map(|u| PeerId(u.as_u128()))
 }
 
+/// A WebRTC handshake message relayed by the signaling server.
 enum Signal {
     Offer(String),
     Answer(String),
@@ -177,6 +185,7 @@ struct Peer {
     connection: Arc<RTCPeerConnection>,
     channels: Vec<Arc<RTCDataChannel>>,
     signals: UnboundedSender<Signal>,
+    /// Both data channels are open; sends to a peer before then are dropped.
     connected: Arc<AtomicBool>,
 }
 
@@ -219,6 +228,7 @@ fn rtc_configuration(ice: &IceConfig) -> RTCConfiguration {
     }
 }
 
+/// The tokio thread's loop: the signaling connection, the peers it announces, and the game thread's commands.
 async fn run(
     url: String,
     ice: IceConfig,
@@ -304,6 +314,7 @@ async fn run(
     }
 }
 
+/// Handles one signaling server message.
 async fn on_event(
     api: &Arc<API>,
     context: &Context,
@@ -347,6 +358,7 @@ async fn on_event(
     }
 }
 
+/// A connection to `id` with negotiated channels 0 and 1. The peer already in the room is the `offerer`.
 async fn new_peer(api: &API, context: &Context, id: PeerId, offerer: bool) -> Option<Peer> {
     let connection = Arc::new(api.new_peer_connection(context.ice.clone()).await.ok()?);
     let connected = Arc::new(AtomicBool::new(false));
@@ -437,6 +449,7 @@ async fn new_peer(api: &API, context: &Context, id: PeerId, offerer: bool) -> Op
     })
 }
 
+/// One peer's offer, answer and ICE candidates; candidates wait on both sides until the remote description is set.
 struct Handshake {
     connection: Arc<RTCPeerConnection>,
     context: Context,
@@ -498,6 +511,7 @@ impl Handshake {
     }
 }
 
+/// Closes the connection to `id`, reporting `Disconnected` if it had connected.
 async fn drop_peer(shared: &SharedRef, peers: &mut HashMap<PeerId, Peer>, id: PeerId) {
     let Some(peer) = peers.remove(&id) else {
         return;

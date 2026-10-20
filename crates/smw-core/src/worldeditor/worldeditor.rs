@@ -1,8 +1,5 @@
-//! Port of src/worldeditor/worldeditor.cpp
-//!
-//! The C++ file defines its own copies of `screen`, `blitdest`, the object containers and the
-//! other game globals the shared code links against; the port reuses the crate's (smw::main,
-//! smw::gs_gameplay) and only defines the editor's own state here.
+//! The world editor: paints a world's tiles, paths, stages, vehicles and warps, and edits its tour stops. It runs
+//! on the crate's shared game globals and keeps only its own state, in [`WorldEditorState`].
 
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::common::resource_manager::SpriteId;
@@ -52,6 +49,7 @@ use std::io::Write;
 use std::path::Path;
 use std::ptr::{null, null_mut};
 
+/// Editor screens: what `WorldEditorState::state` holds and each screen function returns to run next.
 const EDITOR_EDIT: i32 = 0;
 const EDITOR_WATER: i32 = 1;
 const EDITOR_BACKGROUND: i32 = 2;
@@ -75,8 +73,10 @@ const EDITOR_BOUNDARY: i32 = 19;
 const EDITOR_START_ITEMS: i32 = 20;
 const EDITOR_STAGE: i32 = 21;
 
+/// Appended to the game title in the window title and banner.
 pub const MAPTITLESTRING: &str = "World Editor";
 
+/// The label drawn for each `edit_mode`.
 const szEditModes: [&str; 10] = [
     "Background Mode",
     "Foreground Mode",
@@ -90,7 +90,6 @@ const szEditModes: [&str; 10] = [
     "Stage Mode",
 ];
 
-/// The editor's state, a part of `Game`.
 /// The menu the world editor shows.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum EditorMenu {
@@ -98,12 +97,15 @@ pub enum EditorMenu {
     StageSettings,
     BonusItemPicker,
     Vehicle,
+    /// The settings menu of this game mode.
     ModeSettings(u8),
     BossSettings,
 }
 
+/// The menu `mCurrentMenu` names; panics on `EditorMenu::None`.
 fn current_menu(g: &mut Game) -> &'static mut UI_Menu {
     let e: *mut WorldEditorState = ed(g);
+    // SAFETY: the editor state lives in `Game` for the whole run, so the menu outlives every caller.
     let e = unsafe { &mut *e };
     match e.mCurrentMenu {
         EditorMenu::None => panic!("no current menu"),
@@ -115,37 +117,54 @@ fn current_menu(g: &mut Game) -> &'static mut UI_Menu {
     }
 }
 
+/// The world editor's state, in `Game::world_editor`.
 pub struct WorldEditorState {
+    /// The world drawn at the current scroll offset, which `updateworldsurface` redraws.
     pub sMapSurface: *mut Surface,
+    /// The part of `sMapSurface` shown, and where on screen; a world smaller than the screen is centered.
     pub rectSrcSurface: Rect,
     pub rectDstSurface: Rect,
+    /// The world is smaller than the screen, so the screen is cleared around it.
     pub fNeedBlackBackground: bool,
+    /// The world's size in tiles.
     pub iWorldWidth: i16,
     pub iWorldHeight: i16,
+    /// The last polled input event.
     pub event: EditorEvent,
     pub spr_dialog: SpriteId,
     pub menu_shade: Global<gfxSprite>,
     pub spr_largedialog: Global<gfxSprite>,
+    /// Full, preview and thumbnail sizes.
     pub spr_warps: Global<[gfxSprite; 3]>,
     pub spr_path: Global<gfxSprite>,
     pub spr_vehicleicons: SpriteId,
+    /// What the left button paints; its meaning depends on `edit_mode`.
     pub set_tile: i32,
+    /// Painting also fixes up the neighbouring coastlines, paths and path sprites.
     pub fAutoPaint: bool,
+    /// What the mouse paints: 0 land, 1 foreground, 2 path, 3 start/door, 4 path sprite, 5 vehicle, 6 warp,
+    /// 7 water, 8 vehicle boundary, 9 stage.
     pub edit_mode: i32,
     pub draw_offset_col: i32, //col and row offset for drawing map to surface
     pub draw_offset_row: i32,
     pub draw_offset_x: i32, //x and y offset for drawing maps smaller than screensize
     pub draw_offset_y: i32,
+    /// The screen the main loop runs next, one of the `EDITOR_*` and file constants.
     pub state: i32,
+    /// Unused by the world editor.
     pub selectedtiles: [[bool; MAPHEIGHT as usize]; MAPWIDTH as usize],
     pub moveselectedtiles: [[bool; MAPHEIGHT as usize]; MAPWIDTH as usize],
+    /// The pointer, clamped to the window.
     pub mouse_x: i32,
     pub mouse_y: i32,
     //Vehicle structure that holds the current vehicle "stamp"
     pub g_wvVehicleStamp: Global<WorldVehicle>,
+    /// Set when a picker screen closes on a press, so that press does not paint; cleared on left release.
     pub ignoreclick: bool,
     pub findstring: String,
+    /// Frames left to show the music category box.
     pub g_musiccategorydisplaytimer: i16,
+    /// Frames left to show the `SetDisplayMessage` box.
     pub g_messagedisplaytimer: i16,
     pub g_szMessageTitle: String,
     pub g_szMessageLine: [String; 3],
@@ -154,6 +173,7 @@ pub struct WorldEditorState {
     //Warp stuff
     pub warplist: Vec<Ptr<WorldWarp>>,
     pub g_fFullScreen: bool,
+    /// Hovering a stage tile shows its details.
     pub g_fShowStagePreviews: bool,
     //Stage Mode Menu
     pub mCurrentMenu: EditorMenu,
@@ -187,11 +207,16 @@ pub struct WorldEditorState {
     pub miVehicleBoundaryField: Ctl<MI_SelectField<i16>>,
     pub miVehicleCreateButton: Ctl<MI_Button>,
     pub miTitleText: Ctl<MI_Text>,
+    /// The per-mode and boss settings menus.
     pub mModeOptionsMenu: Option<Box<UI_ModeOptionsMenu>>,
+    /// The stage preview's map thumbnail, for stage `iOldStageId` (-1 none).
     pub sMapThumbnail: gfxSprite,
     pub iOldStageId: i16,
+    /// The stage menu's mode names, goal names and goal choices, by game mode.
     pub stagemodes: Vec<StageMode>,
+    /// Where the bonus item picker draws each item.
     pub rItemDst: [Rect; NUM_WORLD_ITEMS as usize],
+    /// The stage type `AdjustBonuses` last saw: 0 stage, 1 bonus house.
     pub iLastStageType: i16,
 }
 
@@ -278,31 +303,37 @@ fn ed(g: &mut Game) -> &mut WorldEditorState {
     &mut g.world_editor
 }
 
+/// Clamps an x coordinate to the 640-pixel window.
 fn bound_to_window_w(x: i32) -> i32 {
     0.max(x.min(640 - 1))
 }
 
+/// Clamps a y coordinate to the 480-pixel window.
 fn bound_to_window_h(y: i32) -> i32 {
     0.max(y.min(480 - 1))
 }
 
+/// Stores the motion event's position, clamped, as the pointer position.
 fn bound_mouse_motion_coords(g: &mut Game) {
     let mut gp = g.ptr();
     ed(gp.get()).mouse_x = bound_to_window_w(ed(gp.get()).event.motion_x());
     ed(gp.get()).mouse_y = bound_to_window_h(ed(gp.get()).event.motion_y());
 }
 
+/// Whether `key` is held in a keyboard state array.
 fn check_key(g: &mut Game, keystate: *const u8, key: Keycode) -> bool {
+    // SAFETY: `keystate` has an entry for every scancode the keyboard maps a key to.
     unsafe { *keystate.add(crate::services::services(g).keyboard.scancode_from_key(key) as usize) != 0 }
 }
 
-//Sets up default mode options
+/// One goal choice in the stage menu.
 #[derive(Clone, Default)]
 pub struct StageModeOption {
     pub szName: String,
     pub iValue: i16,
 }
 
+/// A game mode as the stage menu offers it: its name, goal name, default goal and goal choices.
 #[derive(Clone, Default)]
 pub struct StageMode {
     pub szName: String,
@@ -313,13 +344,14 @@ pub struct StageMode {
     pub options: Vec<StageModeOption>,
 }
 
-/// `strncpy(dst, src, n); dst[n - 1] = 0;` into a `char[n]`.
+/// `s` cut to at most `n - 1` bytes, lossily where that splits a character.
 fn truncate_cstr(s: &str, n: usize) -> String {
     let bytes = s.as_bytes();
     let len = bytes.len().min(n - 1);
     String::from_utf8_lossy(&bytes[..len]).into_owned()
 }
 
+/// Fills `stagemodes[iIndex]` with goal choices at multiples of `iIncrement`; out-of-range indices are ignored.
 pub fn set_stage_mode(g: &mut Game, iIndex: i16, szModeName: &str, szGoalName: &str, iIncrement: i16, iDefault: i16) {
     let mut gp = g.ptr();
     if iIndex < 0 || iIndex as i32 >= GAMEMODE_LAST {
@@ -344,11 +376,13 @@ fn r(x: i32, y: i32, w: i32, h: i32) -> Rect {
     Rect { x, y, w, h }
 }
 
+/// The last event's key.
 fn key_sym(g: &mut Game) -> i32 {
     let mut gp = g.ptr();
     ed(gp.get()).event.key_sym()
 }
 
+/// The last event's SDL2 type.
 fn event_type(g: &mut Game) -> u32 {
     let mut gp = g.ptr();
     ed(gp.get()).event.type_()
@@ -363,22 +397,25 @@ const T_MOUSEMOTION: u32 = SDL_MOUSEMOTION;
 
 const BUTTON_LEFT: u8 = SDL_BUTTON_LEFT as u8;
 const BUTTON_RIGHT: u8 = SDL_BUTTON_RIGHT as u8;
+/// Motion-event button masks for the left and right buttons alone.
 const SDL_BUTTON_LMASK: u32 = 1 << (SDL_BUTTON_LEFT - 1);
 const SDL_BUTTON_RMASK: u32 = 1 << (SDL_BUTTON_RIGHT - 1);
 
-/// The end-of-frame wait every editor loop does; the reference harness `#define`s `SDL_Delay` to this.
+/// The end-of-frame wait every editor loop does, through the replay harness's frame step.
 fn frame_wait(g: &mut Game, framestart: i32) {
     let mut gp = g.ptr();
     let delay = ms_to_next_tick(framestart as u32, crate::services::ticks(gp.get()));
     editor_harness::frame_delay(g, delay);
 }
 
+/// The world tile at a column and row, which must be in the world.
 fn tile(g: &mut Game, iCol: i16, iRow: i16) -> &'static mut WorldMapTile {
     let mut gp = g.ptr();
     gp.get().g_worldmap.tiles.at_mut(iCol as usize, iRow as usize)
 }
 
 
+/// The replay harness's `E` line for a frame.
 fn dump_editor_state(g: &mut Game, out: &mut dyn Write) {
     let mut gp = g.ptr();
     let _ = writeln!(
@@ -399,7 +436,7 @@ fn dump_editor_state(g: &mut Game, out: &mut dyn Write) {
     );
 }
 
-//main main main
+/// Runs the world editor on the backend `smw::services::set_backend` chose.
 pub fn main() {
     main_with(std::env::args().collect(), None);
 }
@@ -428,7 +465,7 @@ pub fn main_with(argv: Vec<String>, services: Option<smw_platform::Services>) {
         g.RootDataDirectory = cmd.data_root.clone();
     }
 
-    // C++ catches `const char*`, `std::string`, `std::exception` and `...` around inner_main().
+    // A panic shows its message in an error box and exits with status 1.
     let mut gp = g.ptr();
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| inner_main(gp.get())));
     if let Err(payload) = result {
@@ -442,8 +479,11 @@ pub fn main_with(argv: Vec<String>, services: Option<smw_platform::Services>) {
     }
 }
 
+/// Loads settings and graphics, builds the menus and runs the editor screens until quit, then saves a backup of the
+/// world to worlds/ZZworldeditor.txt and the editor settings.
 pub fn inner_main(g: &mut Game) {
     let mut gp = g.ptr();
+    // SAFETY: the surfaces dereferenced here are the live ones `gfx_init` and `alloc_surface` created.
     unsafe {
         ensure_settings_dir(g);
 
@@ -986,7 +1026,8 @@ pub fn inner_main(g: &mut Game) {
     }
 }
 
-/// Painting with the left button (`SDL_MOUSEBUTTONDOWN` and `SDL_MOUSEMOTION` repeat the same block in C++).
+/// Paints `set_tile` at a world tile in the current `edit_mode`; `fromMotion` when dragging, which skips bridge
+/// connections and boundaries.
 fn paint_left(g: &mut Game, iCol: i16, iRow: i16, fromMotion: bool) {
     let mut gp = g.ptr();
     if ed(gp.get()).edit_mode == 0 {
@@ -1099,7 +1140,7 @@ fn paint_left(g: &mut Game, iCol: i16, iRow: i16, fromMotion: bool) {
     }
 }
 
-/// Erasing with the right button; returns the new `iStageDisplay` when C++ resets it.
+/// Erases at a world tile in the current `edit_mode`; clears `iStageDisplay` (-1) when it removes a vehicle or stage.
 fn paint_right(g: &mut Game, iCol: i16, iRow: i16, fromMotion: bool, iStageDisplay: &mut i16) {
     let mut gp = g.ptr();
     if ed(gp.get()).edit_mode == 0 {
@@ -1191,6 +1232,7 @@ fn paint_right(g: &mut Game, iCol: i16, iRow: i16, fromMotion: bool, iStageDispl
     }
 }
 
+/// Makes `vehicle`'s settings the stamp and shows them in the vehicle menu.
 fn copy_vehicle_into_stamp(g: &mut Game, vehicle: &WorldVehicle) {
     let mut gp = g.ptr();
     ed(gp.get()).g_wvVehicleStamp.iDrawSprite = vehicle.iDrawSprite;
@@ -1210,8 +1252,10 @@ fn copy_vehicle_into_stamp(g: &mut Game, vehicle: &WorldVehicle) {
     g.ctl(ed(gp.get()).miVehicleBoundaryField).set_current_value(ed(gp.get()).g_wvVehicleStamp.iBoundary);
 }
 
+/// The main painting screen; returns the next screen.
 pub fn editor_edit(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
+    // SAFETY: `g.blitdest` is the live screen surface.
     unsafe {
         let mut done = false;
         ed(gp.get()).g_musiccategorydisplaytimer = 0;
@@ -1722,6 +1766,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
     }
 }
 
+/// Draws the `SetDisplayMessage` box while its timer runs, counting it down.
 pub fn DrawMessage(g: &mut Game) {
     let mut gp = g.ptr();
     if ed(gp.get()).g_messagedisplaytimer > 0 {
@@ -1735,6 +1780,7 @@ pub fn DrawMessage(g: &mut Game) {
     }
 }
 
+/// The foreground sprites of the in-world tiles around and at a tile, row by row, zero-padded.
 pub fn GetForegroundTileValues(g: &mut Game, iCol: i16, iRow: i16, iOldTiles: &mut [i16; 9]) {
     let mut gp = g.ptr();
     let mut iIndex: i16 = 0;
@@ -1752,6 +1798,7 @@ pub fn GetForegroundTileValues(g: &mut Game, iCol: i16, iRow: i16, iOldTiles: &m
     }
 }
 
+/// Whether any foreground sprite around a tile differs from what `GetForegroundTileValues` saved.
 pub fn ForegroundTileValuesChanged(g: &mut Game, iCol: i16, iRow: i16, iOldTiles: &[i16; 9]) -> bool {
     let mut gp = g.ptr();
     let mut iIndex: usize = 0;
@@ -1770,6 +1817,7 @@ pub fn ForegroundTileValuesChanged(g: &mut Game, iCol: i16, iRow: i16, iOldTiles
     false
 }
 
+/// Replaces the editor's vehicle list with copies of the world's vehicles.
 pub fn ReadVehiclesIntoEditor(g: &mut Game) {
     let mut gp = g.ptr();
     for v in ed(gp.get()).vehiclelist.drain(..) {
@@ -1793,6 +1841,7 @@ pub fn ReadVehiclesIntoEditor(g: &mut Game) {
     }
 }
 
+/// Replaces the world's vehicles with copies of the editor's list.
 pub fn WriteVehiclesIntoWorld(g: &mut Game) {
     let mut gp = g.ptr();
     //Cleanup old vehicles
@@ -1816,6 +1865,7 @@ pub fn WriteVehiclesIntoWorld(g: &mut Game) {
     }
 }
 
+/// Puts the stamp's vehicle at a tile, replacing one already there; `iType` is unused.
 pub fn AddVehicleToTile(g: &mut Game, iCol: i16, iRow: i16, iType: i16) {
     let mut gp = g.ptr();
     let mut newvehicle: Ptr<WorldVehicle> = Ptr::null();
@@ -1842,6 +1892,7 @@ pub fn AddVehicleToTile(g: &mut Game, iCol: i16, iRow: i16, iType: i16) {
     newvehicle.iBoundary = ed(gp.get()).g_wvVehicleStamp.iBoundary;
 }
 
+/// Removes the vehicle at a tile, if any.
 pub fn RemoveVehicleFromTile(g: &mut Game, iCol: i16, iRow: i16) {
     let mut gp = g.ptr();
     for i in 0..ed(g).vehiclelist.len() {
@@ -1856,6 +1907,7 @@ pub fn RemoveVehicleFromTile(g: &mut Game, iCol: i16, iRow: i16) {
     }
 }
 
+/// Replaces the editor's warp list with copies of the world's warps.
 pub fn ReadWarpsIntoEditor(g: &mut Game) {
     let mut gp = g.ptr();
     for w in ed(gp.get()).warplist.drain(..) {
@@ -1867,12 +1919,13 @@ pub fn ReadWarpsIntoEditor(g: &mut Game) {
     }
 }
 
+/// Replaces the world's warps with copies of the editor's list.
 pub fn WriteWarpsIntoWorld(g: &mut Game) {
     let mut gp = g.ptr();
-    //Cleanup old vehicles
+    //Cleanup old warps
     g.g_worldmap.warps.clear();
 
-    //Insert new vehicles
+    //Insert new warps
     g.g_worldmap.warps.reserve(ed(gp.get()).warplist.len());
 
     for warp in ed(gp.get()).warplist.iter() {
@@ -1880,6 +1933,7 @@ pub fn WriteWarpsIntoWorld(g: &mut Game) {
     }
 }
 
+/// Places an end of warp pair `iType` at a tile: the first end, then the second; a third click moves the second.
 pub fn AddWarpToTile(g: &mut Game, iCol: i16, iRow: i16, iType: i16) {
     let mut gp = g.ptr();
     let mut newwarp: Ptr<WorldWarp> = Ptr::null();
@@ -1900,6 +1954,7 @@ pub fn AddWarpToTile(g: &mut Game, iCol: i16, iRow: i16, iType: i16) {
     }
 }
 
+/// Removes the warp end at a tile, and the warp once neither end is placed.
 pub fn RemoveWarpFromTile(g: &mut Game, iCol: i16, iRow: i16) {
     let mut gp = g.ptr();
     let mut i = 0;
@@ -1931,6 +1986,7 @@ pub fn RemoveWarpFromTile(g: &mut Game, iCol: i16, iRow: i16) {
     }
 }
 
+/// Re-picks the path sprites of a tile and its eight neighbours.
 pub fn UpdatePathSprite(g: &mut Game, iCol: i16, iRow: i16) {
     let mut gp = g.ptr();
     for iAutoRow in (iRow - 1)..=(iRow + 1) {
@@ -1942,8 +1998,10 @@ pub fn UpdatePathSprite(g: &mut Game, iCol: i16, iRow: i16) {
     }
 }
 
+/// Picks a path tile's sprite from which of its four neighbours connect, keeping its style.
 pub fn AutoSetPathSprite(g: &mut Game, iCol: i16, iRow: i16) {
     let mut gp = g.ptr();
+    // Indexed by a bit per connecting neighbour: up 1, left 2, right 4, down 8.
     let iPathTypes: [i16; 16] = [6, 4, 3, 5, 6, 4, 1, 5, 6, 2, 3, 5, 6, 4, 3, 5];
 
     let mut iPath: i16 = 0;
@@ -1989,7 +2047,7 @@ pub fn AutoSetPathSprite(g: &mut Game, iCol: i16, iRow: i16) {
     tile(g, iCol, iRow).iForegroundSprite = AdjustForeground(g, iPathTypes[iPath as usize] + iForegroundStyle * WORLD_PATH_SPRITE_SET_SIZE, iCol, iRow);
 }
 
-//Convert foreground sprite to match the background sprite
+/// The variant of a path sprite that matches the land under the tile; stage and other sprites unchanged.
 pub fn AdjustForeground(g: &mut Game, mut iSprite: i16, iCol: i16, iRow: i16) -> i16 {
     if iSprite >= WORLD_FOREGROUND_STAGE_OFFSET {
         return iSprite;
@@ -2033,6 +2091,7 @@ pub fn AdjustForeground(g: &mut Game, mut iSprite: i16, iCol: i16, iRow: i16) ->
     iSprite + iPathStyle * WORLD_PATH_SPRITE_SET_SIZE
 }
 
+/// Re-picks the connections of a tile and its eight neighbours.
 pub fn UpdatePath(g: &mut Game, iCol: i16, iRow: i16) {
     let mut gp = g.ptr();
     for iAutoRow in (iRow - 1)..=(iRow + 1) {
@@ -2044,8 +2103,10 @@ pub fn UpdatePath(g: &mut Game, iCol: i16, iRow: i16) {
     }
 }
 
+/// Picks a tile's path connection from which of its four neighbours have one, keeping bridges.
 pub fn AutoSetPath(g: &mut Game, iCol: i16, iRow: i16) {
     let mut gp = g.ptr();
+    // Indexed by a bit per connected neighbour: up 1, left 2, right 4, down 8.
     let iPathTypes: [i16; 16] = [11, 1, 2, 3, 2, 4, 2, 8, 1, 1, 6, 7, 5, 9, 10, 11];
 
     let mut iPath: i16 = 0;
@@ -2088,6 +2149,7 @@ pub fn AutoSetPath(g: &mut Game, iCol: i16, iRow: i16) {
     tile(g, iCol, iRow).iConnectionType = iPathType;
 }
 
+/// Matches a tile's path sprite to its land; true if it changed.
 pub fn UpdateForeground(g: &mut Game, iCol: i16, iRow: i16) -> bool {
     let iForeground = tile(g, iCol, iRow).iForegroundSprite;
     let iNewForeground: i16 = AdjustForeground(g, iForeground, iCol, iRow);
@@ -2100,6 +2162,7 @@ pub fn UpdateForeground(g: &mut Game, iCol: i16, iRow: i16) -> bool {
     false
 }
 
+/// Re-picks the coast and path sprites of a tile and its in-world neighbours; true if any changed.
 pub fn UpdateCoastline(g: &mut Game, iCol: i16, iRow: i16) -> bool {
     let mut gp = g.ptr();
     let iStartCol: i16 = if iCol == 0 { 0 } else { iCol - 1 };
@@ -2119,6 +2182,7 @@ pub fn UpdateCoastline(g: &mut Game, iCol: i16, iRow: i16) -> bool {
     fRet
 }
 
+/// Picks a water tile's coast sprite from which of its eight neighbours are land, in their most common style.
 pub fn AutoSetTile(g: &mut Game, iCol: i16, iRow: i16) -> bool {
     let mut gp = g.ptr();
     //Don't need to do anything if this tile is solid
@@ -2159,6 +2223,7 @@ pub fn AutoSetTile(g: &mut Game, iCol: i16, iRow: i16) -> bool {
         }
     }
 
+    // `t` is the neighbours row by row without the tile itself: 0 1 2 above, 3 4 beside, 5 6 7 below.
     let t = &iTile;
     let iNewTile: i16 = if t[0] && !t[1] && t[2] && !t[3] && !t[4] && t[5] && !t[6] && t[7] {
         iTileStyleOffset + 44
@@ -2264,13 +2329,16 @@ pub fn AutoSetTile(g: &mut Game, iCol: i16, iRow: i16) -> bool {
     false
 }
 
+/// Redraws `sMapSurface` at the current scroll offset.
 pub fn updateworldsurface(g: &mut Game) {
         let mut gp = g.ptr();
     gp.get().g_worldmap.draw_map_to_surface(g, -1, true, ed(gp.get()).sMapSurface, ed(gp.get()).draw_offset_col as i16, ed(gp.get()).draw_offset_row as i16, 0);
 }
 
+/// Copies the world view to the screen.
 pub fn drawmap(g: &mut Game, _fScreenshot: bool, _iBlockSize: i16) {
     let mut gp = g.ptr();
+    // SAFETY: `g.screen`, `g.blitdest` and `sMapSurface` are live surfaces.
     unsafe {
         if ed(gp.get()).fNeedBlackBackground {
             crate::common::gfx::blit::fill_rect(g.screen, null(), 0x0);
@@ -2280,6 +2348,7 @@ pub fn drawmap(g: &mut Game, _fScreenshot: bool, _iBlockSize: i16) {
     }
 }
 
+/// The warp picker; picking one returns to painting warps.
 pub fn editor_warp(g: &mut Game) -> i32 {
     let mut gp = g.ptr();
     let mut done = false;
@@ -2337,10 +2406,12 @@ pub fn editor_warp(g: &mut Game) -> i32 {
     EDITOR_QUIT
 }
 
+/// Whether a point lies inside `rect`.
 fn point_in(x: i16, y: i16, rect: &Rect) -> bool {
     x as i32 >= rect.x && (x as i32) < rect.w + rect.x && y as i32 >= rect.y && (y as i32) < rect.h + rect.y
 }
 
+/// The screen that picks the up to 32 items players start the world with.
 pub fn editor_start_items(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
     let mut done = false;
@@ -2464,8 +2535,10 @@ pub fn editor_start_items(g: &mut Game) -> i32 {
     EDITOR_QUIT
 }
 
+/// The vehicle boundary picker (1 to 100).
 pub fn editor_boundary(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
+    // SAFETY: `g.blitdest` is the live screen surface.
     unsafe {
         let mut done = false;
 
@@ -2480,7 +2553,7 @@ pub fn editor_boundary(g: &mut Game) -> i32 {
                     }
 
                     T_KEYDOWN => {
-                        ed(gp.get()).edit_mode = 8; //change to edit mode using warps
+                        ed(gp.get()).edit_mode = 8; //change to edit mode using boundaries
                         return EDITOR_EDIT;
                     }
 
@@ -2492,7 +2565,7 @@ pub fn editor_boundary(g: &mut Game) -> i32 {
                             if iButtonX >= 0 && iButtonX <= 9 && iButtonY >= 0 && iButtonY <= 9 {
                                 ed(gp.get()).set_tile = iButtonX as i32 + 10 * iButtonY as i32 + 1;
 
-                                ed(gp.get()).edit_mode = 8; //change to edit mode using warps
+                                ed(gp.get()).edit_mode = 8; //change to edit mode using boundaries
 
                                 //The user must release the mouse button before trying to add a tile
                                 ed(gp.get()).ignoreclick = true;
@@ -2527,6 +2600,7 @@ pub fn editor_boundary(g: &mut Game) -> i32 {
     }
 }
 
+/// The start and door picker.
 pub fn editor_type(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
     let mut done = false;
@@ -2556,7 +2630,7 @@ pub fn editor_type(g: &mut Game) -> i32 {
                             ed(gp.get()).set_tile = iButtonX as i32;
                         }
 
-                        ed(gp.get()).edit_mode = 3; //change to edit mode using warps
+                        ed(gp.get()).edit_mode = 3; //change to edit mode using doors/start
 
                         //The user must release the mouse button before trying to add a tile
                         ed(gp.get()).ignoreclick = true;
@@ -2588,8 +2662,10 @@ pub fn editor_type(g: &mut Game) -> i32 {
     EDITOR_QUIT
 }
 
+/// The water picker.
 pub fn editor_water(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
+    // SAFETY: `g.screen` is the live screen surface.
     unsafe {
         let mut done = false;
 
@@ -2645,8 +2721,10 @@ pub fn editor_water(g: &mut Game) -> i32 {
     }
 }
 
+/// The land picker, two pages switched with 1 and 2.
 pub fn editor_background(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
+    // SAFETY: `g.screen` is the live screen surface.
     unsafe {
         let mut done = false;
         let mut iPage: i16 = 0;
@@ -2728,8 +2806,10 @@ pub fn editor_background(g: &mut Game) -> i32 {
     }
 }
 
+/// The stage marker picker, four screens switched with 1 to 4.
 pub fn editor_stageforeground(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
+    // SAFETY: `g.screen` is the live screen surface.
     unsafe {
         let mut done = false;
         let mut iForegroundScreen: i16 = 0;
@@ -2796,8 +2876,10 @@ pub fn editor_stageforeground(g: &mut Game) -> i32 {
     }
 }
 
+/// The bridge picker.
 pub fn editor_bridges(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
+    // SAFETY: `g.screen` is the live screen surface.
     unsafe {
         let mut done = false;
 
@@ -2851,8 +2933,10 @@ pub fn editor_bridges(g: &mut Game) -> i32 {
     }
 }
 
+/// The foreground object picker, static and animated.
 pub fn editor_structureforeground(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
+    // SAFETY: `g.screen` is the live screen surface.
     unsafe {
         let mut done = false;
 
@@ -2913,8 +2997,10 @@ pub fn editor_structureforeground(g: &mut Game) -> i32 {
     }
 }
 
+/// The path sprite picker, eight styles.
 pub fn editor_pathsprite(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
+    // SAFETY: `g.screen` is the live screen surface.
     unsafe {
         let mut done = false;
 
@@ -2970,8 +3056,7 @@ pub fn editor_pathsprite(g: &mut Game) -> i32 {
     }
 }
 
-//Display stages over vehicles
-//allow setting of stages on vehicles
+/// The vehicle stamp menu, which needs at least one stage to assign.
 
 pub fn editor_vehicles(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
@@ -3080,8 +3165,10 @@ pub fn editor_vehicles(g: &mut Game) -> i32 {
     EDITOR_QUIT
 }
 
+/// The path connection picker.
 pub fn editor_path(g: &mut Game) -> i32 {
     let mut gp = g.ptr();
+    // SAFETY: `g.screen` is the live screen surface.
     unsafe {
         let mut done = false;
 
@@ -3132,6 +3219,7 @@ pub fn editor_path(g: &mut Game) -> i32 {
     }
 }
 
+/// Draws a stage's preview box near the pointer, reloading its thumbnail when the stage changes or `fForce`.
 pub fn DisplayStageDetails(g: &mut Game, fForce: bool, iStageId: i16, mut iMouseX: i16, mut iMouseY: i16) {
         let mut gp = g.ptr();
     let ts = g.game_values.tour_stop(iStageId as usize as usize);
@@ -3256,8 +3344,10 @@ pub fn DisplayStageDetails(g: &mut Game, fForce: bool, iStageId: i16, mut iMouse
     }
 }
 
+/// How many mode settings a stage of each game mode stores.
 pub static g_iNumGameModeSettings: [i16; GAMEMODE_LAST as usize] = [2, 2, 3, 4, 3, 10, 9, 6, 2, 1, 3, 5, 3, 3, 0, 22, 6, 4, 3, 4, 4, 3];
 
+/// The world file's text for a bonus: place (stages only), `p`owerup, `w`orld item or `s`core bonus, and index.
 pub fn SetBonusString(szString: &mut String, iPlace: i16, mut iItem: i16, iStageType: i16) {
     let mut cType = 'p';
 
@@ -3273,6 +3363,8 @@ pub fn SetBonusString(szString: &mut String, iPlace: i16, mut iItem: i16, iStage
     *szString = buf;
 }
 
+/// Adds the bonus item under the pointer to a stage for winner place `iPlace` (1 to 4; 0 in a bonus house,
+/// while a stage then asks for a place).
 pub fn TestAndSetBonusItem(g: &mut Game, mut ts: Ptr<TourStop>, iPlace: i16, iButtonX: i16, iButtonY: i16) {
     let mut gp = g.ptr();
     let mut iMaxBonusesAllowed: i16 = 10;
@@ -3311,6 +3403,7 @@ pub fn TestAndSetBonusItem(g: &mut Game, mut ts: Ptr<TourStop>, iPlace: i16, iBu
     }
 }
 
+/// Fixes a stage's bonuses after it switches between stage and bonus house.
 pub fn AdjustBonuses(g: &mut Game, mut ts: Ptr<TourStop>) {
     let mut gp = g.ptr();
     //No need to do anything if we were a stage and we're still a stage
@@ -3347,7 +3440,7 @@ pub fn AdjustBonuses(g: &mut Game, mut ts: Ptr<TourStop>) {
             SetBonusString(&mut ts.wsbBonuses[iBonus].szBonusString, place, bonus, stageType);
         }
     } else if ts.iStageType == 1 {
-        //Cap the number of
+        //Cap the number of bonuses at the chest count
         if ts.iNumBonuses > MAX_BONUS_CHESTS as i16 {
             ts.iNumBonuses = MAX_BONUS_CHESTS as i16;
         }
@@ -3361,6 +3454,7 @@ pub fn AdjustBonuses(g: &mut Game, mut ts: Ptr<TourStop>) {
     ed(gp.get()).iLastStageType = ts.iStageType;
 }
 
+/// Stores the menu's mode settings into a stage, and modes 25 to 27 as their file ids 1000 to 1002.
 pub fn SaveStage(g: &mut Game, iEditStage: i16) {
     let mut ts = g.game_values.tour_stop(iEditStage as usize as usize);
 
@@ -3376,6 +3470,7 @@ pub fn SaveStage(g: &mut Game, iEditStage: i16) {
     ts.gmsSettings = g.game_values.gamemodemenusettings.clone();
 }
 
+/// Points the stage menu's fields at a stage and shows the ones its type and mode use.
 pub fn EditStage(g: &mut Game, iEditStage: i16) {
     let mut gp = g.ptr();
     let mut ts = g.game_values.tour_stop(iEditStage as usize as usize);
@@ -3470,6 +3565,7 @@ pub fn EditStage(g: &mut Game, iEditStage: i16) {
     }
 }
 
+/// Enables or disables every stage menu field, for the delete confirmation.
 pub fn EnableStageMenu(g: &mut Game, fEnable: bool) {
     let mut gp = g.ptr();
     g.ctl(ed(gp.get()).miNameField).disable(!fEnable);
@@ -3498,6 +3594,7 @@ pub fn EnableStageMenu(g: &mut Game, fEnable: bool) {
     g.ctl(ed(gp.get()).miDeleteStageButton).disable(!fEnable);
 }
 
+/// Appends a default stage, sets `iEditStage` to it and opens it in the stage menu.
 pub fn NewStage(g: &mut Game, iEditStage: &mut i16) {
     let mut ts = Box::new(TourStop::default());
 
@@ -3535,8 +3632,10 @@ pub fn NewStage(g: &mut Game, iEditStage: &mut i16) {
     EditStage(g, *iEditStage);
 }
 
+/// The stage list and stage settings screen.
 pub fn editor_stage(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
+    // SAFETY: `g.blitdest` is the live screen surface.
     unsafe {
         ed(gp.get()).mCurrentMenu = EditorMenu::StageSettings;
         current_menu(gp.get()).reset_menu(g);
@@ -3648,7 +3747,7 @@ pub fn editor_stage(g: &mut Game) -> i32 {
                                 if iTileX >= 0 && (iTileX as i32) < g.g_worldmap.iNumStages as i32 - (iTileY as i32 * 20) && iTileY >= 0 && iTileY <= (g.g_worldmap.iNumStages - 1) / 20 {
                                     ed(gp.get()).set_tile = iTileX as i32 + (iTileY as i32 * 20) + 6;
 
-                                    ed(gp.get()).edit_mode = 9; //change to edit mode using warps
+                                    ed(gp.get()).edit_mode = 9; //change to edit mode using stages
 
                                     //The user must release the mouse button before trying to add a tile
                                     ed(gp.get()).ignoreclick = true;
@@ -4016,6 +4115,7 @@ pub fn editor_stage(g: &mut Game) -> i32 {
     }
 }
 
+/// Shows the key help until a key is pressed.
 pub fn display_help(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
     drawmap(g, false, TILESIZE as i16);
@@ -4111,6 +4211,7 @@ pub fn display_help(g: &mut Game) -> i32 {
     }
 }
 
+/// Asks for a name and saves the world as a new file in worlds/.
 pub fn save_as(g: &mut Game) -> i32 {
     let mut fileName = String::new();
     let mut mapLocation = String::from("worlds/");
@@ -4128,6 +4229,7 @@ pub fn save_as(g: &mut Game) -> i32 {
     0
 }
 
+/// Draws a text prompt over the world and presents it.
 fn draw_dialog(g: &mut Game, title: &str, instructions: &str, input: Option<&str>) {
         let mut gp = g.ptr();
     drawmap(g, false, TILESIZE as i16);
@@ -4142,7 +4244,8 @@ fn draw_dialog(g: &mut Game, title: &str, instructions: &str, input: Option<&str
     gfx_flipscreen(g);
 }
 
-/// `char* input` of capacity `inputsize`: the caller's buffer keeps whatever was typed.
+/// Reads up to `inputsize - 1` letters, digits, `-`, `_`, `=` and spaces into `input`; true on Enter, false on
+/// Escape or quit. `input` keeps what was typed either way.
 pub fn dialog(g: &mut Game, title: &str, instructions: &str, input: &mut String, inputsize: i32) -> bool {
     let mut gp = g.ptr();
     let mut currentChar: u32 = 0;
@@ -4172,9 +4275,6 @@ pub fn dialog(g: &mut Game, title: &str, instructions: &str, input: &mut String,
                             currentChar -= 1;
                         }
                     } else {
-                        /* I realize the if statement below is long and can be substituted with
-                        the function isalnum(event.key_sym()) but I did it this way because
-                        isalnum acts funny (ie wrong) when the number pad is pressed. */
                         let isdigit = (b'0' as i32..=b'9' as i32).contains(&sym);
                         if (isdigit || sym == 45 || sym == 32 || sym == 61 || (sym >= 95 && sym <= 122)) && currentChar < (inputsize as u32).wrapping_sub(1) {
                             //insert character into fileName and onScreenText and increment current char
@@ -4226,6 +4326,7 @@ pub fn dialog(g: &mut Game, title: &str, instructions: &str, input: &mut String,
     }
 }
 
+/// Asks for a search string and loads the first world whose name matches it.
 pub fn find(g: &mut Game) -> i32 {
     let mut gp = g.ptr();
     let mut fileName = String::new();
@@ -4244,6 +4345,7 @@ pub fn find(g: &mut Game) -> i32 {
     0
 }
 
+/// Clears the world's tiles.
 pub fn clear_world(g: &mut Game) -> i32 {
     g.g_worldmap.clear();
     updateworldsurface(g);
@@ -4252,6 +4354,7 @@ pub fn clear_world(g: &mut Game) -> i32 {
     0
 }
 
+/// Loads the world list's current world, scrolled to its top left.
 pub fn loadcurrentworld(g: &mut Game) {
     let mut gp = g.ptr();
     g.game_values.worldindex = g.worldlist.current_index() as i16;
@@ -4293,6 +4396,7 @@ pub fn loadcurrentworld(g: &mut Game) {
     updateworldsurface(g);
 }
 
+/// Saves the world, with the editor's vehicles and warps, to its file.
 pub fn savecurrentworld(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
     SetDisplayMessage(g, 60, "Saved", "Your world has", "been saved.", "");
@@ -4304,6 +4408,7 @@ pub fn savecurrentworld(g: &mut Game) -> i32 {
     0
 }
 
+/// Shows a message box with a title and three lines for `iTime` frames.
 pub fn SetDisplayMessage(g: &mut Game, iTime: i16, szTitle: &str, szLine1: &str, szLine2: &str, szLine3: &str) {
     let mut gp = g.ptr();
     ed(gp.get()).g_messagedisplaytimer = ticks(iTime as i32) as i16;
@@ -4313,6 +4418,7 @@ pub fn SetDisplayMessage(g: &mut Game, iTime: i16, szTitle: &str, szLine1: &str,
     ed(gp.get()).g_szMessageLine[2] = szLine3.to_string();
 }
 
+/// Loads the next world matching the last search.
 pub fn findcurrentstring(g: &mut Game) -> i32 {
     let mut gp = g.ptr();
     if !ed(gp.get()).findstring.is_empty() {
@@ -4348,6 +4454,7 @@ fn atoi(s: &str) -> i32 {
     }
 }
 
+/// Empties the editor's warp list, and its vehicle list when `fVehicles`.
 fn delete_all_vehicles_and_warps(g: &mut Game, fVehicles: bool) {
     let mut gp = g.ptr();
     if fVehicles {
@@ -4361,6 +4468,7 @@ fn delete_all_vehicles_and_warps(g: &mut Game, fVehicles: bool) {
     }
 }
 
+/// Asks for a name and size, and creates and saves an empty world.
 pub fn new_world(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
     let mut fileName = String::new();
@@ -4395,6 +4503,7 @@ pub fn new_world(g: &mut Game) -> i32 {
     0
 }
 
+/// Asks for a size and resizes the world, dropping vehicles outside it and every warp, then saves.
 pub fn resize_world(g: &mut Game) -> i32 {
     let mut gp = g.ptr();
     let mut szWidth = String::new();
@@ -4435,9 +4544,10 @@ pub fn resize_world(g: &mut Game) -> i32 {
     0
 }
 
-//take screenshots in full and thumbnail sizes
+/// Saves `worlds/screenshots/<world>.png`, `_preview.png` and `_thumb.png`, reloading the world from its file to draw each.
 pub fn takescreenshot(g: &mut Game) {
         let mut gp = g.ptr();
+    // SAFETY: `sScreenshot` is a live surface until it is freed at the end of its pass.
     unsafe {
         let iTileSizes: [i16; 3] = [32, 16, 8];
 

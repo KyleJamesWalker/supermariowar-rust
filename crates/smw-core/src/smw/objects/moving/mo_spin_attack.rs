@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/moving/MO_SpinAttack.cpp
+//! Cape or tail spin hitbox that follows its owner and hits players, shells and blocks beside them.
 
 use crate::smw::players::PlayerId;
 use crate::common::gfx::soft_surface::Rect;
@@ -23,11 +23,14 @@ use crate::smw::player::{get_player_from_global_id, CPlayer};
 //------------------------------------------------------------------------------
 // class spin death (spinning cape or tail)
 //------------------------------------------------------------------------------
+/// Spin hitbox; harmless while `iTimer` is above 11, and stops hitting blocks below 5.
 #[derive(Clone)]
 pub struct MO_SpinAttack {
     pub mo_attack_zone: MO_AttackZone,
 
+    /// The zone sits on the owner's right side when true.
     pub fDirection: bool,
+    /// Height (pixels) of the zone above the owner's feet.
     pub iOffsetY: i16,
 }
 impl_base!(MO_SpinAttack => mo_attack_zone: MO_AttackZone);
@@ -63,16 +66,6 @@ impl CObjectTrait for MO_SpinAttack {
         mo_attack_zone_collide_player(g, self, player)
     }
 
-    /*
-    void MO_SpinAttack::draw()
-    {
-            if (iTimer <= 11 && !dead)
-            {
-                    Rect r = {ix, iy, collisionWidth, collisionHeight};
-                    crate::common::gfx::blit::fill_rect(blitdest, &r, 0xff00);
-            }
-    }
-    */
     fn draw(&mut self, g: &mut Game) {}
 
     fn update(&mut self, g: &mut Game) {

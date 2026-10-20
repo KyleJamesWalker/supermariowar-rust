@@ -1,4 +1,4 @@
-//! `Aliased`, `Global<T>` and `Ptr<T>`, the global-state infrastructure (see docs/guides/CODE_CONVENTIONS.md).
+//! `Aliased`, `Global<T>`, `Owned<T>` and `Ptr<T>`, the global-state infrastructure (see docs/guides/CODE_CONVENTIONS.md).
 
 use std::cell::UnsafeCell;
 use std::marker::PhantomPinned;
@@ -7,7 +7,7 @@ use std::ops::{Deref, DerefMut};
 use std::ptr::NonNull;
 
 /// Zero-sized marker that makes the containing type `!Freeze + !Unpin`, so rustc emits no
-/// `noalias` for `&T` / `&mut T` and C++-style mutation through other pointers stays sound in practice.
+/// `noalias` for `&T` / `&mut T` and mutation through other pointers to it stays sound in practice.
 #[derive(Default)]
 pub struct Aliased {
     _cell: UnsafeCell<()>,
@@ -44,7 +44,8 @@ impl std::hash::Hash for Aliased {
     fn hash<H: std::hash::Hasher>(&self, _: &mut H) {}
 }
 
-/// A C++ global object constructed at startup. Derefs to `T`.
+/// A global value constructed at startup. Derefs to `T`; doing so before `init` panics in debug builds and is
+/// undefined behavior in release builds. Never drops its value.
 pub struct Global<T> {
     value: MaybeUninit<T>,
     initialized: bool,
@@ -59,8 +60,10 @@ impl<T> Global<T> {
         Global { value: MaybeUninit::new(v), initialized: true }
     }
 
+    /// Sets the value, dropping any earlier one.
     pub fn init(&mut self, v: T) {
         if self.initialized {
+            // SAFETY: `initialized` says `value` holds a `T`.
             unsafe { self.value.assume_init_drop() };
         }
         self.value.write(v);
@@ -71,6 +74,7 @@ impl<T> Global<T> {
         self.initialized
     }
 
+    /// A pointer to the value, which must be initialized.
     pub fn as_ptr(&mut self) -> Ptr<T> {
         Ptr::from_mut(&mut **self)
     }
@@ -91,6 +95,7 @@ impl<T> Deref for Global<T> {
     #[inline(always)]
     fn deref(&self) -> &T {
         debug_assert!(self.initialized, "global used before init");
+        // SAFETY: the caller has called `init`; only debug builds check.
         unsafe { self.value.assume_init_ref() }
     }
 }
@@ -99,11 +104,12 @@ impl<T> DerefMut for Global<T> {
     #[inline(always)]
     fn deref_mut(&mut self) -> &mut T {
         debug_assert!(self.initialized, "global used before init");
+        // SAFETY: as in `deref`.
         unsafe { self.value.assume_init_mut() }
     }
 }
 
-/// An owned value that startup creates, like a C++ member `unique_ptr` filled once. Derefs to `T`.
+/// A boxed value that startup creates once. Derefs to `T`, panicking while empty.
 pub struct Owned<T: ?Sized>(Option<Box<T>>);
 
 impl<T: ?Sized> Owned<T> {
@@ -111,6 +117,7 @@ impl<T: ?Sized> Owned<T> {
         Owned(None)
     }
 
+    /// Stores `value`, dropping any earlier one and dangling `Ptr`s to it.
     pub fn set(&mut self, value: Box<T>) {
         self.0 = Some(value);
     }
@@ -119,7 +126,7 @@ impl<T: ?Sized> Owned<T> {
         self.0.is_some()
     }
 
-    /// A pointer to the value, for code that still reaches it through `Ptr`.
+    /// A pointer to the value, null while empty; it dangles once the value is replaced or dropped.
     pub fn ptr(&self) -> Ptr<T> {
         match self.0.as_deref() {
             Some(v) => Ptr::from_raw(v as *const T as *mut T),
@@ -147,7 +154,8 @@ impl<T: ?Sized> DerefMut for Owned<T> {
     }
 }
 
-/// A nullable, non-owning C++ pointer (`T*`). Copy, compares by address, derefs to `T`.
+/// A nullable, non-owning raw pointer. Copy, compares by address, derefs to `T` and panics when null. Nothing checks
+/// that the pointee is alive or unaliased; the caller keeps it so.
 pub struct Ptr<T: ?Sized>(Option<NonNull<T>>);
 
 impl<T: ?Sized> Ptr<T> {
@@ -170,6 +178,7 @@ impl<T: ?Sized> Ptr<T> {
         self.0.is_none()
     }
 
+    /// The raw pointer; panics when null.
     #[inline(always)]
     pub fn as_ptr(&self) -> *mut T {
         match self.0 {
@@ -187,29 +196,33 @@ impl<T: ?Sized> Ptr<T> {
         }
     }
 
-    /// `&mut *p` with an unbounded lifetime, like dereferencing a C++ pointer.
+    /// `&mut *p` with an unbounded lifetime; panics when null.
     #[inline(always)]
     pub fn get<'a>(self) -> &'a mut T {
         match self.0 {
+            // SAFETY: not checked; see the type's docs.
             Some(p) => unsafe { &mut *p.as_ptr() },
             None => panic!("null Ptr dereference"),
         }
     }
 
-    /// C++ `delete p`.
+    /// Drops the pointee and frees it; `self` must have come from `from_box` or `new_box`, and every copy now dangles.
     pub fn delete(self) {
         if let Some(p) = self.0 {
+            // SAFETY: see above.
             drop(unsafe { Box::from_raw(p.as_ptr()) });
         }
     }
 
+    /// Leaks `b`; `delete` frees it.
     pub fn from_box(b: Box<T>) -> Self {
+        // SAFETY: `Box::into_raw` never returns null.
         Ptr(Some(unsafe { NonNull::new_unchecked(Box::into_raw(b)) }))
     }
 }
 
 impl<T> Ptr<T> {
-    /// C++ `new T(...)`.
+    /// Boxes `v` and leaks it; `delete` frees it.
     pub fn new_box(v: T) -> Self {
         Ptr::from_box(Box::new(v))
     }
@@ -246,6 +259,7 @@ impl<T: ?Sized> Deref for Ptr<T> {
     #[inline(always)]
     fn deref(&self) -> &T {
         match self.0 {
+            // SAFETY: not checked; see the type's docs.
             Some(p) => unsafe { &*p.as_ptr() },
             None => panic!("null Ptr dereference"),
         }
@@ -256,6 +270,7 @@ impl<T: ?Sized> DerefMut for Ptr<T> {
     #[inline(always)]
     fn deref_mut(&mut self) -> &mut T {
         match self.0 {
+            // SAFETY: not checked; see the type's docs.
             Some(p) => unsafe { &mut *p.as_ptr() },
             None => panic!("null Ptr dereference"),
         }

@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/moving/MO_Hammer.cpp
+//! Hammer projectile thrown in an arc; the super variant flies straight with no gravity.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -27,10 +27,14 @@ use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
 pub struct MO_Hammer {
     pub io_moving_object: IO_MovingObject,
 
+    /// Sprite row offset (pixels) for the thrower's color, 28 per color.
     pub colorOffset: i16,
 
+    /// Ticks left before the hammer disappears.
     pub ttl: i16,
+    /// Flies straight without gravity and disappears off the top of the screen.
     pub fSuper: bool,
+    /// Spotlight that follows the hammer while spotlights are on.
     pub sSpotlight: SpotlightId,
 }
 impl_base!(MO_Hammer => io_moving_object: IO_MovingObject);
@@ -52,7 +56,6 @@ impl MO_Hammer {
 
         o.iPlayerID = iGlobalID;
         o.iTeamID = teamID;
-        // RFC
         o.colorOffset = (iColorID as i32 * 28) as i16;
         o.movingObjectType = movingobject_hammer;
 

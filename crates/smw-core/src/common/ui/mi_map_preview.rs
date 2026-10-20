@@ -1,4 +1,4 @@
-//! Port of src/common/ui/MI_MapPreview.cpp
+//! A half-size live preview of a map, with its platforms and hazards moving.
 
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
@@ -18,6 +18,7 @@ use crate::smw::objects::overmap::over_map_object::io_over_map_object_draw_offse
 use crate::smw::objects::overmap::wo_orbit_hazard::OMO_OrbitHazard;
 use crate::smw::objects::overmap::wo_straight_path_hazard::OMO_StraightPathHazard;
 
+/// A 10 ms sleep between preview loading steps; none in the browser, which cannot block.
 #[cfg(not(target_os = "emscripten"))]
 fn small_delay(g: &mut Game) {
     let mut gp = g.ptr();
@@ -26,27 +27,32 @@ fn small_delay(g: &mut Game) {
 #[cfg(target_os = "emscripten")]
 fn small_delay(_g: &mut Game) {}
 
-/// `strncpy(dst, src, 255); dst[255] = 0;`
+/// `src` up to its first NUL, at most 255 bytes.
 pub(crate) fn copy_map_name(src: &str) -> String {
     let bytes = src.as_bytes();
     let n = bytes.iter().position(|&b| b == 0).unwrap_or(bytes.len()).min(255);
     String::from_utf8_lossy(&bytes[..n]).into_owned()
 }
 
+/// A half-size map preview in a dialog frame; loading one replaces `Game::g_map` and the game's hazard objects.
 pub struct MI_MapPreview {
     pub ui_control: UI_Control,
 
     pub spr: SpriteId,
 
+    /// The prerendered layers: background with items, blocks, and foreground with warps.
     pub surfaceMapBackground: gfxSprite,
     pub surfaceMapBlockLayer: gfxSprite,
     pub surfaceMapForeground: gfxSprite,
+    /// Where the preview draws on screen.
     pub rectDst: Rect,
 
     pub iWidth: i16,
     pub iIndent: i16,
+    /// The map name shown; empty until the map changes after construction.
     pub szMapName: String,
 
+    /// How far left of center the preview box is drawn, in pixels.
     pub iSlideListOut: i16,
 }
 crate::impl_base!(MI_MapPreview => ui_control: UI_Control);
@@ -76,11 +82,12 @@ impl MI_MapPreview {
         this.rectDst.w = App::screenWidth / 2;
         this.rectDst.h = App::screenHeight / 2;
 
-        // C++ clears the name after LoadCurrentMap() filled it
+        // Starts with no name shown, though the current map is loaded.
         this.szMapName.clear();
         this
     }
 
+    /// Moves the previewed map's platforms and hazards one tick.
     pub fn update_impl(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         //Update hazards
@@ -146,6 +153,7 @@ impl MI_MapPreview {
         gp.g_map.draw_platforms_offset(g, self.rectDst.x as i16, self.rectDst.y as i16, 4);
     }
 
+    /// Loads the map list's selected map into the preview.
     pub fn load_current_map(&mut self, g: &mut Game) {
         let szMapPath = {
             self.szMapName = copy_map_name(g.maplist.current_shortmapname());
@@ -155,6 +163,7 @@ impl MI_MapPreview {
         self.load_map(g, &szMapPath);
     }
 
+    /// Loads the map at `szMapPath` into `Game::g_map`, renders the preview layers, and spawns its hazards.
     pub fn load_map(&mut self, g: &mut Game, szMapPath: &str) {
         let mut gp = g.ptr();
         gp.g_map.load_map(g, szMapPath, read_type_preview);
@@ -181,6 +190,7 @@ impl MI_MapPreview {
         load_map_hazards(g, true);
     }
 
+    /// Selects the map named `paramSzMapName` (world-only maps first with `fWorld`) and previews it; false if not found.
     pub fn set_map(&mut self, g: &mut Game, paramSzMapName: &str, fWorld: bool) -> bool {
         let fFound = g.maplist.findexact(paramSzMapName, fWorld);
         self.load_current_map(g);
@@ -188,6 +198,7 @@ impl MI_MapPreview {
         fFound
     }
 
+    /// Previews a map by path under the name `mapName`, without changing the map list's selection.
     pub fn set_special_map(&mut self, g: &mut Game, mapName: &str, szMapPath: &str) {
         self.szMapName = copy_map_name(mapName);
 

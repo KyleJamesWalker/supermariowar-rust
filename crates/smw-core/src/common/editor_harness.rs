@@ -1,8 +1,5 @@
-//! Port of src/common/EditorHarness.cpp from tools/cpp-harness.patch (not in upstream C++).
-//!
-//! Deterministic replay/dump harness for the level and world editors. Every entry point is a
-//! no-op unless the corresponding SMW_* environment variable is set; docs/guides/EDITOR_REPLAY.md is
-//! the byte-level spec.
+//! Deterministic replay and dump harness for the level and world editors, driven by SMW_* environment variables;
+//! docs/guides/EDITOR_REPLAY.md is the byte-level spec.
 
 use crate::common::keys::*;
 use crate::game::Game;
@@ -19,6 +16,7 @@ extern "C" {
     fn srand(seed: u32);
 }
 
+/// The kind of a replay line.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum EventKind {
     Key,
@@ -26,32 +24,46 @@ enum EventKind {
     MouseMove,
 }
 
+/// One replay line: input to push at `frame`.
 struct ScriptEvent {
     frame: u32,
     kind: EventKind,
     down: bool,
+    /// An SDL key name, for `Key`.
     keyName: String,
+    /// An SDL mouse button, for `MouseButton`; `x` and `y` are the pointer position for both mouse kinds.
     button: u8,
     x: i32,
     y: i32,
 }
 
+/// Frames past `SMW_FRAMES` the editor has to quit before the harness exits with status 3.
 const QUIT_GRACE_FRAMES: u32 = 60;
 
+/// Writes the editor's state lines into a frame's dump block.
 pub type Dumper = fn(g: &mut Game, out: &mut dyn Write);
 
+/// The harness state, in `Game::editor_harness`.
 pub struct EditorHarness {
+    /// Set by `init`.
     active: bool,
+    /// `SMW_NOLIMIT`: no frame delay.
     noLimit: bool,
+    /// `SMW_FRAMES`, or -1 for no limit.
     maxFrames: i64,
+    /// `SMW_DUMP`, closed once `maxFrames` frames are dumped.
     dump: Option<File>,
+    /// `SMW_SHOT_FRAMES` and `SMW_SHOT_DIR`: frames saved as `frame_<n>.bmp`.
     shotFrames: BTreeSet<u32>,
     shotDir: String,
+    /// The `SMW_REPLAY` lines in frame order, and the next one to push.
     events: Vec<ScriptEvent>,
     nextEvent: usize,
+    /// Frames ended so far.
     frame: u32,
     dumper: Option<Dumper>,
 
+    /// The scripted input so far: mouse button mask, modifiers, pointer position, and key state by scancode.
     buttons: u32,
     mod_: u16,
     mouseX: i32,
@@ -89,6 +101,7 @@ fn env(name: &str) -> Option<String> {
     std::env::var(name).ok().filter(|v| !v.is_empty())
 }
 
+/// Reports a bad replay line and exits with status 2.
 fn fail(path: &str, lineno: usize, msg: &str) -> ! {
     eprintln!("[editorharness] {}:{}: {}", path, lineno, msg);
     std::process::exit(2);
@@ -122,7 +135,7 @@ fn strtol10(s: &str) -> i64 {
     }
 }
 
-/// `std::istringstream >> int`: skips whitespace, takes an optional sign and digits.
+/// A whitespace-separated token as an `i32`, with an optional sign.
 fn parse_int(tok: Option<&str>) -> Option<i32> {
     let tok = tok?;
     tok.parse::<i32>().ok()
@@ -137,6 +150,7 @@ fn parse_button(name: &str, path: &str, lineno: usize) -> u8 {
     }
 }
 
+/// Parses the replay at `path` into `events`; exits with status 2 on a bad line.
 fn load_replay(g: &mut Game, path: &str) {
     let mut gp = g.ptr();
     let text = crate::smw::harness::read_recording(path).unwrap_or_else(|| {
@@ -207,6 +221,7 @@ fn load_replay(g: &mut Game, path: &str) {
     }
 }
 
+/// The `KMOD_*` bit a modifier key sets, 0 for other keys.
 fn modifier_for(key: i32) -> u16 {
     let m = if key == SDLK_LSHIFT {
         KMOD_LSHIFT
@@ -230,6 +245,7 @@ fn sdl_button_mask(button: u8) -> u32 {
     1u32 << (button as u32 - 1)
 }
 
+/// Queues `ev` as an input event and updates the scripted input state it changes.
 fn push_event(g: &mut Game, ev: &ScriptEvent) {
     let mut gp = g.ptr();
     let event = match ev.kind {
@@ -271,8 +287,10 @@ fn push_event(g: &mut Game, ev: &ScriptEvent) {
     crate::services::services(g).events.push(&Input { timestamp: 0, event });
 }
 
+/// Queues the replay lines for the current frame.
 fn push_frame_events(g: &mut Game) {
     let mut gp = g.ptr();
+    // SAFETY: `push_event` never touches `events`, so `ev` stays valid across the call.
     unsafe {
         while h(gp.get()).nextEvent < h(gp.get()).events.len() && h(gp.get()).events[h(gp.get()).nextEvent].frame <= h(gp.get()).frame {
             if h(gp.get()).events[h(gp.get()).nextEvent].frame == h(gp.get()).frame {
@@ -288,8 +306,10 @@ fn push_quit(g: &mut Game) {
     crate::services::services(g).events.push(&Input { timestamp: 0, event: InputEvent::Quit });
 }
 
+/// Reads the SMW_* variables, loads the replay and queues frame 0's events; exits with status 2 on bad input.
 pub fn init(g: &mut Game) {
     let mut gp = g.ptr();
+    // SAFETY: `srand` only sets libc's seed.
     unsafe {
         if let Some(seed) = env("SMW_SEED") {
             let value = strtoul0(&seed);
@@ -332,20 +352,23 @@ pub fn init(g: &mut Game) {
     }
 }
 
+/// Sets what each dump block holds between its `F` and `R` lines.
 pub fn set_dumper(g: &mut Game, dumper: Dumper) {
     let mut gp = g.ptr();
     h(gp.get()).dumper = Some(dumper);
 }
 
+/// `SMW_NOLIMIT` is set.
 pub fn no_limit(g: &mut Game) -> bool {
     let mut gp = g.ptr();
     h(gp.get()).noLimit
 }
 
-/// Ends one editor frame: dump, screenshot, advance, push the next frame's scripted events,
-/// then sleep `delay` ms unless SMW_NOLIMIT is set. The C++ editors `#define SDL_Delay` to this.
+/// Ends one editor frame: dump, screenshot, advance, push the next frame's scripted events, then sleep `delay` ms
+/// unless SMW_NOLIMIT is set. From `SMW_FRAMES` on it pushes quits, and exits with status 3 after `QUIT_GRACE_FRAMES`.
 pub fn frame_delay(g: &mut Game, delay: u32) {
     let mut gp = g.ptr();
+    // SAFETY: `g.screen` is the editor's live screen surface.
     unsafe {
         if h(gp.get()).active {
             if h(gp.get()).maxFrames < 0 || (h(gp.get()).frame as i64) < h(gp.get()).maxFrames {
@@ -388,7 +411,7 @@ pub fn frame_delay(g: &mut Game, delay: u32) {
     }
 }
 
-/// `SDL_GetKeyboardState(NULL)`; while active, the scripted key state, since pushed events do not update SDL's.
+/// `SDL_GetKeyboardState(NULL)`; after `init`, the scripted key state, since pushed events do not update SDL's.
 pub fn keyboard_state(g: &mut Game) -> *const u8 {
     let mut gp = g.ptr();
     if h(gp.get()).active {
@@ -398,7 +421,7 @@ pub fn keyboard_state(g: &mut Game) -> *const u8 {
     }
 }
 
-/// `SDL_GetMouseState(NULL, NULL)`; while active, the scripted button mask.
+/// `SDL_GetMouseState(NULL, NULL)`; after `init`, the scripted button mask.
 pub fn mouse_state(g: &mut Game) -> u32 {
     let mut gp = g.ptr();
     if h(gp.get()).active {

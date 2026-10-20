@@ -9,6 +9,7 @@ use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
 
+/// A switch event the lobby handles on its next `listen`.
 pub enum LobbyEvent {
     Connect(RelayPeer),
     Receive(RelayPeer, Vec<u8>),
@@ -22,10 +23,13 @@ pub struct LobbyIo {
     pub closed: Vec<(ClientId, u16)>,
 }
 
+/// One virtual connection of a WebSocket client, as the lobby sees it.
 #[derive(Clone)]
 pub struct RelayPeer {
     pub client: ClientId,
+    /// The connection number the client chose in its `CONNECT` frame.
     pub conn: u16,
+    /// The client's virtual address.
     pub host: [u8; 4],
     pub port: u16,
     pub sink: Sink,
@@ -83,6 +87,7 @@ impl NetPeer for RelayPeer {
     }
 }
 
+/// The lobby's network layer: it hands the lobby the events the switch queued.
 pub struct RelayNetworkLayer {
     io: Rc<RefCell<LobbyIo>>,
 }

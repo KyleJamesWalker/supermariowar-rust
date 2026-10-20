@@ -1,6 +1,5 @@
-//! LAN discovery for netplay v2 (docs/design/NETPLAY_V2.md, step 6): a game hosting on its own network sends a beacon
-//! every second to multicast group 239.255.42.99 and the broadcast address, UDP port 12524; other games list the
-//! hosts they heard from in the last few seconds.
+//! LAN discovery: a game hosting on its own network beacons every second to multicast group 239.255.42.99 and the
+//! broadcast address on UDP port 12524, and other games list the hosts heard from in the last few seconds.
 
 use crate::common_netplay::protocol_definitions::{NET_PROTOCOL_VERSION_MAJOR, NET_PROTOCOL_VERSION_MINOR};
 use std::collections::BTreeMap;
@@ -10,9 +9,12 @@ use std::time::{Duration, Instant};
 
 const BEACON_PORT: u16 = 12524;
 const BEACON_GROUP: std::net::Ipv4Addr = std::net::Ipv4Addr::new(239, 255, 42, 99);
+/// A beacon is `<MAGIC> <protocol version> <relay port>`; listeners ignore other versions.
 const MAGIC: &str = "SMWLAN1";
+/// A host leaves the list this long after its last beacon.
 const FORGET_AFTER: Duration = Duration::from_secs(4);
 
+/// Each heard host's `ws://` URL and when its last beacon arrived.
 static HEARD: Mutex<BTreeMap<String, Instant>> = Mutex::new(BTreeMap::new());
 
 fn version() -> String {

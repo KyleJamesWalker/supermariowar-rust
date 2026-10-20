@@ -1,4 +1,4 @@
-//! Not in the C++: match checkpoints and segment replays (docs/guides/REPLAY.md, "Markers, checkpoints and clips").
+//! Match checkpoints and segment replays (docs/guides/REPLAY.md, "Markers, checkpoints and clips").
 //!
 //! When a recorded match starts, `capture` saves everything the match reads from earlier frames: the
 //! settings, the menu's choices, the RNG, the virtual mixer and the files the match loaded. A segment
@@ -20,7 +20,9 @@ use crate::smw::gs_gameplay::{lookup_team_id, GameplayState};
 use crate::smw::gs_menu::{enter_gameplay_tail, MenuState};
 use std::path::Path;
 
+/// The first bytes of every checkpoint, followed by its version byte.
 const MAGIC: &[u8; 4] = b"SMWC";
+/// Version of an offline checkpoint (`capture`).
 const VERSION: u8 = 1;
 /// Netplay v2's match start: the map file, then version 1's fields. Each peer keeps its own net state.
 const SHARED_VERSION: u8 = 3;
@@ -29,12 +31,16 @@ const SHARED_MAP: &str = "net_v2.map";
 
 /// One routine both saves and loads each value, so the two directions cannot drift apart.
 pub struct Snap {
+    /// Reading `buf` back rather than writing it.
     load: bool,
     buf: Vec<u8>,
+    /// Read position in `buf`.
     pos: usize,
+    /// A read ran past the end or met an impossible length.
     damaged: bool,
 }
 
+/// A value a `Snap` saves and loads in place.
 pub trait Field {
     fn io(&mut self, s: &mut Snap);
 }
@@ -48,6 +54,7 @@ impl Snap {
         Snap { load: true, buf: bytes, pos: 0, damaged: false }
     }
 
+    /// Saves `v`, or overwrites it with the next value when loading.
     pub fn io<T: Field + ?Sized>(&mut self, v: &mut T) {
         v.io(self);
     }
@@ -56,6 +63,7 @@ impl Snap {
         self.load
     }
 
+    /// The next `n` bytes; past the end it marks the snap damaged and returns zeros.
     fn take(&mut self, n: usize) -> &[u8] {
         if self.pos + n > self.buf.len() {
             self.damaged = true;
@@ -71,6 +79,7 @@ impl Snap {
     }
 }
 
+/// Numbers as their little-endian bytes.
 macro_rules! number_field {
     ($($t:ty),*) => {$(
         impl Field for $t {
@@ -209,6 +218,7 @@ pub fn portable_path(g: &mut Game, path: &str) -> String {
     }
 }
 
+/// The inverse of `portable_path`: a `~settings/` path in this machine's settings directory.
 pub fn local_path(g: &mut Game, path: &str) -> String {
     match path.strip_prefix(HOME_PREFIX) {
         Some(rest) => crate::common::path::get_home_directory(g) + rest,
@@ -216,10 +226,12 @@ pub fn local_path(g: &mut Game, path: &str) -> String {
     }
 }
 
+/// Remembers `path`, relative to the data directory, as the map the match is played on.
 pub fn note_match_map(g: &mut Game, path: &str) {
     g.match_map = data_relative(path);
 }
 
+/// A data-relative name as a full path; empty and absolute names stay as they are.
 fn data_path(g: &mut Game, name: &str) -> String {
     if name.is_empty() || name.starts_with('/') {
         name.to_string()
@@ -636,11 +648,13 @@ pub fn result_fields(g: &mut Game) -> String {
 
 /// A segment replay's first frame: what the splash and the menu set up, then the checkpoint.
 pub struct SegmentState {
+    /// The checkpoint the first frame restores.
     pub checkpoint: Vec<u8>,
     pub _alias: Aliased,
 }
 
 impl GameState for SegmentState {
+    /// Exits the process with status 2 when the checkpoint does not restore.
     fn update(&mut self, g: &mut Game) {
         crate::smw::gs_splash_screen::load_game_data(g);
         g.eyecandy[2].clean();

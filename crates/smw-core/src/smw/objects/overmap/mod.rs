@@ -1,3 +1,5 @@
+//! Objects drawn over the map that ignore map collision and only interact with players: mode zones, goals and flying hazards.
+
 pub mod over_map_object;
 pub mod wo_area;
 pub mod wo_bowser_fire;

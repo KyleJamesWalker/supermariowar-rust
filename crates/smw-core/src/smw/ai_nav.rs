@@ -9,30 +9,38 @@ use crate::game::Game;
 use std::cmp::Reverse;
 use std::collections::BinaryHeap;
 
+/// How a player gets along one link of the graph.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Move {
+    /// To the next tile on the same row, across the screen edge where the row is open on both sides.
     Walk,
+    /// Off an edge, to the tile below where it lands.
     Fall,
     /// Down through a ledge that is solid on top only.
     Drop,
+    /// Up to 3 rows up and up to 4 columns across, fewer columns the higher it goes.
     Jump,
     /// Into a pipe: `dir` is its `WARP_*` enter direction and `x` the pixel column of its middle.
     Warp { dir: i32, x: i32 },
 }
 
+/// What `NavGraph::route` found.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Route {
     /// The player already stands on the target's tile.
     Here,
+    /// The next tile on the cheapest path, and how to get there.
     Step { x: i32, y: i32, how: Move },
     Unreachable,
 }
 
+/// The tiles a player can stand on (`MAPWIDTH` x `MAPHEIGHT`, row-major) and the moves between them.
 #[derive(Clone)]
 pub struct NavGraph {
     standable: Vec<bool>,
     /// Standable only on a moving platform, where it was when the graph was built.
     carried: Vec<bool>,
+    /// The links out of each tile: the target tile's index and the move.
     edges: Vec<Vec<(u16, Move)>>,
 }
 
@@ -72,6 +80,7 @@ pub fn platform_under(g: &Game, x: i32, y: i32) -> bool {
 }
 
 impl NavGraph {
+    /// Builds the graph for the map, with the moving platforms where they are now.
     pub fn build(g: &Game) -> Self {
         // Moving platforms count as tiles where they are now, so the graph only holds until they move on.
         let platform = platform_flags(g);
@@ -176,6 +185,7 @@ impl NavGraph {
                     _ => None,
                 };
                 let Some((ex, ey)) = entrance.filter(|&(ex, ey)| stand(ex, ey)) else { continue };
+                // A vertical pipe is two tiles wide: steer to the seam between them.
                 let middle = match (warp.direction, pair) {
                     (WARP_DOWN | WARP_UP, Some(px)) => (wx.min(px) + 1) * TILESIZE,
                     (WARP_DOWN | WARP_UP, None) => continue,
@@ -227,7 +237,7 @@ impl NavGraph {
         self.carried[idx(x, y)]
     }
 
-    /// The first link of the cheapest path from `from` to `to`.
+    /// The first link of the cheapest path from `from` to `to`; walks and falls cost 1, drops and jumps 2, warps 3.
     pub fn route(&self, from: (i32, i32), to: (i32, i32)) -> Route {
         let (start, goal) = (idx(from.0, from.1), idx(to.0, to.1));
         if start == goal {

@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/blocks/BreakableBlock.cpp
+//! Breakable brick: shatters when hit from below, super-stomped, or struck by a thrown object.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -26,14 +26,20 @@ use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
 //------------------------------------------------------------------------------
 // class breakable block
 //------------------------------------------------------------------------------
+/// Brick whose `state` runs 0 intact, 1 just broken (bumps what stands on it), 2 removed on the next tick.
 #[derive(Clone)]
 pub struct B_BreakableBlock {
     pub io_block: IO_Block,
 
+    /// Number of animation frames.
     pub iNumSprites: i16,
+    /// Ticks per animation frame.
     pub animationSpeed: i16,
+    /// X offset (pixels) of the current animation frame.
     pub drawFrame: i16,
+    /// Tick counter toward the next animation frame.
     pub animationTimer: i16,
+    /// Width (pixels) of the frame strip.
     pub animationWidth: i16,
 }
 impl_base!(B_BreakableBlock => io_block: IO_Block);
@@ -133,11 +139,6 @@ impl IO_BlockTrait for B_BreakableBlock {
         if useBehavior && self.state == 0 {
             self.trigger_behavior(g);
 
-            //When breaking a block, you smash through with a small velocity, but this allows for breaking two blocks at once
-            /*
-            if (player->vely < -VELMAXBREAKBLOCK)
-                player->vely = -VELMAXBREAKBLOCK;
-            */
             g.player(player).vely = cap_falling_velocity(-g.player(player).vely * BOUNCESTRENGTH);
             g.player(player).set_yf((self.iposy as i32 + self.ih as i32) as f32 + 0.2f32);
 

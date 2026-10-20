@@ -1,4 +1,4 @@
-//! Port of src/smw/player_components/PlayerTail.cpp
+//! Raccoon tail (leaf powerup): shake to glide, spin to attack, and tail drawing.
 
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -10,6 +10,7 @@ use crate::smw::objects::moving::mo_spin_attack::MO_SpinAttack;
 use crate::smw::player::CPlayer;
 use crate::common::global_constants::{vel};
 
+/// What the tail is doing: idle, shaking (slowed fall) or spinning (attack).
 pub type PlayerTailState = i32;
 pub const TAIL_NOT_IN_USE: PlayerTailState = 0;
 pub const TAIL_SHAKE: PlayerTailState = 1;
@@ -17,7 +18,9 @@ pub const TAIL_SPIN_AND_SHAKE: PlayerTailState = 2;
 
 #[derive(Clone, Default)]
 pub struct PlayerTail {
+    /// Ticks in the current tail frame; frames change every 4.
     pub iTailTimer: i8,
+    /// Source x of the tail frame, a multiple of 22.
     pub iTailFrame: u16,
     pub iTailState: PlayerTailState,
     pub _alias: Aliased,
@@ -38,6 +41,7 @@ impl PlayerTail {
         self.iTailState > TAIL_NOT_IN_USE
     }
 
+    /// Starts a tail shake, which caps the fall speed.
     pub fn shake(&mut self, g: &mut Game, player: &mut CPlayer) {
         let mut gp = g.ptr();
         gp.rm.sfx_tailspin.stop(g);
@@ -49,6 +53,7 @@ impl PlayerTail {
         self.iTailFrame = 110;
     }
 
+    /// Starts a tail spin and spawns its leaf attack.
     pub fn spin(&mut self, g: &mut Game, player: &mut CPlayer) {
         let mut gp = g.ptr();
         if_sound_on_play(g, &mut gp.rm.sfx_tailspin);
@@ -72,7 +77,7 @@ impl PlayerTail {
         gp.objectcontainer[1].add(g, obj);
     }
 
-    //If player is shaking tail, slow decent
+    /// Caps fall speed while the tail shakes.
     pub fn slow_descent(&mut self, player: &mut CPlayer) {
         if self.iTailState == TAIL_SHAKE {
             if player.vely > vel(1.5f32) {
@@ -81,6 +86,8 @@ impl PlayerTail {
         }
     }
 
+    /// Advances the tail animation; ending a shake or spin uses up one of the leaf limit.
+    /// Draws the tail only for the leaf powerup.
     pub fn draw(&mut self, g: &mut Game, player: &mut CPlayer) {
         let mut gp = g.ptr();
         unsafe {

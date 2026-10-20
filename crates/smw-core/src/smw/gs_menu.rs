@@ -1,4 +1,4 @@
-//! Port of src/smw/GSMenu.cpp (reference build: original + tools/cpp-harness.patch).
+//! The menu game state: owns every menu screen, routes their menu codes and starts matches.
 
 use crate::common::keys::*;
 use crate::common::gfx::soft_surface::Rect;
@@ -63,6 +63,7 @@ use crate::smw::net::{net_end_session, net_start_session, LobbyError};
 use std::ops::{Deref, DerefMut};
 use std::path::Path;
 
+/// Error banner the menus show for `iDisplayErrorTimer` frames.
 pub type DisplayError = i32;
 pub const DISPLAY_ERROR_NONE: DisplayError = 0;
 pub const DISPLAY_ERROR_READ_TOUR_FILE: DisplayError = 1;
@@ -129,7 +130,7 @@ impl<T> DerefMut for Slot<T> {
     }
 }
 
-/// `unique_ptr = std::make_unique<T>()`: the new object exists before the old one is deleted.
+/// Stores `value` in `slot`; the new menu is built before the old one is dropped.
 fn assign<T>(slot: &mut Slot<T>, value: Box<T>) {
     slot.0 = Some(value);
 }
@@ -138,6 +139,7 @@ fn rect(x: i32, y: i32, w: i32, h: i32) -> Rect {
     Rect { x, y, w, h }
 }
 
+/// The menu game state; one instance, built by `init` once game data is loaded.
 pub struct MenuState {
     mCurrentMenu: MenuId,
     mMainMenu: Slot<UI_MainMenu>,
@@ -178,17 +180,23 @@ pub struct MenuState {
     mNetNewRoomSettingsMenu: Slot<UI_NetNewRoomSettingsMenu>,
     mNetRoomMenu: Slot<UI_NetRoomMenu>,
 
+    /// Error banner shown, for `iDisplayErrorTimer` more frames.
     iDisplayError: DisplayError,
     iDisplayErrorTimer: i16,
+    /// Message shown with `DISPLAY_ERROR_NET`.
     net_error: &'static str,
+    /// Frames on the servers menu; LAN servers merge into the list once a second.
     nearby_timer: u32,
     /// The new-room settings menu is open from a room, to pick the next match's map and mode.
     room_settings: bool,
+    /// Set in a tournament, tour or world, so leaving it to the main menu restarts the menu music.
     fNeedMenuMusicReset: bool,
 
 
+    /// Progress through the minigame unlock code; nothing reads it.
     iUnlockMinigameOptionIndex: i16,
 
+    /// Step of the AI setting up a tournament game: 1 map, 2 mode, 3 goal, 4 start; `iTournamentAITimer` frames apart.
     iTournamentAIStep: i16,
     iTournamentAITimer: i16,
 
@@ -287,10 +295,12 @@ impl MenuState {
         }
     }
 
+    /// The world map menu, for controls that add eye candy to it.
     pub fn world_menu(&mut self) -> Ptr<UI_WorldMenu> {
         Ptr::from_mut(&mut *self.mWorldMenu)
     }
 
+    /// The singleton, created on first use.
     pub fn instance(g: &mut Game) -> &'static mut MenuState {
         g.ptr().get().ms.get_or_insert_with(MenuState::new)
     }
@@ -307,6 +317,7 @@ impl MenuState {
         }
     }
 
+    /// The current menu's name in harness dumps, or `unknown`.
     pub fn harness_menu_name(&self) -> &'static str {
         let names: [(MenuId, &'static str); 29] = [
             (MenuId::Main, "main"),
@@ -357,6 +368,7 @@ impl MenuState {
         }
     }
 
+    /// Index of the focused control in the current menu, or -1 with no menu.
     pub fn harness_focus_index(&mut self) -> i32 {
         if self.mCurrentMenu != MenuId::None {
             self.current().current_focus_index()
@@ -365,10 +377,12 @@ impl MenuState {
         }
     }
 
+    /// Whether the focused control is being modified.
     pub fn harness_modifying(&mut self) -> bool {
         self.mCurrentMenu != MenuId::None && self.current().is_modifying()
     }
 
+    /// Loads the selected tour's stops, at most 10, and shows the current one; false if it has none.
     fn read_tour_file(&mut self, g: &mut Game) -> bool {
         reset_tour_stops(g);
 
@@ -382,7 +396,7 @@ impl MenuState {
                 break;
             }
 
-            // strchr also matches the terminating NUL
+            // An empty line is skipped like a comment.
             let lead = buffer.as_bytes().first().copied().unwrap_or(0);
             if lead == 0 || ignorable_leads.contains(&lead) {
                 continue;
@@ -428,13 +442,12 @@ impl MenuState {
         !g.game_values.tourstops.is_empty()
     }
 
+    /// Leaves the menu for a match: saves the config, loads skins, announcer and music, and starts the fade.
     fn start_game(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         println!("> StartGame");
 
         g.game_values.appstate = AppState::StartGame;
-        //backgroundonly = false;
-        //fastmap = false;
 
         gp.game_values.write_config(g);
 
@@ -528,6 +541,7 @@ impl MenuState {
         println!("< StartGame");
     }
 
+    /// Gives game setup to team `iControlTeam` (-1 for all) and arms the AI timer if that team has no humans.
     fn set_controlling_team_for_settings_menu(&mut self, g: &mut Game, iControlTeam: i16, fDisplayMessage: bool) {
         self.mGameSettingsMenu.set_controlling_team(iControlTeam);
 
@@ -561,6 +575,7 @@ impl MenuState {
         }
     }
 
+    /// Announces who controls game setup.
     fn display_controlling_team_message(&mut self, g: &mut Game, iControlTeam: i16) {
         //Display the team that is in control of selecting the next game
         let szMessage = if iControlTeam < 0 {
@@ -582,13 +597,14 @@ impl MenuState {
         ));
     }
 
+    /// Quits, except on the web, where a page cannot close its tab.
     fn exit(&mut self, g: &mut Game) {
         if !cfg!(target_os = "emscripten") {
             self.quit(g);
         }
     }
 
-    /// Not in upstream: `exit` without its web early return. The main menu's Exit button uses it, so the web build
+    /// `exit` without its web early return. The main menu's Exit button uses it, so the web build
     /// ends the session and the page shows its game-over overlay (web_quit_if_done in main.rs).
     fn quit(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
@@ -596,6 +612,7 @@ impl MenuState {
         gp.game_values.write_config(g);
     }
 
+    /// Returns to the main menu after a match series, restarting the menu music if needed.
     fn reset_tournament_back_to_main_menu(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         self.mCurrentMenu = MenuId::Main;
@@ -799,7 +816,7 @@ impl MenuState {
         }
     }
 
-    /// The tournament-control branch of `MenuState::onEnterState`, run when a tournament game was won.
+    /// Picks the team that sets up the next tournament game, per `tournamentcontrolstyle`.
     fn choose_next_tournament_control_team(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         //Set the next controlling team
@@ -913,13 +930,13 @@ impl MenuState {
         }
     }
 
-    /// The `game_values.screenfade == 255` + `AppState::StartGame` block of `MenuState::update`.
+    /// Starts the match once the fade-out ends: applies the mode settings, loads the map and its music.
     fn enter_gameplay(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         if g.game_values.matchtype == MatchType::QuickGame {
             self.mModeOptionsMenu.set_random_game_mode_settings(g, g.mode().gamemode as i16);
         } else if g.game_values.matchtype == MatchType::NetGame {
-            // Not in the C++ (whose TODO rolls random ones here on every client): the host sent the match's at the sync.
+            // Net games use the mode settings the host sent at the sync, so every client plays the same match.
             crate::smw::net::reseed_for_match(g);
         } else {
             crate::smw::gs_gameplay::set_game_mode_settings_from_menu(g);
@@ -1059,7 +1076,7 @@ pub fn enter_gameplay_tail(g: &mut Game) {
 }
 
 impl MenuState {
-    /// Handles one `MenuCodeEnum` from `mCurrentMenu->SendInput`. Returns true where C++ `return`s from `update`.
+    /// Handles one menu code from the current menu's input or a tap; true when `update` should return at once.
     fn handle_menu_code(&mut self, g: &mut Game, mut code: MenuCodeEnum, fGenerateMapThumbs: &mut bool) -> bool {
         let mut gp = g.ptr();
         // Shortcut to game start
@@ -1430,14 +1447,13 @@ impl MenuState {
             g.ctl(self.mGameSettingsMenu.miMapField).load_current_map(g);
 
             self.mCurrentMenu = MenuId::GameSettings;
-            //mCurrentMenu->ResetMenu();
         } else if MENU_CODE_TO_MAP_BROWSER_THUMBNAILS == code {
             g.ctl(self.mMapFilterEditMenu.miMapBrowser).reset(g, 1);
 
             self.mCurrentMenu = MenuId::MapFilterEdit;
             self.current().reset_menu(g);
         } else if MENU_CODE_SAVE_ALL_MAP_THUMBNAILS == code {
-            // C++ casts mCurrentMenu to UI_OptionsMenu*; only the options menu emits this code.
+            // Only the options menu sends this code.
             self.mOptionsMenu.show_thumbnails_popup(g);
             self.current().reset_menu(g);
         } else if MENU_CODE_GENERATE_THUMBS_RESET_YES == code || MENU_CODE_GENERATE_THUMBS_RESET_NO == code {
@@ -1598,7 +1614,6 @@ impl MenuState {
                 self.iDisplayError = DISPLAY_ERROR_NONE;
                 self.iDisplayErrorTimer = 0;
 
-                //game_values.noexit = true;
                 self.start_game(g);
             }
 
@@ -1627,13 +1642,12 @@ impl MenuState {
             }
         }
 
-        /*if (code != MENU_CODE_NONE)
-            printf("Code: %d\n", code);*/
         false
     }
 }
 
 impl MenuState {
+    /// Whether the current menu is one of the netplay menus.
     fn in_net_menu(&self) -> bool {
         matches!(
             self.mCurrentMenu,
@@ -1785,11 +1799,6 @@ impl GameState for MenuState {
                     }
                 }
             }
-            /*else if (game_values.tournamentwinner > -1) //World is completed
-            {
-                miBonusWheel->Reset(true);
-                mCurrentMenu = mBonusWheelMenu;
-            }*/
 
             crate::smw::gs_gameplay::update_score_board(g);
 
@@ -1951,13 +1960,6 @@ impl GameState for MenuState {
                     }
                 }
             }
-
-            //Watch for the konami code to unlock the minigames match type
-            /*
-            if (!game_values.minigameunlocked && mCurrentMenu == mMatchSelectionMenu) {
-                ... (commented out in the C++)
-            }
-            */
 
             if AppState::Menu == g.game_values.appstate {
                 let code = self.current().send_input(g, Ptr::from_mut(&mut gp.game_values.playerInput));

@@ -1,4 +1,4 @@
-//! Port of src/common/IO_Block.h
+//! The base type and virtual interface of map blocks: question blocks, bricks, switches and the like.
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
 use crate::game::Game;
@@ -11,23 +11,30 @@ use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::player::CPlayer;
 use std::ops::{Deref, DerefMut};
 
+/// What every map block has: its position and who last bumped it.
 #[derive(Clone)]
 
 pub struct IO_Block {
     pub cobject: CObject,
 
+    /// The player whose bump triggered the block, for kill credit, or -1.
     pub iBumpPlayerID: i16,
     pub iBumpTeamID: i16,
 
+    /// Position in pixels.
     pub fposx: f32,
     pub fposy: f32,
+    /// Position in pixels, truncated.
     pub iposx: i16,
     pub iposy: i16,
 
+    /// The block is currently invisible.
     pub hidden: bool,
+    /// The block can hide: once revealed, it hides again after `hiddenblockrespawn` ticks when that is set.
     pub ishiddentype: bool,
     pub iHiddenTimer: i16,
 
+    /// The tile column and row the block sits on.
     pub col: i16,
     pub row: i16,
 }
@@ -42,7 +49,7 @@ impl IO_Block {
 /// Virtual interface of `IO_Block`. Overloads: `collide(CPlayer*, short, bool)` is `collide_player_dir`,
 /// `collide(IO_MovingObject*, short)` is `collide_object_dir`, `hittop(CPlayer*, bool)` is `hittop_player`,
 /// `hittop(IO_MovingObject*)` is `hittop_object` (same for the other sides).
-/// Default bodies live in `smw::objects::blocks::io_block` (src/smw/objects/blocks/IO_Block.cpp).
+/// Default bodies live in `smw::objects::blocks::io_block`.
 pub trait IO_BlockTrait: CObjectTrait {
     fn block(&self) -> &IO_Block;
     fn block_mut(&mut self) -> &mut IO_Block;

@@ -6,10 +6,12 @@ use crate::common::global_constants::TICKS_PER_SECOND;
 use crate::game::Game;
 use smw_platform::{Input, InputEvent, Keycode};
 
+/// Frames an all-CPU game waits on a screen before pressing Enter.
 const DELAY_FRAMES: u16 = 3 * TICKS_PER_SECOND as u16;
 const SDLK_RETURN: i32 = 13;
 const SDL_SCANCODE_RETURN: i32 = 40;
 
+/// `playercontrol` is 0 for off, 1 for a human and 2 for a CPU.
 fn all_cpus(g: &Game) -> bool {
     let controls = &g.game_values.playercontrol;
     controls.iter().all(|&c| c != 1) && controls.iter().any(|&c| c == 2)
@@ -23,7 +25,7 @@ fn press(g: &mut Game, down: bool) {
     crate::services::services(g).events.push(&input);
 }
 
-/// Called once a frame with whether the current screen waits for Enter to continue.
+/// Called once a frame with whether the current screen waits for Enter; presses and releases it after `DELAY_FRAMES`.
 pub fn tick(g: &mut Game, waiting: bool) {
     if !waiting || !all_cpus(g) || crate::smw::harness::replaying(g) {
         g.main_loop.auto_advance = 0;

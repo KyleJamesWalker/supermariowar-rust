@@ -1,10 +1,11 @@
-//! Port of src/smw/network/FileCompressor.cpp
+//! zlib for the map and skin files sent through the lobby, and for replay checkpoints and recordings.
 
 use flate2::read::{MultiGzDecoder, ZlibDecoder};
 use flate2::write::ZlibEncoder;
 use flate2::Compression;
 use std::io::{Read, Seek, SeekFrom, Write};
 
+/// The largest file `compress` takes, and the largest stored size `decompress` accepts, in bytes.
 const COMPRESSION_SIZE_LIMIT: u64 = 20000;
 
 /// zlib's `compressBound`.
@@ -26,7 +27,7 @@ fn zlib_decompress(data: &[u8], limit: u64) -> Option<Vec<u8>> {
     (read.is_ok() && out.len() as u64 <= limit).then_some(out)
 }
 
-/// `CompressedData`: an owned buffer; empty means invalid.
+/// What [`FileCompressor::compress`] produced; empty when it failed.
 pub struct CompressedData {
     pub data: Vec<u8>,
 }
@@ -41,10 +42,12 @@ impl CompressedData {
     }
 }
 
+/// Compresses the files a lobby message carries.
 pub struct FileCompressor;
 
 impl FileCompressor {
     /// Buffer layout: `output_header_offset` zero bytes, uncompressed size (u16), compressed size (u16), zlib data.
+    /// The sizes are in native byte order.
     pub fn compress(input_path: &str, output_header_offset: usize) -> CompressedData {
         let result = (|| -> Option<Vec<u8>> {
             if input_path.len() < 5 {
@@ -141,24 +144,24 @@ impl FileCompressor {
     }
 }
 
-/// Not in the C++: a zlib stream at the best compression, for replay checkpoints (smw/harness.rs).
+/// A zlib stream at the best compression, for replay checkpoints (smw/harness.rs).
 pub fn deflate(data: &[u8]) -> Vec<u8> {
     zlib_compress(data, 9)
 }
 
-/// Not in the C++: the data of a zlib stream, or None when it is damaged.
+/// The data of a zlib stream, or None when it is damaged.
 pub fn inflate(data: &[u8]) -> Option<Vec<u8>> {
     zlib_decompress(data, 1 << 27)
 }
 
-/// Not in the C++: the data of a gzip file (a .smwrp recording, one or more members), or None when it is damaged.
+/// The data of a gzip file (a .smwrp recording, one or more members), or None when it is damaged.
 pub fn gunzip(data: &[u8]) -> Option<Vec<u8>> {
     let mut out = Vec::with_capacity(data.len() * 8);
     MultiGzDecoder::new(data).read_to_end(&mut out).ok()?;
     Some(out)
 }
 
-/// Not in the C++: a file's bytes, gunzipped when they start with the gzip magic.
+/// A file's bytes, gunzipped when they start with the gzip magic.
 pub fn read_maybe_gzip(path: impl AsRef<std::path::Path>) -> std::io::Result<Vec<u8>> {
     let bytes = std::fs::read(path)?;
     if !bytes.starts_with(&[0x1f, 0x8b]) {

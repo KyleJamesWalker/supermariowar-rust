@@ -1,4 +1,4 @@
-//! Port of src/smw/gamemodes/MiniPipe.cpp
+//! World-map pipe minigame: collect coins and bonuses that shoot out of a pipe.
 
 use crate::smw::players::PlayerId;
 use crate::game::Game;
@@ -17,17 +17,21 @@ use crate::smw::objects::overmap::wo_pipe_coin::OMO_PipeCoin;
 use crate::smw::player::CPlayer;
 use std::any::Any;
 
-//Pipe Bonus Mini Game (used in world mode)
-//Collect coins and powerups that come out of a pipe
+/// Pipe minigame. Kills cost nothing; first team to the point goal wins.
 #[derive(Clone)]
 pub struct CGM_Pipe_MiniGame {
     pub cgame_mode: CGameMode,
 
+    /// Ticks until the pipe emits the next item.
     iNextItemTimer: i16,
+    /// Ticks left on the active bonus; it reverts to 0 when this runs out.
     iBonusTimer: i16,
+    /// Active bonus: 0 none, 1 team coins, 2 faster items, 3 penalty coins, 4 slowdown.
     iBonusType: i16,
+    /// Team that collected the active bonus.
     iBonusTeam: i16,
 
+    /// True while the slowdown bonus is active.
     fSlowdown: bool,
 }
 impl_base!(CGM_Pipe_MiniGame => cgame_mode: CGameMode);
@@ -42,6 +46,7 @@ impl CGM_Pipe_MiniGame {
         this
     }
 
+    /// Activates bonus `iType` (5 picks 1-4 at random) for `iTimer` ticks on behalf of `iTeamID`.
     pub fn set_bonus(&mut self, g: &mut Game, iType: i16, iTimer: i16, iTeamID: i16) {
         let mut gp = g.ptr();
         self.iBonusType = iType;
@@ -159,12 +164,10 @@ impl CGameModeTrait for CGM_Pipe_MiniGame {
     }
 
     fn playerkilledplayer(&mut self, g: &mut Game, _player: PlayerId, _other: PlayerId, _style: KillStyle) -> PlayerKillType {
-        //other.Score().AdjustScore(-2);
         PlayerKillType::Normal
     }
 
     fn playerkilledself(&mut self, g: &mut Game, _player: PlayerId, _style: KillStyle) -> PlayerKillType {
-        //player.Score().AdjustScore(-2);
         PlayerKillType::Normal
     }
 

@@ -1,3 +1,4 @@
+//! Code the game and both editors share: data files, options, input, sound, menus, maps and graphics.
 pub mod cmd_args;
 pub mod editor_event;
 pub mod editor_harness;

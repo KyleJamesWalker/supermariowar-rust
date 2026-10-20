@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/moving/MO_FrenzyCard.cpp
+//! Fire frenzy card: grants the frenzy mode's current powerup, or a held shell.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -21,19 +21,25 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class frenzycard (for fire frenzy mode)
 //------------------------------------------------------------------------------
+/// Frenzy card placed at a random spawn point; relocates after `ticks(1500)`.
 #[derive(Clone)]
 pub struct MO_FrenzyCard {
     pub io_moving_object: IO_MovingObject,
 
+    /// Ticks at the current spot.
     pub timer: i16,
+    /// Powerup index passed to `set_powerup`; 14 to 17 are shells, put in the player's hands unless stored shells are on.
     pub r#type: i16,
 
+    /// Tick counter for the sparkle overlay; it steps a frame every 4 ticks.
     pub sparkleanimationtimer: i16,
+    /// X offset (pixels) of the current sparkle frame.
     pub sparkledrawframe: i16,
 }
 impl_base!(MO_FrenzyCard => io_moving_object: IO_MovingObject);
 
 impl MO_FrenzyCard {
+    /// The last card type picks a random powerup but keeps its own card face.
     pub fn new(g: &mut Game, nspr: SpriteId, iType: i16) -> Self {
         let mut gp = g.ptr();
         let mut o = MO_FrenzyCard {
@@ -61,6 +67,7 @@ impl MO_FrenzyCard {
         o
     }
 
+    /// Moves the card to a random spawn point more than 150 pixels from other cards, trying up to 33 times.
     pub fn place_card(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
 

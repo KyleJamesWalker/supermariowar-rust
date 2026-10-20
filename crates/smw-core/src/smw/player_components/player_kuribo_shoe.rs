@@ -1,4 +1,4 @@
-//! Port of src/smw/player_components/PlayerKuriboShoe.cpp
+//! Kuribo's shoe: riding it, super stomping from it, and jumping out.
 
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -12,19 +12,25 @@ use crate::smw::objects::carriable::co_kuribo_shoe::CO_KuriboShoe;
 use crate::smw::objects::moving::moving_object::io_moving_object_collision_detection_checksides;
 use crate::smw::player::CPlayer;
 
+/// Shoe the player wears: none, normal, or sticky (stops ground movement).
 pub type KuriboShoeType = i32;
 pub const NONE: KuriboShoeType = 0;
 pub const NORMAL: KuriboShoeType = 1;
 pub const STICKY: KuriboShoeType = 2;
 
+/// Key mask bits that leave the shoe when pressed in order: left, right, left, right.
 const kuriboShoe_exitCode: [u8; 4] = [4, 8, 4, 8];
 
 #[derive(Clone, Default)]
 pub struct PlayerKuriboShoe {
     pub r#type: KuriboShoeType,
+    /// Ticks in the current shoe frame; frames change every 8.
     pub animationTimer: u8,
+    /// Source x of the shoe frame: 0 or 32.
     pub animationFrame: u8,
+    /// Ticks since the first key of the exit sequence.
     pub exitTimer: u8,
+    /// Exit sequence keys matched so far.
     pub exitIndex: u8,
     pub _alias: Aliased,
 }
@@ -42,7 +48,7 @@ impl PlayerKuriboShoe {
         self.exitIndex = 0;
     }
 
-    // Return true if the player is inside a shoe
+    /// True while the player wears a shoe.
     pub fn is_on(&self) -> bool {
         self.r#type > 0
     }
@@ -61,7 +67,7 @@ impl PlayerKuriboShoe {
         self.update_animation();
     }
 
-    // Free player from the kuribo shoe
+    // Entering the exit code within `ticks(32)` ticks drops the shoe as a carriable object.
     fn update_getting_out_of_the_shoe(&mut self, g: &mut Game, player: &mut CPlayer, keymask: u8) {
         let mut gp = g.ptr();
         let mut rm = g.rm;

@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/overmap/WO_Phanto.cpp
+//! Phanto for chase mode: a mask that chases the player holding the key.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -21,27 +21,35 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class Phanto (for phanto mode)
 //------------------------------------------------------------------------------
+/// Chasing mask; it drifts off screen and waits while nobody holds the key.
 #[derive(Clone)]
 pub struct OMO_Phanto {
     pub io_over_map_object: IO_OverMapObject,
 
+    /// 0 kills the key holder, 1 also costs them 10 points, 2 kills anyone it touches.
     pub iType: i16,
 
+    /// Top speed (pixels per tick) from the phanto speed setting; x is one faster than y.
     pub dMaxSpeedX: f32,
     pub dMaxSpeedY: f32,
+    /// Acceleration toward the target (pixels per tick squared), rerolled every second.
     pub dReactionSpeed: f32,
+    /// Phanto speed setting divided by 6; scales `dReactionSpeed`.
     pub dSpeedRatio: f32,
+    /// Ticks toward the next `dReactionSpeed` reroll.
     pub iSpeedTimer: i16,
 }
 impl_base!(OMO_Phanto => io_over_map_object: IO_OverMapObject);
 
 impl OMO_Phanto {
+    /// Rerolls the acceleration.
     pub fn change_speed(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         self.iSpeedTimer = 0;
         self.dReactionSpeed = acc((0.05f32 + RANDOM_INT(gp.get(), 20) as f32 / 100.0f32) * self.dSpeedRatio);
     }
 
+    /// Moves the phanto to a random x just above or below the screen.
     pub fn return_offscreen(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         self.set_xi(RANDOM_INT(gp.get(), App::screenWidth) as i16);
@@ -176,7 +184,7 @@ impl CObjectTrait for OMO_Phanto {
             return false;
         }
 
-        // If the player is holding the key, kill him
+        // Kills the key holder; type 2 kills anyone.
         if !g.player(player).is_invincible() && !g.player(player).is_shielded() {
             if self.iType == 2 {
                 g.player(player).kill_player_map_hazard(g, false, KillStyle::Phanto, false, -1);

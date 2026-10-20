@@ -13,10 +13,14 @@ use tungstenite::handshake::server::{ErrorResponse, Request, Response};
 use tungstenite::http::StatusCode;
 use tungstenite::Message;
 
+/// How long a signaling thread waits for input before it sends what other peers queued.
 const POLL: Duration = Duration::from_millis(4);
+/// A signaling peer silent this long leaves its room.
 const IDLE_TIMEOUT: Duration = Duration::from_secs(60);
+/// Messages queued for one peer; more are dropped.
 const OUTBOX_LEN: usize = 256;
 
+/// Each signaling room's peers, by peer ID, with the queue of messages to each.
 type Rooms = HashMap<String, HashMap<String, SyncSender<String>>>;
 
 fn rooms() -> &'static Mutex<Rooms> {
@@ -24,6 +28,7 @@ fn rooms() -> &'static Mutex<Rooms> {
     ROOMS.get_or_init(Default::default)
 }
 
+/// A random UUID v4, the form matchbox peer IDs take.
 fn new_peer_id() -> String {
     let mut b = [0u8; 16];
     getrandom::fill(&mut b).expect("the OS random source");
@@ -33,12 +38,14 @@ fn new_peer_id() -> String {
     format!("{}-{}-{}-{}-{}", &hex[0..8], &hex[8..12], &hex[12..16], &hex[16..20], &hex[20..32])
 }
 
+/// Queues a message to one peer of a room; it is dropped if the peer is gone or its queue is full.
 fn send_to(room: &str, peer: &str, text: String) {
     if let Some(tx) = rooms().lock().unwrap().get(room).and_then(|r| r.get(peer)) {
         let _ = tx.try_send(text);
     }
 }
 
+/// One peer's signaling session in `room`, on its connection's thread, until it closes or goes quiet.
 pub fn run(stream: TcpStream, room: String, config: &Config) {
     let check_origin = |request: &Request, response: Response| -> Result<Response, ErrorResponse> {
         let origin = request.headers().get("origin").and_then(|v| v.to_str().ok());

@@ -1,4 +1,4 @@
-//! Port of src/smw/gamemodes/BonusHouse.cpp
+//! World-map bonus house: a pseudo game mode where players pick treasure chests instead of fighting.
 
 use crate::smw::players::PlayerId;
 use crate::common::gfx::soft_surface::Rect;
@@ -18,7 +18,7 @@ use crate::smw::objects::moving::mo_bonus_house_chest::MO_BonusHouseChest;
 use crate::smw::player::CPlayer;
 use std::any::Any;
 
-//Bonus Mode (not really a game mode, but involves using the map so we need a mode to play)
+/// Bonus house mode: lays out the tour stop's bonus chests; kills and extra lives do nothing.
 #[derive(Clone)]
 pub struct CGM_Bonus {
     pub cgame_mode: CGameMode,
@@ -126,7 +126,7 @@ impl CGameModeTrait for CGM_Bonus {
         }
     }
 
-    //Override so it doesn't display winner text after you choose a powerup
+    // Empty so no winner text appears after a chest is chosen.
     fn think(&mut self, g: &mut Game) {}
 
     fn playerkilledplayer(&mut self, g: &mut Game, _inflictor: PlayerId, _other: PlayerId, _style: KillStyle) -> PlayerKillType {

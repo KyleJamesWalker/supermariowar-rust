@@ -1,4 +1,4 @@
-//! Port of src/smw/ui/MI_MapFilterScroll.cpp
+//! The map filter list: toggle each filter, or open a user filter to choose its maps.
 
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
@@ -11,6 +11,7 @@ use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
 use crate::smw::gs_gameplay::lookup_team_id;
 
+/// One filter row.
 #[derive(Clone, Debug, Default)]
 pub struct MFS_ListItem {
     pub sName: String, //Display name
@@ -24,28 +25,37 @@ impl MFS_ListItem {
     }
 }
 
+/// Scrolling filter list; built-in filters come first, user filters after `NUM_AUTO_FILTERS`.
 pub struct MI_MapFilterScroll {
     pub ui_control: UI_Control,
 
     pub items: Vec<Box<MFS_ListItem>>,
-    /// Index into `items` (the C++ iterator).
+    /// Index into `items` of the selected row; tracks `iIndex`.
     pub current: usize,
 
     pub spr: SpriteId,
 
+    /// 0 toggles the filter, 1 opens it for editing; 1 only on user filters.
     pub iSelectedColumn: i16,
+    /// Rows shown at once.
     pub iNumLines: i16,
+    /// Highlighted row on screen.
     pub iSelectedLine: i16,
+    /// Index of the selected filter, also into `game_values.pfFilters`.
     pub iIndex: u16,
     pub iWidth: i16,
+    /// Index of the first row shown.
     pub iOffset: i16,
 
+    /// Selection index past which the list scrolls instead of moving the highlight.
     pub iTopStop: i16,
+    /// Selection index after which the list stops scrolling and the highlight moves again.
     pub iBottomStop: i16,
 }
 crate::impl_base!(MI_MapFilterScroll => ui_control: UI_Control);
 
 impl MI_MapFilterScroll {
+    /// `x`, `y` and `width` are in pixels; `numlines` is the rows shown at once.
     pub fn new(nspr: SpriteId, x: i16, y: i16, width: i16, numlines: i16) -> Self {
         MI_MapFilterScroll {
             ui_control: UI_Control::new(x, y),
@@ -63,6 +73,7 @@ impl MI_MapFilterScroll {
         }
     }
 
+    /// Appends a filter, off, and moves the selection back to the first row.
     pub fn add(&mut self, name: impl Into<String>, icon: i16) {
         let item = Box::new(MFS_ListItem::new(name.into(), icon, false));
         self.items.push(item);
@@ -75,6 +86,7 @@ impl MI_MapFilterScroll {
         self.iBottomStop = (self.items.len() as i64 - self.iNumLines as i64 + self.iTopStop as i64) as i16;
     }
 
+    /// Selects the next filter; false at the end of the list.
     pub fn move_next(&mut self) -> bool {
         if self.items.is_empty() {
             return false;
@@ -96,6 +108,7 @@ impl MI_MapFilterScroll {
         true
     }
 
+    /// Selects the previous filter; false at the start of the list.
     pub fn move_prev(&mut self) -> bool {
         if self.items.is_empty() {
             return false;
@@ -197,7 +210,7 @@ impl UI_ControlTrait for MI_MapFilterScroll {
         let iWidth = self.iWidth as i32;
         let iNumLines = self.iNumLines as i32;
 
-        //Draw the background for the map preview
+        //Draw the dialog background
         gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, x, y, &Rect { x: 0, y: 0, w: iWidth - 16, h: iNumLines * 32 + 32 });
         gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, x + iWidth - 16, y, &Rect { x: 496, y: 0, w: 16, h: iNumLines * 32 + 32 });
         gp.rm.sprite(gp.rm.menu_dialog).draw_src(g, x, y + iNumLines * 32 + 32, &Rect { x: 0, y: 464, w: iWidth - 16, h: 16 });

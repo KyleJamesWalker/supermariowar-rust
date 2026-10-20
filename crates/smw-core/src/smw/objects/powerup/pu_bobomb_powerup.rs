@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/powerup/PU_BobombPowerup.cpp
+//! Bob-omb powerup: turns the player into a bob-omb, or stores one if already a bob-omb.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;

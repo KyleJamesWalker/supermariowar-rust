@@ -1,4 +1,4 @@
-//! The game's state as one value (docs/design/ARCHITECTURE_V2.md, Step 2: globals into a `Game` struct).
+//! `Game`, the one value that holds all game state (docs/design/ARCHITECTURE_V2.md).
 
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::common::gfx::soft_surface::Surface;
@@ -39,21 +39,25 @@ use crate::smw::touch::TouchState;
 use crate::smw::world::WorldMap;
 use crate::worldeditor::worldeditor::WorldEditorState;
 
+/// The most input devices open at once; `Game::devices` never grows past it.
 pub const MAX_DEVICES: usize = 8;
 
+/// An open input device in a `Game::devices` slot.
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Device {
-    /// A backend pad, as its events name it.
+    /// A backend pad, as its events name it; `controller` when the backend translates it as a game controller.
     Pad { pad: smw_platform::PadSlot, controller: bool },
     /// A replay's pad: nothing is open, and its events carry the device number.
     Replay,
 }
 
+/// Every piece of state the game, menus and editors share; one per running game, plus any `clone_match` copies.
 pub struct Game {
     pub _alias: Aliased,
     pub game_values: Global<CGameValues>,
-    /// Must be created before `maplist`, whose constructor reads it.
+    /// The map filters; must be created before `maplist`, whose constructor reads it.
     pub filterslist: Ptr<FiltersList>,
+    /// The maps in the data directory and the one selected.
     pub maplist: Ptr<MapList>,
     pub skinlist: Ptr<SkinList>,
     pub announcerlist: Ptr<AnnouncerList>,
@@ -65,35 +69,49 @@ pub struct Game {
     pub soundpacklist: Ptr<SoundsList>,
     pub tourlist: Ptr<TourList>,
     pub worldlist: Ptr<WorldList>,
+    /// Sprites, fonts and sounds loaded from the current packs.
     pub rm: Ptr<CResourceManager>,
+    /// The map being played or edited.
     pub g_map: Owned<CMap>,
     pub g_tilesetmanager: Ptr<CTilesetManager>,
+    /// Map blocks and other objects that collide with no other object, drawn behind the players.
     pub noncolcontainer: CObjectContainer,
+    /// Gameplay objects in three draw layers: 0 behind the players, 1 just after them, 2 in front of the map's front layer.
     pub objectcontainer: [CObjectContainer; 3],
     pub controls: crate::common::uicontrol::Controls,
+    /// Short-lived effects in three draw layers: 0 behind the players, 1 just after them, 2 in front of everything.
     pub eyecandy: [CEyecandyContainer; 3],
     pub players: crate::smw::players::Players,
+    /// Per team; only the first `score_cnt` are in use.
     pub score: [Global<CScore>; 4],
+    /// How many teams are in the match.
     pub score_cnt: i16,
+    /// The standard game modes, indexed by `GAMEMODE_*`.
     pub gamemodes: [Owned<dyn CGameModeTrait>; GAMEMODE_LAST as usize],
     pub bonushousemode: Owned<CGM_Bonus>,
     pub pipegamemode: Owned<CGM_Pipe_MiniGame>,
     pub bossgamemode: Owned<CGM_Boss_MiniGame>,
     pub boxesgamemode: Owned<CGM_Boxes_MiniGame>,
+    /// The `GAMEMODE_*` the match was started with, which netplay sends to joiners.
     pub currentgamemode: i16,
     pub rng: RngState,
     pub sfx: SfxState,
     pub backgroundmusic: [sfxMusic; 6],
     pub networkHandler: Global<NetworkHandler>,
     pub netplay: Global<Networking>,
+    /// `game_values.playercontrol` saved while netplay overrides it, restored after.
     pub backup_playercontrol: [i16; 4],
+    /// The screen shake offset in pixels, applied to the whole frame.
     pub x_shake: i16,
     pub y_shake: i16,
+    /// The direction the horizontal screen shake moves next.
     pub shakeleft: bool,
     /// Locations for swirl spawn effects.
     pub g_iSwirlSpawnLocations: [[[i16; 25]; 2]; 4],
     pub spotlightManager: Global<SpotlightManager>,
+    /// The team leading on the scoreboard this frame, or -1 on a tie or when no scoreboard is shown.
     pub g_iWinningPlayer: i16,
+    /// Which of the two prerendered back-map frames (0 or 1) animated tiles draw this tick.
     pub g_iCurrentDrawIndex: i16,
     /// The file a match loaded, relative to the data directory so a checkpoint works with any data root.
     pub match_map: String,
@@ -103,13 +121,17 @@ pub struct Game {
     pub level_editor: LevelEditorState,
     pub world_editor: WorldEditorState,
     pub gsm: GameStateManager,
+    /// The gameplay state, once created.
     pub gps: Option<GameplayState>,
+    /// The menu state, once created.
     pub ms: Option<MenuState>,
+    /// The splash screen state, once created.
     pub ss: Option<SplashScreenState>,
     /// The browser cannot block for input, so a control field being rebound reads this frame's events here.
     #[cfg(target_os = "emscripten")]
     pub frame_events: Vec<smw_platform::Input>,
     pub net_record: NetRecordState,
+    /// The window's backbuffer.
     pub screen: *mut Surface,
     /// The destination surface for all drawing; swapped from `screen` to another surface at times.
     pub blitdest: *mut Surface,
@@ -125,14 +147,17 @@ pub struct Game {
     pub services: Option<smw_platform::Services>,
     pub gfx: Global<GraphicsSDL>,
     pub gfx_palette: Global<gfxPalette>,
+    /// The `data` directory every asset path resolves against.
     pub RootDataDirectory: String,
+    /// `RootDataDirectory` with a trailing slash, set by the first `path::convert_path`.
     pub SMW_Root_Data_Dir: String,
     pub are_paths_initialized: bool,
     /// Indexed by the device number in bindings and replay lines; `None` is an empty slot.
     pub devices: Vec<Option<Device>>,
     pub relay: crate::smw::platform::network::websocket::network_layer_websocket::Relay,
+    /// Scratch space for the websocket layer to receive one relay frame into.
     pub recv_buffer: [u8; smw_netplay::common_netplay::relay_frame::MAX_MESSAGE_LEN],
-    /// What a copy from `clone_match` owns where the original's fields point at shared values.
+    /// What a `clone_match` copy owns that the source game's fields point at.
     match_copy: Option<MatchCopy>,
 }
 
@@ -142,6 +167,7 @@ struct MatchCopy {
 }
 
 impl Game {
+    /// The object `id` names, in whichever container holds it, if it is still alive.
     pub fn object(&self, id: ObjectId) -> Option<Ptr<dyn crate::common::object_base::CObjectTrait>> {
         match id.container() {
             3 => self.noncolcontainer.get(id),
@@ -149,7 +175,7 @@ impl Game {
         }
     }
 
-    /// The item `id` names, or null: what the C++ `carriedItem` pointer held.
+    /// The carried item `id` names, or null when it is gone or not a carried object.
     pub fn carried(&self, id: ObjectId) -> Ptr<dyn crate::smw::objects::moving::mo_carried_object::MO_CarriedObjectTrait> {
         match self.object(id) {
             Some(mut obj) => obj.get().as_io_moving_object().and_then(|m| m.as_carried_object()).map(Ptr::from_mut).unwrap_or_else(Ptr::null),
@@ -157,10 +183,12 @@ impl Game {
         }
     }
 
+    /// The item `player` carries, or null.
     pub fn carried_item(&self, player: PlayerId) -> Ptr<dyn crate::smw::objects::moving::mo_carried_object::MO_CarriedObjectTrait> {
         self.carried(self.player(player).carriedItem)
     }
 
+    /// The typed control `ctl` names; panics on a removed control.
     pub fn ctl<T: 'static>(&self, ctl: crate::common::uicontrol::Ctl<T>) -> &'static mut T {
         self.controls.typed(ctl)
     }
@@ -170,6 +198,7 @@ impl Game {
         self.controls.get(id).unwrap_or_else(|| panic!("no control {:?}", id))
     }
 
+    /// The output keys of a local player's input slot or of a remote player's network input.
     pub fn player_keys(&self, keys: crate::smw::player::PlayerKeys) -> &'static mut crate::common::input::COutputControl {
         let controls: *const crate::common::input::COutputControl = match keys {
             crate::smw::player::PlayerKeys::Local(i) => &self.game_values.playerInput.outputControls[i as usize],
@@ -200,10 +229,12 @@ impl Game {
         }
     }
 
+    /// The block object at tile `x`, `y`, or null.
     pub fn map_block(&self, x: i16, y: i16) -> Ptr<dyn crate::common::io_block::IO_BlockTrait> {
         self.g_map.block(&self.noncolcontainer, x, y)
     }
 
+    /// Recomputes the tile gap flags around tile `i`, `j`.
     pub fn update_tile_gap(&mut self, i: i16, j: i16) {
         let mut map = self.g_map.ptr();
         map.update_tile_gap(&self.noncolcontainer, i, j);
@@ -230,6 +261,7 @@ impl Game {
         Ptr::from_mut(self)
     }
 
+    /// A game with every field empty or null; `init_globals` and the entry point fill it.
     pub const fn new() -> Self {
         Game {
             _alias: Aliased::new(),

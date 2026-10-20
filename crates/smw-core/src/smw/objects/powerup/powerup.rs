@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/powerup/Powerup.cpp
+//! Shared base for powerups: rise out of a block, then fall and bounce under map physics.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -17,16 +17,18 @@ use std::ops::{Deref, DerefMut};
 //------------------------------------------------------------------------------
 // class powerup
 //------------------------------------------------------------------------------
+/// Base state for a powerup that grows out of a block, then moves under map physics.
 #[derive(Clone)]
 pub struct MO_Powerup {
     pub io_moving_object: IO_MovingObject,
 
+    /// Y (pixels) where the rise out of the block ends; `state` is 0 until then.
     pub desty: f32,
 }
 impl_base!(MO_Powerup => io_moving_object: IO_MovingObject);
 
 impl MO_Powerup {
-    /// Pass `-1` for the C++ default arguments.
+    /// Collision arguments of `-1` use the sprite frame size with no offset.
     #[allow(clippy::too_many_arguments)]
     pub fn new(g: &mut Game, nspr: SpriteId,
         pos: Vec2s,
@@ -47,6 +49,7 @@ impl MO_Powerup {
     }
 }
 
+/// Draws the current frame, clipped to the part already out of the block while rising.
 pub fn mo_powerup_draw<T: MO_PowerupTrait + ?Sized>(g: &mut Game, this: &mut T) {
     let o = this.pu();
     if o.state == 0 {
@@ -57,6 +60,7 @@ pub fn mo_powerup_draw<T: MO_PowerupTrait + ?Sized>(g: &mut Game, this: &mut T) 
     }
 }
 
+/// Rises out of the block while `state` is 0, then runs map collision and physics.
 pub fn mo_powerup_update<T: MO_PowerupTrait + ?Sized>(g: &mut Game, this: &mut T) {
     // Have the powerup grow out of the powerup block
     if this.pu().state == 0 {
@@ -83,6 +87,7 @@ pub fn mo_powerup_update<T: MO_PowerupTrait + ?Sized>(g: &mut Game, this: &mut T
     this.animate();
 }
 
+/// Default pickup: removes the powerup once it has finished rising.
 pub fn mo_powerup_collide_player<T: MO_PowerupTrait + ?Sized>(this: &mut T, _player: PlayerId) -> bool {
     let o = this.pu_mut();
     if o.state > 0 {
@@ -92,6 +97,7 @@ pub fn mo_powerup_collide_player<T: MO_PowerupTrait + ?Sized>(this: &mut T, _pla
     false
 }
 
+/// Skips the rise: places the powerup at `y` and pops it upward at half jump speed.
 pub fn mo_powerup_nospawn<T: MO_PowerupTrait + ?Sized>(this: &mut T, y: i16) {
     let o = this.pu_mut();
     o.state = 1;
@@ -100,11 +106,12 @@ pub fn mo_powerup_nospawn<T: MO_PowerupTrait + ?Sized>(this: &mut T, y: i16) {
 }
 
 /// Virtual interface added by `MO_Powerup`. Implementors forward `CObjectTrait::draw`, `update` and
-/// `collide_player` to `mo_powerup_*` unless the C++ class overrides them.
+/// `collide_player` to `mo_powerup_*` unless they need their own behavior.
 pub trait MO_PowerupTrait: IO_MovingObjectTrait {
     fn pu(&self) -> &MO_Powerup;
     fn pu_mut(&mut self) -> &mut MO_Powerup;
 
+    /// Places the powerup at `y` (pixels) already out of its block, for spawns without a block.
     fn nospawn(&mut self, y: i16) {
         mo_powerup_nospawn(self, y)
     }

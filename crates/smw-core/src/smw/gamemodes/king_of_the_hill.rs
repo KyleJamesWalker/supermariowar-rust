@@ -1,4 +1,4 @@
-//! Port of src/smw/gamemodes/KingOfTheHill.cpp
+//! King of the hill mode.
 
 use crate::smw::players::PlayerId;
 use crate::game::Game;
@@ -13,7 +13,7 @@ use crate::smw::objects::overmap::wo_king_of_the_hill_zone::OMO_KingOfTheHillZon
 use crate::smw::player::CPlayer;
 use std::any::Any;
 
-//King of the Hill (Control an area for a certain amount of time)
+/// King of the hill: control the hill zone to earn points. Reuses domination's win check.
 #[derive(Clone)]
 pub struct CGM_KingOfTheHill {
     pub cgm_domination: CGM_Domination,

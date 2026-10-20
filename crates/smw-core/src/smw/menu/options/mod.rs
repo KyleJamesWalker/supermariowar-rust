@@ -1,3 +1,5 @@
+//! Option submenus reached from the options menu, plus helpers they share.
+
 use crate::game::Game;
 pub mod eye_candy_options_menu;
 pub mod gameplay_options_menu;
@@ -16,8 +18,8 @@ use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::ui::mi_select_field::MI_SelectField;
 use crate::globals::*;
 
-/// `new MI_SelectField<T>(spr, x, y, name, width, indent)`, `add` of each item, `setOutputPtr(output)`,
-/// `setCurrentValue(*output)`: the construction sequence every options menu field uses.
+/// Builds a select field with `items`, bound to write the selection through `output` and showing its current value.
+/// Safety: `output` must stay valid for the field's lifetime.
 pub(crate) unsafe fn select_field<T: Copy + PartialEq + 'static>(
     spr: SpriteId,
     x: i16,
@@ -38,4 +40,5 @@ pub(crate) unsafe fn select_field<T: Copy + PartialEq + 'static>(
     f
 }
 
+/// Items for a boolean Off/On select field.
 pub(crate) const OFF_ON: &[(&str, bool)] = &[("Off", false), ("On", true)];

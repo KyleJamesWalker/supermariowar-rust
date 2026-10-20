@@ -12,15 +12,18 @@ use smw_platform::{DeviceChange, Input, InputEvent, Keycode, MouseEvent, PadSlot
 /// clamps it there; the touch controls sit outside that viewport.
 #[derive(Clone, Copy)]
 struct RawFinger {
+    /// With `timestamp` and `finger`, matches the queued event this was recorded for.
     type_: u32,
     timestamp: u32,
     finger: i64,
+    /// Normalized to the window, 0.0 to 1.0.
     x: f32,
     y: f32,
     dx: f32,
     dy: f32,
 }
 
+/// Oldest first, capped at 1024 so fingers nobody reads do not pile up.
 static RAW_FINGERS: Mutex<VecDeque<RawFinger>> = Mutex::new(VecDeque::new());
 
 /// An `SDL_AddEventWatch` callback that must be added before the renderer is created, so it runs first.
@@ -53,7 +56,9 @@ fn state(down: bool) -> u8 {
     (if down { SDL_PRESSED } else { SDL_RELEASED }) as u8
 }
 
+/// Normalizes an SDL event; finger positions come from `keep_raw_finger` when it recorded them.
 pub fn from_sdl(e: &SDL_Event) -> Input {
+    // SAFETY: each branch reads only the union member its event type names.
     unsafe {
         let t = e.type_;
         let is = |k: sdl2::sys::SDL_EventType| t == k as u32;
@@ -136,7 +141,9 @@ pub fn from_sdl(e: &SDL_Event) -> Input {
     }
 }
 
+/// The SDL event `from_sdl` reads back as `input`; text is cut to 31 bytes.
 pub fn to_sdl(input: &Input) -> SDL_Event {
+    // SAFETY: an all-zero `SDL_Event` is valid, and each arm writes the union member its event type names.
     unsafe {
         let mut e: SDL_Event = std::mem::zeroed();
         match &input.event {
@@ -150,6 +157,7 @@ pub fn to_sdl(input: &Input) -> SDL_Event {
                 e.key.windowID = window;
                 e.key.state = state(down);
                 e.key.repeat = repeat as u8;
+                // A scancode that is not an `SDL_Scancode` variant is undefined behavior here.
                 e.key.keysym.scancode = std::mem::transmute::<i32, sdl2::sys::SDL_Scancode>(scancode);
                 e.key.keysym.sym = key.0;
                 e.key.keysym.mod_ = mods;

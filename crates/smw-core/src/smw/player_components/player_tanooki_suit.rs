@@ -1,4 +1,4 @@
-//! Port of src/smw/player_components/PlayerTanookiSuit.cpp
+//! Tanooki suit: turning into an invulnerable statue that super stomps.
 
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -12,9 +12,13 @@ use crate::smw::player_components::player_shield::{OFF, SOFT_WITH_STOMP};
 
 #[derive(Clone, Default)]
 pub struct PlayerTanookiSuit {
+    /// True while the player has the tanooki powerup.
     pub tanooki_on: bool,
+    /// Blocks turning into a statue again until the player lands.
     pub statue_lock: bool,
+    /// Ticks left as a statue; 0 means not a statue, and 1 triggers the change back.
     pub statue_timer: u16,
+    /// Statue uses left when `tanookilimit` is set; the suit is lost at 0.
     pub statue_uses_left: u16,
     pub _alias: Aliased,
 }
@@ -33,6 +37,7 @@ impl PlayerTanookiSuit {
         self.statue_uses_left = 0;
     }
 
+    /// True when turbo is pressed with down held and nothing else blocks the change.
     fn can_turn_into_statue(&mut self, g: &Game, player: &mut CPlayer) -> bool {
         player.keys(g).game_turbo().fPressed
             && player.keys(g).game_down().fDown
@@ -51,6 +56,7 @@ impl PlayerTanookiSuit {
         player.shield.set_type(SOFT_WITH_STOMP);
     }
 
+    /// Handles turning into and out of the statue; releasing down ends it early.
     pub fn update(&mut self, g: &mut Game, player: &mut CPlayer) {
         let mut gp = g.ptr();
         if !self.tanooki_on || !player.isready() {
@@ -110,7 +116,7 @@ impl PlayerTanookiSuit {
                 // Untransform from statue
                 self.statue_timer = 0;
 
-                // Release invincibility
+                // Drop the statue's shield
                 player.shield.set_type(OFF);
 
                 // Slight upward velocity to escape spikes / lava
@@ -149,7 +155,6 @@ impl PlayerTanookiSuit {
                 // Don't fall through passable platforms
                 player.fallthrough = false;
 
-                // Decrement statue timer3
                 self.statue_timer -= 1;
 
                 // Become soft shielded (with stomp ability)
@@ -172,10 +177,12 @@ impl PlayerTanookiSuit {
         self.statue_timer == 0
     }
 
+    /// True on the off frames of the blink during the statue's last `ticks(50)` ticks.
     pub fn is_blinking(&self) -> bool {
         ((self.statue_timer as i32) < ticks(50)) && (self.statue_timer / 3 % 2 != 0)
     }
 
+    /// Grants the suit and refills its uses from `tanookilimit`.
     pub fn on_pickup(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         if_sound_on_play(g, &mut gp.rm.sfx_collectpowerup);
@@ -186,6 +193,7 @@ impl PlayerTanookiSuit {
         }
     }
 
+    /// Clears `statue_lock`.
     pub fn allow_statue(&mut self) {
         self.statue_lock = false;
     }

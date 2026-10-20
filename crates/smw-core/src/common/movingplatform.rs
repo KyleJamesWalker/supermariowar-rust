@@ -1,4 +1,4 @@
-//! Port of src/common/movingplatform.cpp
+//! Moving platforms: tile grids that follow a path and collide with players and objects like map tiles.
 
 use crate::smw::players::PlayerId;
 use crate::common::gfx::soft_surface::Rect;
@@ -22,6 +22,7 @@ use crate::smw::player::CPlayer;
 use std::ffi::CStr;
 use std::ptr::{null, null_mut};
 
+/// How an object overlaps a platform: not at all, directly, or across the screen's left or right wrap edge.
 type CollisionStyle = i16;
 const collision_none: CollisionStyle = 0;
 const collision_normal: CollisionStyle = 1;
@@ -30,7 +31,7 @@ const collision_overlap_right: CollisionStyle = 3;
 
 const SW: f32 = App::screenWidth as f32;
 
-/// `(short)f / TILESIZE` as an index.
+/// Tile index of pixel offset `f`, truncating `f` to `i16` before dividing.
 #[inline(always)]
 fn tile_of(f: f32) -> i16 {
     ((f as i16) as i32 / TILESIZE) as i16
@@ -38,11 +39,14 @@ fn tile_of(f: f32) -> i16 {
 
 #[derive(Clone)]
 
+/// A moving platform. Positions are pixels at the platform's center; sizes are pixels unless named in tiles.
 pub struct MovingPlatform {
+    /// Tiles and their collision types, column-major (`col * iTileHeight + row`).
     pub iTileData: Vec<TilesetTile>,
     pub iTileType: Vec<TileType>,
     pub ix: i16,
     pub iy: i16,
+    /// Size in pixels: tiles times 32, or 16 for a preview.
     pub iWidth: i16,
     pub iHeight: i16,
     pub iTileWidth: i16,
@@ -50,10 +54,12 @@ pub struct MovingPlatform {
     pub iHalfWidth: i16,
     pub iHalfHeight: i16,
 
+    /// A falling platform that left the screen; the map removes it.
     pub fDead: bool,
 
     pub fx: f32,
     pub fy: f32,
+    /// Position and velocity at the start of this tick, used to resolve collisions.
     pub fOldX: f32,
     pub fOldY: f32,
     pub fOldVelX: f32,
@@ -62,6 +68,7 @@ pub struct MovingPlatform {
     pub iSteps: i16,
     pub iOnStep: i16,
 
+    /// Prerendered tiles, double-buffered so animated tiles can redraw one while the other shows.
     pub sprites: [gfxSprite; 2],
 
     pub rSrcRect: Rect,
@@ -70,6 +77,7 @@ pub struct MovingPlatform {
     pub fForwardDirection: bool,
     pub fStartDirection: bool,
 
+    /// Map draw layer (0 to 4) the platform draws on.
     pub iDrawLayer: i16,
 
     pub pPath: Box<dyn MovingPlatformPathTrait>,
@@ -77,16 +85,18 @@ pub struct MovingPlatform {
     pub fVelX: f32,
     pub fVelY: f32,
 
+    /// Player credited for kills the platform causes, or -1.
     pub iPlayerId: i16,
 
-    /// Set when a map takes the platform.
+    /// This platform's handle; set when a map takes the platform.
     pub id: PlatformId,
 
     pub _alias: Aliased,
 }
 
 impl MovingPlatform {
-    /// C++ `new MovingPlatform(...)`.
+    /// A `w` x `h`-tile platform; `tiledata` and `tiletypes` are column-major. Prerenders both draw buffers, at half
+    /// size for a preview.
     pub fn new(g: &mut Game, 
         tiledata: Vec<TilesetTile>,
         tiletypes: Vec<TileType>,
@@ -205,15 +215,17 @@ impl MovingPlatform {
         this
     }
 
+    /// The tile at (`col`, `row`).
     pub fn tile_at(&self, col: usize, row: usize) -> &TilesetTile {
         &self.iTileData[col * self.iTileHeight as usize + row]
     }
 
+    /// The collision type of tile (`col`, `row`).
     pub fn tile_type_at(&self, col: usize, row: usize) -> TileType {
         self.iTileType[col * self.iTileHeight as usize + row]
     }
 
-    //Draw a custom sprite on a tile of the platform, instead of a tileset tile
+    /// Draws `spr` over tile (`col`, `row`) in both draw buffers.
     pub fn paint_sprite_at(&mut self, spr: &gfxSprite, col: usize, row: usize) {
         let iTileSize: i16 = self.iWidth / self.iTileWidth;
         let dstPos = Rect { x: col as i32 * iTileSize as i32, y: row as i32 * iTileSize as i32, w: 0, h: 0 };
@@ -244,10 +256,12 @@ impl MovingPlatform {
         self.fy = self.iy as f32;
     }
 
+    /// Sets the player credited for kills the platform causes.
     pub fn set_player_id(&mut self, playerId: i16) {
         self.iPlayerId = playerId;
     }
 
+    /// Draws the platform's shown buffer at its position plus camera shake.
     pub fn draw(&mut self, g: &mut Game) {
         self.rDstRect.x = self.ix as i32 - self.iHalfWidth as i32 + g.x_shake as i32;
         self.rDstRect.y = self.iy as i32 - self.iHalfHeight as i32 + g.y_shake as i32;
@@ -257,7 +271,7 @@ impl MovingPlatform {
         self.sprites[(1 - g.g_iCurrentDrawIndex) as usize].draw_src_to(&self.rSrcRect, g.blitdest, &self.rDstRect);
     }
 
-    /// `draw(short iOffsetX, short iOffsetY)`: path drawing for the map preview.
+    /// Draws the platform at half scale, offset by (`iOffsetX`, `iOffsetY`), for the map preview.
     pub fn draw_offset(&mut self, g: &mut Game, iOffsetX: i16, iOffsetY: i16) {
         gfx_drawpreview(
             g,
@@ -274,6 +288,7 @@ impl MovingPlatform {
         );
     }
 
+    /// Moves both path tracks one tick and takes the new position from track 0.
     pub fn update(&mut self, g: &mut Game) {
         self.fOldX = self.pPath.current_pos0().x;
         self.fOldY = self.pPath.current_pos0().y;
@@ -295,6 +310,7 @@ impl MovingPlatform {
         self.set_yf(y);
     }
 
+    /// Returns to the path start, with the lookahead track advanced by the spawn animation.
     pub fn reset_path(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         let this = Ptr::from_mut(self);
@@ -309,7 +325,7 @@ impl MovingPlatform {
         self.fOldY = self.fy;
     }
 
-    /// `collide(CPlayer*)`
+    /// Pushes `player` out of the platform's solid tiles, lands them on it, or kills them on death tiles or when crushed.
     pub fn collide_player(&mut self, g: &mut Game, mut player: PlayerId) {
         let this = Ptr::from_mut(self);
         let fx = self.fx;
@@ -667,6 +683,7 @@ impl MovingPlatform {
         }
     }
 
+    /// After a platform pushes `player` right into the map, pushes them back out of solid map tiles.
     fn check_map_collision_right(&mut self, g: &mut Game, mut player: PlayerId) {
         if g.player(player).fy + (PH as f32) < 0.0 {
             return;
@@ -706,6 +723,7 @@ impl MovingPlatform {
         }
     }
 
+    /// After a platform pushes `player` left into the map, pushes them back out of solid map tiles.
     fn check_map_collision_left(&mut self, g: &mut Game, mut player: PlayerId) {
         if g.player(player).fy + (PH as f32) < 0.0 {
             return;
@@ -740,6 +758,7 @@ impl MovingPlatform {
         }
     }
 
+    /// Pushes `object` out of any solid platform tiles it overlaps; returns whether it overlapped one.
     pub fn collision_detection_check_sides(&mut self, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
         let coldec = self.coldec_object(object);
         if coldec == collision_none {
@@ -949,6 +968,7 @@ impl MovingPlatform {
         true
     }
 
+    /// How `player`'s next position overlaps the platform, accounting for horizontal screen wrap.
     fn coldec_player(&self, g: &Game, player: PlayerId) -> CollisionStyle {
         let fx = self.fx;
         let fy = self.fy;
@@ -976,6 +996,7 @@ impl MovingPlatform {
         }
     }
 
+    /// Collision flags of the platform tiles under `player`'s left and right edges, non-solid when off the platform.
     pub fn get_tile_types_from_player(&self, g: &Game, player: PlayerId, lefttile: &mut i32, righttile: &mut i32) {
         *lefttile = tile_flag_nonsolid;
         *righttile = tile_flag_nonsolid;
@@ -1005,6 +1026,7 @@ impl MovingPlatform {
         }
     }
 
+    /// Collision flags of the platform tile at screen pixel (`x`, `y`), wrapping `x`; non-solid off the platform.
     pub fn get_tile_type_from_coord(&self, mut x: i16, y: i16) -> i32 {
         let fRelativeY = y as f32 - self.fy + self.iHalfHeight as f32;
 
@@ -1027,7 +1049,7 @@ impl MovingPlatform {
         self.flags_at(tile_of(fRelativeX), tile_of(fRelativeY))
     }
 
-    /// `collide(IO_MovingObject*)`
+    /// Pushes `object` out of the platform's solid tiles or lands it on top.
     pub fn collide_object(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) {
         let this = Ptr::from_mut(self);
         let fx = self.fx;
@@ -1363,6 +1385,7 @@ impl MovingPlatform {
         }
     }
 
+    /// How `object`'s next position overlaps the platform, accounting for horizontal screen wrap.
     fn coldec_object(&self, object: Ptr<dyn IO_MovingObjectTrait>) -> CollisionStyle {
         let fx = self.fx;
         let fy = self.fy;
@@ -1390,6 +1413,7 @@ impl MovingPlatform {
         }
     }
 
+    /// Whether a `w` x `h` box at (`iX`, `iY`) touches a solid tile at the platform's lookahead position.
     pub fn is_in_no_spawn_zone(&self, mut iX: i16, iY: i16, w: i16, h: i16) -> bool {
         let p1 = *self.pPath.current_pos1();
         let iTop: i16 = ((p1.y as i16) as i32 - self.iHalfHeight as i32) as i16;

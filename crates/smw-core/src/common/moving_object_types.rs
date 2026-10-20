@@ -1,5 +1,6 @@
-//! Port of src/common/MovingObjectTypes.h
+//! The `movingobject_*` type tags that collision code switches on.
 
+/// A moving object's kind; one of the `movingobject_*` constants.
 pub type MovingObjectType = i32;
 
 pub const movingobject_none: MovingObjectType = 0;

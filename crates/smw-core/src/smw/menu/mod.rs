@@ -1,3 +1,5 @@
+//! The game's menu screens, each a [`UI_Menu`](crate::common::uimenu::UI_Menu) of controls.
+
 pub mod bonus_wheel_menu;
 pub mod game_settings_menu;
 pub mod main_menu;

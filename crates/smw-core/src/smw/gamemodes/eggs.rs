@@ -1,4 +1,4 @@
-//! Port of src/smw/gamemodes/Eggs.cpp
+//! Yoshi's eggs mode.
 
 use crate::smw::players::PlayerId;
 use crate::game::Game;
@@ -15,14 +15,12 @@ use crate::smw::player::CPlayer;
 
 #[derive(Clone)]
 
+/// Yoshi's eggs: carry an egg to the Yoshi of the same color for a point; kills score nothing.
 pub struct CGM_Eggs {
     pub cgame_mode: CGameMode,
 }
 impl_base!(CGM_Eggs => cgame_mode: CGameMode);
 
-//Egg mode:
-//Grab the egg and return it to Yoshi
-//Score 1 point for each
 impl CGM_Eggs {
     pub fn new() -> Self {
         let mut this = CGM_Eggs { cgame_mode: CGameMode::new() };
@@ -41,7 +39,7 @@ impl CGameModeTrait for CGM_Eggs {
         let mut gp = g.ptr();
         cgamemode_init(g, self);
 
-        //Verify that at least 1 matching yoshi and egg exist
+        // Spawns up to 10 eggs and Yoshis per color, adding a matching pair if no color has both.
         let mut fEgg: [bool; 4] = [false, false, false, false];
         let mut fAtLeastOneMatch = false;
 

@@ -1,4 +1,4 @@
-//! Port of src/smw/gamemodes/TimeLimit.cpp
+//! Time limit mode: score kills until the clock runs out.
 
 use crate::smw::players::PlayerId;
 use crate::game::Game;
@@ -14,15 +14,16 @@ use crate::smw::gamemodes::game_mode_timer::GameTimerDisplay;
 use crate::smw::gs_gameplay::count_alive_teams;
 use crate::smw::player::CPlayer;
 
-//Timelimit
+/// Time limit mode. The goal is the match length in seconds; unlimited counts up forever.
+/// Star mode builds on this for its clock.
 #[derive(Clone)]
 pub struct CGM_TimeLimit {
     pub cgame_mode: CGameMode,
+    /// Match clock shown in the HUD.
     pub gameClock: GameTimerDisplay,
 }
 impl_base!(CGM_TimeLimit => cgame_mode: CGameMode);
 
-//timelimit
 impl CGM_TimeLimit {
     pub fn new() -> Self {
         let mut this = CGM_TimeLimit { cgame_mode: CGameMode::new(), gameClock: GameTimerDisplay::new() };
@@ -33,6 +34,7 @@ impl CGM_TimeLimit {
         this
     }
 
+    /// Adds `iTime` seconds to the clock unless the match is over.
     pub fn addtime(&mut self, iTime: i16) {
         if !self.gameover {
             self.gameClock.add_time(iTime);
@@ -60,6 +62,7 @@ impl CGameModeTrait for CGM_TimeLimit {
     }
 }
 
+/// Starts the clock counting down from the goal, or up from 0 when unlimited.
 pub fn cgm_timelimit_init(g: &mut Game, this: &mut CGM_TimeLimit) {
     cgamemode_init(g, this);
 
@@ -71,6 +74,7 @@ pub fn cgm_timelimit_init(g: &mut Game, this: &mut CGM_TimeLimit) {
     }
 }
 
+/// Runs the clock; warns at 20 seconds and, at zero, keeps only the top-scoring teams.
 pub fn cgm_timelimit_think(g: &mut Game, this: &mut CGM_TimeLimit) {
     cgamemode_think(g, this);
     let iTime: i16 = this.gameClock.run_clock();
@@ -93,6 +97,7 @@ pub fn cgm_timelimit_think(g: &mut Game, this: &mut CGM_TimeLimit) {
     }
 }
 
+/// Scores the kill (-1 for a teammate), honoring `PushOnly` scoring and shield death style.
 pub fn cgm_timelimit_playerkilledplayer(g: &mut Game, this: &mut CGM_TimeLimit, mut inflictor: PlayerId, mut other: PlayerId, style: KillStyle) -> PlayerKillType {
         let mut gp = g.ptr();
     if !this.gameover {
@@ -115,6 +120,7 @@ pub fn cgm_timelimit_playerkilledplayer(g: &mut Game, this: &mut CGM_TimeLimit, 
     PlayerKillType::Normal
 }
 
+/// Costs the player's team a point, never going below zero.
 pub fn cgm_timelimit_playerkilledself(g: &mut Game, this: &mut CGM_TimeLimit, mut player: PlayerId, style: KillStyle) -> PlayerKillType {
     cgamemode_playerkilledself(g, this, player, style);
 

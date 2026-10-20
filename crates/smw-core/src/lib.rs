@@ -1,4 +1,4 @@
-//! Faithful Rust port of Super Mario War (see docs/guides/CODE_CONVENTIONS.md).
+//! The game, its menus and both editors, on whichever platform backend the app sets (see docs/guides/CODE_CONVENTIONS.md).
 #![allow(
     non_snake_case,
     non_camel_case_types,

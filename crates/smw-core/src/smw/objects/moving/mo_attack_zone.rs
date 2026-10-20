@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/moving/MO_AttackZone.cpp
+//! Invisible attack zone: a timed hitbox that kills players and breaks thrown objects for its owner.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -22,13 +22,17 @@ use crate::smw::player::{get_player_from_global_id, player_killed_player, CPlaye
 //------------------------------------------------------------------------------
 // attack zone(invisible area that kills objects and players)
 //------------------------------------------------------------------------------
+/// Invisible hitbox owned by a player; expires after `iTimer` ticks.
 #[derive(Clone)]
 pub struct MO_AttackZone {
     pub io_moving_object: IO_MovingObject,
 
+    /// The zone disappears after its first hit.
     pub fDieOnCollision: bool,
 
+    /// Ticks left before the zone expires.
     pub iTimer: i16,
+    /// Kill style credited to the owner for a kill.
     pub iStyle: KillStyle,
 }
 impl_base!(MO_AttackZone => io_moving_object: IO_MovingObject);
@@ -59,7 +63,7 @@ impl MO_AttackZone {
     }
 }
 
-/// `(MO_AttackZone*)object` after a `movingobject_attackzone` check: the object is an `MO_AttackZone` or an `MO_SpinAttack`.
+/// Views a `movingobject_attackzone` object as its `MO_AttackZone`, which may sit inside an `MO_SpinAttack`.
 pub fn as_attack_zone<'a>(object: Ptr<dyn IO_MovingObjectTrait>) -> &'a mut MO_AttackZone {
     let o = object.get();
     if o.as_any().is::<MO_SpinAttack>() {
@@ -68,12 +72,13 @@ pub fn as_attack_zone<'a>(object: Ptr<dyn IO_MovingObjectTrait>) -> &'a mut MO_A
     o.as_any().downcast_mut::<MO_AttackZone>().unwrap()
 }
 
-/// Virtuals with a body in `MO_AttackZone`, overridable by `MO_SpinAttack`.
+/// Access to the `MO_AttackZone` state shared by attack zones and spin attacks.
 pub trait MO_AttackZoneTrait: IO_MovingObjectTrait {
     fn az(&self) -> &MO_AttackZone;
     fn az_mut(&mut self) -> &mut MO_AttackZone;
 }
 
+/// Kills a vulnerable player other than the owner (teammates only with team collision on); returns true on a kill.
 pub fn mo_attack_zone_collide_player<T: MO_AttackZoneTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: PlayerId) -> bool {
     let (dead, iTeamID, iPlayerID, iStyle) = {
         let z = this.az();
@@ -101,15 +106,7 @@ pub fn mo_attack_zone_collide_player<T: MO_AttackZoneTrait + ?Sized>(g: &mut Gam
     true
 }
 
-/*void MO_AttackZone::draw()
-{
-        if (!dead)
-        {
-                Rect r = {ix, iy, collisionWidth, collisionHeight};
-                crate::common::gfx::blit::fill_rect(blitdest, &r, 0xf000);
-        }
-}*/
-
+/// Counts down `iTimer` and removes the zone when it runs out.
 pub fn mo_attack_zone_update<T: MO_AttackZoneTrait + ?Sized>(this: &mut T) {
     let z = this.az_mut();
     z.iTimer -= 1;
@@ -118,6 +115,7 @@ pub fn mo_attack_zone_update<T: MO_AttackZoneTrait + ?Sized>(this: &mut T) {
     }
 }
 
+/// Breaks shells and other players' thrown blocks and boxes; shatters frozen ones.
 pub fn mo_attack_zone_collide_object<T: MO_AttackZoneTrait + ?Sized>(g: &mut Game, this: &mut T, mut object: Ptr<dyn IO_MovingObjectTrait>) {
         let mut gp = g.ptr();
     if this.az().dead {
@@ -158,6 +156,7 @@ pub fn mo_attack_zone_collide_object<T: MO_AttackZoneTrait + ?Sized>(g: &mut Gam
     }
 }
 
+/// Removes the zone only if `fDieOnCollision` is set.
 pub fn mo_attack_zone_die<T: MO_AttackZoneTrait + ?Sized>(this: &mut T) {
     let z = this.az_mut();
     if z.fDieOnCollision {

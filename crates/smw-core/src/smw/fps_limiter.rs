@@ -1,12 +1,15 @@
-//! Port of src/smw/FPSLimiter.cpp
+//! Waits out the rest of the tick after each `main::gameloop_frame`; a no-op in the browser build.
 
 use crate::game::Game;
 use crate::globals::*;
 use crate::smw::harness;
 
 
+/// Frame timing in ms of the platform clock.
 pub struct FPSLimiter {
+    /// Clock time when the current frame started, in ms.
     framestart: u32,
+    /// Length of the last frame in ms, at least 1.
     ticks: u32,
     realfps: f32,
     flipfps: f32,
@@ -22,7 +25,6 @@ impl FPSLimiter {
         &mut g.ptr().get().fps_limiter
     }
 
-    // the browser limits the frame rate
     #[cfg(target_os = "emscripten")]
     pub fn frame_start(&mut self, _g: &mut Game) {}
     #[cfg(target_os = "emscripten")]
@@ -44,14 +46,13 @@ impl FPSLimiter {
             self.ticks = 1;
         }
 
-        // `#if !_DEBUG`: the reference build is Release.
         if g.game_values.showfps {
             let potentialFps = crate::common::global_constants::frame_rate_cap(g.game_values.framelimiter).unwrap_or(crate::common::global_constants::TICKS_PER_SECOND) as f32;
-            // TODO(resource_manager): rm->menu_font_large.drawf(0, 480 - rm->menu_font_large.getHeight(),
-            //     "Actual:%.1f/%.1f, Flip:%.1f, Potential:%.1f", realfps, potentialFps, flipfps, 1000.0f / (float)ticks);
+            // The F1 FPS overlay is drawn by `main::draw_fps_overlay`.
         }
     }
 
+    /// Sleeps until the next tick boundary, scaled by the harness speed; no wait with the harness's no-limit flag.
     #[cfg(not(target_os = "emscripten"))]
     pub fn after_flip(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
@@ -76,7 +77,7 @@ impl FPSLimiter {
 
         //Fine tune wait here
         while crate::services::ticks(gp.get()).wrapping_sub(self.framestart) < (framelimiter as u16) as u32 {
-            crate::services::delay(gp.get(), 0); //keep framerate constant at 1000/game_values.framelimiter fps
+            crate::services::delay(gp.get(), 0);
         }
 
         self.ticks = crate::services::ticks(gp.get()).wrapping_sub(self.framestart);

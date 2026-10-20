@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/powerup/PU_PWingsPowerup.cpp
+//! P-wings powerup: gives the player the P-wings power.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;

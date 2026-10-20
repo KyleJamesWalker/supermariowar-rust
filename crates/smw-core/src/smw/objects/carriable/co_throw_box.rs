@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/carriable/CO_ThrowBox.cpp
+//! Throwable box: a carried shield, a weapon when moving fast, and a container for an item.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -26,12 +26,17 @@ use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
 pub struct CO_ThrowBox {
     pub mo_carried_object: MO_CarriedObject,
 
+    /// Powerup spawned when the box breaks, or `NO_POWERUP`.
     pub iItem: i16,
 
+    /// Frozen in an ice block; touching it shatters it.
     pub frozen: bool,
+    /// Ticks left frozen.
     pub frozentimer: i16,
+    /// Animation speed restored when the ice thaws.
     pub frozenanimationspeed: i16,
 
+    /// Spotlight that follows a moving box while spotlights are on.
     pub sSpotlight: SpotlightId,
 }
 impl_base!(CO_ThrowBox => mo_carried_object: MO_CarriedObject);
@@ -70,6 +75,7 @@ impl CO_ThrowBox {
         o
     }
 
+    /// Breaks the box and kills an unprotected player, crediting the thrower.
     pub fn kill_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         if g.player(player).is_invincible() || g.player(player).shyguy {
             self.die(g);
@@ -82,11 +88,12 @@ impl CO_ThrowBox {
 
         self.die(g);
 
-        // Find the player that shot this shell so we can attribute a kill
+        // Credit the kill to the player who threw the box.
         player_killed_player(g, self.iPlayerID, player, PlayerDeathStyle::Jump, KillStyle::ThrowBlock, false, false);
         true
     }
 
+    /// Breaks a frozen box into ice fragments.
     pub fn shatter_die(&mut self, g: &mut Game) {
         if self.dead {
             return;
@@ -104,6 +111,7 @@ impl CO_ThrowBox {
         self.die_helper(g);
     }
 
+    /// Removes the box, frees its holder and releases its item.
     fn die_helper(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         self.dead = true;
@@ -121,6 +129,7 @@ impl CO_ThrowBox {
         }
     }
 
+    /// Moving sideways or falling faster than `vel(2.0)`: fast enough to kill and to break on impact.
     pub fn has_kill_velocity(&self) -> bool {
         self.velx < -0.01 || self.velx > 0.01 || self.vely < -0.01 || self.vely > vel(2.0)
     }
@@ -144,18 +153,6 @@ impl CObjectTrait for CO_ThrowBox {
         if self.has_kill_velocity() && g.player(player).globalID != self.iPlayerID {
             return self.kill_player(g, player);
         }
-
-        /*
-        //Kill player when another player is holding the box
-        else
-        {
-            if (owner && player != owner && (game_values.teamcollision == TeamCollisionStyle::On || player->teamID != owner->teamID))
-            {
-                    iPlayerID = owner->globalID;
-                    iTeamID = owner->teamID;
-                    return KillPlayer(player);
-            }
-        }*/
 
         // Otherwise allow them to pick this box up
         if self.owner.is_none() && g.player(player).isready() {

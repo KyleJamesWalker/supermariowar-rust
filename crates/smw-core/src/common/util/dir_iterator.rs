@@ -1,4 +1,4 @@
-//! Port of src/common/util/DirIterator.cpp
+//! Iterators over a directory's files or subdirectories, through the platform storage service.
 
 use crate::common::linfunc::lowercase;
 use crate::game::Game;
@@ -9,8 +9,7 @@ fn lowercase_ext(path: &Path) -> String {
     lowercase(ext)
 }
 
-/// A directory's entries in `Storage::list_dir` order, which the SDL backend takes from `readdir` as libc++
-/// `std::filesystem::directory_iterator` does.
+/// A directory's entries in `Storage::list_dir` order, which by default is `readdir` order, unsorted.
 pub struct DirIterator {
     m_entries: std::vec::IntoIter<PathBuf>,
 }
@@ -25,6 +24,7 @@ impl DirIterator {
     }
 }
 
+/// The files in a directory whose lowercased extension (with its dot) is in `extensions`, or every entry when empty.
 pub struct FilesIterator {
     base: DirIterator,
     m_extensions: Vec<String>,
@@ -41,6 +41,7 @@ impl FilesIterator {
     }
 }
 
+/// The subdirectories of a directory.
 pub struct SubdirsIterator {
     base: DirIterator,
 }

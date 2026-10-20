@@ -12,6 +12,7 @@ fn repo() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..").canonicalize().unwrap()
 }
 
+/// The value of the last `#@ key=value` line in a replay's text.
 fn directive(text: &str, key: &str) -> Option<String> {
     let prefix = format!("{}=", key);
     text.lines().filter_map(|l| l.strip_prefix("#@").map(str::trim_start)).filter_map(|l| l.strip_prefix(&prefix)).next_back().map(str::to_string)
@@ -34,7 +35,7 @@ fn decode_base64(text: &str) -> Vec<u8> {
     smw::smw::harness::base64_decode(text.trim()).expect("base64 settings file")
 }
 
-/// Runs `replay` as `tools/run_ref.sh` does, in a sandbox under `out`, and returns the dump's text. `segment`
+/// Runs `replay` as `tools/run_rust.sh` does, in a sandbox under `out`, and returns the dump's text. `segment`
 /// plays only that match (`SMW_SEGMENT`).
 fn run(replay: &Path, out: &Path, segment: Option<u32>) -> String {
     sandboxed(replay, out, segment, |argv, services| smw::smw::main::run_with(argv, Some(services)))
@@ -84,6 +85,7 @@ fn sandboxed(replay: &Path, out: &Path, segment: Option<u32>, game: impl FnOnce(
     std::fs::read_to_string(&dump).unwrap()
 }
 
+/// A text file, gunzipped when it starts with the gzip magic.
 fn read_maybe_gzip(path: &Path) -> String {
     let bytes = std::fs::read(path).unwrap();
     if bytes.starts_with(&[0x1f, 0x8b]) {

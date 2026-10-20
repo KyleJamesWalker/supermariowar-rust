@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/powerup/PU_SecretPowerup.cpp
+//! Hidden secret item that turns on a map-wide effect when collected.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -20,12 +20,16 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // secret powerup
 //------------------------------------------------------------------------------
+/// Secret item placed at a random spawn point; collecting it enables one global effect.
 #[derive(Clone)]
 pub struct PU_SecretPowerup {
     pub mo_powerup: MO_Powerup,
 
-    pub itemtype: i16, // TODO: enum
+    /// Effect on pickup: 0 wind and snow, 1 spinning screen, 2 reversed controls, 3 spotlights.
+    pub itemtype: i16,
+    /// Tick counter for the sparkle overlay; it steps a frame every 4 ticks.
     pub sparkleanimationtimer: i16,
+    /// X offset (pixels) of the current sparkle frame.
     pub sparkledrawframe: i16,
 }
 impl_base!(PU_SecretPowerup => mo_powerup: MO_Powerup);
@@ -42,6 +46,7 @@ impl PU_SecretPowerup {
         o
     }
 
+    /// Moves the item to a random item spawn point, trying up to 11 times.
     pub fn place(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
 

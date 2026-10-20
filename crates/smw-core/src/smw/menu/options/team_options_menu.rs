@@ -1,4 +1,4 @@
-//! Port of src/smw/menu/options/TeamOptionsMenu.cpp
+//! Team options: friendly collision, team colors and tournament control.
 
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
@@ -13,10 +13,7 @@ use crate::common::uimenu::UI_Menu;
 use crate::globals::*;
 use crate::smw::menu::options::select_field;
 
-/*
-    In this menu, you can set team-relates preferences,
-    such as friendly collision or team color drawing.
-*/
+/// Team preferences such as friendly collision and team colors.
 #[derive(Default)]
 pub struct UI_TeamOptionsMenu {
     pub ui_menu: UI_Menu,

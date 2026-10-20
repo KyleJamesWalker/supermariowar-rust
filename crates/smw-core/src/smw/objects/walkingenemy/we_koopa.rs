@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/walkingenemy/WE_Koopa.cpp
+//! Green or red koopa, optionally winged: a stomp clips the wings or leaves a shell.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -29,6 +29,7 @@ use crate::smw::player::CPlayer;
 pub struct MO_Koopa {
     pub mo_walking_enemy: MO_WalkingEnemy,
 
+    /// Red koopa: red sprites and shell.
     pub fRed: bool,
 }
 impl_base!(MO_Koopa => mo_walking_enemy: MO_WalkingEnemy);

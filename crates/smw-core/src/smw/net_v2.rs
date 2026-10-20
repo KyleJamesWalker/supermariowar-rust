@@ -1,6 +1,5 @@
-//! Netplay v2 matches (docs/design/NETPLAY_V2.md, rollout step 4): every peer restores the host's match start, then
-//! the match runs under a GGRS P2P session over the room's WebRTC connections. A recording keeps every frame of the
-//! match as a `#@ v2` line, which a replay plays back without the network (docs/guides/REPLAY.md).
+//! Netplay v2 matches: every peer restores the host's match start, then the match runs under a GGRS P2P session over
+//! the room's WebRTC connections. Recordings keep each frame as a `#@ v2` line, which a replay plays without the network.
 
 use crate::common::input::COutputControl;
 use crate::game::Game;
@@ -13,44 +12,70 @@ use smw_peer::{PeerId, PeerSocket, RELIABLE};
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
 
+/// `[MSG_SLOT, slot]`: the sender's room slot. Reliable-channel messages start with one of these kinds.
 const MSG_SLOT: u8 = 1;
+/// `[MSG_START_PART, index u16 LE, count u16 LE, bytes]`: one part of the host's match start.
 const MSG_START_PART: u8 = 2;
+/// A joiner to the host: the match start is restored.
 const MSG_READY: u8 = 3;
+/// The host to the joiners: every joiner is ready, start the GGRS session.
 const MSG_GO: u8 = 4;
+/// The sender left the match; the others end it too.
 const MSG_LEAVE: u8 = 5;
+/// Match start bytes per `MSG_START_PART`.
 const PART_BYTES: usize = 16 * 1024;
+/// How long the start handshake may take before the match is abandoned.
 const START_DEADLINE: Duration = Duration::from_secs(20);
+/// Frames between repeats of the handshake messages.
 const RESEND_TICKS: u64 = 30;
+/// Ticks of local input delay.
 const INPUT_DELAY: usize = 2;
+/// How many ticks GGRS runs ahead of the confirmed inputs before it waits.
 const MAX_PREDICTION: usize = 8;
+/// GGRS frames between checksum comparisons.
 const DESYNC_INTERVAL: u32 = 30;
 /// A peer is dropped for good after this much silence; GGRS's 2 s default is shorter than a Wi-Fi mesh's node hop.
 const DISCONNECT_TIMEOUT: Duration = Duration::from_secs(10);
+/// Silence after which GGRS reports a peer as interrupted.
 const INTERRUPTED_AFTER: Duration = Duration::from_secs(1);
 
+/// Where a [`V2Match`] is: the start handshake, or the running GGRS session.
 enum Phase {
     Starting,
     Running(Box<P2PSession<GgrsConfig<PeerId>>>),
 }
 
+/// This client's live v2 match, held in `NetClient::v2` from `match_starting` until it ends.
 pub struct V2Match {
     socket: PeerSocket,
     host: bool,
+    /// This player's room slot (`remotePlayerNumber`).
     my_slot: u8,
+    /// How many other players the match waits for.
     others: usize,
+    /// Each other peer's room slot, from its `MSG_SLOT`.
     slots: BTreeMap<PeerId, u8>,
+    /// The host's match start (`checkpoint::capture_shared`); empty on a joiner.
     start: Vec<u8>,
+    /// The match start parts a joiner has received so far.
     parts: Vec<Option<Vec<u8>>>,
+    /// The joiners that sent `MSG_READY`; host only.
     ready: Vec<PeerId>,
+    /// The match start is in place: from the outset on the host, after restoring it on a joiner.
     restored: bool,
+    /// A joiner received the host's `MSG_GO`.
     go: bool,
     /// A joiner's own options.bin and controls bytes: the host's match start replaces them for the match.
     own_config: Option<(Vec<u8>, Vec<u8>)>,
     phase: Phase,
+    /// Where each GGRS player handle's keys go.
     targets: Vec<KeySlot>,
+    /// This player's device keys, carried from frame to frame because rollback ticks overwrite input slot 0.
     local_device: COutputControl,
     opened: Instant,
+    /// Handshake frames while starting, then frames of the running session.
     ticks: u64,
+    /// Ticks re-run after rollbacks.
     rollback_ticks: u64,
     desyncs: u32,
     /// Remote players GGRS dropped for good.
@@ -123,6 +148,7 @@ pub fn match_starting(g: &mut Game) -> bool {
     !host
 }
 
+/// True while a v2 match or its replay runs the frame instead of the current game state.
 pub fn owns_tick(g: &mut Game) -> bool {
     g.netplay.client.v2.is_some() || g.netplay.client.v2_replay.is_some()
 }
@@ -334,6 +360,7 @@ fn slot_token(slot: &KeySlot) -> String {
     }
 }
 
+/// Reads a [`slot_token`].
 fn parse_slot(token: &str) -> Option<KeySlot> {
     let (kind, n) = token.split_at_checked(1)?;
     let n = n.parse().ok()?;
@@ -344,6 +371,7 @@ fn parse_slot(token: &str) -> Option<KeySlot> {
     }
 }
 
+/// Ends the match on this client and gives the joiner's own settings back.
 fn finish(g: &mut Game) {
     let mut gp = g.ptr();
     g.netplay.v2_match = false;
@@ -361,12 +389,14 @@ fn finish(g: &mut Game) {
 }
 
 impl V2Match {
+    /// Sends `data` reliably to every connected peer.
     fn send_all(&mut self, data: &[u8]) {
         for peer in self.socket.connected_peers().to_vec() {
             self.socket.send(RELIABLE, peer, data);
         }
     }
 
+    /// Sends this player's slot and, on the host, the match start in parts.
     fn announce(&mut self) {
         let slot = [MSG_SLOT, self.my_slot];
         self.send_all(&slot);
@@ -383,6 +413,7 @@ impl V2Match {
         }
     }
 
+    /// Handles the handshake messages; a joiner restores the match start once all its parts arrived.
     fn receive_reliable(&mut self, g: &mut Game) -> Result<(), String> {
         for (peer, msg) in self.socket.receive(RELIABLE) {
             match msg.first() {
@@ -470,6 +501,7 @@ impl V2Match {
         }
     }
 
+    /// Builds the GGRS session; handles follow room slot order, so every peer numbers the players alike.
     fn start_session(&mut self) -> Result<P2PSession<GgrsConfig<PeerId>>, GgrsError> {
         let mut players: Vec<(u8, Option<PeerId>)> = self.slots.iter().map(|(&peer, &slot)| (slot, Some(peer))).collect();
         players.push((self.my_slot, None));

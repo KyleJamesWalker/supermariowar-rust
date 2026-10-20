@@ -1,4 +1,4 @@
-//! Port of src/smw/gamemodes/ShyGuyTag.cpp
+//! Shy guy tag mode: tagged players become shy guys while everyone else scores.
 
 use crate::smw::players::PlayerId;
 use crate::game::Game;
@@ -17,17 +17,18 @@ use crate::smw::gs_gameplay::{count_alive_teams};
 use crate::smw::player::CPlayer;
 use std::any::Any;
 
-//shyguy tag mode
-//First player killed becomes the shyguy
-//He can then tag other players to also become shy guys
-//Players that are not shy guys will be slowly scoring points
-//When all players become shyguys, then the mode is reset with no shyguys
+/// Shy guy tag. The first player killed becomes a shy guy and tags others by killing them.
+/// Non-shy-guy teams score one point per shy guy every `ticks(pointspeed)` ticks; once everyone is
+/// a shy guy, all are freed after `freetime` seconds.
 #[derive(Clone)]
 pub struct CGM_ShyGuyTag {
     pub cgame_mode: CGameMode,
 
+    /// Countdown to freeing the shy guys once everyone is one.
     gameClock: GameTimerDisplay,
+    /// True while `gameClock` is counting down.
     fRunClock: bool,
+    /// Ticks toward the next point payout.
     scorecounter: i16,
 }
 impl_base!(CGM_ShyGuyTag => cgame_mode: CGameMode);
@@ -43,6 +44,7 @@ impl CGM_ShyGuyTag {
         this
     }
 
+    /// Turns every player on `iTeam` into a shy guy, stripping their powerups.
     pub fn set_shy_guy(&mut self, g: &mut Game, iTeam: i16) {
         let mut gp = g.ptr();
         for &player in g.players.iter() {
@@ -191,7 +193,6 @@ impl CGameModeTrait for CGM_ShyGuyTag {
         }
     }
 
-    //Draw count down timer here
     fn draw_foreground(&mut self, g: &mut Game) {
         if self.fRunClock {
             self.gameClock.draw(g);

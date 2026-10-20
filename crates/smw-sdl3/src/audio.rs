@@ -9,15 +9,19 @@ use std::ffi::{c_int, c_void, CStr};
 use std::io::Cursor;
 use std::sync::{Arc, Mutex};
 
+/// Voice streams; the core's virtual mixer has the same count.
 const CHANNELS: usize = 16;
+/// The device format, and every voice's PCM.
 const SPEC: SDL_AudioSpec = SDL_AudioSpec { format: SDL_AUDIO_S16LE, channels: 2, freq: 44100 };
+/// Of `SPEC`.
 const BYTES_PER_SECOND: u64 = 44100 * 2 * 2;
 
 fn sdl_error() -> String {
     unsafe { CStr::from_ptr(SDL_GetError()).to_string_lossy().into_owned() }
 }
 
-/// A channel's sound: PCM at `SPEC`, and how many more times it plays after this one (-1 forever), as SDL_mixer's.
+/// A channel's sound: PCM at `SPEC`, the read position in bytes, and how many more times it plays after this one
+/// (-1 forever).
 #[derive(Default)]
 struct Voice {
     pcm: Option<Arc<Vec<u8>>>,
@@ -25,6 +29,7 @@ struct Voice {
     loops: i32,
 }
 
+/// The playing track: its Ogg bytes, kept to restart a looping track, and the decoder.
 #[derive(Default)]
 struct MusicVoice {
     bytes: Option<Arc<[u8]>>,
@@ -33,6 +38,7 @@ struct MusicVoice {
     paused: bool,
 }
 
+/// A Vorbis decoder over `bytes`, positioned at the start.
 fn reader(bytes: &Arc<[u8]>) -> Result<OggStreamReader<Cursor<Arc<[u8]>>>, String> {
     OggStreamReader::new(Cursor::new(bytes.clone())).map_err(|e| e.to_string())
 }
@@ -61,6 +67,7 @@ fn take(voice: &mut Voice, mut want: usize, out: &mut Vec<u8>) {
     }
 }
 
+/// The voice stream's get callback, on SDL's audio thread. Safety: `userdata` is the voice's `Mutex<Voice>`.
 unsafe extern "C" fn feed_voice(userdata: *mut c_void, stream: *mut SDL_AudioStream, additional: c_int, _total: c_int) {
     let voice = &*(userdata as *const Mutex<Voice>);
     let Ok(mut voice) = voice.lock() else { return };
@@ -71,6 +78,7 @@ unsafe extern "C" fn feed_voice(userdata: *mut c_void, stream: *mut SDL_AudioStr
     }
 }
 
+/// The music stream's get callback, on SDL's audio thread. Safety: `userdata` is the `Mutex<MusicVoice>`.
 unsafe extern "C" fn feed_music(userdata: *mut c_void, stream: *mut SDL_AudioStream, additional: c_int, _total: c_int) {
     let music = &*(userdata as *const Mutex<MusicVoice>);
     let Ok(mut music) = music.lock() else { return };
@@ -96,8 +104,10 @@ unsafe extern "C" fn feed_music(userdata: *mut c_void, stream: *mut SDL_AudioStr
     }
 }
 
+/// SDL3 audio streams fed from decoded sounds and tracks, by the core's ids.
 pub struct Sdl3Audio {
     device: SDL_AudioDeviceID,
+    /// One stream per channel; the boxes stay put because the callbacks hold pointers to them.
     voices: Vec<(*mut SDL_AudioStream, Box<Mutex<Voice>>)>,
     music: Option<(*mut SDL_AudioStream, Box<Mutex<MusicVoice>>)>,
     sounds: HashMap<SoundId, Arc<Vec<u8>>>,
@@ -109,11 +119,13 @@ impl Sdl3Audio {
         Sdl3Audio { device: SDL_AudioDeviceID(0), voices: Vec::new(), music: None, sounds: HashMap::new(), tracks: HashMap::new() }
     }
 
+    /// Stops channel `i` and drops the audio its stream has queued.
     fn halt_voice(&self, i: usize) {
         if let Some((stream, voice)) = self.voices.get(i) {
             if let Ok(mut v) = voice.lock() {
                 v.pcm = None;
             }
+            // SAFETY: streams in `voices` are live until `close`.
             unsafe { SDL_ClearAudioStream(*stream) };
         }
     }
@@ -131,7 +143,8 @@ impl Drop for Sdl3Audio {
     }
 }
 
-/// The real device; if that fails, the silent dummy driver, so the game runs on.
+/// The default playback device at `SPEC`.
+/// With `exact`, a failed open restarts SDL's audio subsystem on the dummy driver and tries again; 0 on failure.
 unsafe fn open_device(exact: bool) -> SDL_AudioDeviceID {
     SDL_InitSubSystem(SDL_INIT_AUDIO);
     let device = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &SPEC);
@@ -147,6 +160,7 @@ unsafe fn open_device(exact: bool) -> SDL_AudioDeviceID {
 
 impl AudioOut for Sdl3Audio {
     fn open(&mut self, exact: bool) {
+        // SAFETY: each callback's userdata is a boxed mutex that outlives its stream, which `close` destroys first.
         unsafe {
             self.device = open_device(exact);
             if self.device.0 == 0 {
@@ -177,6 +191,7 @@ impl AudioOut for Sdl3Audio {
     }
 
     fn close(&mut self) {
+        // SAFETY: each stream is destroyed once, before the box its callback reads is dropped.
         unsafe {
             for (stream, _) in self.voices.drain(..) {
                 SDL_DestroyAudioStream(stream);
@@ -241,6 +256,7 @@ impl AudioOut for Sdl3Audio {
         let Ok(r) = reader(&bytes) else { return };
         let src = SDL_AudioSpec { format: SDL_AUDIO_S16LE, channels: r.ident_hdr.audio_channels as c_int, freq: r.ident_hdr.audio_sample_rate as c_int };
         if let Ok(mut m) = music.lock() {
+            // SAFETY: the music stream is live; holding the lock keeps the callback out meanwhile.
             unsafe {
                 SDL_ClearAudioStream(*stream);
                 SDL_SetAudioStreamFormat(*stream, &src, std::ptr::null());
@@ -254,6 +270,7 @@ impl AudioOut for Sdl3Audio {
             if let Ok(mut m) = music.lock() {
                 *m = MusicVoice::default();
             }
+            // SAFETY: the music stream is live until `close`.
             unsafe { SDL_ClearAudioStream(*stream) };
         }
     }
@@ -266,15 +283,17 @@ impl AudioOut for Sdl3Audio {
         }
     }
 
-    /// 0 to 128 on every channel, as `Mix_Volume(-1, volume)`.
+    /// 0 to 128 on every channel.
     fn set_sound_volume(&mut self, volume: i32) {
         for (stream, _) in &self.voices {
+            // SAFETY: streams in `voices` are live until `close`.
             unsafe { SDL_SetAudioStreamGain(*stream, volume.clamp(0, 128) as f32 / 128.0) };
         }
     }
 
     fn set_music_volume(&mut self, volume: i32) {
         if let Some((stream, _)) = &self.music {
+            // SAFETY: the music stream is live until `close`.
             unsafe { SDL_SetAudioStreamGain(*stream, volume.clamp(0, 128) as f32 / 128.0) };
         }
     }
@@ -282,6 +301,7 @@ impl AudioOut for Sdl3Audio {
 
 /// A WAV file as PCM at 44100 Hz, S16, stereo.
 pub fn decode_wav(bytes: &[u8]) -> Result<Vec<u8>, String> {
+    // SAFETY: `SDL_LoadWAV_IO` reads `bytes` and closes the stream before returning; both SDL buffers are freed once.
     unsafe {
         let io = SDL_IOFromConstMem(bytes.as_ptr() as *const c_void, bytes.len());
         let mut spec = SDL_AudioSpec::default();

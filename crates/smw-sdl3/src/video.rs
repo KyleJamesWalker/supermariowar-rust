@@ -9,11 +9,14 @@ fn sdl_error() -> String {
     unsafe { CStr::from_ptr(SDL_GetError()).to_string_lossy().into_owned() }
 }
 
+/// The SDL window, its renderer and the screen texture; all null until `open`.
 pub struct Sdl3Video {
     window: *mut SDL_Window,
     renderer: *mut SDL_Renderer,
     texture: *mut SDL_Texture,
+    /// The `Overlay::generation` that `overlay_textures` were made from.
     overlay_generation: Option<u64>,
+    /// One per overlay image, null where SDL could not create it.
     overlay_textures: Vec<*mut SDL_Texture>,
     vsync: bool,
 }
@@ -23,12 +26,14 @@ impl Sdl3Video {
         Sdl3Video { window: null_mut(), renderer: null_mut(), texture: null_mut(), overlay_generation: None, overlay_textures: Vec::new(), vsync: false }
     }
 
+    /// Turns the letterboxed 640x480 logical presentation on, or off to draw in window pixels.
     fn set_logical(&self, on: bool) {
         let (w, h, mode) = if on { (SCREEN_W as i32, SCREEN_H as i32, SDL_LOGICAL_PRESENTATION_LETTERBOX) } else { (0, 0, SDL_LOGICAL_PRESENTATION_DISABLED) };
+        // SAFETY: SDL rejects a null renderer.
         unsafe { SDL_SetRenderLogicalPresentation(self.renderer, w, h, mode) };
     }
 
-    /// Draws in window pixels, outside the 640x480 logical viewport.
+    /// Draws in window pixels, outside the 640x480 logical viewport. Safety: the renderer must be open.
     unsafe fn draw_overlay(&mut self, overlay: &Overlay) {
         if self.overlay_generation != Some(overlay.generation) {
             for tex in self.overlay_textures.drain(..) {
@@ -68,6 +73,7 @@ impl Default for Sdl3Video {
 
 impl Drop for Sdl3Video {
     fn drop(&mut self) {
+        // SAFETY: each non-null pointer is destroyed once, textures before their renderer.
         unsafe {
             for tex in self.overlay_textures.drain(..) {
                 SDL_DestroyTexture(tex);
@@ -91,6 +97,7 @@ impl Video for Sdl3Video {
     }
 
     fn show_cursor(&mut self, on: bool) {
+        // SAFETY: takes no pointers.
         unsafe {
             if on {
                 SDL_ShowCursor();
@@ -101,6 +108,7 @@ impl Video for Sdl3Video {
     }
 
     fn open(&mut self, fullscreen: bool) {
+        // SAFETY: each create call panics on null, so the stored pointers are valid.
         unsafe {
             if !SDL_Init(SDL_INIT_VIDEO) {
                 panic!("SDL error: {}", sdl_error());
@@ -139,6 +147,7 @@ impl Video for Sdl3Video {
     }
 
     fn present(&mut self, frame: Frame<'_>, overlay: Option<&Overlay>) {
+        // SAFETY: `Frame` holds SCREEN_W * SCREEN_H pixels, the texture's size; SDL rejects the nulls before `open`.
         unsafe {
             SDL_UpdateTexture(self.texture, null(), frame.pixels.as_ptr() as *const _, (SCREEN_W * 4) as i32);
             SDL_RenderClear(self.renderer);
@@ -152,6 +161,7 @@ impl Video for Sdl3Video {
 
     fn output_size(&self) -> (i32, i32) {
         let (mut w, mut h) = (0, 0);
+        // SAFETY: the out-pointers are live locals; SDL rejects a null renderer.
         unsafe { SDL_GetCurrentRenderOutputSize(self.renderer, &mut w, &mut h) };
         (w, h)
     }
@@ -161,6 +171,7 @@ impl Video for Sdl3Video {
         if !cfg!(target_os = "android") {
             return None;
         }
+        // SAFETY: SDL rejects a null window and an invalid display with 0.
         let scale = unsafe { SDL_GetDisplayContentScale(SDL_GetDisplayForWindow(self.window)) };
         (scale > 0.0).then_some(scale * 160.0)
     }
@@ -170,6 +181,7 @@ impl Video for Sdl3Video {
         if cfg!(target_os = "android") {
             return;
         }
+        // SAFETY: SDL rejects a null window.
         if !unsafe { SDL_SetWindowFullscreen(self.window, on) } {
             eprintln!("[gfx] Couldn't toggle fullscreen mode: {}", sdl_error());
         }
@@ -177,11 +189,13 @@ impl Video for Sdl3Video {
 
     fn set_title(&mut self, title: &str) {
         let t = CString::new(title).unwrap_or_default();
+        // SAFETY: `t` is NUL-terminated and outlives the call; SDL rejects a null window.
         unsafe { SDL_SetWindowTitle(self.window, t.as_ptr()) };
     }
 
     fn show_error(&mut self, message: &str) {
         let msg = CString::new(message).unwrap_or_default();
+        // SAFETY: both strings are NUL-terminated; a null parent window is allowed.
         unsafe { SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, c"Error".as_ptr(), msg.as_ptr(), self.window) };
     }
 }

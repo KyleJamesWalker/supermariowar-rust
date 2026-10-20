@@ -14,6 +14,7 @@ extern "C" {
     fn smw_peer_close();
 }
 
+/// The largest packet `receive` takes, in bytes; peer_socket.js drops larger ones.
 const MAX_PACKET: usize = 64 * 1024;
 
 fn json_string(s: &str) -> String {
@@ -69,6 +70,7 @@ fn send(channel: usize, peer: PeerId, data: &[u8]) {
     unsafe { smw_peer_send(channel as i32, id.as_ptr(), data.as_ptr(), data.len()) };
 }
 
+/// The page holds one room connection, and connecting again closes the last one; dropping this does not close it.
 pub struct Socket {
     unreliable_taken: bool,
 }
@@ -126,6 +128,7 @@ impl Socket {
     }
 }
 
+/// The unreliable channel, handed to GGRS.
 pub struct Channel;
 
 impl Channel {

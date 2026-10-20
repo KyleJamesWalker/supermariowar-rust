@@ -1,5 +1,6 @@
-//! Port of src/common/linfunc.cpp
+//! ASCII string helpers for parsing data files and comparing names.
 
+/// Lowercases ASCII letters in place; other bytes are untouched.
 pub fn in_place_lower_case(s: &mut String) {
     s.make_ascii_lowercase();
 }
@@ -9,7 +10,7 @@ pub fn lowercase(mut s: String) -> String {
     s
 }
 
-/// Compares up to the end of `a` only, like the C++ loop (a prefix of `b` compares equal).
+/// ASCII case-insensitive equality up to the end of `a` only: a prefix of `b` compares equal.
 pub fn cstr_ci_equals(a: &str, b: &str) -> bool {
     if std::ptr::eq(a, b) {
         return true;
@@ -26,6 +27,7 @@ pub fn cstr_ci_equals(a: &str, b: &str) -> bool {
     true
 }
 
+/// Splits `text` on `delim` at most `maxsplit` times; a trailing delimiter yields no empty last token.
 pub fn tokenize(text: &str, delim: char, mut maxsplit: usize) -> Vec<&str> {
     if text.is_empty() {
         return vec![text];

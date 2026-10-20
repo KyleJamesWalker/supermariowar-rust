@@ -1,4 +1,4 @@
-//! Port of src/smw/menu/TeamSelectMenu.cpp
+//! The team and character selection screen before match setup.
 
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
@@ -9,6 +9,7 @@ use crate::common::uimenu::UI_Menu;
 use crate::globals::*;
 use crate::smw::ui::mi_team_select::MI_TeamSelect;
 
+/// Holds the team select control; cancel returns to match selection.
 #[derive(Default)]
 pub struct UI_TeamSelectMenu {
     pub ui_menu: UI_Menu,
@@ -47,14 +48,17 @@ impl UI_TeamSelectMenu {
         this
     }
 
+    /// Syncs teams with who is playing, splits a lone team and clears human players' ready state.
     pub fn reset_team_select(&mut self, g: &mut Game) {
         g.ctl(self.miTeamSelect).reset(g);
     }
 
+    /// As [`Self::reset_team_select`], but players already on a team keep their ready state.
     pub fn players_changed(&mut self, g: &mut Game) {
         g.ctl(self.miTeamSelect).players_changed(g);
     }
 
+    /// Packs the chosen teams into `game_values.teamids`/`teamcounts` and returns how many are non-empty.
     pub fn get_team_count(&self, g: &mut Game) -> i16 {
         let mut ts = self.miTeamSelect;
         g.ctl(ts).organize_teams(g)

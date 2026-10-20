@@ -8,6 +8,7 @@ pub type Keycode = i32;
 /// `SDL_Keymod`.
 pub type Keymod = u16;
 
+/// `SDL_Keycode` values: printable keys are their ASCII code, the rest are scancode | `1 << 30`.
 pub const SDLK_UNKNOWN: Keycode = 0;
 pub const SDLK_RETURN: Keycode = 13;
 pub const SDLK_ESCAPE: Keycode = 27;
@@ -253,6 +254,7 @@ pub const SDLK_SOFTRIGHT: Keycode = 1073742112;
 pub const SDLK_CALL: Keycode = 1073742113;
 pub const SDLK_ENDCALL: Keycode = 1073742114;
 
+/// `SDL_Keymod` bit flags; `KMOD_CTRL` and friends cover both sides.
 pub const KMOD_NONE: Keymod = 0;
 pub const KMOD_LSHIFT: Keymod = 1;
 pub const KMOD_RSHIFT: Keymod = 2;
@@ -271,15 +273,18 @@ pub const KMOD_SHIFT: Keymod = 3;
 pub const KMOD_ALT: Keymod = 768;
 pub const KMOD_GUI: Keymod = 3072;
 
+/// `SDL_Scancode` values.
 pub const SDL_SCANCODE_LSHIFT: usize = 225;
 pub const SDL_SCANCODE_RSHIFT: usize = 229;
 pub const SDL_NUM_SCANCODES: usize = 512;
 
+/// Joystick hat direction bits; diagonals set two.
 pub const SDL_HAT_UP: u32 = 1;
 pub const SDL_HAT_RIGHT: u32 = 2;
 pub const SDL_HAT_DOWN: u32 = 4;
 pub const SDL_HAT_LEFT: u32 = 8;
 
+/// Mouse button numbers.
 pub const SDL_BUTTON_LEFT: u32 = 1;
 pub const SDL_BUTTON_MIDDLE: u32 = 2;
 pub const SDL_BUTTON_RIGHT: u32 = 3;

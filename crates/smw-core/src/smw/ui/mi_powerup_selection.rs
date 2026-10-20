@@ -1,4 +1,4 @@
-//! Port of src/smw/ui/MI_PowerupSelection.cpp
+//! The item selection editor: override mode, preset, and a weight slider per powerup.
 
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
@@ -15,32 +15,39 @@ use crate::common::uimenu::UI_Menu;
 use crate::globals::*;
 use crate::smw::ui::mi_powerup_slider::MI_PowerupSlider;
 
-//Rearrange display of powerups
-//short iPowerupDisplayMap[NUM_POWERUPS] = { 4, 0, 1, 2, 3, 6, 10, 12, 11, 14, 13, 7, 16, 17, 18, 19, 15, 9, 5, 8, 20, 21, 22, 23, 24, 25};
-//                                          0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
+/// Powerup each slider sets, in screen order, two sliders per row.
 const iPowerupPositionMap: [i16; NUM_POWERUPS as usize] = [1, 0, 2, 6, 3, 8, 4, 20, 18, 7, 5, 10, 11, 22, 19, 9, 23, 16, 21, 12, 17, 13, 24, 15, 25, 14];
 
 const NP: usize = NUM_POWERUPS as usize;
 
+/// A scrolling inner menu of item weight fields, editing `game_values.powerupweights` and the selected preset.
 pub struct MI_PowerupSelection {
     pub ui_control: UI_Control,
 
+    /// Focused row, counting the override and preset rows; drives scrolling.
     iIndex: i16,
+    /// First slider row shown.
     iOffset: i16,
+    /// Slider rows shown at once.
     iNumLines: i16,
     iTopStop: i16,
     iBottomStop: i16,
 
+    /// Inner menu holding every field; input goes to it while this control is modified.
     mMenu: Box<UI_Menu>,
 
+    /// Writes `overridepowerupsettings`: 0 map only, 1 game only, 2 basic average, 3 weighted average.
     miOverride: Ctl<MI_SelectField<i16>>,
+    /// Writes `poweruppreset`, 0 to 16; 0 to 4 are the custom sets.
     miPreset: Ctl<MI_SelectField<i16>>,
 
+    /// Weight sliders, 0 to 10; slider `i` sets powerup `iPowerupPositionMap[i]`.
     miPowerupSlider: [Ctl<MI_PowerupSlider>; NP],
 
     miRestoreDefaultsButton: Ctl<MI_Button>,
     miClearButton: Ctl<MI_Button>,
 
+    /// Are You Sure dialog shared by Defaults and Clear.
     miDialogImage: Ctl<MI_Image>,
     miDialogAreYouText: Ctl<MI_Text>,
     miDialogSureText: Ctl<MI_Text>,
@@ -53,6 +60,7 @@ pub struct MI_PowerupSelection {
 crate::impl_base!(MI_PowerupSelection => ui_control: UI_Control);
 
 impl MI_PowerupSelection {
+    /// `numlines` is the slider rows shown at once; `width` is unused.
     pub fn new(g: &mut Game, x: i16, y: i16, width: i16, numlines: i16) -> Self {
         let _ = width;
         let iNumLines = numlines;
@@ -90,7 +98,6 @@ impl MI_PowerupSelection {
         g.ctl(this.miOverride).add("Weighted Average", 3);
         g.ctl(this.miOverride).set_output_ptr(&mut g.game_values.overridepowerupsettings as *mut i16);
         g.ctl(this.miOverride).set_current_value(g.game_values.overridepowerupsettings);
-        //miOverride->SetItemChangedCode(MENU_CODE_POWERUP_OVERRIDE_CHANGED);
 
         this.miPreset = Ctl::new(MI_SelectField::<i16>::new(spr_selectfield, 70, this.m_pos.y + 40, "Item Set", 500, 250), g);
         g.ctl(this.miPreset).add("Custom Set 1", 0);
@@ -192,8 +199,6 @@ impl MI_PowerupSelection {
         //Setup positions and visible powerups
         this.setup_powerup_fields(g);
 
-        //Set enabled based on if we are overriding or not
-        //EnablePowerupFields();
 
         this.mMenu.add_non_control(this.miDialogImage.id());
         this.mMenu.add_non_control(this.miDialogAreYouText.id());
@@ -211,6 +216,7 @@ impl MI_PowerupSelection {
         this
     }
 
+    /// Shows and positions the slider rows in view and hides the rest.
     fn setup_powerup_fields(&mut self, g: &mut Game) {
         for iPowerup in 0..NP {
             let iPosition = iPowerupPositionMap[iPowerup];
@@ -228,6 +234,7 @@ impl MI_PowerupSelection {
         }
     }
 
+    /// Enables or disables every slider and the preset field's link down to them.
     fn enable_powerup_fields(&mut self, g: &mut Game, fEnable: bool) {
         for iPowerup in 0..NP {
             g.ctl(self.miPowerupSlider[iPowerup]).disable(!fEnable);
@@ -237,6 +244,7 @@ impl MI_PowerupSelection {
         g.ctl(self.miPreset).set_neighbor(MenuNavDirection::Down, down);
     }
 
+    /// Moves the focused row down, scrolling the sliders between the stops.
     pub fn move_next(&mut self, g: &mut Game) {
         self.iIndex += 1;
 
@@ -248,6 +256,7 @@ impl MI_PowerupSelection {
         self.adjust_display_arrows(g);
     }
 
+    /// Moves the focused row up, scrolling the sliders between the stops.
     pub fn move_prev(&mut self, g: &mut Game) {
         self.iIndex -= 1;
 
@@ -259,6 +268,7 @@ impl MI_PowerupSelection {
         self.adjust_display_arrows(g);
     }
 
+    /// Shows each scroll arrow while rows are hidden that way.
     fn adjust_display_arrows(&mut self, g: &mut Game) {
         if self.iIndex > self.iTopStop {
             g.ctl(self.miUpArrow).set_visible(true);
@@ -283,7 +293,6 @@ impl UI_ControlTrait for MI_PowerupSelection {
         self.iIndex = 0;
         self.setup_powerup_fields(g);
 
-        //EnablePowerupFields(game_values.poweruppreset >= 1 && game_values.poweruppreset <= 3);
 
         self.fModifying = modify;
         MENU_CODE_MODIFY_ACCEPTED
@@ -304,10 +313,8 @@ impl UI_ControlTrait for MI_PowerupSelection {
                 g.game_values.powerupweights[pos] = iCurrentValue;
             }
 
-            //If it is a custom preset, then allow modification
-            //EnablePowerupFields(game_values.poweruppreset >= 1 && game_values.poweruppreset <= 3);
         } else if MENU_CODE_POWERUP_SETTING_CHANGED == ret {
-            //Update the custom presets
+            //Save the weights into the selected preset
             for iPowerup in 0..NP {
                 let pos = iPowerupPositionMap[iPowerup] as usize;
                 gp.get().game_values.allPowerupPresets[gp.get().game_values.poweruppreset as usize][pos] = gp.get().game_values.powerupweights[pos];
@@ -353,7 +360,7 @@ impl UI_ControlTrait for MI_PowerupSelection {
                     gp.get().game_values.allPowerupPresets[gp.get().game_values.poweruppreset as usize][pos] = iDefaultValue;
                 }
             } else if MENU_CODE_POWERUP_CLEAR_YES == ret {
-                //restore default powerup weights for powerup selection menu
+                //Zero every weight in the selected preset
                 for iPowerup in 0..NP {
                     g.ctl(self.miPowerupSlider[iPowerup]).set_current_value(0);
                     g.game_values.powerupweights[iPowerup] = 0;

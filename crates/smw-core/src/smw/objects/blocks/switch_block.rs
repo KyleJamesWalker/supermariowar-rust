@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/blocks/SwitchBlock.cpp
+//! Switch block: solid or passable outline, toggled by on/off switches of its color.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -16,16 +16,19 @@ use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::objects::switch_color::SwitchColor;
 use crate::smw::player::CPlayer;
 
+/// Block whose `state` is 0 solid or 1 passable.
 #[derive(Clone)]
 
 pub struct B_SwitchBlock {
     pub io_block: IO_Block,
 
+    /// Sprite x offset (pixels) for the color.
     pub iSrcX: i16,
 }
 impl_base!(B_SwitchBlock => io_block: IO_Block);
 
 impl B_SwitchBlock {
+    /// `iState` 1 starts the block solid.
     pub fn new(g: &mut Game, nspr: SpriteId, pos: Vec2s, color: SwitchColor, iState: i16) -> Self {
         let mut b = B_SwitchBlock { io_block: IO_Block::new(g, nspr, pos), iSrcX: 0 };
         b.iw = (g.rm.sprite(b.spr).get_width() as i16) >> 2;
@@ -38,6 +41,7 @@ impl B_SwitchBlock {
         b
     }
 
+    /// Toggles solid and passable; turning solid kills what is inside, credited to `playerID`.
     pub fn flip_state(&mut self, g: &mut Game, playerID: i16) {
         self.state = (1 - self.state as i32) as i16;
         g.update_tile_gap(self.col, self.row);

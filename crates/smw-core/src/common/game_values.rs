@@ -1,4 +1,4 @@
-//! Port of src/common/GameValues.cpp
+//! Game options and session state (`CGameValues`), with the options.bin and controls.sdl2.bin formats.
 
 use crate::common::keys::*;
 use crate::game::Game;
@@ -17,10 +17,13 @@ use crate::common::version::{Version, GAME_VERSION};
 use crate::globals::*;
 use Keycode;
 
+/// The window title.
 pub const TITLESTRING: &str = "Super Mario War";
 
+/// The stops of the loaded tour, in play order.
 pub type TourStopVec = Vec<Box<crate::common::world_tour_stop::TourStop>>;
 
+/// Which top-level screen the main loop runs.
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum AppState {
@@ -37,9 +40,12 @@ pub enum AppState {
 crate::enum_from_u8!(AppState, 7);
 
 //tournament scores
+/// A team's tournament or tour results.
 #[derive(Clone, Copy, Default, Debug)]
 pub struct TournamentScores {
+    /// Games won.
     pub wins: i16,
+    /// Per game played, the team's place.
     pub type_: [i16; MAXTOURNAMENTGAMES as usize],
     pub total: i16, //used for running total in a tour
 }
@@ -47,25 +53,32 @@ pub struct TournamentScores {
 /// Gameplay-specific variables, which are reset on the start of a game.
 #[derive(Clone, Debug)]
 pub struct GameplayFlags {
+    /// The pause menu is open.
     pub pausegame: bool,
+    /// The exit prompt is open.
     pub exitinggame: bool,
     pub exityes: bool,
 
+    /// The game cannot be exited while set; `noexittimer` clears it when it runs out, in ticks.
     pub noexit: bool,
     pub noexittimer: i16,
     pub forceexittimer: i16,
 
+    /// How many teams have been removed so far; `CScore::order` takes the next value.
     pub teamdeadcounter: i16,
 
+    /// Ticks left of a screen shake, and the player and team who caused it.
     pub screenshaketimer: i16,
     pub screenshakeplayerid: i16,
     pub screenshaketeamid: i16,
     pub screenshakekillscount: i16,
     pub screenshakekillinair: bool,
 
+    /// The team whose slow-down powerup is active, or -1.
     pub slowdownon: i16,
     pub slowdowncounter: i16,
 
+    /// The scoreboard is moving to its end-of-game layout; `scorepercentmove` is how far, 0 to 1.
     pub showscoreboard: bool,
     pub scorepercentmove: f32,
 
@@ -73,11 +86,13 @@ pub struct GameplayFlags {
     pub playinvinciblesound: bool,
     pub playflyingsound: bool,
 
+    /// The players are being swapped by a mystery mushroom.
     pub swapplayers: bool,
     pub swapplayersposition: f32,
     pub swapplayersblink: bool,
     pub swapplayersblinkcount: i16,
 
+    /// The wind's push on players and objects, in pixels per tick.
     pub gamewindx: f32,
     pub gamewindy: f32,
 
@@ -124,6 +139,7 @@ impl Default for GameplayFlags {
 }
 
 //[Keyboard/Joystick][Game/Menu][NumPlayers][NumKeys]  left, right, jump, down, turbo, powerup, start, cancel
+/// The default bindings, by input kind, control set, player and slot.
 pub static controlkeys: [[[[Keycode; NUM_KEYS]; 4]; 2]; 2] = [
     [
         [
@@ -186,6 +202,7 @@ pub static controlkeys: [[[[Keycode; NUM_KEYS]; 4]; 2]; 2] = [
 24 == leaf
 25 == pwings
 */
+/// The built-in powerup weights per preset, indexed as listed above; 0 never spawns.
 const DEFAULT_POWERUP_PRESETS: [[i16; NUM_POWERUPS as usize]; NUM_POWERUP_PRESETS as usize] = [
     //0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
     [5, 10, 4, 2, 1, 10, 8, 4, 4, 2, 2, 4, 8, 4, 2, 4, 2, 4, 5, 6, 6, 3, 4, 4, 5, 3], //Custom 1
@@ -207,19 +224,22 @@ const DEFAULT_POWERUP_PRESETS: [[i16; NUM_POWERUPS as usize]; NUM_POWERUP_PRESET
     [0, 10, 0, 0, 0, 10, 6, 0, 0, 0, 2, 0, 8, 4, 2, 4, 0, 4, 0, 0, 0, 0, 5, 0, 0, 0], //Super Mario World
 ];
 
+/// Plays `sfx` if sound is on.
 pub fn if_sound_on_play(g: &mut Game, sfx: &mut sfxSound) {
     if g.game_values.sound {
         sfx.play(g);
     }
 }
 
+/// Built-in preset `presetIdx`'s weight for powerup `powerupIdx`.
 pub fn default_powerup_setting(presetIdx: usize, powerupIdx: usize) -> i16 {
     DEFAULT_POWERUP_PRESETS[presetIdx][powerupIdx]
 }
 
-// the real configuration class
+/// The options saved in options.bin and controls.sdl2.bin.
 #[derive(Clone)]
 pub struct CGameConfig {
+    /// 0 to 128.
     pub soundvolume: i16,
     pub musicvolume: i16,
     pub fullscreen: bool,
@@ -237,6 +257,7 @@ pub struct CGameConfig {
     pub boomerangstyle: BoomerangStyle,
     pub boomeranglife: i16,
     pub boomeranglimit: i16,
+    /// The CPU players' skill, 0 (easiest) to 4.
     pub cpudifficulty: i16,
     pub warplockstyle: WarpLockStyle,
     pub warplocktime: i16,
@@ -248,31 +269,40 @@ pub struct CGameConfig {
     pub featherlimit: i16,
     pub suicidetime: i16,
     pub deadteamnotice: bool,
+    /// The "Frame Rate" setting: `FRAME_RATE_DISPLAY` or one of `FRAME_RATE_CAPS`.
     pub framelimiter: i16,
+    /// Ticks a revealed hidden block stays before hiding again; 0 never hides.
     pub hiddenblockrespawn: i16,
     pub inputConfiguration: [[CInputPlayerControl; 2]; 4], //[NumPlayers][Keyboard/Joystick]
+    /// Ticks before an emptied powerup block refills; 0 never.
     pub itemrespawntime: i16,
     pub keeppowerup: bool,
     pub leaflimit: i16,
     pub pwingslimit: i16,
     pub tanookilimit: i16,
+    /// Per player: 0 off, 1 human, 2 CPU.
     pub playercontrol: [i16; 4],
     pub playerInput: CPlayerInput,
     pub playnextmusic: bool, //automatically advance to the next music track after one finishes
+    /// Seconds a player may stay above the screen top before dying; 0 for no limit.
     pub outofboundstime: i16,
+    /// 1 makes every powerup block use the global weights, ignoring the map's own.
     pub overridepowerupsettings: i16,
     pub secretsenabled: bool,
     pub gamemodemenusettings: GameModeSettings,
     pub music: bool,
+    /// Ticks per point in the timed scoring modes (area, king of the hill, chicken), before `ticks` scaling.
     pub pointspeed: i16,
     pub poweruppreset: i16,
     pub allPowerupPresets: [[i16; NUM_POWERUPS as usize]; NUM_POWERUP_PRESETS as usize],
+    /// Per player: pick a random skin each game.
     pub randomskin: [bool; 4],
     pub scoreboardstyle: ScoreboardStyle,
     pub screencrunch: bool,
     pub shieldtime: i16,
     pub shieldstyle: ShieldStyle,
     pub showwinningcrown: bool,
+    /// Per player: index into `Game::skinlist`.
     pub skinids: [i16; 4],
     pub wandlimit: i16,
     pub tournamentcontrolstyle: TournamentControlStyle, //ID for the player selected control style
@@ -283,17 +313,21 @@ pub struct CGameConfig {
     pub sound: bool,
     pub startgamecountdown: bool,
     pub startmodedisplay: bool,
+    /// How fast the stored-powerup ring closes when one is used.
     pub storedpowerupdelay: i16,
+    /// Mystery mushroom swap: 0 walk, 1 blink then swap, 2 instant.
     pub swapstyle: i16,
+    /// Respawn delay in half-seconds; 0 is instant.
     pub respawn: i16,
     pub _alias: Aliased,
 }
 
-// these are actually the program options
+/// Program options plus the state of the current session, match and game.
 #[derive(Clone)]
 pub struct CGameValues {
     pub cgame_config: CGameConfig,
 
+    /// Draw the frame rate overlay.
     pub showfps: bool,
     pub frameadvance: bool,
     pub autokill: bool,
@@ -301,13 +335,16 @@ pub struct CGameValues {
     pub appstate: AppState,
 
     pub flags: GameplayFlags,
+    /// The current game mode, or `None` before one is chosen.
     pub gamemode: Option<crate::common::game_mode::ModeId>,
 
+    /// The screen fade's opacity, 0 to 255, and its change per 62.5 Hz tick (negative fades in).
     pub screenfade: i16,
     pub screenfadespeed: i16,
 
     pub matchtype: MatchType, //The currently selected match type: quick game, single, tournament, tour, world, minigame
 
+    /// Per team, its players' ids; `teamcounts` says how many are in use.
     pub teamids: [[i16; 3]; 4],
     pub teamcounts: [i16; 4],
 
@@ -324,37 +361,48 @@ pub struct CGameValues {
     pub tourstops: TourStopVec,
     pub worldindex: i16,
 
+    /// Per player, the powerup stored for the next game, or -1; `gamepowerups` is what each holds in the current one.
     pub storedpowerups: [i16; 4],
     pub gamepowerups: [i16; 4],
     pub powerupweights: [i16; NUM_POWERUPS as usize],
 
+    /// Per team, the world map items held; `worldpowerupcount` says how many are in use.
     pub worldpowerups: [[i16; 32]; 4],
     pub worldpowerupcount: [i16; 4],
 
+    /// The world point multiplier item in play, or -1.
     pub worldpointsbonus: i16,
 
+    /// Per player, the color.
     pub colorids: [i16; 4],
 
+    /// Per player, ticks left of the bullet bill powerup and until its next bill.
     pub bulletbilltimer: [i16; 4],
     pub bulletbillspawntimer: [i16; 4],
 
+    /// The index in `announcerlist` and `musiclist` loaded into sounds, or -1 / `usize::MAX` for none.
     pub loadedannouncer: usize,
     pub loadedmusic: i16,
 
+    /// Cycles 0 to 3 each tick; a CPU player thinks when it matches its id, so every fourth tick (second on Very Hard).
     pub cputurn: i16,
 
     pub tournament_scores: [TournamentScores; 4],
 
+    /// Mode settings for the current game; `gamemodemenusettings` holds the menu's copy.
     pub gamemodesettings: GameModeSettings,
 
+    /// The audio device opened.
     pub soundcapable: bool,
 
+    /// Per map filter, whether it is on, and its icon.
     pub pfFilters: Vec<bool>,
     pub piFilterIcons: Vec<i16>,
     pub selectedmapfilter: i16,
     pub fNeedWriteFilters: bool,
     pub fFiltersOn: bool,
 
+    /// The player who entered a world map bonus house alone, or -1.
     pub singleplayermode: i16,
 
     pub worldskipscoreboard: bool,
@@ -364,6 +412,7 @@ pub struct CGameValues {
     pub reversewalk: bool,
     pub spotlights: bool,
 
+    /// Progress toward the hidden secrets, which `secretsenabled` turns on.
     pub unlocksecret1part1: [bool; 4],
     pub unlocksecret1part2: i16,
     pub unlocksecret2part1: bool,
@@ -378,7 +427,7 @@ pub struct CGameValues {
 crate::impl_base!(CGameValues => cgame_config: CGameConfig);
 
 impl CGameConfig {
-    /// Zero-initialized like the C++ global, which has static storage.
+    /// Zero-initialized; `init` sets the defaults.
     pub fn new() -> Self {
         CGameConfig { _alias: Aliased::new(),
             soundvolume: 0,
@@ -458,11 +507,12 @@ impl CGameValues {
         Ptr::from_mut(&mut *self.tourstops[i])
     }
 
+    /// The tour stop being played.
     pub fn current_tour_stop(&mut self) -> Ptr<crate::common::world_tour_stop::TourStop> {
         self.tour_stop(self.tourstopcurrent)
     }
 
-    /// Zero-initialized plus the in-class member initializers, like the C++ global.
+    /// Zero-initialized; `init` sets the defaults.
     pub fn new() -> Self {
         CGameValues {
             cgame_config: CGameConfig::new(),
@@ -523,6 +573,7 @@ impl CGameValues {
         }
     }
 
+    /// Sets every option to its default; `read_binary_config` then loads the saved ones.
     pub fn init(&mut self, g: &mut Game) {
         //set standard game values
         self.playercontrol[0] = 1;
@@ -548,7 +599,7 @@ impl CGameValues {
         self.teamcollision = TeamCollisionStyle::Off;
         self.screencrunch = true;
         self.toplayer = true;
-        self.loadedannouncer = usize::MAX; // -1 into size_t
+        self.loadedannouncer = usize::MAX; // none loaded
         self.loadedmusic = -1;
         self.scoreboardstyle = ScoreboardStyle::Top;
         self.teamcolors = true;
@@ -563,7 +614,7 @@ impl CGameValues {
         self.outofboundstime = 5;
         self.warplockstyle = WarpLockStyle::ExitOnly; // Lock Warp Exit Only
         self.warplocktime = 180; // 3 seconds
-        self.suicidetime = 300; // 5 seconds (the reference build is Release)
+        self.suicidetime = 300; // 5 seconds
         self.cpudifficulty = 2;
         self.fireballttl = 300; // 5 seconds
         self.shellttl = 480; // 8 seconds
@@ -644,7 +695,7 @@ impl CGameValues {
         }
     }
 
-    /// The change in `screenfade` this tick. `screenfadespeed` is per original tick, and a fade starts at 255 going down
+    /// The change in `screenfade` this tick. `screenfadespeed` is per 62.5 Hz tick, and a fade starts at 255 going down
     /// or 8 going up, so the steps taken so far follow from `screenfade`; one tick in 24 takes two.
     pub fn screenfade_step(&self) -> i16 {
         let speed = self.screenfadespeed as i32;
@@ -653,6 +704,7 @@ impl CGameValues {
         (if steps % 25 == 23 { 2 * speed } else { speed }) as i16
     }
 
+    /// Clears the gameplay flags, starts the fade in, and initializes the game mode.
     pub fn reset_gameplay_settings(&mut self, g: &mut Game) {
         self.flags = GameplayFlags::default();
 
@@ -663,6 +715,7 @@ impl CGameValues {
         g.mode().get().init(g);
     }
 
+    /// Clears all progress toward the secrets.
     pub fn reset_secret_counters(&mut self) {
         //Reset Secret Counters
         for iPlayer in 0..4 {
@@ -679,7 +732,7 @@ impl CGameValues {
 }
 
 
-/// `CInputPlayerControl` as clang lays it out: `short iDevice`, 2 bytes padding, `Keycode keys[2][8]`.
+/// `CInputPlayerControl` as stored in controls.sdl2.bin: `i16 iDevice`, 2 bytes padding, `i32 keys[2][8]`.
 const CINPUTPLAYERCONTROL_RAW_SIZE: usize = 68;
 
 fn input_control_from_raw(c: &mut CInputPlayerControl, b: &[u8]) {
@@ -702,7 +755,7 @@ fn input_control_to_raw(c: &CInputPlayerControl, b: &mut [u8]) {
     }
 }
 
-/// `try { f } catch (std::exception const& error) { perror(error.what()); }`; `None` when it threw.
+/// Runs `f`, printing the message of a `throw_runtime_error` panic in it to stderr; `None` when it panicked.
 fn catch_runtime_error<R>(f: impl FnOnce() -> R) -> Option<R> {
     match std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)) {
         Ok(r) => Some(r),
@@ -719,6 +772,7 @@ fn catch_runtime_error<R>(f: impl FnOnce() -> R) -> Option<R> {
 }
 
 impl CGameConfig {
+    /// Loads options.bin, then controls.sdl2.bin, from the settings directory; skips both if options.bin is missing or from another version.
     pub fn read_binary_config(&mut self, g: &mut Game) {
         let ok = catch_runtime_error(|| {
             let options_path = get_home_directory(g) + "options.bin";
@@ -744,6 +798,7 @@ impl CGameConfig {
         });
     }
 
+    /// Reads options.bin's fields; false, with nothing read past the version, when it is from another version.
     fn read_options(&mut self, g: &mut Game, options: &mut BinaryFile) -> bool {
         let mut gp = g.ptr();
         let version = Version {
@@ -874,6 +929,7 @@ impl CGameConfig {
         true
     }
 
+    /// Reads every player's bindings, then each player's device; a device not connected falls back to the keyboard.
     fn read_controls(&mut self, g: &mut Game, controls: &mut BinaryFile) {
         let mut raw = [0u8; CINPUTPLAYERCONTROL_RAW_SIZE * 8];
         controls.read_raw(&mut raw);
@@ -1019,7 +1075,7 @@ impl CGameConfig {
         }
     }
 
-    /// Not in the C++: the bytes `write_config` would write to options.bin and controls.sdl2.bin.
+    /// The bytes `write_config` would write to options.bin and controls.sdl2.bin.
     pub fn config_bytes(&self, g: &mut Game) -> (Vec<u8>, Vec<u8>) {
         let mut options = BinaryFile::memory("options.bin", Vec::new());
         self.write_options(g, &mut options);
@@ -1028,17 +1084,19 @@ impl CGameConfig {
         (options.into_bytes(), controls.into_bytes())
     }
 
-    /// Not in the C++: `read_binary_config` from the bytes `config_bytes` returned.
+    /// `read_binary_config` from the bytes `config_bytes` returned.
     pub fn read_config_bytes(&mut self, g: &mut Game, options: Vec<u8>, controls: Vec<u8>) {
         if catch_runtime_error(|| self.read_options(g, &mut BinaryFile::memory("options.bin", options))) == Some(true) {
             catch_runtime_error(|| self.read_controls(g, &mut BinaryFile::memory("controls.sdl2.bin", controls)));
         }
     }
 
+    /// `read_controls` from the controls bytes `config_bytes` returned.
     pub fn read_controls_bytes(&mut self, g: &mut Game, controls: Vec<u8>) {
         catch_runtime_error(|| self.read_controls(g, &mut BinaryFile::memory("controls.sdl2.bin", controls)));
     }
 
+    /// Saves options.bin, controls.sdl2.bin, the map filters and the map summary cache.
     pub fn write_config(&self, g: &mut Game) {
         let mut gp = g.ptr();
         let ok = catch_runtime_error(|| {

@@ -1,4 +1,4 @@
-//! Port of src/common/FileList.cpp
+//! The lists of packs and data files the menus cycle through: graphics, sounds, music, skins, tours, worlds and filters.
 
 use crate::game::Game;
 use crate::globals::Aliased;
@@ -12,9 +12,10 @@ use crate::impl_base;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
+/// The most songs a music category holds.
 const MAXCATEGORYTRACKS: usize = 64;
 
-/// `std::getline` over a whole file; `None` when the file cannot be opened.
+/// The file's lines without their `\n`; `None` when it cannot be opened.
 fn read_lines(path: &Path) -> Option<Vec<String>> {
     let bytes = std::fs::read(path).ok()?;
     let mut lines: Vec<String> = bytes.split(|&b| b == b'\n').map(cstr_bytes_to_string).collect();
@@ -24,6 +25,7 @@ fn read_lines(path: &Path) -> Option<Vec<String>> {
     Some(lines)
 }
 
+/// Blank lines and lines starting with `#` or whitespace.
 fn is_comment_line(line: &str) -> bool {
     match line.as_bytes().first() {
         None => true,
@@ -35,6 +37,7 @@ fn filename_string(path: &Path) -> String {
     path.file_name().map(|f| f.to_string_lossy().into_owned()).unwrap_or_default()
 }
 
+/// Adds the map and world music overrides in music/Overrides.txt to every music pack.
 pub fn update_music_with_overrides(g: &mut Game, musiclist: &mut MusicList, worldmusiclist: &mut WorldMusicList) {
     let mut mapmusicoverrides: Vec<MapMusicOverride> = Vec::new();
     let mut worldmusicoverrides: Vec<WorldMusicOverride> = Vec::new();
@@ -96,7 +99,7 @@ pub fn update_music_with_overrides(g: &mut Game, musiclist: &mut MusicList, worl
         } else if current_section == Section::Worlds {
             let worldname = tokens.remove(0).to_string();
 
-            // C++ reads front() of an empty list here (UB) when the line has no comma.
+            // A line with no comma names no song, and the empty path never exists.
             let path = PathBuf::from(convert_path(g, tokens.first().copied().unwrap_or("")));
             if path.exists() {
                 worldmusicoverrides.push(WorldMusicOverride { worldname, song: path });
@@ -110,6 +113,7 @@ pub fn update_music_with_overrides(g: &mut Game, musiclist: &mut MusicList, worl
 
 ///////////// SimpleFileList ///////////////
 
+/// The files in one directory and a current index into them; `usize::MAX` when there are none.
 #[derive(Clone, Debug)]
 pub struct SimpleFileList {
     pub m_filelist: Vec<PathBuf>,
@@ -124,6 +128,7 @@ impl Default for SimpleFileList {
 }
 
 impl SimpleFileList {
+    /// The files in `dirpath` with `extension`; with `fAlphabetize`, ordered by name ignoring the creator prefix and case.
     pub fn new(g: &mut Game, dirpath: impl AsRef<Path>, extension: &str, fAlphabetize: bool) -> Self {
         let dirpath = dirpath.as_ref();
         let mut s = SimpleFileList::default();
@@ -166,6 +171,7 @@ impl SimpleFileList {
         s
     }
 
+    /// The path at `index`; panics past the end.
     pub fn at(&self, index: usize) -> &PathBuf {
         &self.m_filelist[index]
     }
@@ -179,6 +185,7 @@ impl SimpleFileList {
         self.at(self.m_index)
     }
 
+    /// Selects `index`, ignoring one past the end.
     pub fn set_current_index(&mut self, index: usize) {
         if index < self.m_filelist.len() {
             self.m_index = index;
@@ -191,6 +198,7 @@ impl SimpleFileList {
         }
     }
 
+    /// Selects the next file, wrapping.
     pub fn next(&mut self) {
         if self.m_filelist.is_empty() {
             return;
@@ -202,6 +210,7 @@ impl SimpleFileList {
         }
     }
 
+    /// Selects the previous file, wrapping.
     pub fn prev(&mut self) {
         if self.m_filelist.is_empty() {
             return;
@@ -213,6 +222,7 @@ impl SimpleFileList {
         }
     }
 
+    /// Selects a random file.
     pub fn random(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         if !self.m_filelist.is_empty() {
@@ -224,6 +234,7 @@ impl SimpleFileList {
         self.m_filelist.push(path);
     }
 
+    /// Selects the next file whose name starts with `name`, searching from the one after the current; false if none.
     pub fn find(&mut self, name: &str) -> bool {
         if self.m_filelist.is_empty() {
             return false;
@@ -245,6 +256,7 @@ impl SimpleFileList {
     }
 }
 
+/// The subdirectories of a directory, as a `SimpleFileList`.
 #[derive(Clone, Debug)]
 pub struct SimpleDirectoryList {
     pub simple_file_list: SimpleFileList,
@@ -269,6 +281,7 @@ impl SimpleDirectoryList {
     }
 }
 
+/// A list type over a fixed data directory, built by `$ctor`.
 macro_rules! file_list_subclass {
     ($name:ident, $base:ty, $field:ident, |$g:ident| $ctor:expr) => {
         #[derive(Clone, Debug)]
@@ -320,12 +333,14 @@ file_list_subclass!(FiltersList, SimpleFileList, simple_file_list, |g| {
 
 ///////////// SkinList ///////////////
 
+/// A player skin: its display name and image path.
 #[derive(Clone, Debug)]
 pub struct SkinListNode {
     pub name: String,
     pub path: PathBuf,
 }
 
+/// The player skins in gfx/skins/, sorted by display name.
 #[derive(Clone, Debug)]
 pub struct SkinList {
     m_skins: Vec<SkinListNode>,
@@ -354,6 +369,7 @@ impl SkinList {
 
 ///////////// Music ///////////////
 
+/// A map music category; each map names one.
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum MusicCategory {
@@ -368,6 +384,7 @@ pub enum MusicCategory {
     Desert,
     Clouds,
     Snow,
+    /// Not a category: how many there are.
     COUNT,
 }
 
@@ -404,16 +421,20 @@ pub fn music_category_to_string(category: MusicCategory) -> &'static str {
     }
 }
 
+/// Songs that replace the category music on one map.
 #[derive(Clone, Debug, Default)]
 pub struct MapMusicOverride {
     pub mapname: String,
     pub songs: Vec<PathBuf>,
 }
 
+/// One music pack: its songs by category, and per-map and per-background overrides.
 #[derive(Clone, Debug)]
 pub struct MusicPack {
     m_name: String,
+    /// The index of the last song picked in whichever list it came from.
     m_currentMusic: usize,
+    /// Every song; the ones listed before any section come first, so `music(n)` reaches them.
     m_all_songs: Vec<PathBuf>,
     m_category_songs: HashMap<MusicCategory, Vec<usize>>,
     m_map_overrides: HashMap<String, Vec<usize>>,
@@ -432,6 +453,7 @@ impl MusicPack {
         }
     }
 
+    /// Loads the pack in `musicdirectory` from its Music.txt and category folders; `None` if it has no songs or lacks a category with no fallback.
     pub fn load(g: &mut Game, musicdirectory: &Path) -> Option<MusicPack> {
         let mut this = MusicPack::new(filename_string(musicdirectory));
 
@@ -580,11 +602,13 @@ impl MusicPack {
         &self.m_name
     }
 
+    /// Song `idx`, or the last song when past the end.
     pub fn music(&self, idx: usize) -> &PathBuf {
         let idx = idx.min(self.m_all_songs.len() - 1);
         &self.m_all_songs[idx]
     }
 
+    /// A random song for the map: from its map override, else its background override, else its category.
     pub fn random_music(&mut self, g: &mut Game, musicCategory: MusicCategory, mapName: &str, background: &str) -> PathBuf {
         let mut gp = g.ptr();
         if let Some(list) = self.m_map_overrides.get(mapName) {
@@ -610,6 +634,7 @@ impl MusicPack {
         self.m_all_songs[4].clone()
     }
 
+    /// The song after the last one picked, from the same list `random_music` would pick from.
     pub fn next_music(&mut self, musicCategory: MusicCategory, mapName: &str, background: &str) -> PathBuf {
         if let Some(list) = self.m_map_overrides.get(mapName) {
             if !list.is_empty() {
@@ -652,8 +677,10 @@ impl MusicPack {
     }
 }
 
+/// The music packs in music/game/ and the selected one.
 #[derive(Clone, Debug)]
 pub struct MusicList {
+    /// The song the game is playing.
     m_currentMusic: PathBuf,
     m_entries: Vec<MusicPack>,
     m_currentIndex: usize,
@@ -678,6 +705,7 @@ impl MusicList {
         MusicList { _alias: Aliased::new(), m_currentMusic: PathBuf::new(), m_entries, m_currentIndex: 0 }
     }
 
+    /// Song `musicID` of the selected pack.
     pub fn music(&self, musicID: usize) -> &PathBuf {
         self.m_entries[self.m_currentIndex].music(musicID)
     }
@@ -685,7 +713,7 @@ impl MusicList {
         &self.m_currentMusic
     }
 
-    /// Not in the C++: the current song and its index in the current pack, for replay checkpoints (smw/checkpoint.rs).
+    /// The current song and its index in the current pack, for replay checkpoints (smw/checkpoint.rs).
     pub fn song_state_mut(&mut self) -> (&mut PathBuf, &mut usize) {
         (&mut self.m_currentMusic, &mut self.m_entries[self.m_currentIndex].m_currentMusic)
     }
@@ -728,6 +756,7 @@ impl MusicList {
     }
 }
 
+/// A world music category.
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum WorldMusicCategory {
@@ -742,6 +771,7 @@ pub enum WorldMusicCategory {
     Space,
     Bonus,
     Sleep,
+    /// Not a category: how many there are.
     COUNT,
 }
 
@@ -753,7 +783,7 @@ impl WorldMusicCategory {
         *self
     }
 
-    /// `category++`
+    /// `category++`: returns the category before the step.
     pub fn post_increment(&mut self) -> WorldMusicCategory {
         let temp = *self;
         self.pre_increment();
@@ -778,12 +808,14 @@ pub fn world_music_category_to_string(category: WorldMusicCategory) -> &'static 
     }
 }
 
+/// A song that replaces the category music on one world.
 #[derive(Clone, Debug, Default)]
 pub struct WorldMusicOverride {
     pub worldname: String,
     pub song: PathBuf,
 }
 
+/// One world music pack: a song per category and per-world overrides.
 #[derive(Clone, Debug)]
 pub struct WorldMusicPack {
     m_name: String,
@@ -871,6 +903,7 @@ impl WorldMusicPack {
         Some(this)
     }
 
+    /// The world's override song, else the category's, else Grass's; panics if the pack has no Grass song.
     pub fn music(&self, category: WorldMusicCategory, worldName: &str) -> &PathBuf {
         if let Some(p) = self.m_world_overrides.get(worldName) {
             return p;
@@ -893,6 +926,7 @@ impl WorldMusicPack {
     }
 }
 
+/// The world music packs in music/world/ and the selected one.
 #[derive(Clone, Debug)]
 pub struct WorldMusicList {
     m_entries: Vec<WorldMusicPack>,

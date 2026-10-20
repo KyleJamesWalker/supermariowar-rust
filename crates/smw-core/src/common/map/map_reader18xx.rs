@@ -1,4 +1,4 @@
-//! Port of src/common/map/MapReader18xx.cpp
+//! Readers for 1.8 map files, which name their tilesets and add items, hazards and per-type spawn areas.
 
 use crate::game::Game;
 use crate::common::file_io::BinaryFile;
@@ -8,6 +8,7 @@ use crate::common::map::{read_type_preview, read_type_summary, CMap, MapHazard, 
 use crate::common::movingplatform::MovingPlatform;
 use crate::common::tile_types::TileType;
 
+/// One entry of a 1.8 map's tileset table: the map-file ID and the tileset name it refers to.
 struct TilesetTranslation {
     iID: i16,
     szName: String,
@@ -23,6 +24,7 @@ impl MapReader {
         }
     }
 
+    /// Reads the tileset table and builds the ID translation and size tables used by the tile readers.
     fn read_tileset(&mut self, g: &mut Game, mapfile: &mut BinaryFile) {
         let mut gp = g.ptr();
         let iNumTilesets: i16 = mapfile.read_i32() as i16;
@@ -41,7 +43,7 @@ impl MapReader {
             translation.push(TilesetTranslation { iID: iTilesetID, szName });
         }
 
-        // C++ leaves entries for IDs missing from the table uninitialized (`new short[]`).
+        // IDs missing from the table map to tileset 0 with size 0, which zeroes their tile coordinates.
         let n = (self.iMaxTilesetID as i32 + 1) as usize;
         let mut translationid = vec![0i16; n];
         let mut tilesetwidths = vec![0i16; n];
@@ -66,6 +68,7 @@ impl MapReader {
         self.tilesetheights = Some(tilesetheights);
     }
 
+    /// Reads every tile layer and object; out-of-range tileset IDs and tile coordinates become 0.
     pub(super) fn read_tiles_1800(&mut self, map: &mut CMap, mapfile: &mut BinaryFile) {
         let translationid = self.translationid.as_ref().unwrap();
         let tilesetwidths = self.tilesetwidths.as_ref().unwrap();
@@ -160,6 +163,7 @@ impl MapReader {
         }
     }
 
+    /// Reads the on/off state of each switch block by tile column and row.
     fn read_switchable_blocks(&mut self, map: &mut CMap, mapfile: &mut BinaryFile) {
         let iNumSwitchBlockData: i32 = mapfile.read_i32();
         let mut iBlock: i16 = 0;
@@ -172,6 +176,7 @@ impl MapReader {
         }
     }
 
+    /// Reads each spawn type's areas; a type with no spawn size gets one default area covering the map from row 1.
     pub(super) fn read_spawn_areas_1800(&mut self, map: &mut CMap, mapfile: &mut BinaryFile) -> bool {
         for i in 0..NUMSPAWNAREATYPES as usize {
             map.totalspawnsize[i] = 0;
@@ -208,6 +213,7 @@ impl MapReader {
         true
     }
 
+    /// Reads per-tile object settings (powerup weights and the like) by tile column and row.
     fn read_extra_tiledata(&mut self, map: &mut CMap, mapfile: &mut BinaryFile) {
         let iNumExtendedDataBlocks: i32 = mapfile.read_i32();
 
@@ -224,6 +230,7 @@ impl MapReader {
         }
     }
 
+    /// Reads race goal and flag base positions, in pixels.
     fn read_gamemode_settings(&mut self, map: &mut CMap, mapfile: &mut BinaryFile) {
         map.iNumRaceGoals = mapfile.read_i32() as i16;
         let mut j: u16 = 0;

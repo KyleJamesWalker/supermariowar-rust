@@ -1,4 +1,4 @@
-//! Port of src/smw/player_components/PlayerBurnupTimer.cpp
+//! Burn-up: a player falling at terminal velocity for too long catches fire and dies.
 
 use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
@@ -8,9 +8,12 @@ use crate::common::player_kill_styles::KillStyle;
 use crate::globals::*;
 use crate::smw::player::CPlayer;
 
+/// Kills an unprotected player who falls at `MAXVELY` for `ticks(20) + ticks(80)` ticks.
 #[derive(Clone, Default)]
 pub struct PlayerBurnupTimer {
+    /// Ticks spent burning, after the `starttimer` delay.
     pub timer: i16,
+    /// Ticks spent at terminal velocity; reset when the player slows.
     pub starttimer: i16,
     pub _alias: Aliased,
 }

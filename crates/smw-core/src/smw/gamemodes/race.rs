@@ -1,4 +1,4 @@
-//! Port of src/smw/gamemodes/Race.cpp
+//! Race mode: touch the numbered race goals in order; each full lap scores a point.
 
 use crate::smw::players::PlayerId;
 use crate::game::Game;
@@ -13,6 +13,8 @@ use crate::smw::objects::overmap::wo_race_goal::OMO_RaceGoal;
 use crate::smw::player::CPlayer;
 use std::any::Any;
 
+/// Clears team `id`'s mark on race goals: all of them when `iGoal` is -1 (lap done) or the
+/// penalty is 2, only goal `iGoal` when the penalty is 1, none when it is 0.
 fn remove_player_race_goals(g: &mut Game, container: &CObjectContainer, id: i16, iGoal: i16) {
     if g.game_values.gamemodesettings.race.penalty == 0 && iGoal != -1 {
         return;
@@ -31,16 +33,16 @@ fn remove_player_race_goals(g: &mut Game, container: &CObjectContainer, id: i16,
     }
 }
 
-//Race
-//Touch all the flying blocks in order
-//Each successful curcuit you complete (before getting killed)
-//Counts as one point
+/// Race mode. A death undoes progress according to the penalty setting.
 #[derive(Clone)]
 pub struct CGM_Race {
     pub cgame_mode: CGameMode,
 
+    /// Per team, the index of the next race goal to touch.
     pub nextGoal: [i16; 4],
+    /// Number of race goals on the map, at least 2.
     pub quantity: i16,
+    /// Death penalty: 0 none, 1 lose the last goal touched, 2 restart the lap.
     pub penalty: i16,
 }
 impl_base!(CGM_Race => cgame_mode: CGameMode);
@@ -61,6 +63,7 @@ impl CGM_Race {
         self.nextGoal[teamID as usize]
     }
 
+    /// Advances the team to its next goal, scoring a lap and checking for a winner after the last one.
     pub fn set_next_goal(&mut self, g: &mut Game, teamID: i16) {
         let mut gp = g.ptr();
         self.nextGoal[teamID as usize] += 1;
@@ -91,7 +94,7 @@ impl CGM_Race {
         }
     }
 
-    //Player loses control of his areas
+    /// Applies the death penalty to the player's team.
     pub fn penalize_race_goals(&mut self, g: &mut Game, player: PlayerId) {
         let mut gp = g.ptr();
         remove_player_race_goals(g, &gp.objectcontainer[2], g.player(player).get_team_id(), (self.nextGoal[g.player(player).get_team_id() as usize] as i32 - 1) as i16);

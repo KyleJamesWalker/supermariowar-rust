@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/moving/MO_Yoshi.cpp
+//! Yoshi for egg mode: takes eggs of its own color for a point.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -21,11 +21,14 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class yoshi (for egg mode)
 //------------------------------------------------------------------------------
+/// Yoshi that scores a matching egg carried into it or thrown at it; relocates after `ticks(2000)`.
 #[derive(Clone)]
 pub struct MO_Yoshi {
     pub io_moving_object: IO_MovingObject,
 
+    /// Ticks at the current spot.
     pub timer: i16,
+    /// Egg color this yoshi accepts; also its sprite row.
     pub color: i16,
 }
 impl_base!(MO_Yoshi => io_moving_object: IO_MovingObject);
@@ -50,6 +53,7 @@ impl MO_Yoshi {
         o
     }
 
+    /// Moves the yoshi to a random open spot on safe ground; falls back to the screen center after 64 tries.
     pub fn place_yoshi(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
 

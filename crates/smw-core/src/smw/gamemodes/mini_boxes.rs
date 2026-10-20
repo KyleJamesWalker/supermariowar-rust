@@ -1,4 +1,4 @@
-//! Port of src/smw/gamemodes/MiniBoxes.cpp
+//! World-map boxes minigame: collect coins from boxes and other players.
 
 use crate::smw::players::PlayerId;
 use crate::game::Game;
@@ -26,8 +26,7 @@ TODO
 4) Add hurry up that kicks in after 3 minutes of play that adds more coins or lowers bar to win
 */
 
-//Boxes Bonus Mini Game (used in world mode)
-//Try to collect all coins from boxes and players
+/// Boxes minigame. Per team, `score` is lives and `subscore[0]` is coins held; 5 coins wins.
 #[derive(Clone)]
 pub struct CGM_Boxes_MiniGame {
     pub cgame_mode: CGameMode,
@@ -44,6 +43,7 @@ impl CGM_Boxes_MiniGame {
         this
     }
 
+    /// Knocks one of the team's coins loose at the player's position.
     fn release_coin(&mut self, g: &mut Game, mut player: PlayerId) {
         let mut gp = g.ptr();
         if g.player(player).score(g).subscore[0] > 0 {

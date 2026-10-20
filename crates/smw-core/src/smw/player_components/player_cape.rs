@@ -1,4 +1,4 @@
-//! Port of src/smw/player_components/PlayerCape.cpp
+//! Feather cape: spin attack and cape animation.
 
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -12,10 +12,15 @@ use crate::smw::player::CPlayer;
 
 #[derive(Clone, Default)]
 pub struct PlayerCape {
+    /// Ticks in the current cape frame; frames change every 4.
     pub iCapeTimer: u8,
+    /// Source x of the cape frame within its row.
     pub iCapeFrameX: u16,
+    /// Source y of the cape animation row.
     pub iCapeFrameY: u16,
+    /// True after the cape flew up, so landing plays the settle frame first.
     pub fCapeUp: bool,
+    /// Vertical draw offset for the current cape row, in pixels.
     pub iCapeYOffset: i16,
     pub _alias: Aliased,
 }
@@ -33,10 +38,12 @@ impl PlayerCape {
         self.iCapeYOffset = 0;
     }
 
+    /// Makes the next draw advance the cape frame immediately.
     pub fn restart_animation(&mut self) {
         self.iCapeTimer = 4;
     }
 
+    /// Starts a cape spin and spawns its feather attack.
     pub fn spin(&mut self, g: &mut Game, player: &mut CPlayer) {
         let mut gp = g.ptr();
         if_sound_on_play(g, &mut gp.rm.sfx_tailspin);

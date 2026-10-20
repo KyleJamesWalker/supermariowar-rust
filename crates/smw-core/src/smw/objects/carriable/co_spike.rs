@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/carriable/CO_Spike.cpp
+//! Carriable spike block: kills players who land on it.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;

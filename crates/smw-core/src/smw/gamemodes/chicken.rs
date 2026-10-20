@@ -1,4 +1,4 @@
-//! Port of src/smw/gamemodes/Chicken.cpp
+//! Chicken mode: the chicken scores over time and the player who kills it becomes the chicken.
 
 use crate::smw::players::PlayerId;
 use crate::common::gfx::soft_surface::Rect;
@@ -15,17 +15,20 @@ use crate::impl_base;
 use crate::smw::gamemodes::game_mode::*;
 use crate::smw::player::CPlayer;
 
-//capture the chicken
+/// Chicken mode: the first kill, or killing the chicken, makes the killer the chicken. The chicken
+/// scores a point every `ticks(pointspeed)` ticks and 5 per kill, and moves at most `VELMOVING_CHICKEN`.
 #[derive(Clone)]
 pub struct CGM_Chicken {
     pub cgame_mode: CGameMode,
 
-    pub m_chicken: PlayerId,    /// Frames toward the next point; never reset between games, like the C++ function-local static.
+    /// The current chicken, or `PlayerId::NONE` when nobody is the chicken.
+    pub m_chicken: PlayerId,
+    /// Ticks toward the chicken's next point; `init` does not reset it.
     counter: i16,
 }
 impl_base!(CGM_Chicken => cgame_mode: CGameMode);
 
-/// `static_cast<ClipEdge>(short)`.
+/// Maps a warp state (0-3) to the edge the warping sprite is clipped against.
 pub(crate) fn clip_edge_from(v: i16) -> ClipEdge {
     match v as u8 {
         0 => ClipEdge::Top,
@@ -35,10 +38,6 @@ pub(crate) fn clip_edge_from(v: i16) -> ClipEdge {
     }
 }
 
-//capture the chicken
-//one player is the chicken
-//if he is killed the attacker becomes the chicken.
-//get points for being the chicken
 impl CGM_Chicken {
     pub fn new() -> Self {
         let mut this = CGM_Chicken { cgame_mode: CGameMode::new(), m_chicken: PlayerId::NONE, counter: 0 };
@@ -61,7 +60,6 @@ impl CGM_Chicken {
 impl CGameModeTrait for CGM_Chicken {
     crate::impl_cgamemode_plumbing!();
 
-    //called once when the game is started
     fn init(&mut self, g: &mut Game) {
         cgamemode_init(g, self);
         self.clear_chicken();
@@ -150,7 +148,7 @@ impl CGameModeTrait for CGM_Chicken {
         cgamemode_playerkilledself(g, self, player, style);
 
         if self.m_chicken == player {
-            g.player(player).set_corpse_type(1); //flag to use chocobo corpse sprite
+            g.player(player).set_corpse_type(1); //flag to use chicken corpse sprite
 
             if !self.gameover {
                 self.m_chicken = PlayerId::NONE;

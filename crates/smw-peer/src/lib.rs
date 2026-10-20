@@ -1,7 +1,5 @@
-//! Netplay v2 transport (docs/design/NETPLAY_V2.md): every player joins one room on a matchbox signaling server
-//! and opens a WebRTC connection to every other player. Each connection carries a reliable channel for match
-//! setup and an unreliable, unordered one for GGRS. Native builds use webrtc-rs and the web build uses
-//! web/peer_socket.js; both speak matchbox_socket's signaling protocol and channel layout, so they share rooms.
+//! Netplay v2 transport: every player joins a matchbox signaling room and opens a WebRTC connection with a reliable
+//! and an unreliable channel to every other player. Native (webrtc-rs) and web (web/peer_socket.js) peers share rooms.
 
 #[cfg(not(target_os = "emscripten"))]
 mod native;
@@ -34,6 +32,7 @@ pub struct IceConfig {
 }
 
 impl Default for IceConfig {
+    /// Two public STUN servers and no TURN.
     fn default() -> Self {
         let urls = [
             "stun:stun.l.google.com:19302",
@@ -53,6 +52,7 @@ impl Default for IceConfig {
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub struct PeerId(pub u128);
 
+/// A change in a peer's connection: `Connected` once both channels are open.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum PeerState {
     Connected,
@@ -62,6 +62,7 @@ pub enum PeerState {
 /// A room connection, polled once per frame. Nothing blocks.
 pub struct PeerSocket {
     inner: imp::Socket,
+    /// Open peers, in the order they connected.
     connected: Vec<PeerId>,
 }
 
@@ -91,6 +92,7 @@ impl PeerSocket {
         changes
     }
 
+    /// The peers whose connections are open, as of the last `update_peers`.
     pub fn connected_peers(&self) -> &[PeerId] {
         &self.connected
     }
@@ -100,10 +102,12 @@ impl PeerSocket {
         self.inner.signaling_closed()
     }
 
+    /// Queues `data` on `channel` (`RELIABLE` or `UNRELIABLE`) to `peer`.
     pub fn send(&mut self, channel: usize, peer: PeerId, data: &[u8]) {
         self.inner.send(channel, peer, data);
     }
 
+    /// What arrived on `channel` since the last call, in arrival order.
     pub fn receive(&mut self, channel: usize) -> Vec<(PeerId, Vec<u8>)> {
         self.inner.receive(channel)
     }
@@ -131,6 +135,7 @@ impl PeerSocket {
         GgrsSocket(self.inner.take_unreliable())
     }
 
+    /// Closes every peer connection and the signaling connection.
     pub fn close(&mut self) {
         self.inner.close();
         self.connected.clear();

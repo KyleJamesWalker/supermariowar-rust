@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/powerup/PU_BombPowerup.cpp
+//! Bomb powerup: gives the player the bomb-throwing power.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;

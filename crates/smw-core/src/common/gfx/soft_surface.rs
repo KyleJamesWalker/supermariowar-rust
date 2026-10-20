@@ -1,6 +1,6 @@
 //! Software ARGB8888 surfaces and the SDL3 blit paths the game uses.
 
-/// `SDL_Rect`, with its layout, so a pointer to one can go to the SDL calls that remain.
+/// Pixel rectangle with `SDL_Rect`'s layout; a non-positive `w` or `h` is empty.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Rect {
@@ -38,6 +38,7 @@ impl Rect {
     }
 }
 
+/// How a source surface combines with the destination: `None` copies, `Blend` alpha-blends.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BlendMode {
     None,
@@ -50,8 +51,11 @@ pub struct Surface {
     pub w: i32,
     pub h: i32,
     pub pixels: Vec<u32>,
+    /// Blits and fills into this surface are limited to this rectangle.
     pub clip: Rect,
+    /// Pixel value (alpha ignored) that blits from this surface skip.
     pub color_key: Option<u32>,
+    /// Multiplies source alpha on blits from this surface; 255 is no change.
     pub alpha_mod: u8,
     pub blend: BlendMode,
     /// ARGB8888; `false` is XRGB8888, whose top byte reads as opaque.
@@ -201,18 +205,22 @@ impl Surface {
         ((pixel >> 16) as u8, (pixel >> 8) as u8, pixel as u8)
     }
 
+    /// Raw pixel value at (`x`, `y`); panics outside the surface.
     pub fn pixel(&self, x: i32, y: i32) -> u32 {
         self.pixels[(y * self.w + x) as usize]
     }
 
+    /// Borrowed source view of the whole surface.
     pub fn view(&self) -> Pixels<'_> {
         Pixels { w: self.w, h: self.h, pitch: self.w as usize, pixels: &self.pixels, alpha: self.alpha }
     }
 
+    /// Borrowed destination view, clipped by the surface's clip rectangle.
     pub fn view_mut(&mut self) -> PixelsMut<'_> {
         PixelsMut { w: self.w, h: self.h, pitch: self.w as usize, pixels: &mut self.pixels, clip: self.clip, alpha: self.alpha }
     }
 
+    /// The color key, alpha modulation and blend mode a blit from this surface uses.
     pub fn state(&self) -> BlitState {
         BlitState { color_key: self.color_key, alpha_mod: self.alpha_mod, blend: self.blend }
     }
@@ -242,7 +250,7 @@ impl Surface {
     }
 }
 
-/// An owned surface, or none: `std::unique_ptr<SDL_Surface, SdlDeleter>`.
+/// An owned, possibly null, heap surface; [`get`](SurfacePtr::get) hands out a raw pointer that stays valid while it lives.
 #[derive(Clone, Default)]
 pub struct SurfacePtr(Option<Box<Surface>>);
 

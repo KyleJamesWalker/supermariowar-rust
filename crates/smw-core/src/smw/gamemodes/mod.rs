@@ -1,3 +1,4 @@
+//! Game mode implementations: one module per mode or minigame, plus shared helpers.
 pub mod bonus_house;
 pub mod capture_the_flag;
 pub mod card_collection;

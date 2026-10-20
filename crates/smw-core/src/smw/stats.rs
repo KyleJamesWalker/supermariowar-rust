@@ -1,6 +1,5 @@
-//! Gameplay stats (docs/design/GAMEPLAY_STATS.md): per-player counters for the running match, the after-match page,
-//! and the lifetime totals saved in the settings directory. The match counters live in `game_values`, so a rollback
-//! restores them with the rest of the match; nothing in the simulation reads them.
+//! Gameplay stats (docs/design/GAMEPLAY_STATS.md): match counters, the after-match page and saved lifetime totals.
+//! Match counters live in `game_values` so rollback restores them; nothing in the simulation reads them.
 
 use crate::common::player_kill_styles::KillStyle;
 use crate::game::Game;
@@ -8,33 +7,51 @@ use crate::smw::player::PlayerKeys;
 use crate::smw::players::PlayerId;
 use std::collections::BTreeMap;
 
+/// Number of `KillStyle` variants.
 pub const KILL_STYLES: usize = KillStyle::Phanto as usize + 1;
+/// Lifetime stats file name in the settings directory.
 const FILE: &str = "stats.txt";
+/// First line of the lifetime stats file; a file with any other header loads as empty.
 const FORMAT: &str = "smw-stats 1";
 
+/// One player's counters for the current match.
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct PlayerStats {
     pub kills: u16,
     pub deaths: u16,
     pub suicides: u16,
+    /// Kills per `KillStyle`.
     pub kills_by: [u16; KILL_STYLES],
+    /// Deaths per `KillStyle`, suicides included.
     pub deaths_by: [u16; KILL_STYLES],
     /// Kills of each player slot.
     pub victims: [u16; 4],
     pub powerups: u16,
+    /// Items put into the item reserve.
     pub items_stored: u16,
+    /// Items used from the item reserve.
     pub items_used: u16,
+    /// Item boxes opened.
     pub boxes: u16,
     pub jumps: u32,
+    /// Ticks spent airborne.
     pub air_ticks: u32,
+    /// Horizontal distance travelled, in pixels.
     pub distance: f32,
+    /// Ticks spent invincible.
     pub star_ticks: u32,
+    /// Kills since the last death.
     pub streak: u16,
     pub best_streak: u16,
+    /// Ticks alive since the last death.
     pub alive_ticks: u32,
+    /// Longest stretch of `alive_ticks` this match.
     pub best_alive_ticks: u32,
+    /// Kills in the current airtime.
     pub air_chain: u16,
+    /// Airtimes with exactly 2 kills.
     pub air_doubles: u16,
+    /// Airtimes with 3 or more kills.
     pub air_triples: u16,
 }
 
@@ -81,6 +98,7 @@ impl PlayerStats {
     };
 }
 
+/// Stats for the four player slots, indexed by global player id.
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct MatchStats {
     pub players: [PlayerStats; 4],
@@ -98,6 +116,7 @@ impl Default for MatchStats {
     }
 }
 
+/// The player's stats slot, or `None` for an id outside 0-3.
 fn slot(g: &mut Game, id: PlayerId) -> Option<usize> {
     let gid = g.player(id).globalID;
     (0..4).contains(&gid).then_some(gid as usize)
@@ -109,6 +128,7 @@ fn with(g: &mut Game, id: PlayerId, f: impl FnOnce(&mut PlayerStats)) {
     }
 }
 
+/// Clears the match counters.
 pub fn reset(g: &mut Game) {
     g.game_values.stats = MatchStats::new();
 }
@@ -130,6 +150,7 @@ pub fn kill(g: &mut Game, killer: PlayerId, killed: PlayerId, style: KillStyle) 
     with(g, killed, |s| s.deaths_by[style as usize] += 1);
 }
 
+/// `killed` died without a player killer.
 pub fn suicide(g: &mut Game, killed: PlayerId, style: KillStyle) {
     with(g, killed, |s| {
         s.suicides += 1;
@@ -137,6 +158,7 @@ pub fn suicide(g: &mut Game, killed: PlayerId, style: KillStyle) {
     });
 }
 
+/// Any death: counts it and ends the player's streak and life timer.
 pub fn death(g: &mut Game, killed: PlayerId) {
     with(g, killed, |s| {
         s.deaths += 1;
@@ -217,6 +239,7 @@ pub struct Lifetime {
 }
 
 impl Lifetime {
+    /// Reads the tab-separated stats file, skipping malformed lines.
     pub fn parse(text: &str) -> Self {
         let mut life = Lifetime::default();
         let mut lines = text.lines();
@@ -245,6 +268,7 @@ impl Lifetime {
         life
     }
 
+    /// Writes the format [`Lifetime::parse`] reads.
     pub fn to_text(&self) -> String {
         let mut out = format!("{FORMAT}\n");
         for (k, v) in &self.totals {
@@ -340,6 +364,7 @@ fn save(g: &mut Game, life: &Lifetime) {
     }
 }
 
+/// Overwrites the lifetime file with empty totals.
 pub fn reset_lifetime(g: &mut Game) {
     save(g, &Lifetime::default());
 }
@@ -374,6 +399,7 @@ pub fn commit(g: &mut Game) {
     }
 }
 
+/// Formats a tick count as `m:ss`, or `h:mm:ss` from an hour.
 pub fn clock(ticks: u64) -> String {
     let t = ticks / crate::common::global_constants::TICKS_PER_SECOND as u64;
     if t >= 3600 {

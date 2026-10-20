@@ -1,4 +1,4 @@
-//! Port of src/smw/ui/MI_FrenzyModeOptions.cpp
+//! Frenzy mode settings: card limit, spawn rate, stored shells and a weight slider per card.
 
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
@@ -15,24 +15,31 @@ use crate::smw::ui::mi_powerup_slider::MI_PowerupSlider;
 
 const NF: usize = NUMFRENZYCARDS as usize;
 
-//Rearrange display of powerups
+/// Screen slot of each card's slider, two per row; currently in card order.
 pub static iFrenzyCardPositionMap: [i16; NF] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
 
+/// A scrolling inner menu writing `gamemodemenusettings.frenzy`.
 pub struct MI_FrenzyModeOptions {
     pub ui_control: UI_Control,
 
+    /// Focused row, counting the three fields above the sliders; drives scrolling.
     iIndex: i16,
+    /// First slider row shown.
     iOffset: i16,
     iTopStop: i16,
     iBottomStop: i16,
+    /// Slider rows shown at once.
     iNumLines: i16,
     iWidth: i16,
 
     mMenu: Box<UI_Menu>,
 
+    /// Card limit: 0 one at a time, 1 to 5 fixed, 6 to 10 the player count -1 to +3.
     miQuantityField: Ctl<MI_SelectField<i16>>,
+    /// Spawn interval in frames, 60 per labeled second.
     miRateField: Ctl<MI_SelectField<i16>>,
     miStoredShellsField: Ctl<MI_SelectField<bool>>,
+    /// Weight of each frenzy card, 0 to 10.
     miPowerupSlider: [Ctl<MI_PowerupSlider>; NF],
     miBackButton: Ctl<MI_Button>,
 
@@ -42,6 +49,7 @@ pub struct MI_FrenzyModeOptions {
 crate::impl_base!(MI_FrenzyModeOptions => ui_control: UI_Control);
 
 impl MI_FrenzyModeOptions {
+    /// `numlines` is the slider rows shown at once; `width` is stored but unused.
     pub fn new(g: &mut Game, x: i16, y: i16, width: i16, numlines: i16) -> Self {
         let iNumLines = numlines;
         let iTopStop = (((iNumLines as i32 - 1) >> 1) + 3) as i16; // Plus 3 for the 3 fields at the top
@@ -103,6 +111,7 @@ impl MI_FrenzyModeOptions {
         g.ctl(this.miStoredShellsField).set_current_value(g.game_values.gamemodemenusettings.frenzy.storedshells);
         g.ctl(this.miStoredShellsField).set_auto_advance(true);
 
+        // Stored powerup icon for each card.
         let iPowerupMap: [i16; NF] = [8, 5, 11, 17, 19, 21, 23, 24, 25, 20, 9, 16, 10, 22, 12, 13, 14, 15, 27];
         for iPowerup in 0..NF {
             let mut slider = Ctl::new(MI_PowerupSlider::new(
@@ -173,6 +182,7 @@ impl MI_FrenzyModeOptions {
         this
     }
 
+    /// Shows and positions the slider rows in view and hides the rest.
     fn setup_powerup_fields(&mut self, g: &mut Game) {
         for iPowerup in 0..NF {
             let iPosition = iFrenzyCardPositionMap[iPowerup];
@@ -190,6 +200,7 @@ impl MI_FrenzyModeOptions {
         }
     }
 
+    /// Moves the focused row down, scrolling the sliders between the stops.
     pub fn move_next(&mut self, g: &mut Game) {
         self.iIndex += 1;
 
@@ -201,6 +212,7 @@ impl MI_FrenzyModeOptions {
         self.adjust_display_arrows(g);
     }
 
+    /// Moves the focused row up, scrolling the sliders between the stops.
     pub fn move_prev(&mut self, g: &mut Game) {
         self.iIndex -= 1;
 
@@ -212,6 +224,7 @@ impl MI_FrenzyModeOptions {
         self.adjust_display_arrows(g);
     }
 
+    /// Rolls every field's random value into `gamemodesettings.frenzy`.
     pub fn set_random_game_mode_settings(&mut self, g: &mut Game) {
         g.game_values.gamemodesettings.frenzy.quantity = g.ctl(self.miQuantityField).random_value(g);
         g.game_values.gamemodesettings.frenzy.rate = g.ctl(self.miRateField).random_value(g);
@@ -222,6 +235,7 @@ impl MI_FrenzyModeOptions {
         }
     }
 
+    /// Shows each scroll arrow while rows are hidden that way.
     fn adjust_display_arrows(&mut self, g: &mut Game) {
         if self.iIndex > self.iTopStop {
             g.ctl(self.miUpArrow).set_visible(true);

@@ -1,4 +1,4 @@
-//! Port of src/smw/gamemodes/Coin.cpp
+//! Coin collection mode.
 
 use crate::smw::players::PlayerId;
 use crate::game::Game;
@@ -14,14 +14,12 @@ use crate::smw::player::CPlayer;
 
 #[derive(Clone)]
 
+/// Coin collection: collect randomly appearing coins; first team to the goal wins.
 pub struct CGM_Coins {
     pub cgame_mode: CGameMode,
 }
 impl_base!(CGM_Coins => cgame_mode: CGameMode);
 
-//Coin mode:
-//Collect randomly appearing coins on map
-//First one to set amount wins
 impl CGM_Coins {
     pub fn new() -> Self {
         let mut this = CGM_Coins { cgame_mode: CGameMode::new() };

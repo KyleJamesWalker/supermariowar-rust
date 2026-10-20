@@ -1,4 +1,4 @@
-//! Port of src/common/GameModeSettingsSerialization.cpp
+//! Game mode settings as the comma-separated integers that tour and world files store.
 
 use crate::common::game_mode::*;
 use crate::common::game_mode_settings::*;
@@ -7,7 +7,7 @@ use crate::common::global_constants::{ticks_from_disk, ticks_to_disk};
 use crate::common::match_types::Boss;
 use crate::common::world_tour_stop::Strtok;
 
-/// `ReadTourStopSetting`: the next integer token, or `defaultVal`; returns whether a token was read.
+/// A setting type that tour and world files store as one integer.
 trait TourStopSetting: Sized + Copy {
     fn from_atoi(v: i32) -> Self;
     fn to_short(self) -> i16;
@@ -42,6 +42,7 @@ macro_rules! u8_enum_setting {
 }
 u8_enum_setting!(DeathStyle, ScoringStyle, JailStyle, StarStyle, Boss);
 
+/// Reads the next integer token into `output`, or `defaultVal` when there is none; returns whether one was read.
 fn read<T: TourStopSetting>(st: &mut Strtok, output: &mut T, defaultVal: T) -> bool {
     match st.tok(b",\n") {
         Some(tok) => {
@@ -55,7 +56,7 @@ fn read<T: TourStopSetting>(st: &mut Strtok, output: &mut T, defaultVal: T) -> b
     }
 }
 
-/// `read` for a duration, which tour and world files store in frames of the original 62-frames-per-second game.
+/// `read` for a duration, which tour and world files store in 62 Hz frames.
 fn read_ticks(st: &mut Strtok, output: &mut i16, defaultVal: i16) -> bool {
     let read = read(st, output, defaultVal);
     if read {
@@ -64,7 +65,7 @@ fn read_ticks(st: &mut Strtok, output: &mut i16, defaultVal: i16) -> bool {
     read
 }
 
-/// Turns the selected game mode settings into a list of integers
+/// `gamemodeId`'s settings as a list of integers, durations in 62 Hz frames; empty for a mode with none.
 pub fn serialize_gms(gamemodeId: i16, g: &GameModeSettings) -> Vec<i16> {
     let s = |v: &[i16]| v.to_vec();
     match gamemodeId as i32 {
@@ -130,8 +131,8 @@ pub fn serialize_gms(gamemodeId: i16, g: &GameModeSettings) -> Vec<i16> {
     }
 }
 
-/// Parses the active tokenizer of `strtok` (a list of integers) into the selected game mode settings;
-/// settings missing from the line take their value from `current`.
+/// Parses the rest of the line in `st` into `gamemodeId`'s settings in `g`; missing ones take their value from `d`.
+/// Returns, per setting, whether it was read.
 pub fn deserialize_gms(st: &mut Strtok, gamemodeId: i16, g: &mut GameModeSettings, d: &GameModeSettings) -> Vec<bool> {
     let mut v = Vec::new();
     match gamemodeId as i32 {

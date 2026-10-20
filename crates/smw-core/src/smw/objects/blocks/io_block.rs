@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/blocks/IO_Block.cpp
+//! Default block behavior shared by every block: drawing, hidden-block respawn, and collision by side.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -17,6 +17,7 @@ use crate::smw::objects::carriable::co_shell::CO_Shell;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::player::{get_player_from_global_id, CPlayer};
 
+/// Builds the shared block state at `pos` (pixels) and records its tile column and row.
 pub fn io_block_new(g: &mut Game, nspr: SpriteId, pos: Vec2s) -> IO_Block {
     let mut gp = g.ptr();
     let cobject = CObject::new(gp.get(), nspr, pos);
@@ -54,11 +55,13 @@ pub fn io_block_new(g: &mut Game, nspr: SpriteId, pos: Vec2s) -> IO_Block {
     b
 }
 
+/// Draws the whole block sprite.
 pub fn io_block_draw<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T) {
     let b = this.block();
     g.rm.sprite(b.spr).draw(g, b.ix as i32, b.iy as i32);
 }
 
+/// Hides a revealed hidden block again after the hidden-block respawn setting.
 pub fn io_block_update<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T) {
     let b = this.block_mut();
     if b.ishiddentype && !b.hidden {
@@ -76,10 +79,12 @@ pub fn io_block_update<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T) {
     }
 }
 
+/// Returns the block to its idle state.
 pub fn io_block_reset<T: IO_BlockTrait + ?Sized>(this: &mut T) {
     this.block_mut().state = 0;
 }
 
+/// Routes a player hit by side: 0 from below, 1 into the left side, 2 onto the top, 3 into the right side.
 pub fn io_block_collide_player_dir<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T, player: PlayerId, direction: i16, useBehavior: bool) -> bool {
     if direction == 2 {
         this.hittop_player(g, player, useBehavior)
@@ -92,6 +97,7 @@ pub fn io_block_collide_player_dir<T: IO_BlockTrait + ?Sized>(g: &mut Game, this
     }
 }
 
+/// With `useBehavior`, lands the player on top of the block.
 pub fn io_block_hittop_player<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: PlayerId, useBehavior: bool) -> bool {
     if useBehavior {
         let iposy = this.block().iposy;
@@ -108,6 +114,7 @@ pub fn io_block_hittop_player<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mu
     false
 }
 
+/// With `useBehavior`, bounces the player down off the block's underside.
 pub fn io_block_hitbottom_player<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: PlayerId, useBehavior: bool) -> bool {
     if useBehavior {
         g.player(player).vely = cap_falling_velocity(-g.player(player).vely * BOUNCESTRENGTH);
@@ -118,6 +125,7 @@ pub fn io_block_hitbottom_player<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: 
     false
 }
 
+/// With `useBehavior`, stops the player against the block's right side.
 pub fn io_block_hitright_player<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: PlayerId, useBehavior: bool) -> bool {
     if useBehavior {
         let b = this.block();
@@ -136,6 +144,7 @@ pub fn io_block_hitright_player<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &
     false
 }
 
+/// With `useBehavior`, stops the player against the block's left side.
 pub fn io_block_hitleft_player<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: PlayerId, useBehavior: bool) -> bool {
     if useBehavior {
         let b = this.block();
@@ -154,6 +163,7 @@ pub fn io_block_hitleft_player<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &m
     false
 }
 
+/// Routes an object hit by side, numbered as in [`io_block_collide_player_dir`].
 pub fn io_block_collide_object_dir<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T, object: Ptr<dyn IO_MovingObjectTrait>, direction: i16) -> bool {
     if direction == 2 {
         this.hittop_object(g, object)
@@ -166,6 +176,7 @@ pub fn io_block_collide_object_dir<T: IO_BlockTrait + ?Sized>(g: &mut Game, this
     }
 }
 
+/// Lands the object on the block with its own landing bounce.
 pub fn io_block_hittop_object<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
     let iposy = this.block().iposy;
     let ch = object.collisionHeight;
@@ -175,6 +186,7 @@ pub fn io_block_hittop_object<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mu
     true
 }
 
+/// Pushes the object below the block and reverses its vertical speed.
 pub fn io_block_hitbottom_object<T: IO_BlockTrait + ?Sized>(this: &mut T, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
     let b = this.block();
     object.set_yf((b.iposy as i32 + b.ih as i32) as f32 + 0.2);
@@ -183,6 +195,7 @@ pub fn io_block_hitbottom_object<T: IO_BlockTrait + ?Sized>(this: &mut T, mut ob
     true
 }
 
+/// Pushes the object out of the right side and sends it right.
 pub fn io_block_hitright_object<T: IO_BlockTrait + ?Sized>(this: &mut T, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
     let b = this.block();
     object.set_xf((b.iposx as i32 + b.iw as i32) as f32 + 0.2);
@@ -195,6 +208,7 @@ pub fn io_block_hitright_object<T: IO_BlockTrait + ?Sized>(this: &mut T, mut obj
     true
 }
 
+/// Pushes the object out of the left side and sends it left.
 pub fn io_block_hitleft_object<T: IO_BlockTrait + ?Sized>(this: &mut T, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
     let iposx = this.block().iposx;
     let cw = object.collisionWidth;
@@ -208,6 +222,7 @@ pub fn io_block_hitleft_object<T: IO_BlockTrait + ?Sized>(this: &mut T, mut obje
     true
 }
 
+/// Bumps an object standing on a block hit from below: enemies die leaving a flipped shell, shells flip, thrown blocks break, others hop.
 pub fn io_block_bounce_moving_object<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut object: Ptr<dyn IO_MovingObjectTrait>) {
         let mut gp = g.ptr();
     let r#type = object.get_moving_object_type();
@@ -240,6 +255,7 @@ pub fn io_block_bounce_moving_object<T: IO_BlockTrait + ?Sized>(g: &mut Game, th
     }
 }
 
+/// Kills players and map-colliding objects overlapping this tile, crediting `playerID`; called when the block turns solid.
 pub fn io_block_kill_players_and_objects_inside_block<T: IO_BlockTrait + ?Sized>(g: &mut Game, this: &mut T, playerID: i16) {
     let iposx = this.block().iposx;
     let iposy = this.block().iposy;

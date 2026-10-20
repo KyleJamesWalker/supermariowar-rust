@@ -1,4 +1,4 @@
-//! Port of src/smw/ui/MI_InputControlContainer.cpp
+//! The player controls editor: device choice and a binding field per game and menu key.
 
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::common::resource_manager::SpriteId;
@@ -20,13 +20,16 @@ use crate::smw::harness;
 use crate::common::keys::{SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP};
 use std::ffi::CStr;
 
+/// Labels of the game control bindings, in key index order.
 const GameInputNames: [&str; NUM_KEYS] = ["Left", "Right", "Jump", "Down", "Turbo", "Use Item", "Pause", "Exit"];
+/// Labels of the menu control bindings, in key index order.
 const MenuInputNames: [&str; NUM_KEYS] = ["Up", "Down", "Left", "Right", "Select", "Cancel", "Random", "Fast Map"];
 
 /**************************************
  * MI_InputControlField Class
  **************************************/
 
+/// One binding row; selecting it waits for the next key, mouse or pad input and binds it.
 pub struct MI_InputControlField {
     pub ui_control: UI_Control,
 
@@ -36,15 +39,20 @@ pub struct MI_InputControlField {
     pub iWidth: i16,
     pub iIndent: i16,
 
+    /// `DEVICE_KEYBOARD` or a joystick index.
     pub iDevice: i16,
+    /// The binding this row edits, inside the player's input controls; null shows Unassigned.
     pub iKey: *mut Keycode,
+    /// 0 for game controls, 1 for menu controls.
     pub iType: i16,
+    /// Key index within the control set.
     pub iKeyIndex: i16,
     pub iPlayerIndex: i16,
 }
 crate::impl_base!(MI_InputControlField => ui_control: UI_Control);
 
 impl MI_InputControlField {
+    /// Display names of joystick keycodes, indexed by keycode.
     pub const Joynames: [&'static str; 30] = [
         "Joystick Up", "Joystick Down", "Joystick Left", "Joystick Right", "Stick 2 Up", "Stick 2 Down", "Stick 2 Left", "Stick 2 Right", "Pad Up", "Pad Down",
         "Pad Left", "Pad Right", "Button 1", "Button 2", "Button 3", "Button 4", "Button 5", "Button 6", "Button 7", "Button 8",
@@ -84,7 +92,7 @@ impl MI_InputControlField {
         self.iPlayerIndex = playerindex;
     }
 
-    /// `SetKey(Keycode* iSetKey, Keycode key, short device)`
+    /// Binds `key` to `*iSetKey`; a same-device binding that already had `key` takes the old value instead.
     pub fn set_key_device(&mut self, g: &mut Game, iSetKey: *mut Keycode, key: Keycode, device: i16) {
         unsafe {
             let mut fNeedSwap = false;
@@ -137,6 +145,7 @@ impl UI_ControlTrait for MI_InputControlField {
         #[cfg(target_os = "emscripten")]
         let mut events = std::mem::take(&mut g.frame_events).into_iter();
 
+        // Natively this blocks until a bindable input arrives; on the web it reads only this frame's events.
         while !done {
             #[cfg(not(target_os = "emscripten"))]
             let input = harness::wait_event(g);
@@ -297,13 +306,16 @@ impl UI_ControlTrait for MI_InputControlField {
  * MI_InputControlContainer Class
  **************************************/
 
+/// Inner menu editing one player's device and bindings.
 pub struct MI_InputControlContainer {
     pub ui_control: UI_Control,
 
     pub iPlayerID: i16,
     pub iDevice: i16,
+    /// 0 shows the game bindings, 1 the menu bindings.
     pub iSelectedInputType: i16,
 
+    /// Inner menu holding every field; input goes to it while this control is modified.
     pub mInputMenu: Box<UI_Menu>,
 
     pub miImage: [Ctl<MI_Image>; 2],
@@ -319,6 +331,7 @@ pub struct MI_InputControlContainer {
 }
 crate::impl_base!(MI_InputControlContainer => ui_control: UI_Control);
 
+/// Adds an item per connected pad, labeled with its controller type and name.
 unsafe fn add_joysticks(g: &mut Game, field: &mut MI_SelectField<i16>) {
     for iJoystick in 0..g.devices.len() as i16 {
         let pad = g.pad(iJoystick as usize);
@@ -340,12 +353,13 @@ unsafe fn add_joysticks(g: &mut Game, field: &mut MI_SelectField<i16>) {
     }
 }
 
+/// Pointer to binding `iKey` of control set `iType` (0 game, 1 menu) for player `iPlayerID`.
 fn key_ptr(g: &mut Game, iPlayerID: i16, iType: usize, iKey: usize) -> *mut Keycode {
     &mut g.input_control(g.game_values.playerInput.inputControls[iPlayerID as usize]).inputGameControls[iType].keys[iKey] as *mut Keycode
 }
 
 impl MI_InputControlContainer {
-    //call with x = 94, y = 19
+    /// Builds the editor for player `playerID` (0 to 3) with fields placed from `x`, `y` in pixels.
     pub fn new(g: &mut Game, spr_button: SpriteId, x: i16, y: i16, playerID: i16) -> Self {
         let mut gp = g.ptr();
         unsafe {
@@ -458,6 +472,7 @@ impl MI_InputControlContainer {
         }
     }
 
+    /// Shows the selected set's rows; the last two keys are hidden for keyboards other than player 1's.
     fn set_visible_input_fields(&mut self, g: &mut Game) {
         let selDevice = g.ctl(self.miDeviceSelectField).current_value() as i32;
 
@@ -472,8 +487,9 @@ impl MI_InputControlContainer {
         }
     }
 
+    /// Points the editor at player `playerID`, hiding devices other players use.
     pub fn set_player(&mut self, g: &mut Game, playerID: i16) {
-        // Not in upstream: list the pads connected since (pad::hotplug).
+        // Relist the pads when any were connected or removed since (see `pad::hotplug`).
         #[cfg(not(target_os = "emscripten"))]
         if self.devices != crate::smw::pad::generation() {
             self.devices = crate::smw::pad::generation();
@@ -526,9 +542,10 @@ impl MI_InputControlContainer {
         self.mInputMenu.reset_menu(g);
     }
 
+    /// Moves the player onto device `lDevice` and points the rows at that device's bindings.
     pub fn update_device_keys(&mut self, g: &mut Game, lDevice: i16) {
         let p = self.iPlayerID as usize;
-        // Not in upstream: a joystick keeps its own bindings, and a keyboard player takes the first
+        // A joystick keeps its own bindings, and a keyboard player takes the first
         // keyboard set no other player has (player p's own unless joysticks moved them, see assign_inputs).
         let control = if lDevice == DEVICE_KEYBOARD {
             let taken = |q: usize| (0..4).any(|o| o != p && g.game_values.playerInput.inputControls[o] == Some((q as u8, 0)));
@@ -590,9 +607,6 @@ impl UI_ControlTrait for MI_InputControlContainer {
 
             return MENU_CODE_NONE;
         } else if MENU_CODE_INPUT_DEVICE_CHANGED == ret {
-            //TODO: Need to handle writing out input configurations, modifying input configs here
-            //Need to handle case where reading in and using a device that is no longer
-            //an option will crash the system (joystick unplugged or something)
 
             let v = g.ctl(self.miDeviceSelectField).current_value();
             self.update_device_keys(g, v);

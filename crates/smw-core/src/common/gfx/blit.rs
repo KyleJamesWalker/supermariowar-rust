@@ -1,5 +1,5 @@
-//! `SDL_UpperBlit`, `SDL_UpperBlitScaled` and `SDL_FillRect` for the game's surfaces, drawn with the software
-//! blitter (`soft_surface`).
+//! Pointer-based blit and fill calls for game surfaces: each records screen writes in the display list, then draws
+//! with the software blitter (`soft_surface`).
 
 use crate::common::gfx::soft_surface::{self, Rect, Surface};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -16,7 +16,8 @@ fn warn_unverified(src: &Surface, dst: &Surface) {
     }
 }
 
-/// `SDL_UpperBlit`.
+/// Blits `src_rect` of `src` (all of it when null) to `dst` at `dst_rect`'s position, clipped, and writes the clipped
+/// rectangle back to `dst_rect`. Returns -1 when either surface is null, else 0.
 pub unsafe fn upper_blit(src: *mut Surface, src_rect: *const Rect, dst: *mut Surface, dst_rect: *mut Rect) -> i32 {
     if src.is_null() || dst.is_null() {
         return -1;
@@ -47,7 +48,7 @@ pub unsafe fn upper_blit(src: *mut Surface, src_rect: *const Rect, dst: *mut Sur
     0
 }
 
-/// `SDL_FillRect`.
+/// Fills `rect` (the clip rectangle when null) of `dst` with the raw pixel value `color`. Returns -1 on a null `dst`.
 pub unsafe fn fill_rect(dst: *mut Surface, rect: *const Rect, color: u32) -> i32 {
     if dst.is_null() {
         return -1;
@@ -65,7 +66,8 @@ pub fn decode_for_load(path: &std::path::Path) -> Option<crate::common::gfx::sof
     crate::common::gfx::soft_image::decode_png(&std::fs::read(path).ok()?)
 }
 
-/// `SDL_UpperBlitScaled`.
+/// Stretches `src_rect` of `src` onto `dst_rect` of `dst`. Returns -1 for null or identical surfaces, or a source
+/// state the scaler does not support.
 pub unsafe fn upper_blit_scaled(src: *mut Surface, src_rect: *const Rect, dst: *mut Surface, dst_rect: *mut Rect) -> i32 {
     if src.is_null() || dst.is_null() || src == dst {
         return -1;

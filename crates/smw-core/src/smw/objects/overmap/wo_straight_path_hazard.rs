@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/overmap/WO_StraightPathHazard.cpp
+//! Straight-path hazard: a fireball flying in a fixed direction, as spat by pirhana plants.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -19,11 +19,14 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class OMO Straight Path Hazard - straight path fireball
 //------------------------------------------------------------------------------
+/// Fireball that wraps horizontally, disappears off the top or bottom, and bursts on hitting a player.
 #[derive(Clone)]
 pub struct OMO_StraightPathHazard {
     pub io_over_map_object: IO_OverMapObject,
 
+    /// Heading (radians).
     pub dAngle: f32,
+    /// Speed (pixels per tick).
     pub dVel: f32,
 }
 impl_base!(OMO_StraightPathHazard => io_over_map_object: IO_OverMapObject);
