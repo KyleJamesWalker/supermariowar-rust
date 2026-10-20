@@ -309,6 +309,14 @@ impl sfxSound {
         })
     }
 
+    /// `from_file`, or a silent sound with a warning when the file is missing or unreadable.
+    pub fn from_file_or_silence(g: &mut Game, path: &Path) -> Self {
+        Self::from_file(g, path).unwrap_or_else(|e| {
+            println!("\n[sfx] {e}; playing silence instead");
+            Self::new()
+        })
+    }
+
     /// Starts the sound on a free channel; false if it started within the last 40 ms or no channel is free.
     pub fn play(&mut self, g: &mut Game) -> bool {
         let mut gp = g.ptr();

@@ -525,7 +525,7 @@ impl MenuState {
 
                 //If it is not "[none]", then add this announcer sound
                 if szBuffer != "[none]" {
-                    let sound = sfxSound::from_file(gp.get(), Path::new(&convert_path(g, &szBuffer))).unwrap_or_else(|e| std::panic::panic_any(e));
+                    let sound = sfxSound::from_file_or_silence(gp.get(), Path::new(&convert_path(g, &szBuffer)));
                     g.rm.sfx_announcer[announcerIndex as usize] = sound;
                 }
 
