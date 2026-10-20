@@ -1,4 +1,4 @@
-//! Port of src/common/GameModeSettings.cpp
+//! Every game mode's options, and their byte layout in options.bin.
 
 use crate::common::gameplay_styles::{DeathStyle, JailStyle, ScoringStyle, StarStyle};
 use crate::common::global_constants::{NUMFRENZYCARDS, NUMSTOMPENEMIES, NUMSURVIVALENEMIES};
@@ -42,6 +42,7 @@ impl FragGameModeSettings {
 pub struct TimeGameModeSettings {
     pub style: DeathStyle,
     pub scoring: ScoringStyle,
+    /// Percent chance that a powerup block gives a clock instead.
     pub percentextratime: i16,
 }
 
@@ -55,7 +56,9 @@ impl TimeGameModeSettings {
 pub struct JailGameModeSettings {
     pub style: JailStyle,
     pub tagfree: bool,
+    /// Ticks a jailed player waits to be freed.
     pub timetofree: i16,
+    /// Percent chance that a powerup block gives a jail key instead.
     pub percentkey: i16,
 }
 
@@ -69,6 +72,7 @@ impl JailGameModeSettings {
 pub struct CoinGameModeSettings {
     pub penalty: bool,
     pub quantity: i16,
+    /// Percent chance that a powerup block gives a coin instead.
     pub percentextracoin: i16,
 }
 
@@ -80,7 +84,9 @@ impl CoinGameModeSettings {
 
 #[derive(Clone, Debug)]
 pub struct StompGameModeSettings {
+    /// Spawn delay base, in 62.5 Hz ticks: each enemy comes after `rate` plus a random part of it.
     pub rate: i16,
+    /// Per stomp enemy kind, its spawn weight.
     pub enemyweight: [i16; NUMSTOMPENEMIES as usize],
 }
 
@@ -105,9 +111,11 @@ impl EggGameModeSettings {
 
 #[derive(Clone, Debug)]
 pub struct FlagGameModeSettings {
+    /// Flag base speed in quarter pixels per 62.5 Hz tick; 0 keeps the bases still.
     pub speed: i16,
     pub touchreturn: bool,
     pub pointmove: bool,
+    /// Ticks a dropped flag waits before returning home.
     pub autoreturn: i16,
     pub homescore: bool,
     pub centerflag: bool,
@@ -146,6 +154,7 @@ impl TagGameModeSettings {
 pub struct StarGameModeSettings {
     pub time: i16,
     pub shine: StarStyle,
+    /// Percent chance that a powerup block gives a clock instead.
     pub percentextratime: i16,
 }
 
@@ -160,6 +169,7 @@ pub struct DominationGameModeSettings {
     pub loseondeath: bool,
     pub stealondeath: bool,
     pub relocateondeath: bool,
+    /// Ticks between area relocations.
     pub relocationfrequency: i16,
     pub quantity: i16,
 }
@@ -173,6 +183,7 @@ impl DominationGameModeSettings {
 #[derive(Clone, Debug)]
 pub struct KingOfTheHillModeSettings {
     pub areasize: i16,
+    /// Ticks between hill relocations.
     pub relocationfrequency: i16,
     pub maxmultiplier: i16,
 }
@@ -199,8 +210,10 @@ impl RaceGameModeSettings {
 #[derive(Clone, Debug)]
 pub struct FrenzyGameModeSettings {
     pub quantity: i16,
+    /// Ticks between card spawns.
     pub rate: i16,
     pub storedshells: bool,
+    /// Per frenzy card, its spawn weight.
     pub powerupweight: [i16; NUMFRENZYCARDS as usize],
 }
 
@@ -229,9 +242,11 @@ impl SurvivalGameModeSettings {
 
 #[derive(Clone, Debug)]
 pub struct GreedGameModeSettings {
+    /// Ticks before a dropped coin disappears.
     pub coinlife: i16,
     pub owncoins: bool,
     pub multiplier: i16,
+    /// Percent chance that a powerup block gives a coin instead.
     pub percentextracoin: i16,
 }
 
@@ -245,6 +260,7 @@ impl GreedGameModeSettings {
 pub struct HealthGameModeSettings {
     pub startlife: i16,
     pub maxlife: i16,
+    /// Percent chance that a powerup block gives an extra life instead.
     pub percentextralife: i16,
 }
 
@@ -257,8 +273,11 @@ impl HealthGameModeSettings {
 #[derive(Clone, Debug)]
 pub struct CollectionGameModeSettings {
     pub quantity: i16,
+    /// Ticks between card spawns.
     pub rate: i16,
+    /// Ticks a player must hold three cards to bank them.
     pub banktime: i16,
+    /// Ticks before a dropped card disappears.
     pub cardlife: i16,
 }
 
@@ -331,6 +350,7 @@ default_via_new!(
     BossGameModeSettings
 );
 
+/// Every mode's options. `CGameValues` holds the menu's copy and the one the current game plays with.
 #[derive(Clone, Debug, Default)]
 pub struct GameModeSettings {
     pub classic: ClassicGameModeSettings,
@@ -363,9 +383,10 @@ impl GameModeSettings {
     }
 }
 
-/// Byte image of the C++ struct (clang layout, 194 bytes) for `read_raw` / `write_raw` of options.bin.
+/// Size of the settings block in options.bin: each mode's fields in order, every `i16` at an even offset.
 pub const GAMEMODESETTINGS_RAW_SIZE: usize = 194;
 
+/// Reads or writes the options.bin settings block in field order, aligning as `raw_visit` asks.
 struct RawCursor<'a> {
     buf: &'a mut [u8],
     pos: usize,
@@ -557,6 +578,7 @@ impl GameModeSettings {
         c.end(2);
     }
 
+    /// The options.bin settings block, durations as stored here (in ticks).
     pub fn to_raw_bytes(&self) -> [u8; GAMEMODESETTINGS_RAW_SIZE] {
         let mut buf = [0u8; GAMEMODESETTINGS_RAW_SIZE];
         let mut copy = self.clone();
@@ -581,6 +603,7 @@ impl GameModeSettings {
         ]
     }
 
+    /// Loads from an options.bin settings block; durations come back as stored.
     pub fn from_raw_bytes(&mut self, bytes: &[u8; GAMEMODESETTINGS_RAW_SIZE]) {
         let mut buf = *bytes;
         let mut c = RawCursor { buf: &mut buf, pos: 0, write: false };
@@ -599,7 +622,7 @@ mod raw_tests {
         s.boss.hitpoints = 77;
         s.tag.tagontouch = false;
         let bytes = s.to_raw_bytes();
-        // boss at offset 188 in the C++ struct (tools/ref/layout_ref.cpp)
+        // boss.hitpoints sits at offset 192 (tools/ref/layout_ref.cpp).
         assert_eq!(i16::from_le_bytes([bytes[192], bytes[193]]), 77);
         let mut t = GameModeSettings::new();
         t.from_raw_bytes(&bytes);
