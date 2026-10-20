@@ -1733,7 +1733,7 @@ impl WorldMap {
                         iBackTileId += 1;
                     } else if iBackTileDirection == 4 {
                         let target = Vec2s::new(iBackTileId % self.iWidth, iBackTileId / self.iWidth);
-                        let pos = self.warps[self.tiles.at(iCol as usize, iRow as usize).iWarp as usize].get_other_side(target);
+                        let pos = self.warps[self.tiles.at(target.x as usize, target.y as usize).iWarp as usize].get_other_side(target);
                         iBackTileId = self.tiles.at(pos.x as usize, pos.y as usize).iID;
                     }
 
