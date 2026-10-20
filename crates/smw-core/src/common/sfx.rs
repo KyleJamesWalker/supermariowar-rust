@@ -51,7 +51,7 @@ pub struct SfxState {
     /// Whether the audio service plays anything; headless replays only run the virtual mixer.
     pub sfx_audible: bool,
     /// Called when a play-once track ends; a no-op unless something assigns it.
-    pub musicfinished: fn(),
+    pub musicfinished: fn(&mut Game),
     v_channels: [VirtualChannel; sfxSound::k_channels],
     v_music: VirtualMusic,
     next_id: u32,
@@ -77,7 +77,7 @@ impl SfxState {
             sfx_log_events: false,
             sfx_events: Vec::new(),
             sfx_audible: false,
-            musicfinished: || {},
+            musicfinished: |_| {},
             v_channels: [VirtualChannel { chunk: None, forever: false, end: 0 }; sfxSound::k_channels],
             v_music: VirtualMusic { music: None, forever: false, paused: false, end: 0, remaining: 0 },
             next_id: 0,
@@ -172,7 +172,7 @@ pub fn sfx_virtual_advance(g: &mut Game) {
     if sfx_state(g).v_music.music.is_some() && !sfx_state(g).v_music.forever && !sfx_state(g).v_music.paused && now.wrapping_sub(sfx_state(g).v_music.end) as i32 >= 0 {
         sfx_state(g).v_music.music = None;
         log_event(g, "S musicdone".to_string());
-        (sfx_state(g).musicfinished)();
+        (sfx_state(g).musicfinished)(g);
     }
 }
 
