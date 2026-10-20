@@ -94,6 +94,9 @@ impl UI_SoundOptionsMenu {
                 g.ctl(this.miWorldMusicField).add(name, iMusic as i16);
                 g.worldmusiclist.next();
             }
+            if g.worldmusiclist.count() == 0 {
+                g.ctl(this.miWorldMusicField).add("(none)".to_string(), 0);
+            }
             g.ctl(this.miWorldMusicField).set_current_value(iCurrentMusic as i16);
             g.worldmusiclist.set_current(iCurrentMusic as usize);
             g.ctl(this.miWorldMusicField).set_item_changed_code(MENU_CODE_WORLD_MUSIC_CHANGED);

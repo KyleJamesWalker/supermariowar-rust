@@ -405,9 +405,12 @@ impl sfxMusic {
     }
 
     /// `from_file`, or with a warning, when the file is missing or unreadable, a track the virtual mixer plays for the
-    /// file's listed duration while the backend, which never loaded it, stays silent.
+    /// file's listed duration while the backend, which never loaded it, stays silent. An empty path is no track.
     pub fn from_file_or_silence(g: &mut Game, path: &Path) -> Self {
         let mut gp = g.ptr();
+        if path.as_os_str().is_empty() {
+            return Self::new();
+        }
         Self::from_file(g, path).unwrap_or_else(|e| {
             println!("\n[sfx] {e}; playing silence instead");
             let name = data_relative(&path.to_string_lossy());

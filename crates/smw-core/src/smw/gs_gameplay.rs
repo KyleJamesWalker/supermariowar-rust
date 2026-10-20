@@ -2349,7 +2349,7 @@ pub fn play_music(g: &mut Game) {
     }
 
     //If no background music is playing, then play some
-    if !gp.backgroundmusic[0].is_playing(g) && !g.rm.sfx_invinciblemusic.is_playing(g) && !g.rm.sfx_timewarning.is_playing(g) && !g.mode().gameover {
+    if !g.musiclist.is_empty() && !gp.backgroundmusic[0].is_playing(g) && !g.rm.sfx_invinciblemusic.is_playing(g) && !g.rm.sfx_timewarning.is_playing(g) && !g.mode().gameover {
         if g.game_values.playnextmusic {
             let mapname = g.maplist.current_shortmapname().to_string();
             g.musiclist.set_next_music(music_category(g.g_map.musicCategoryID), &mapname, &g.g_map.szBackgroundFile);
