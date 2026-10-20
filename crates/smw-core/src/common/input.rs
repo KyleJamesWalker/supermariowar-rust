@@ -1,7 +1,7 @@
-//! Port of src/common/input.cpp
+//! Key bindings and per-player key state: turns keyboard, mouse and joystick events into game and menu keys.
 //!
-//! The C++ unions that alias `keys[NUM_KEYS]` with named members (`menu_up`, `game_jump`, ...)
-//! become a plain `keys` array plus same-named accessor methods (`game_jump()` / `game_jump_mut()`).
+//! `keys[NUM_KEYS]` holds a control set's bindings or states, and named accessors (`game_jump()` /
+//! `game_jump_mut()`) reach each slot; the game and menu names alias the same eight slots.
 
 use crate::common::keys::*;
 use crate::game::Game;
@@ -10,20 +10,25 @@ use crate::common::global_constants::MAX_PLAYERS;
 use crate::globals::*;
 use crate::common::keys::{SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP};
 
+/// Slots in one control set.
 pub const NUM_KEYS: usize = 8;
 
+/// `CInputPlayerControl::iDevice` for the keyboard; a joystick uses its device number.
 pub const DEVICE_KEYBOARD: i16 = -1;
 
+/// Axis values within this of center count as released.
 pub const JOYSTICK_DEAD_ZONE: i32 = 16384;
 pub const MOUSE_X_DEAD_ZONE: i32 = 0;
 pub const MOUSE_Y_DEAD_ZONE: i32 = 5;
 
+/// Binding codes for mouse motion; `MOUSE_BUTTON_START + n` is mouse button `n`.
 pub const MOUSE_UP: i32 = 323;
 pub const MOUSE_DOWN: i32 = 324;
 pub const MOUSE_LEFT: i32 = 325;
 pub const MOUSE_RIGHT: i32 = 326;
 pub const MOUSE_BUTTON_START: i32 = 327;
 
+/// Binding codes for joystick sticks and hat; `JOY_BUTTON_START + n` is button `n`.
 pub const JOY_STICK_1_UP: i32 = 0;
 pub const JOY_STICK_1_DOWN: i32 = 1;
 pub const JOY_STICK_1_LEFT: i32 = 2;
@@ -40,11 +45,15 @@ pub const JOY_HAT_LEFT: i32 = 10;
 pub const JOY_HAT_RIGHT: i32 = 11;
 pub const JOY_BUTTON_START: i32 = 12;
 
+/// An unbound slot.
 pub const KEY_NONE: i32 = -1;
 
 #[derive(Clone, Copy, Default, PartialEq, Eq, Debug)]
+/// One key's state this tick.
 pub struct CKeyState {
+    /// Held down.
     pub fDown: bool,
+    /// Went down this tick; `clear_pressed_keys` clears it.
     pub fPressed: bool,
 }
 
@@ -85,12 +94,14 @@ macro_rules! all_key_aliases {
 }
 
 #[derive(Clone, Copy, Default, PartialEq, Eq, Debug)]
+/// One control set's bindings: a keycode, mouse code or joystick code per slot.
 pub struct CInputControl {
     pub keys: [Keycode; NUM_KEYS],
 }
 all_key_aliases!(CInputControl, Keycode);
 
 #[derive(Clone, Copy, Default, Debug)]
+/// A player's key states this tick.
 pub struct COutputControl {
     pub keys: [CKeyState; NUM_KEYS],
 }
@@ -116,13 +127,16 @@ impl PartialEq for COutputControl {
 }
 
 #[derive(Clone, Copy, Default, Debug)]
+/// A device and its bindings.
 pub struct CInputPlayerControl {
+    /// `DEVICE_KEYBOARD`, or the joystick's device number.
     pub iDevice: i16,
     pub inputGameControls: [CInputControl; 2], //0 == game controls, 1 == menu controls
 }
 
 #[derive(Clone)]
 
+/// Turns input events into each player's key states.
 pub struct CPlayerInput {
     /// Each player's `inputConfiguration[set][kind]` (kind 0 is the keyboard, 1 the joystick); `Game::input_control` reads it.
     pub inputControls: [Option<(u8, u8)>; 4],
@@ -130,13 +144,14 @@ pub struct CPlayerInput {
     //Use these structures to see what input has been pressed
     pub outputControls: [COutputControl; 4],
 
+    /// The last key pressed this tick, for fields that read raw keys; 0 for none.
     pub iPressedKey: Keycode,
-    /// Not in upstream: per joystick (`which`), the stick 1 and hat directions held (up, down, left, right).
+    /// Per joystick (`which`), the stick 1 and hat directions held (up, down, left, right).
     joyDirections: Vec<(i32, [bool; 4], [bool; 4])>,
     pub _alias: Aliased,
 }
 
-/// Not in upstream: the direction (up, down, left, right) of a stick 1 or hat binding. A joystick's
+/// The direction (up, down, left, right) of a stick 1 or hat binding. A joystick's
 /// stick 1 and hat drive the same direction bindings, so either one moves a player or a menu.
 fn joy_direction(key: Keycode) -> Option<usize> {
     match key {
@@ -189,11 +204,12 @@ impl CPlayerInput {
         self.iPressedKey = 0;
     }
 
+    /// Releases every game key but left, right, jump, down and turbo.
     pub fn clear_game_action_keys(&mut self) {
         for iPlayer in 0..MAX_PLAYERS as usize {
             let outputControl = &mut self.outputControls[iPlayer];
 
-            // 0-3: direction keys, 4: turbo
+            // 0-4: left, right, jump, down, turbo
             for iKey in 5..NUM_KEYS {
                 outputControl.keys[iKey].fPressed = false;
                 outputControl.keys[iKey].fDown = false;
@@ -203,7 +219,7 @@ impl CPlayerInput {
         self.iPressedKey = 0;
     }
 
-    /// Not in the C++: the held stick and hat directions, for replay checkpoints (smw/checkpoint.rs).
+    /// The held stick and hat directions, for replay checkpoints (smw/checkpoint.rs).
     pub fn joy_directions_mut(&mut self) -> &mut Vec<(i32, [bool; 4], [bool; 4])> {
         &mut self.joyDirections
     }
@@ -273,8 +289,8 @@ impl CPlayerInput {
                 let outputControl: *mut COutputControl;
                 let mut iDeviceID: i16 = DEVICE_KEYBOARD;
 
-                //Allow keyboard input from player 1 at all times (even when he is configured to use joystick)
-                // Not in upstream: unless another player now has those keys (see assign_inputs).
+                //Allow keyboard input from player 1 in menus (even when they are configured to use joystick)
+                // unless another player now has those keys (see assign_inputs).
                 if iPlayer == -1 {
                     let keyboard = &mut g.game_values.inputConfiguration[0][0] as *mut CInputPlayerControl;
                     if iGameState == 1 && g.input_control(self.inputControls[0]).iDevice != DEVICE_KEYBOARD && !self.inputControls.contains(&Some((0, 0))) {
@@ -297,8 +313,7 @@ impl CPlayerInput {
                 let inputControl = &*inputControl;
                 let outputControl = &mut *outputControl;
 
-                // game_values.playercontrol[-1] is read for the keyboard fallback player in C++ only
-                // when iGameState == 0, which the iPlayer == -1 branch excludes.
+                // `iPlayer` is -1 only in menus, where `iGameState` is 1, so this never indexes `playercontrol` with it.
                 let ignore_cpu = |iKey: usize| -> bool {
                     iGameState == 0 && g.game_values.playercontrol[iPlayer as usize] != 1 && iKey < 6
                 };
