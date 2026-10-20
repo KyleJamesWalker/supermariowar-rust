@@ -40,7 +40,9 @@ impl VideoSettings {
 /// The bundled presets: `shaders/presets/` beside the data folder.
 fn bundled_dir(g: &mut Game) -> PathBuf {
     let data = crate::common::path::convert_path(g, "");
-    Path::new(&data).join("..").join("shaders").join("presets")
+    // The data folder's parent by name; a `..` would leave through a symlinked data folder.
+    let data = Path::new(data.trim_end_matches('/'));
+    data.parent().unwrap_or(Path::new(".")).join("shaders").join("presets")
 }
 
 /// The player's presets: `shaders/` in the settings folder.
