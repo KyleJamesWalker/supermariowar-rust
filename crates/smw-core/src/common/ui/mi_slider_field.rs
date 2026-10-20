@@ -72,7 +72,7 @@ impl UI_ControlTrait for MI_SliderField {
             gp.rm.menu_font_large.draw_chop_right(g, x + indent2 + 16, y + 5, width - indent2 - 24, &self.current_item().name);
         }
 
-        let iSpacing: i16 = ((indent2 - indent - 20) / ((self.m_items.len() as i16) as i32 - 1)) as i16;
+        let iSpacing: i16 = ((indent2 - indent - 20) / ((self.m_items.len() as i16) as i32 - 1).max(1)) as i16;
         let mut iSpot: i16 = 0;
 
         for index in 0..self.m_items.len() {

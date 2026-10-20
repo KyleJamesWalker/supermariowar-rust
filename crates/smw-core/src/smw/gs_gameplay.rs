@@ -77,7 +77,7 @@ pub static scorepowerupoffsets: [[i16; 3]; 3] = [[37, 0, 0], [71, 89, 0], [105, 
 /// Creates the gameplay globals: the spotlight manager.
 pub fn init_globals(g: &mut Game) {
     g.spotlightManager.init(SpotlightManager::new());
-    g.sfx.musicfinished = g.sfx.musicfinished;
+    g.sfx.musicfinished = musicfinished;
 }
 
 #[derive(Clone)]
@@ -714,7 +714,6 @@ impl GameplayState {
             None => Ptr::null(),
         };
 
-        // The index still advances after a removal, so the player shifted into slot i is skipped this frame.
         let mut i: usize = 0;
         while i < g.players.len() {
             if g.player(g.players[i]).state == PlayerState::Dead {
@@ -756,6 +755,7 @@ impl GameplayState {
                 }
 
                 g.players.pop();
+                continue;
             }
             i += 1;
         }
@@ -1117,12 +1117,16 @@ pub fn handle_obj2obj_collisions(g: &mut Game) {
         for iObject1 in 0..iContainerEnd1 {
             let mut object1 = g.objectcontainer[iLayer1].list()[iObject1];
 
+            if object1.is_dead() {
+                continue;
+            }
+
             let movingobject1: Ptr<dyn IO_MovingObjectTrait> = match object1.as_io_moving_object() {
                 Some(m) => m.as_mo_ptr(),
                 None => continue,
             };
 
-            for iLayer2 in iLayer1..3usize {
+            'object2: for iLayer2 in iLayer1..3usize {
                 let iContainerEnd2 = g.objectcontainer[iLayer2].list().len();
                 let start = if iLayer1 == iLayer2 { iObject1 + 1 } else { 0 };
                 for iObject2 in start..iContainerEnd2 {
@@ -1149,9 +1153,8 @@ pub fn handle_obj2obj_collisions(g: &mut Game) {
                         }
                     }
 
-                    // Returns from the whole function, not just the object1 loop.
                     if object1.is_dead() {
-                        return;
+                        break 'object2;
                     }
                 }
             }

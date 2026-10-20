@@ -104,11 +104,10 @@ fn stoi(text: &str) -> i32 {
     v as i32
 }
 
-/// A world file's music category; values past `COUNT` (corrupt files) become `Grass`.
+/// A world file's music category; values outside the categories (corrupt files) become `Grass`.
 fn world_music_category_from_int(v: i32) -> WorldMusicCategory {
-    let v = v as u8;
-    if v <= WorldMusicCategory::COUNT as u8 {
-        unsafe { std::mem::transmute::<u8, WorldMusicCategory>(v) }
+    if (0..WorldMusicCategory::COUNT as i32).contains(&v) {
+        unsafe { std::mem::transmute::<u8, WorldMusicCategory>(v as u8) }
     } else {
         WorldMusicCategory::Grass
     }
@@ -1643,8 +1642,7 @@ impl WorldMap {
             }
         }
 
-        // Compares the column, not the row, against the height.
-        if iCol < self.iHeight - 1 && tile.iCompleted >= -1 {
+        if iRow < self.iHeight - 1 && tile.iCompleted >= -1 {
             let iType = self.tiles.at(c, r + 1).iType - 2;
 
             if iType >= 0 && iType <= 3 {
@@ -1739,7 +1737,7 @@ impl WorldMap {
                         iBackTileId += 1;
                     } else if iBackTileDirection == 4 {
                         let target = Vec2s::new(iBackTileId % self.iWidth, iBackTileId / self.iWidth);
-                        let pos = self.warps[self.tiles.at(iCol as usize, iRow as usize).iWarp as usize].get_other_side(target);
+                        let pos = self.warps[self.tiles.at(target.x as usize, target.y as usize).iWarp as usize].get_other_side(target);
                         iBackTileId = self.tiles.at(pos.x as usize, pos.y as usize).iID;
                     }
 

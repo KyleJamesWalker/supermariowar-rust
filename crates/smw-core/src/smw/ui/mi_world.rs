@@ -115,16 +115,6 @@ pub struct MI_World {
 }
 crate::impl_base!(MI_World => ui_control: UI_Control);
 
-/// `teamids[iTeam][iMember]` as one flat array: member 3 reads the next team's first slot, past the end reads `teamcounts`.
-fn teamids_flat(g: &mut Game, iTeam: i16, iMember: i16) -> i16 {
-    let idx = iTeam as usize * 3 + iMember as usize;
-    if idx < 12 {
-        g.game_values.teamids[idx / 3][idx % 3]
-    } else {
-        g.game_values.teamcounts[idx - 12]
-    }
-}
-
 
 impl MI_World {
     pub fn new(g: &mut Game) -> Self {
@@ -1027,8 +1017,7 @@ impl UI_ControlTrait for MI_World {
                                 //Door Keys
                                 let iKeyType = iType - NUM_POWERUPS - 5;
                                 if fDoor[iKeyType as usize] {
-                                    // iTeamMember is the team's member count here, one past its last member.
-                                    let iPlayer = teamids_flat(g, self.iControllingTeam, iTeamMember);
+                                    let iPlayer = keysPlayer as i16;
                                     fUsedItem = self.use_powerup(g, iPlayer, self.iControllingTeam, iPowerup, false);
                                 }
                             }

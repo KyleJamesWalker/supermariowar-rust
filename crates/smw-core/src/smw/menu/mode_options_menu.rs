@@ -1732,8 +1732,7 @@ impl UI_ModeOptionsMenu {
             // shyguy tag
             g.game_values.gamemodesettings.shyguytag.tagonsuicide = g.ctl(self.miShyGuyTagModeTagOnSuicideField).random_value(g);
             g.game_values.gamemodesettings.shyguytag.tagtransfer = g.ctl(self.miShyGuyTagModeTagOnStompField).random_value(g);
-            // freetime reads the tag transfer field, not miShyGuyTagModeFreeTimeField.
-            g.game_values.gamemodesettings.shyguytag.freetime = g.ctl(self.miShyGuyTagModeTagOnStompField).random_value(g);
+            g.game_values.gamemodesettings.shyguytag.freetime = g.ctl(self.miShyGuyTagModeFreeTimeField).random_value(g);
         } else if iMode == game_mode_boss_minigame {
             // boss
             g.game_values.gamemodesettings.boss.bosstype = g.ctl(self.miBossModeTypeField).random_value(g);

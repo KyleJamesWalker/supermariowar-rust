@@ -452,8 +452,7 @@ impl CObjectTrait for CO_Shell {
             if self.frozen || shell.frozen {
                 self.die(g);
                 shell.die(g);
-            }
-            if shell.fSmoking && !self.fSmoking {
+            } else if shell.fSmoking && !self.fSmoking {
                 self.die(g);
             } else if !shell.fSmoking && self.fSmoking {
                 shell.die(g);

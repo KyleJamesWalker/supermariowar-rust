@@ -94,7 +94,7 @@ impl B_WeaponBreakableBlock {
         if self.iType == WeaponDamageType::Shell
             && ((r#type == movingobject_shell && object.state == 1)
                 || r#type == movingobject_throwblock
-                || (r#type == movingobject_throwbox && !object.as_any().downcast_mut::<CO_ThrowBox>().unwrap().has_kill_velocity()))
+                || (r#type == movingobject_throwbox && object.as_any().downcast_mut::<CO_ThrowBox>().unwrap().has_kill_velocity()))
         {
             let mut iPlayerID: i16 = -1;
             let mut iTeamID: i16 = -1;
@@ -168,12 +168,12 @@ impl IO_BlockTrait for B_WeaponBreakableBlock {
         io_block_hittop_player(g, self, player, useBehavior);
 
         if self.state == 1 || self.state == 2 {
-            let iKillType = PlayerKillType::NonKill;
+            let mut iKillType = PlayerKillType::NonKill;
             if self.iBumpPlayerID >= 0
                 && !g.player(player).is_invincible_on_bottom()
                 && (g.player(player).teamID != self.iBumpTeamID || g.game_values.teamcollision == TeamCollisionStyle::On)
             {
-                player_killed_player(g, self.iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
+                iKillType = player_killed_player(g, self.iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
             }
 
             if PlayerKillType::NonKill == iKillType {
