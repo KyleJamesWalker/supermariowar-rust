@@ -1,7 +1,8 @@
-//! Port of src/common/math/Vec2.h
+//! A 2D vector with componentwise arithmetic.
 
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 
+/// A 2D vector; `*` and `/` between two vectors are componentwise.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Vec2<T> {
     pub x: T,

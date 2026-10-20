@@ -1,18 +1,27 @@
-//! Port of src/common/MatchTypes.h
+//! The kinds of match the menus start and the minigames and bosses they pick from.
 
+/// How the current match was started and what follows it.
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum MatchType {
     #[default]
+    /// One game, then back to the menu.
     SingleGame,
+    /// A series of games until a team wins enough of them.
     Tournament,
+    /// A tour: a fixed list of maps and modes.
     Tour,
+    /// A minigame picked from the menu.
     MiniGame,
+    /// A world map.
     World,
+    /// A single game started from the main menu's quick game option.
     QuickGame,
+    /// A netplay match.
     NetGame,
 }
 
+/// The minigames the menu offers.
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum Minigame {
@@ -24,6 +33,7 @@ pub enum Minigame {
     Boxes,
 }
 
+/// The boss a boss minigame fights.
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum Boss {
