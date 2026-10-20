@@ -68,6 +68,8 @@ pub struct V2Match {
     host_peer: Option<PeerId>,
     /// Peers whose slot claim was refused, so each is logged once.
     refused: Vec<PeerId>,
+    /// SMW_V2_ROGUE, for tests: a joiner that also claims the host's slot and sends its own start parts and GO.
+    rogue: bool,
     /// The host's match start (`checkpoint::capture_shared`); empty on a joiner.
     start: Vec<u8>,
     /// The match start parts a joiner has received so far.
@@ -171,6 +173,7 @@ pub fn match_starting(g: &mut Game) -> bool {
         host_slot: g.netplay.hostPlayerNumber,
         host_peer: None,
         refused: Vec::new(),
+        rogue: std::env::var_os("SMW_V2_ROGUE").is_some(),
         start,
         parts: StartParts::default(),
         ready: Vec::new(),
@@ -587,6 +590,11 @@ impl V2Match {
                 msg.extend_from_slice(&part);
                 self.send_all(&msg);
             }
+        } else if self.rogue {
+            self.send_all(&slot_message(self.host_slot));
+            self.send_all(&[MSG_START_PART, 0, 0, 0, 0]);
+            self.send_all(&[MSG_START_PART, 0, 0, 1, 0, b'x']);
+            self.send_all(&[MSG_GO]);
         }
     }
 
