@@ -393,9 +393,9 @@ fn music_category(id: i16) -> MusicCategory {
     MusicCategory::ALL[id as usize]
 }
 
-/// Loads a music file; panics when it cannot.
+/// Loads a music file; one that cannot load plays as silence.
 fn load_music(g: &mut Game, path: &std::path::Path) -> sfxMusic {
-    sfxMusic::from_file(g, path).unwrap_or_else(|e| std::panic::panic_any(e))
+    sfxMusic::from_file_or_silence(g, path)
 }
 
 impl GameplayState {
