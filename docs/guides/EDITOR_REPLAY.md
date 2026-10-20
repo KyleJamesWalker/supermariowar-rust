@@ -68,7 +68,7 @@ The harness builds each event as follows:
 - **Mouse button events:** `clicks = 1`.
 - **Motion events:** `state` is the scripted buttons held, and `xrel`/`yrel` are measured from the last scripted position.
 
-`SDL_PushEvent` does not update `SDL_GetKeyboardState` or `SDL_GetMouseState`, so the harness keeps its own copies: a scancode array set and cleared by scripted key events at push time, and the scripted button mask. `editorharness::keyboardState()` / `mouseState()` (`editor_harness::keyboard_state()` / `mouse_state()`) return them while the harness is active and fall back to SDL otherwise.
+`SDL_PushEvent` does not update `SDL_GetKeyboardState` or `SDL_GetMouseState`, so the harness keeps its own copies: a scancode array set and cleared by scripted key events at push time, and the scripted button mask. `editorharness::keyboardState()` / `mouseState()` (`editor_harness::keyboard_state()` / `mouse_state()`) return them while a script (`SMW_REPLAY`) runs and fall back to SDL otherwise, so the editors see real Shift and Ctrl when used live. The harness counts and dumps frames only when `SMW_REPLAY`, `SMW_FRAMES`, `SMW_DUMP` or `SMW_SHOT_FRAMES` is set.
 
 - The level editor `#define`s `SDL_GetKeyboardState` and `SDL_GetMouseState` to these, so held Shift, Ctrl and the Z/X/C path modifiers work in scripts.
 - The world editor still reads SDL directly, so it sees held modifiers released.

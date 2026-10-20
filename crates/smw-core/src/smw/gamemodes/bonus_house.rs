@@ -38,6 +38,10 @@ impl CGM_Bonus {
 }
 
 impl CGameModeTrait for CGM_Bonus {
+    fn harness_hash(&self, h: &mut crate::smw::rollback::Fnv) {
+        self.gm().harness_hash(h);
+        h.u32(self.tsTourStop as u32);
+    }
     fn gm(&self) -> &CGameMode {
         &self.cgame_mode
     }

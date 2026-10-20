@@ -27,6 +27,8 @@ struct Voice {
     pcm: Option<Arc<Vec<u8>>>,
     pos: usize,
     loops: i32,
+    /// The callback's output buffer, kept so the audio thread does not allocate.
+    out: Vec<u8>,
 }
 
 /// The playing track: its Ogg bytes, kept to restart a looping track, and the decoder.
@@ -36,6 +38,8 @@ struct MusicVoice {
     reader: Option<OggStreamReader<Cursor<Arc<[u8]>>>>,
     once: bool,
     paused: bool,
+    /// The callback's output buffer, kept so the audio thread does not allocate.
+    out: Vec<u8>,
 }
 
 /// A Vorbis decoder over `bytes`, positioned at the start.
@@ -71,11 +75,13 @@ fn take(voice: &mut Voice, mut want: usize, out: &mut Vec<u8>) {
 unsafe extern "C" fn feed_voice(userdata: *mut c_void, stream: *mut SDL_AudioStream, additional: c_int, _total: c_int) {
     let voice = &*(userdata as *const Mutex<Voice>);
     let Ok(mut voice) = voice.lock() else { return };
-    let mut out = Vec::with_capacity(additional.max(0) as usize);
+    let mut out = std::mem::take(&mut voice.out);
+    out.clear();
     take(&mut voice, additional.max(0) as usize, &mut out);
     if !out.is_empty() {
         SDL_PutAudioStreamData(stream, out.as_ptr() as *const c_void, out.len() as c_int);
     }
+    voice.out = out;
 }
 
 /// The music stream's get callback, on SDL's audio thread. Safety: `userdata` is the `Mutex<MusicVoice>`.
@@ -86,22 +92,25 @@ unsafe extern "C" fn feed_music(userdata: *mut c_void, stream: *mut SDL_AudioStr
         return;
     }
     let mut written = 0;
+    let mut out = std::mem::take(&mut music.out);
     while written < additional {
-        let Some(r) = music.reader.as_mut() else { return };
+        let Some(r) = music.reader.as_mut() else { break };
         match r.read_dec_packet_itl() {
             Ok(Some(samples)) => {
-                let bytes: Vec<u8> = samples.iter().flat_map(|s| s.to_le_bytes()).collect();
-                SDL_PutAudioStreamData(stream, bytes.as_ptr() as *const c_void, bytes.len() as c_int);
-                written += bytes.len() as c_int;
+                out.clear();
+                out.extend(samples.iter().flat_map(|s| s.to_le_bytes()));
+                SDL_PutAudioStreamData(stream, out.as_ptr() as *const c_void, out.len() as c_int);
+                written += out.len() as c_int;
             }
             _ => {
                 music.reader = if music.once { None } else { music.bytes.as_ref().and_then(|b| reader(b).ok()) };
                 if music.reader.is_none() {
-                    return;
+                    break;
                 }
             }
         }
     }
+    music.out = out;
 }
 
 /// SDL3 audio streams fed from decoded sounds and tracks, by the core's ids.
@@ -238,7 +247,7 @@ impl AudioOut for Sdl3Audio {
         self.halt_voice(channel as usize);
         if let Some((_, voice)) = self.voices.get(channel as usize) {
             if let Ok(mut v) = voice.lock() {
-                *v = Voice { pcm: Some(pcm), pos: 0, loops };
+                (v.pcm, v.pos, v.loops) = (Some(pcm), 0, loops);
             }
         }
     }
@@ -261,7 +270,7 @@ impl AudioOut for Sdl3Audio {
                 SDL_ClearAudioStream(*stream);
                 SDL_SetAudioStreamFormat(*stream, &src, std::ptr::null());
             }
-            *m = MusicVoice { bytes: Some(bytes), reader: Some(r), once, paused: false };
+            (m.bytes, m.reader, m.once, m.paused) = (Some(bytes), Some(r), once, false);
         }
     }
 
@@ -326,7 +335,7 @@ mod tests {
     use super::*;
 
     fn voice(len: usize, loops: i32) -> Voice {
-        Voice { pcm: Some(Arc::new((0..len as u8).collect())), pos: 0, loops }
+        Voice { pcm: Some(Arc::new((0..len as u8).collect())), pos: 0, loops, out: Vec::new() }
     }
 
     #[test]

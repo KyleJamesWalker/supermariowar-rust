@@ -83,6 +83,10 @@ pub trait Video {
     fn builtin_shaders(&self) -> Vec<String> {
         Vec::new()
     }
+    /// Why the preset `set_shader` picked before `open` did not load, once.
+    fn take_open_shader_error(&mut self) -> Option<String> {
+        None
+    }
     /// Scales the picture only by whole multiples of 640x480 when `on`.
     fn set_integer_scale(&mut self, _on: bool) {}
 }

@@ -1,4 +1,4 @@
-//! The transport a lobby server listens on, installed with `set_net_layer`.
+//! The transport a lobby server listens on, passed to `SMWServer::new`.
 
 use smw::common_netplay::network_interface::NetworkEventHandler;
 

@@ -77,7 +77,7 @@ pub static scorepowerupoffsets: [[i16; 3]; 3] = [[37, 0, 0], [71, 89, 0], [105, 
 /// Creates the gameplay globals: the spotlight manager.
 pub fn init_globals(g: &mut Game) {
     g.spotlightManager.init(SpotlightManager::new());
-    g.sfx.musicfinished = g.sfx.musicfinished;
+    g.sfx.musicfinished = musicfinished;
 }
 
 #[derive(Clone)]
@@ -169,6 +169,15 @@ impl GameplayState {
     }
 
     /// Replay-harness `G`/`P`/`T`/`O` records (docs/guides/REPLAY.md).
+    /// Feeds the simulated fields the harness dump leaves out into a desync checksum; the score text offsets only draw.
+    pub fn harness_hash(&self, h: &mut crate::smw::rollback::Fnv) {
+        h.i16s(&[self.iCountDownState, self.iCountDownTimer, self.iWindTimer, self.spindirection, self.spintimer]);
+        h.i16s(&self.respawnCount);
+        h.i16s(&self.respawnanimationtimer);
+        h.i16s(&self.respawnanimationframe);
+        h.f32s(&[self.dNextWind, self.spinangle, self.spinspeed]);
+    }
+
     pub fn harness_dump(&mut self, g: &mut Game, out: &mut impl Write) -> std::io::Result<()> {
         let gm = g.mode();
         writeln!(out, "G mode={} gameover={} winner={}", gm.gamemode as i32, gm.gameover as i32, gm.winningteam)?;
@@ -393,9 +402,9 @@ fn music_category(id: i16) -> MusicCategory {
     MusicCategory::ALL[id as usize]
 }
 
-/// Loads a music file; panics when it cannot.
+/// Loads a music file; one that cannot load plays as silence.
 fn load_music(g: &mut Game, path: &std::path::Path) -> sfxMusic {
-    sfxMusic::from_file(g, path).unwrap_or_else(|e| std::panic::panic_any(e))
+    sfxMusic::from_file_or_silence(g, path)
 }
 
 impl GameplayState {
@@ -714,7 +723,6 @@ impl GameplayState {
             None => Ptr::null(),
         };
 
-        // The index still advances after a removal, so the player shifted into slot i is skipped this frame.
         let mut i: usize = 0;
         while i < g.players.len() {
             if g.player(g.players[i]).state == PlayerState::Dead {
@@ -756,6 +764,7 @@ impl GameplayState {
                 }
 
                 g.players.pop();
+                continue;
             }
             i += 1;
         }
@@ -1117,12 +1126,16 @@ pub fn handle_obj2obj_collisions(g: &mut Game) {
         for iObject1 in 0..iContainerEnd1 {
             let mut object1 = g.objectcontainer[iLayer1].list()[iObject1];
 
+            if object1.is_dead() {
+                continue;
+            }
+
             let movingobject1: Ptr<dyn IO_MovingObjectTrait> = match object1.as_io_moving_object() {
                 Some(m) => m.as_mo_ptr(),
                 None => continue,
             };
 
-            for iLayer2 in iLayer1..3usize {
+            'object2: for iLayer2 in iLayer1..3usize {
                 let iContainerEnd2 = g.objectcontainer[iLayer2].list().len();
                 let start = if iLayer1 == iLayer2 { iObject1 + 1 } else { 0 };
                 for iObject2 in start..iContainerEnd2 {
@@ -1149,9 +1162,8 @@ pub fn handle_obj2obj_collisions(g: &mut Game) {
                         }
                     }
 
-                    // Returns from the whole function, not just the object1 loop.
                     if object1.is_dead() {
-                        return;
+                        break 'object2;
                     }
                 }
             }
@@ -2349,7 +2361,7 @@ pub fn play_music(g: &mut Game) {
     }
 
     //If no background music is playing, then play some
-    if !gp.backgroundmusic[0].is_playing(g) && !g.rm.sfx_invinciblemusic.is_playing(g) && !g.rm.sfx_timewarning.is_playing(g) && !g.mode().gameover {
+    if !g.musiclist.is_empty() && !gp.backgroundmusic[0].is_playing(g) && !g.rm.sfx_invinciblemusic.is_playing(g) && !g.rm.sfx_timewarning.is_playing(g) && !g.mode().gameover {
         if g.game_values.playnextmusic {
             let mapname = g.maplist.current_shortmapname().to_string();
             g.musiclist.set_next_music(music_category(g.g_map.musicCategoryID), &mapname, &g.g_map.szBackgroundFile);

@@ -47,6 +47,10 @@ impl IO_BulletBillCannon {
 }
 
 impl CObjectTrait for IO_BulletBillCannon {
+    fn harness_hash_object(&mut self, h: &mut crate::smw::rollback::Fnv) {
+        h.i16s(&[self.m_freq, self.m_timer]);
+        h.f32s(&[self.m_vel]);
+    }
     crate::impl_cobject_plumbing!();
 
     fn draw(&mut self, g: &mut Game) {}

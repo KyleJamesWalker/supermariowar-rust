@@ -95,6 +95,8 @@ pub struct OverlayGl {
     /// The `Overlay::generation` that `textures` were made from.
     generation: Option<u64>,
     textures: Vec<glow::Texture>,
+    /// Every quad's vertices, uploaded once per draw.
+    verts: Vec<f32>,
 }
 
 impl OverlayGl {
@@ -117,7 +119,7 @@ impl OverlayGl {
         gl.use_program(Some(program));
         gl.uniform_1_i32(gl.get_uniform_location(program, "image").as_ref(), 0);
         gl.use_program(Option::None);
-        Ok(OverlayGl { program, glsl, vao, vbo, screen, tint, generation: Option::None, textures: Vec::new() })
+        Ok(OverlayGl { program, glsl, vao, vbo, screen, tint, generation: Option::None, textures: Vec::new(), verts: Vec::new() })
     }
 
     /// Uploads the overlay's images when its generation changes.
@@ -172,16 +174,19 @@ impl OverlayGl {
         gl.active_texture(glow::TEXTURE0);
         gl.enable(glow::BLEND);
         gl.blend_func(glow::SRC_ALPHA, glow::ONE_MINUS_SRC_ALPHA);
-        for q in &overlay.quads {
-            let Some(&tex) = self.textures.get(q.image as usize) else { continue };
+        let quads = || overlay.quads.iter().filter_map(|q| Some((q, *self.textures.get(q.image as usize)?)));
+        self.verts.clear();
+        for (q, _) in quads() {
             let (x0, y0, x1, y1) = (q.x as f32, q.y as f32, (q.x + q.w) as f32, (q.y + q.h) as f32);
-            let verts: [f32; 16] = [x0, y0, 0.0, 0.0, x1, y0, 1.0, 0.0, x0, y1, 0.0, 1.0, x1, y1, 1.0, 1.0];
-            let bytes = std::slice::from_raw_parts(verts.as_ptr() as *const u8, std::mem::size_of_val(&verts));
-            gl.buffer_data_u8_slice(glow::ARRAY_BUFFER, bytes, glow::STREAM_DRAW);
+            self.verts.extend_from_slice(&[x0, y0, 0.0, 0.0, x1, y0, 1.0, 0.0, x0, y1, 0.0, 1.0, x1, y1, 1.0, 1.0]);
+        }
+        let bytes = std::slice::from_raw_parts(self.verts.as_ptr() as *const u8, std::mem::size_of_val(self.verts.as_slice()));
+        gl.buffer_data_u8_slice(glow::ARRAY_BUFFER, bytes, glow::STREAM_DRAW);
+        for (i, (q, tex)) in quads().enumerate() {
             let [r, g, b] = q.color.map(|c| c as f32 / 255.0);
             gl.uniform_4_f32(self.tint.as_ref(), r, g, b, q.alpha as f32 / 255.0);
             gl.bind_texture(glow::TEXTURE_2D, Some(tex));
-            gl.draw_arrays(glow::TRIANGLE_STRIP, 0, 4);
+            gl.draw_arrays(glow::TRIANGLE_STRIP, 4 * i as i32, 4);
         }
         gl.disable(glow::BLEND);
         if self.vao.is_some() {

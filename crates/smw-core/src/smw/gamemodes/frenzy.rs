@@ -47,6 +47,11 @@ impl CGM_Frenzy {
 }
 
 impl CGameModeTrait for CGM_Frenzy {
+    fn harness_hash(&self, h: &mut crate::smw::rollback::Fnv) {
+        self.gm().harness_hash(h);
+        h.i16s(&[self.timer, self.iSelectedPowerup, self.iItemWeightCount]);
+        h.player(self.m_frenzyowner);
+    }
     crate::impl_cgamemode_plumbing!();
 
     fn init(&mut self, g: &mut Game) {

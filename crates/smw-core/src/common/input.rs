@@ -12,6 +12,8 @@ use crate::common::keys::{SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP}
 
 /// Slots in one control set.
 pub const NUM_KEYS: usize = 8;
+/// The start key's slot in `keys`.
+pub const KEY_GAME_START: usize = 6;
 
 /// `CInputPlayerControl::iDevice` for the keyboard; a joystick uses its device number.
 pub const DEVICE_KEYBOARD: i16 = -1;
@@ -87,7 +89,7 @@ macro_rules! all_key_aliases {
             game_down, game_down_mut = 3;
             game_turbo, game_turbo_mut = 4;
             game_powerup, game_powerup_mut = 5;
-            game_start, game_start_mut = 6;
+            game_start, game_start_mut = KEY_GAME_START;
             game_cancel, game_cancel_mut = 7;
         );
     };

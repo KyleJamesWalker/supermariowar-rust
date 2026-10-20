@@ -130,7 +130,7 @@ pub fn gfx_show_catched_error(g: &mut Game, error: &str) {
         "It seems the game has unexpectedly crashed. If you could tell us\n\
          what happened exactly, we might be able to fix this bug. Consider\n\
          reporting it on the link below, thanks!\n\n\
-         https://github.com/mmatyas/supermariowar/issues\n\n\
+         https://github.com/KyleJamesWalker/supermariowar-rust/issues\n\n\
          Sincerely,\nThe Developers",
     );
     if !error.is_empty() {
