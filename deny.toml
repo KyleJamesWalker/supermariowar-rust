@@ -7,6 +7,7 @@ yanked = "deny"
 ignore = [
     { id = "RUSTSEC-2024-0384", reason = "instant: ggrs 0.13 depends on it" },
     { id = "RUSTSEC-2025-0141", reason = "bincode 1: ggrs 0.13 depends on it" },
+    { id = "RUSTSEC-2026-0249", reason = "smartstring: librashader 0.12 depends on it" },
 ]
 
 [licenses]
@@ -17,6 +18,7 @@ allow = [
     "CDLA-Permissive-2.0",
     "ISC",
     "MIT",
+    "MPL-2.0",
     "Unicode-3.0",
     "Unlicense",
     "Zlib",

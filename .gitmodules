@@ -1,3 +1,7 @@
 [submodule "data"]
 	path = data
 	url = https://github.com/mmatyas/supermariowar-data
+[submodule "shaders/slang-shaders"]
+	path = shaders/slang-shaders
+	url = https://github.com/libretro/slang-shaders.git
+	shallow = true

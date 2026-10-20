@@ -11,6 +11,8 @@ pub mod keymap;
 #[cfg(not(target_os = "emscripten"))]
 mod pad;
 mod pads;
+#[cfg(feature = "shaders")]
+mod shader;
 mod video;
 pub use audio::Sdl2Audio;
 pub use pads::Sdl2Pads;
@@ -64,7 +66,7 @@ fn home_directory() -> String {
 fn home_directory() -> String {
     let mut result = String::from("/Library/Preferences/.smw/");
     if let Ok(folder) = std::env::var("HOME") {
-        result = folder + &result;
+        result = folder + result.as_str();
     }
     result
 }
@@ -74,7 +76,7 @@ fn home_directory() -> String {
 fn home_directory() -> String {
     let mut result = String::from(".smw/");
     if let Ok(folder) = std::env::var("USERPROFILE") {
-        result = folder + "/" + &result;
+        result = folder + "/" + result.as_str();
     }
     result
 }

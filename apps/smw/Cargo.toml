@@ -7,6 +7,7 @@ publish.workspace = true
 
 [features]
 no_network = ["smw-core/no_network"]
+shaders = ["smw-sdl2/shaders"]
 
 [dependencies]
 smw-core = { path = "../../crates/smw-core" }
