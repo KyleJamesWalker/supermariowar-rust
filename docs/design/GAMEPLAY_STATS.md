@@ -34,7 +34,7 @@ The hooks sit where the game already decides each event: `CPlayer::killed_player
 
 ## Determinism and rollback
 
-The match counters are `game_values.stats`. `MatchState` already copies `game_values`, so a GGRS load restores the counters with the rest of the match. A re-simulated tick then counts its events once, and a mispredicted tick's events vanish with the state that held them. The checksum hashes the harness dump, which prints no stats, so the counters cannot cause a desync report.
+The match counters are `game_values.stats`. `MatchState` already copies `game_values`, so a GGRS load restores the counters with the rest of the match. A re-simulated tick then counts its events once, and a mispredicted tick's events vanish with the state that held them. The checksum hashes no stats, so the counters cannot cause a desync report.
 
 The alternative, committing only confirmed frames, needs a second copy of the counters and the confirmed-frame bookkeeping in `net_v2.rs`, for the same result.
 

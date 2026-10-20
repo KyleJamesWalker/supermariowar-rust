@@ -104,11 +104,10 @@ fn stoi(text: &str) -> i32 {
     v as i32
 }
 
-/// A world file's music category; values past `COUNT` (corrupt files) become `Grass`.
+/// A world file's music category; values outside the categories (corrupt files) become `Grass`.
 fn world_music_category_from_int(v: i32) -> WorldMusicCategory {
-    let v = v as u8;
-    if v <= WorldMusicCategory::COUNT as u8 {
-        unsafe { std::mem::transmute::<u8, WorldMusicCategory>(v) }
+    if (0..WorldMusicCategory::COUNT as i32).contains(&v) {
+        unsafe { std::mem::transmute::<u8, WorldMusicCategory>(v as u8) }
     } else {
         WorldMusicCategory::Grass
     }
@@ -663,18 +662,7 @@ impl WorldMap {
         let mut this = Self::blank();
         this.reset_draw_cycle();
 
-        this.iTileSize = tilesize;
-
-        if this.iTileSize as i32 == TILESIZE {
-            this.iTileSizeShift = 5;
-            this.iTileSheet = 0;
-        } else if this.iTileSize as i32 == PREVIEWTILESIZE {
-            this.iTileSizeShift = 4;
-            this.iTileSheet = 1;
-        } else if this.iTileSize as i32 == THUMBTILESIZE {
-            this.iTileSizeShift = 3;
-            this.iTileSheet = 2;
-        }
+        this.set_tile_size(tilesize);
 
         this.worldName = strip_path_and_extension(path);
 
@@ -1317,6 +1305,22 @@ impl WorldMap {
         }
     }
 
+    /// Draws at `tilesize` from now on: `TILESIZE`, `PREVIEWTILESIZE` or `THUMBTILESIZE`.
+    pub fn set_tile_size(&mut self, tilesize: i16) {
+        self.iTileSize = tilesize;
+
+        if self.iTileSize as i32 == TILESIZE {
+            self.iTileSizeShift = 5;
+            self.iTileSheet = 0;
+        } else if self.iTileSize as i32 == PREVIEWTILESIZE {
+            self.iTileSizeShift = 4;
+            self.iTileSheet = 1;
+        } else if self.iTileSize as i32 == THUMBTILESIZE {
+            self.iTileSizeShift = 3;
+            self.iTileSheet = 2;
+        }
+    }
+
     pub fn reset_draw_cycle(&mut self) {
         self.iLastDrawRow = 0;
         self.iLastDrawCol = 0;
@@ -1638,8 +1642,7 @@ impl WorldMap {
             }
         }
 
-        // Compares the column, not the row, against the height.
-        if iCol < self.iHeight - 1 && tile.iCompleted >= -1 {
+        if iRow < self.iHeight - 1 && tile.iCompleted >= -1 {
             let iType = self.tiles.at(c, r + 1).iType - 2;
 
             if iType >= 0 && iType <= 3 {
@@ -1734,7 +1737,7 @@ impl WorldMap {
                         iBackTileId += 1;
                     } else if iBackTileDirection == 4 {
                         let target = Vec2s::new(iBackTileId % self.iWidth, iBackTileId / self.iWidth);
-                        let pos = self.warps[self.tiles.at(iCol as usize, iRow as usize).iWarp as usize].get_other_side(target);
+                        let pos = self.warps[self.tiles.at(target.x as usize, target.y as usize).iWarp as usize].get_other_side(target);
                         iBackTileId = self.tiles.at(pos.x as usize, pos.y as usize).iID;
                     }
 

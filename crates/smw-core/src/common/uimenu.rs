@@ -295,7 +295,9 @@ impl UI_Menu {
                     self.fModifyingItem = false;
                 }
 
-                g.control(self.m_currentFocus).select(g, false);
+                if !self.m_currentFocus.is_none() {
+                    g.control(self.m_currentFocus).select(g, false);
+                }
                 self.m_currentFocus = pFound;
                 self.fModifyingItem = g.control(self.m_currentFocus).select(g, true);
 

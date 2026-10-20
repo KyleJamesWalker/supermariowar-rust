@@ -298,15 +298,17 @@ pub fn io_block_kill_players_and_objects_inside_block<T: IO_BlockTrait + ?Sized>
 
             let fOldX = movingobject.mo().fOldX;
             let fOldY = movingobject.mo().fOldY;
+            let w = movingobject.mo().collisionWidth;
+            let h = movingobject.mo().collisionHeight;
 
             let mut iSwapSides: i16 = 0;
             if fOldX >= (iposx as i32 + TILESIZE) as f32 {
                 iSwapSides = -App::screenWidth as i16;
             }
 
-            if fOldX + PW as f32 + iSwapSides as f32 >= iposx as f32
+            if fOldX + w as f32 + iSwapSides as f32 >= iposx as f32
                 && fOldX + (iSwapSides as f32) < (iposx as i32 + TILESIZE) as f32
-                && fOldY + PH as f32 >= iposy as f32
+                && fOldY + h as f32 >= iposy as f32
                 && fOldY < (iposy as i32 + TILESIZE) as f32
             {
                 movingobject.kill_object_map_hazard(g, playerID);

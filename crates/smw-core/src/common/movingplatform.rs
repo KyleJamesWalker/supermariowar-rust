@@ -20,6 +20,7 @@ use crate::smw::objectgame::removeifprojectile;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::player::CPlayer;
 use std::ffi::CStr;
+use std::rc::Rc;
 use std::ptr::{null, null_mut};
 
 /// How an object overlaps a platform: not at all, directly, or across the screen's left or right wrap edge.
@@ -68,8 +69,9 @@ pub struct MovingPlatform {
     pub iSteps: i16,
     pub iOnStep: i16,
 
-    /// Prerendered tiles, double-buffered so animated tiles can redraw one while the other shows.
-    pub sprites: [gfxSprite; 2],
+    /// Prerendered tiles, double-buffered so animated tiles can redraw one while the other shows. Only drawing reads
+    /// them, so clones share them; [`unshare_sprites`](Self::unshare_sprites) gives a clone its own.
+    pub sprites: Rc<[gfxSprite; 2]>,
 
     pub rSrcRect: Rect,
     pub rDstRect: Rect,
@@ -141,7 +143,7 @@ impl MovingPlatform {
             fOldVelY: 0.0,
             iSteps: 0,
             iOnStep: 0,
-            sprites: [gfxSprite::new(), gfxSprite::new()],
+            sprites: Rc::new([gfxSprite::new(), gfxSprite::new()]),
             rSrcRect: Rect { x: 0, y: 0, w: 0, h: 0 },
             rDstRect: Rect { x: 0, y: 0, w: 0, h: 0 },
             fForwardDirection: false,
@@ -158,14 +160,15 @@ impl MovingPlatform {
         this.reset_path(g);
 
         unsafe {
-            for iSurface in 0..2 {
-                this.sprites[iSurface] = gfxSprite::blank(g, w as u32 * iTileSize as u32, h as u32 * iTileSize as u32);
-                this.sprites[iSurface].set_wrap(640);
+            this.sprites = Rc::new(std::array::from_fn(|_| {
+                let mut sprite = gfxSprite::blank(g, w as u32 * iTileSize as u32, h as u32 * iTileSize as u32);
+                sprite.set_wrap(640);
 
-                let s = this.sprites[iSurface].get_surface();
+                let s = sprite.get_surface();
                 (*s).color_key = Some((*s).map_rgb(255, 0, 255));
                 crate::common::gfx::blit::fill_rect(s, null(), (*s).map_rgb(255, 0, 255));
-            }
+                sprite
+            }));
 
             for iSurface in 0..2 {
                 for iCol in 0..this.iTileWidth {
@@ -225,12 +228,17 @@ impl MovingPlatform {
         self.iTileType[col * self.iTileHeight as usize + row]
     }
 
+    /// Gives this platform its own copy of the draw buffers it shares with the platform it was cloned from.
+    pub fn unshare_sprites(&mut self) {
+        self.sprites = Rc::new((*self.sprites).clone());
+    }
+
     /// Draws `spr` over tile (`col`, `row`) in both draw buffers.
     pub fn paint_sprite_at(&mut self, spr: &gfxSprite, col: usize, row: usize) {
         let iTileSize: i16 = self.iWidth / self.iTileWidth;
         let dstPos = Rect { x: col as i32 * iTileSize as i32, y: row as i32 * iTileSize as i32, w: 0, h: 0 };
 
-        for layer in &self.sprites {
+        for layer in self.sprites.iter() {
             spr.draw_to(layer.get_surface(), &dstPos);
         }
     }

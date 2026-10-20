@@ -450,5 +450,10 @@ impl CObjectTrait for MO_PirhanaPlant {
 }
 
 impl IO_MovingObjectTrait for MO_PirhanaPlant {
+    fn harness_hash(&mut self, h: &mut crate::smw::rollback::Fnv) {
+        crate::smw::objects::moving::moving_object::mo_harness_hash(self, h);
+        h.i16s(&[self.iType, self.iDirection, self.iFreq, self.iTimer, self.iAnimationTimer, self.iFrame, self.iActionTimer]);
+        h.f32s(&[self.fExtent]);
+    }
     crate::impl_io_moving_object_plumbing!();
 }

@@ -139,7 +139,7 @@ pub struct MO_SledgeBrother {
     /// Choices made without each action; compared against `g_iSledgeBrotherNeedAction`.
     pub need_action: [i16; 6],
 
-    /// Last action picked and how many times in a row.
+    /// Last action picked, as a `need_action` index, and how many times in a row.
     pub last_action: i16,
     pub last_action_count: i16,
 }
@@ -300,9 +300,9 @@ impl MO_SledgeBrother {
             self.throwprojectile(g);
         } else if (last_action != 2 || last_action_count < max[2]) && randaction < actions[2] as i32 {
             self.turn(g);
-        } else if (last_action != 2 || last_action_count < max[3]) && randaction < actions[3] as i32 {
+        } else if (last_action != 3 || last_action_count < max[3]) && randaction < actions[3] as i32 {
             self.wait(g, waittime[0], waittime[1]);
-        } else if (last_action != 2 || last_action_count < max[4]) && randaction < actions[4] as i32 {
+        } else if (last_action != 4 || last_action_count < max[4]) && randaction < actions[4] as i32 {
             self.taunt(g);
         } else {
             self.r#move(g);
@@ -323,7 +323,7 @@ impl MO_SledgeBrother {
             RANDOM_INT(gp.get(), 2) == 0
         };
 
-        self.set_last_action(3);
+        self.set_last_action(5);
 
         if moveright {
             self.location += 1;
@@ -405,7 +405,7 @@ impl MO_SledgeBrother {
 
     fn taunt(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        self.set_last_action(2);
+        self.set_last_action(4);
 
         gp.rm.sfx_boomerang.play_loop(g, 3);
         self.taunt_timer = ticks(60) as i16;
@@ -420,9 +420,10 @@ impl MO_SledgeBrother {
     }
 
     fn turn(&mut self, g: &mut Game) {
+        self.set_last_action(2);
         self.face_right = !self.face_right;
         let waittime = g_iSledgeBrotherWaitTime[self.iType as usize][g.game_values.gamemodesettings.boss.difficulty as usize];
-        self.wait(g, waittime[0] >> 1, waittime[1] >> 1);
+        self.start_wait(g, waittime[0] >> 1, waittime[1] >> 1);
 
         self.need_action[2] = 0;
     }
@@ -437,9 +438,12 @@ impl MO_SledgeBrother {
     }
 
     fn wait(&mut self, g: &mut Game, min: i16, max: i16) {
-        let mut gp = g.ptr();
-        self.set_last_action(2);
+        self.set_last_action(3);
+        self.start_wait(g, min, max);
+    }
 
+    fn start_wait(&mut self, g: &mut Game, min: i16, max: i16) {
+        let mut gp = g.ptr();
         self.wait_timer = ticks(RandomNumberGenerator::generator(gp.get()).get_integer_range(min as i32, max as i32)) as i16;
         self.iActionState = 1;
 
@@ -722,6 +726,13 @@ impl CObjectTrait for MO_SledgeBrother {
 }
 
 impl IO_MovingObjectTrait for MO_SledgeBrother {
+    fn harness_hash(&mut self, h: &mut crate::smw::rollback::Fnv) {
+        crate::smw::objects::moving::moving_object::mo_harness_hash(self, h);
+        h.i16s(&[self.iType, self.iActionState, self.location, self.throwing_timer, self.hit_timer, self.hit_movement_timer, self.hit_offset_y, self.leg_offset_x, self.leg_movement_timer, self.arm_offset_x, self.arm_movement_timer, self.taunt_timer, self.wait_timer, self.hit_points, self.iDestX, self.iPlatformY, self.last_action, self.last_action_count]);
+        h.i16s(&self.iDestLocationX);
+        h.i16s(&self.need_action);
+        h.bools(&[self.face_right]);
+    }
     crate::impl_io_moving_object_plumbing!();
 
     fn die(&mut self, g: &mut Game) {

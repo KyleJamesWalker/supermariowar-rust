@@ -1317,8 +1317,7 @@ pub fn editor_edit(g: &mut Game) -> i32 {
                                                 update_tile_type(g, iLocalX, iLocalY);
                                             }
 
-                                            // (sic) checks the item at (iLocalY, iLocalY), not the painted cell.
-                                            adjust_map_items(g, iLocalY, iLocalY);
+                                            adjust_map_items(g, iLocalX, iLocalY);
                                         }
                                     }
                                 }
@@ -4160,7 +4159,7 @@ pub fn editor_backgrounds(g: &mut Game) -> i32 {
                     free_background_surfaces(g);
 
                     ed(gp.get()).editor_backgrounds_initialized = false;
-                    return EDITOR_EDIT;
+                    return EDITOR_QUIT;
                 }
 
                 SDL_KEYDOWN_EV => {
@@ -4527,8 +4526,8 @@ pub fn display_help(g: &mut Game) -> i32 {
     //handle messages
     while poll_event(g, &mut ed(gp.get()).event) != 0 {
         match ed(gp.get()).event.type_() {
-            SDL_QUIT_EV => return 0,
-            SDL_KEYDOWN_EV => return 0,
+            SDL_QUIT_EV => return EDITOR_QUIT,
+            SDL_KEYDOWN_EV => return EDITOR_EDIT,
             _ => {}
         }
     }
@@ -5121,7 +5120,7 @@ pub fn pasteselectedtiles(g: &mut Game, movex: i32, movey: i32) {
                         if ed(gp.get()).move_replace {
                             g.g_map.mapdatatop[iNewX][iNewY] = c.tiletype;
                         } else {
-                            update_tile_type(g, j as i16, kk as i16);
+                            update_tile_type(g, iNewX as i16, iNewY as i16);
                         }
 
                         for iType in 0..NUMSPAWNAREATYPES as usize {

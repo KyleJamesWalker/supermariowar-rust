@@ -67,13 +67,13 @@ impl MO_SuperFireball {
         o.iPlayerID = iGlobalID;
         o.iTeamID = teamID;
         o.colorOffset = ((iColorID as i32 + 1) * 64) as i16;
-        o.directionOffset = if o.velx < 0.0 { 0 } else { 32 };
         o.movingObjectType = movingobject_superfireball;
 
         o.state = 1;
 
         o.velx = vel.x;
         o.vely = vel.y;
+        o.directionOffset = if o.velx < 0.0 { 0 } else { 32 };
         o.ttl = ticks(RANDOM_INT(gp.get(), 30) + 60) as i16;
 
         o.drawframe = 0;
@@ -145,5 +145,9 @@ impl CObjectTrait for MO_SuperFireball {
 }
 
 impl IO_MovingObjectTrait for MO_SuperFireball {
+    fn harness_hash(&mut self, h: &mut crate::smw::rollback::Fnv) {
+        crate::smw::objects::moving::moving_object::mo_harness_hash(self, h);
+        h.i16s(&[self.ttl, self.directionOffset]);
+    }
     crate::impl_io_moving_object_plumbing!();
 }

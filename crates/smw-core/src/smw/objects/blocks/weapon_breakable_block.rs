@@ -94,7 +94,7 @@ impl B_WeaponBreakableBlock {
         if self.iType == WeaponDamageType::Shell
             && ((r#type == movingobject_shell && object.state == 1)
                 || r#type == movingobject_throwblock
-                || (r#type == movingobject_throwbox && !object.as_any().downcast_mut::<CO_ThrowBox>().unwrap().has_kill_velocity()))
+                || (r#type == movingobject_throwbox && object.as_any().downcast_mut::<CO_ThrowBox>().unwrap().has_kill_velocity()))
         {
             let mut iPlayerID: i16 = -1;
             let mut iTeamID: i16 = -1;
@@ -164,16 +164,21 @@ impl CObjectTrait for B_WeaponBreakableBlock {
 impl IO_BlockTrait for B_WeaponBreakableBlock {
     crate::impl_io_block_plumbing!();
 
+    fn harness_hash(&self, h: &mut crate::smw::rollback::Fnv) {
+        self.block().harness_hash(h);
+        h.i16s(&[self.iType as i16, self.iDrawOffsetX]);
+    }
+
     fn hittop_player(&mut self, g: &mut Game, mut player: PlayerId, useBehavior: bool) -> bool {
         io_block_hittop_player(g, self, player, useBehavior);
 
         if self.state == 1 || self.state == 2 {
-            let iKillType = PlayerKillType::NonKill;
+            let mut iKillType = PlayerKillType::NonKill;
             if self.iBumpPlayerID >= 0
                 && !g.player(player).is_invincible_on_bottom()
                 && (g.player(player).teamID != self.iBumpTeamID || g.game_values.teamcollision == TeamCollisionStyle::On)
             {
-                player_killed_player(g, self.iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
+                iKillType = player_killed_player(g, self.iBumpPlayerID, player, PlayerDeathStyle::Jump, KillStyle::Bounce, false, false);
             }
 
             if PlayerKillType::NonKill == iKillType {

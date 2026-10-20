@@ -9,6 +9,7 @@ extern crate smw_netplay as smw;
 use smw::server;
 
 pub mod config;
+mod limits;
 mod lobby;
 mod signal;
 mod switch;
@@ -16,7 +17,7 @@ mod websocket;
 
 pub use config::Config;
 use lobby::{LobbyIo, RelayNetworkLayer};
-use server::server::{set_net_layer, SMWServer};
+use server::server::SMWServer;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::mpsc::{self, RecvTimeoutError};
@@ -35,8 +36,7 @@ pub fn run(config: &Config) -> Result<(), String> {
     websocket::serve(config, events_tx).map_err(|e| format!("Could not listen on port {}: {}", config.port, e))?;
 
     let io = Rc::new(RefCell::new(LobbyIo::default()));
-    set_net_layer(Box::new(RelayNetworkLayer::new(io.clone())));
-    let mut lobby = SMWServer::new();
+    let mut lobby = SMWServer::new(Box::new(RelayNetworkLayer::new(io.clone())));
     if let Some(url) = &config.signal_url {
         lobby.v2.signal_url = url.clone();
     }

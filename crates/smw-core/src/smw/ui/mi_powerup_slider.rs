@@ -73,7 +73,7 @@ impl UI_ControlTrait for MI_PowerupSlider {
         g.rm.sprite(self.m_spr).draw_src(g, x + 38, y, &Rect { x: 0, y: selY, w: halfWidth, h: 32 });
         g.rm.sprite(self.m_spr).draw_src(g, x + 38 + halfWidth, y, &Rect { x: 550 - width + halfWidth, y: selY, w: width - halfWidth - 38, h: 32 });
 
-        let iSpacing: i16 = ((width - 100) / ((self.m_items.len() as i16) as i32 - 1)) as i16;
+        let iSpacing: i16 = ((width - 100) / ((self.m_items.len() as i16) as i32 - 1).max(1)) as i16;
         let mut iSpot: i16 = 0;
 
         for index in 0..self.m_items.len() as u32 {

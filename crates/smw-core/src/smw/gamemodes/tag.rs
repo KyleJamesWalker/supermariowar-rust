@@ -77,6 +77,11 @@ impl CGM_Tag {
 }
 
 impl CGameModeTrait for CGM_Tag {
+    fn harness_hash(&self, h: &mut crate::smw::rollback::Fnv) {
+        self.gm().harness_hash(h);
+        h.player(self.m_tagged);
+        h.i16s(&[self.counter]);
+    }
     crate::impl_cgamemode_plumbing!();
 
     fn init(&mut self, g: &mut Game) {

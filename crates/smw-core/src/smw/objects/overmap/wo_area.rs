@@ -117,6 +117,10 @@ impl OMO_Area {
 }
 
 impl CObjectTrait for OMO_Area {
+    fn harness_hash_object(&mut self, h: &mut crate::smw::rollback::Fnv) {
+        h.i16s(&[self.numareas, self.iPlayerID, self.iTeamID, self.colorID, self.scoretimer, self.frame, self.relocatetimer, self.totalTouchingPlayers]);
+        h.player(self.touchingPlayer);
+    }
     crate::impl_cobject_plumbing!();
 
     fn draw(&mut self, g: &mut Game) {
