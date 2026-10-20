@@ -4,6 +4,7 @@
 use crate::common::gfx::soft_surface::{self, BlitState, PixelsMut, Rect, Surface};
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
+use std::rc::Rc;
 
 /// What drew a write, by the address of the player, object, eyecandy or platform, so the same write in the next
 /// tick's record can be found.
@@ -37,7 +38,7 @@ pub struct Cmd {
 #[derive(Clone)]
 pub struct Draw {
     cmds: Vec<Cmd>,
-    snapshots: Vec<std::rc::Rc<Surface>>,
+    snapshots: Vec<Rc<Surface>>,
 }
 
 impl Draw {
@@ -58,6 +59,12 @@ thread_local! {
     static SCREEN: Cell<*mut Surface> = const { Cell::new(std::ptr::null_mut()) };
     static OWNER: Cell<(Owner, u16)> = const { Cell::new((Owner::None, 0)) };
     static RECORD_ONLY: Cell<bool> = const { Cell::new(false) };
+    /// The surfaces this draw's recorded blits read from, so far as no snapshot has replaced them.
+    static SOURCES: RefCell<Vec<*mut Surface>> = const { RefCell::new(Vec::new()) };
+    /// Every snapshot made, so one that no draw holds any more is reused instead of allocated.
+    static SNAPSHOTS: RefCell<Vec<Rc<Surface>>> = const { RefCell::new(Vec::new()) };
+    /// `render`'s lookup of the previous draw's writes, kept for its allocation.
+    static BEFORE: RefCell<HashMap<(Owner, u16), (i32, i32, *mut Surface)>> = RefCell::new(HashMap::new());
 }
 
 /// Starts recording the writes to `screen`. With `record_only`, they are not drawn: the frames shown render from
@@ -66,6 +73,7 @@ pub fn begin(screen: *mut Surface, record_only: bool) {
     SCREEN.set(screen);
     RECORD_ONLY.set(record_only);
     OWNER.set((Owner::None, 0));
+    SOURCES.with_borrow_mut(Vec::clear);
     RECORD.with_borrow_mut(|r| *r = Some(Draw::new()));
 }
 
@@ -102,11 +110,12 @@ pub(crate) unsafe fn before_write(dst: *mut Surface) {
     }
     RECORD.with_borrow_mut(|r| {
         let Some(r) = r else { return };
-        if !r.cmds.iter().any(|c| matches!(c.op, Op::Blit { src, .. } if src == dst)) {
+        let blitted = SOURCES.with_borrow_mut(|s| s.iter().position(|&p| p == dst).map(|i| s.swap_remove(i)).is_some());
+        if !blitted {
             return;
         }
-        let copy = std::rc::Rc::new((*dst).clone());
-        let ptr = std::rc::Rc::as_ptr(&copy) as *mut Surface;
+        let copy = snapshot(&*dst);
+        let ptr = Rc::as_ptr(&copy) as *mut Surface;
         for c in r.cmds.iter_mut() {
             if let Op::Blit { src, .. } = &mut c.op {
                 if *src == dst {
@@ -118,12 +127,35 @@ pub(crate) unsafe fn before_write(dst: *mut Surface) {
     });
 }
 
+/// A copy of `surface`, made in the pixels of a snapshot no draw holds any more when there is one.
+fn snapshot(surface: &Surface) -> Rc<Surface> {
+    SNAPSHOTS.with_borrow_mut(|all| {
+        if let Some(spare) = all.iter_mut().find(|s| Rc::strong_count(s) == 1) {
+            let s = Rc::get_mut(spare).expect("held only here");
+            let mut pixels = std::mem::take(&mut s.pixels);
+            pixels.clone_from(&surface.pixels);
+            *s = Surface { pixels, ..*surface };
+            return spare.clone();
+        }
+        let copy = Rc::new(surface.clone());
+        all.push(copy.clone());
+        copy
+    })
+}
+
 /// Whether a write to `dst` is recorded and not drawn.
 pub(crate) fn record_only(dst: *mut Surface) -> bool {
     RECORD_ONLY.get() && !dst.is_null() && dst == SCREEN.get()
 }
 
 pub(crate) unsafe fn record_blit(src: *mut Surface, src_rect: Option<Rect>, dst: *mut Surface, at: Option<Rect>, scaled: bool) {
+    if !dst.is_null() && dst == SCREEN.get() {
+        SOURCES.with_borrow_mut(|s| {
+            if !s.contains(&src) {
+                s.push(src);
+            }
+        });
+    }
     push(dst, || Op::Blit { src, state: (*src).state(), src_rect, at: at.unwrap_or(Rect::new(0, 0, (*dst).w, (*dst).h)), scaled });
 }
 
@@ -133,15 +165,17 @@ pub(crate) fn record_fill(dst: *mut Surface, rect: Option<Rect>, color: u32) {
 
 /// Draws `cur` onto `screen` with each owned write placed `alpha` (0 to 1) of the way from its position in `prev`.
 pub unsafe fn render(screen: *mut Surface, prev: &Draw, cur: &Draw, alpha: f32) {
-    let before: HashMap<(Owner, u16), (i32, i32, *mut Surface)> = prev
-        .cmds
-        .iter()
-        .filter(|c| c.owner != Owner::None)
-        .filter_map(|c| match c.op {
+    BEFORE.with_borrow_mut(|before| {
+        before.clear();
+        before.extend(prev.cmds.iter().filter(|c| c.owner != Owner::None).filter_map(|c| match c.op {
             Op::Blit { src, at, .. } => Some(((c.owner, c.seq), (at.x, at.y, src))),
             Op::Fill { .. } => None,
-        })
-        .collect();
+        }));
+        render_with(screen, before, cur, alpha);
+    });
+}
+
+unsafe fn render_with(screen: *mut Surface, before: &HashMap<(Owner, u16), (i32, i32, *mut Surface)>, cur: &Draw, alpha: f32) {
     let s = &mut *screen;
     for c in &cur.cmds {
         let mut view = PixelsMut { w: s.w, h: s.h, pitch: s.w as usize, pixels: &mut s.pixels, clip: c.clip, alpha: s.alpha };
