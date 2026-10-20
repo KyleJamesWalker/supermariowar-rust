@@ -94,7 +94,7 @@ impl B_WeaponBreakableBlock {
         if self.iType == WeaponDamageType::Shell
             && ((r#type == movingobject_shell && object.state == 1)
                 || r#type == movingobject_throwblock
-                || (r#type == movingobject_throwbox && !object.as_any().downcast_mut::<CO_ThrowBox>().unwrap().has_kill_velocity()))
+                || (r#type == movingobject_throwbox && object.as_any().downcast_mut::<CO_ThrowBox>().unwrap().has_kill_velocity()))
         {
             let mut iPlayerID: i16 = -1;
             let mut iTeamID: i16 = -1;
