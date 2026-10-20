@@ -458,7 +458,7 @@ pub fn log_event(st: &mut PadState, stage: usize, event: &SDL_Event) {
         } else if t == SDL_CONTROLLERAXISMOTION as u32 {
             format!("caxis which {} axis {} value {}", event.caxis.which, event.caxis.axis, event.caxis.value)
         } else if t == SDL_KEYDOWN as u32 || t == SDL_KEYUP as u32 {
-            format!("key {} sym {} scancode {}", if t == SDL_KEYDOWN as u32 { "down" } else { "up" }, event.key.keysym.sym, event.key.keysym.scancode as i32)
+            format!("key {} sym {} scancode {}", if t == SDL_KEYDOWN as u32 { "down" } else { "up" }, event.key.keysym.sym, crate::input::scancode(event))
         } else if t == SDL_QUIT as u32 {
             String::from("quit")
         } else if (SDL_JOYAXISMOTION as u32..=SDL_CONTROLLERDEVICEREMAPPED as u32).contains(&t) {

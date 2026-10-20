@@ -31,7 +31,7 @@ crate::impl_base!(MI_PlaylistField => ui_control: UI_Control);
 fn restart_menu_music(g: &mut Game) {
     let mut gp = g.ptr();
     gp.backgroundmusic[2].stop(g);
-    g.backgroundmusic[2] = sfxMusic::from_file(g, gp.musiclist.music(1)).unwrap_or_else(|e| std::panic::panic_any(e));
+    g.backgroundmusic[2] = sfxMusic::from_file_or_silence(g, gp.musiclist.music(1));
 
     if g.game_values.music {
         gp.backgroundmusic[2].play(g, false, false);

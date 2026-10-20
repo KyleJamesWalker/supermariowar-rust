@@ -41,6 +41,15 @@ impl Sdl2Audio {
     }
 }
 
+impl Drop for Sdl2Audio {
+    fn drop(&mut self) {
+        let tracks: Vec<TrackId> = self.tracks.keys().copied().collect();
+        tracks.into_iter().for_each(|id| self.free_track(id));
+        let sounds: Vec<SoundId> = self.sounds.keys().copied().collect();
+        sounds.into_iter().for_each(|id| self.free_sound(id));
+    }
+}
+
 /// The real device with no format changes allowed; if that fails, the silent dummy driver rather than another spec.
 /// On failure, restarts SDL's audio subsystem on the dummy driver.
 unsafe fn open_exact() {
@@ -49,7 +58,11 @@ unsafe fn open_exact() {
     }
     eprintln!("[sfx] no usable audio device ({}); continuing silently", mix_error());
     sdl2::sys::SDL_QuitSubSystem(sdl2::sys::SDL_INIT_AUDIO);
-    std::env::set_var("SDL_AUDIODRIVER", "dummy");
+    sdl2::sys::SDL_SetHintWithPriority(
+        sdl2::sys::SDL_HINT_AUDIODRIVER.as_ptr().cast(),
+        c"dummy".as_ptr(),
+        sdl2::sys::SDL_HintPriority::SDL_HINT_OVERRIDE,
+    );
     sdl2::sys::SDL_InitSubSystem(sdl2::sys::SDL_INIT_AUDIO);
     Mix_OpenAudio(44100, AUDIO_S16 as u16, 2, 2048);
 }
@@ -98,7 +111,10 @@ impl AudioOut for Sdl2Audio {
         if chunk.is_null() {
             return Err(mix_error());
         }
-        self.sounds.insert(id, chunk);
+        if let Some(old) = self.sounds.insert(id, chunk) {
+            // SAFETY: no longer in the map, so freed once; SDL_mixer halts the channels playing it first.
+            unsafe { Mix_FreeChunk(old) };
+        }
         let bytes_per_second = Self::bytes_per_second();
         // SAFETY: `chunk` was just checked non-null.
         Ok(if bytes_per_second != 0 { (unsafe { (*chunk).alen } as u64 * 1000 / bytes_per_second) as u32 } else { 0 })
@@ -113,7 +129,10 @@ impl AudioOut for Sdl2Audio {
         }
         // SAFETY: `music` was just checked non-null.
         let duration = unsafe { Mix_MusicDuration(music) };
-        self.tracks.insert(id, (music, bytes));
+        if let Some((old, _old_bytes)) = self.tracks.insert(id, (music, bytes)) {
+            // SAFETY: freed once, which halts it if playing, before `_old_bytes` drops at the end of this block.
+            unsafe { Mix_FreeMusic(old) };
+        }
         Ok(duration)
     }
 
@@ -171,5 +190,69 @@ impl AudioOut for Sdl2Audio {
 
     fn set_music_volume(&mut self, volume: i32) {
         unsafe { Mix_VolumeMusic(volume) };
+    }
+}
+
+#[cfg(test)]
+pub(crate) mod tests {
+    use super::*;
+
+    /// Held by every test that opens SDL_mixer, which is process-wide.
+    pub(crate) static MIXER: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    /// A mono 16-bit PCM WAV of `samples` silent samples at 44100 Hz.
+    fn wav(samples: u32) -> Vec<u8> {
+        let data = samples * 2;
+        let mut w = Vec::new();
+        w.extend_from_slice(b"RIFF");
+        w.extend_from_slice(&(36 + data).to_le_bytes());
+        w.extend_from_slice(b"WAVEfmt ");
+        w.extend_from_slice(&16u32.to_le_bytes());
+        w.extend_from_slice(&1u16.to_le_bytes());
+        w.extend_from_slice(&1u16.to_le_bytes());
+        w.extend_from_slice(&44100u32.to_le_bytes());
+        w.extend_from_slice(&88200u32.to_le_bytes());
+        w.extend_from_slice(&2u16.to_le_bytes());
+        w.extend_from_slice(&16u16.to_le_bytes());
+        w.extend_from_slice(b"data");
+        w.extend_from_slice(&data.to_le_bytes());
+        w.resize(w.len() + data as usize, 0);
+        w
+    }
+
+    #[test]
+    fn falls_back_to_dummy_and_reloading_an_id_replaces_what_plays() {
+        let _mixer = MIXER.lock().unwrap_or_else(|p| p.into_inner());
+        // SAFETY: the hint name and value are static C strings.
+        unsafe {
+            sdl2::sys::SDL_SetHintWithPriority(sdl2::sys::SDL_HINT_AUDIODRIVER.as_ptr().cast(), c"no-such-driver".as_ptr(), sdl2::sys::SDL_HintPriority::SDL_HINT_OVERRIDE);
+        }
+        let mut audio = Sdl2Audio::new();
+        audio.open(true);
+        assert!(audio.is_open(), "{}", mix_error());
+        // SAFETY: SDL returns a static name while audio is initialized.
+        assert_eq!(unsafe { CStr::from_ptr(sdl2::sys::SDL_GetCurrentAudioDriver()) }, c"dummy");
+        let (sound, track) = (SoundId(1), TrackId(1));
+
+        audio.load_sound(sound, &wav(44100)).unwrap();
+        audio.play(0, sound, -1);
+        audio.load_sound(sound, &wav(22050)).unwrap();
+        assert_eq!(audio.sounds.len(), 1);
+        audio.play(0, sound, 0);
+        // SAFETY: SDL_mixer checks the channel number.
+        assert_eq!(unsafe { Mix_Playing(0) }, 1);
+
+        audio.load_track(track, &wav(44100)).unwrap();
+        audio.play_track(track, false);
+        let duration = audio.load_track(track, &wav(22050)).unwrap();
+        assert!((duration - 0.5).abs() < 0.01, "{duration}");
+        assert_eq!(audio.tracks.len(), 1);
+        audio.play_track(track, false);
+        // SAFETY: takes no pointers.
+        assert_eq!(unsafe { Mix_PlayingMusic() }, 1);
+
+        drop(audio);
+        // SAFETY: takes no pointers.
+        unsafe { Mix_CloseAudio() };
     }
 }

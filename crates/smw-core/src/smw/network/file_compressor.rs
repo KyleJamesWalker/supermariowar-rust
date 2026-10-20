@@ -47,7 +47,7 @@ pub struct FileCompressor;
 
 impl FileCompressor {
     /// Buffer layout: `output_header_offset` zero bytes, uncompressed size (u16), compressed size (u16), zlib data.
-    /// The sizes are in native byte order.
+    /// The sizes are little-endian.
     pub fn compress(input_path: &str, output_header_offset: usize) -> CompressedData {
         let result = (|| -> Option<Vec<u8>> {
             if input_path.len() < 5 {
@@ -87,8 +87,8 @@ impl FileCompressor {
             let mut compressed_buffer = vec![0u8; output_header_offset + 4];
             let stored_full_size = input_size as u16;
             let stored_compressed_size = compressed.len() as u16;
-            compressed_buffer[output_header_offset..output_header_offset + 2].copy_from_slice(&stored_full_size.to_ne_bytes());
-            compressed_buffer[output_header_offset + 2..output_header_offset + 4].copy_from_slice(&stored_compressed_size.to_ne_bytes());
+            compressed_buffer[output_header_offset..output_header_offset + 2].copy_from_slice(&stored_full_size.to_le_bytes());
+            compressed_buffer[output_header_offset + 2..output_header_offset + 4].copy_from_slice(&stored_compressed_size.to_le_bytes());
             compressed_buffer.extend_from_slice(&compressed);
             Some(compressed_buffer)
         })();
@@ -113,8 +113,8 @@ impl FileCompressor {
             if input_buffer.len() < 4 {
                 return false;
             }
-            let stored_full_size = u16::from_ne_bytes([input_buffer[0], input_buffer[1]]);
-            let stored_compressed_size = u16::from_ne_bytes([input_buffer[2], input_buffer[3]]);
+            let stored_full_size = u16::from_le_bytes([input_buffer[0], input_buffer[1]]);
+            let stored_compressed_size = u16::from_le_bytes([input_buffer[2], input_buffer[3]]);
 
             if stored_full_size as u64 > COMPRESSION_SIZE_LIMIT || stored_compressed_size as u64 > COMPRESSION_SIZE_LIMIT {
                 println!("[error] Irregular size stored, possibly corrupted?");
