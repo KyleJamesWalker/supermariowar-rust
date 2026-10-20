@@ -1265,6 +1265,8 @@ pub struct Networking {
     pub myPlayerName: String,
     /// A v2 match, live or replayed, is running.
     pub v2_match: bool,
+    /// Why the last v2 match ended early, for the room menu to show.
+    pub match_notice: Option<String>,
     /// The name the lobby server gave this player: `myPlayerName`, numbered if another player has it.
     pub lobby_name: String,
 
@@ -1312,6 +1314,7 @@ impl Networking {
             client: NetClient::new(),
             myPlayerName: String::new(),
             v2_match: false,
+            match_notice: None,
             lobby_name: String::new(),
             selectedServerIndex: 0,
             savedServers: Vec::new(),

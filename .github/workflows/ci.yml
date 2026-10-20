@@ -141,6 +141,16 @@ jobs:
           JOIN_PRESENT_HZ: '144'
         run: timeout 10m tools/net_v2_test.py "$RUNNER_TEMP/net-games-mixed-rate"
 
+      - name: A joiner killed mid-match over netplay v2
+        env:
+          SDL_RENDER_DRIVER: software
+        run: timeout 5m tools/net_v2_disconnect_test.py "$RUNNER_TEMP/net-v2-disconnect"
+
+      - name: Mismatched and misbehaving peers over netplay v2
+        env:
+          SDL_RENDER_DRIVER: software
+        run: timeout 8m tools/net_v2_adversarial_test.py "$RUNNER_TEMP/net-v2-adversarial"
+
       - name: Upload net game logs
         if: failure()
         uses: actions/upload-artifact@v7
@@ -151,6 +161,8 @@ jobs:
             ${{ runner.temp }}/net-games-v2
             ${{ runner.temp }}/net-games-lan
             ${{ runner.temp }}/net-games-mixed-rate
+            ${{ runner.temp }}/net-v2-disconnect
+            ${{ runner.temp }}/net-v2-adversarial
           retention-days: 7
 
   relay:

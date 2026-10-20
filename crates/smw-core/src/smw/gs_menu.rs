@@ -139,6 +139,14 @@ fn rect(x: i32, y: i32, w: i32, h: i32) -> Rect {
     Rect { x, y, w, h }
 }
 
+/// The menu's error bar, near the bottom of the screen, with `text` in it.
+pub fn draw_message_bar(g: &mut Game, text: &str) {
+    let mut gp = g.ptr();
+    gp.rm.sprite(gp.rm.spr_selectfield).draw_src(g, 70, 400, &rect(0, 0, 484, 32));
+    gp.rm.sprite(gp.rm.spr_selectfield).draw_src(g, 554, 400, &rect(496, 0, 16, 32));
+    gp.rm.menu_font_large.draw_chop_centered(g, 320, 405, 470, text);
+}
+
 /// The menu game state; one instance, built by `init` once game data is loaded.
 pub struct MenuState {
     mCurrentMenu: MenuId,
@@ -184,7 +192,7 @@ pub struct MenuState {
     iDisplayError: DisplayError,
     iDisplayErrorTimer: i16,
     /// Message shown with `DISPLAY_ERROR_NET`.
-    net_error: &'static str,
+    net_error: String,
     /// Frames on the servers menu; LAN servers merge into the list once a second.
     nearby_timer: u32,
     /// The new-room settings menu is open from a room, to pick the next match's map and mode.
@@ -244,7 +252,7 @@ impl MenuState {
             mNetRoomMenu: Slot::empty(),
             iDisplayError: DISPLAY_ERROR_NONE,
             iDisplayErrorTimer: 0,
-            net_error: "",
+            net_error: String::new(),
             nearby_timer: 0,
             room_settings: false,
             fNeedMenuMusicReset: false,
@@ -1510,7 +1518,7 @@ impl MenuState {
                 if crate::smw::net::host_on_this_device(g) {
                     self.mNetServersMenu.refresh_scroll(g);
                 } else {
-                    self.net_error = "Hosting needs a desktop or handheld build";
+                    self.net_error = "Hosting needs a desktop or handheld build".to_string();
                     self.iDisplayError = DISPLAY_ERROR_NET;
                     self.iDisplayErrorTimer = (4 * TICKS_PER_SECOND) as i16;
                 }
@@ -1646,9 +1654,16 @@ impl MenuState {
             }
 
             if let Some(error) = lobby_error.filter(|_| self.in_net_menu()) {
-                self.net_error = error.message();
+                self.net_error = error.message().to_string();
                 self.iDisplayError = DISPLAY_ERROR_NET;
                 self.iDisplayErrorTimer = (4 * TICKS_PER_SECOND) as i16;
+            }
+            if self.in_net_menu() {
+                if let Some(notice) = g.netplay.match_notice.take() {
+                    self.net_error = notice;
+                    self.iDisplayError = DISPLAY_ERROR_NET;
+                    self.iDisplayErrorTimer = (4 * TICKS_PER_SECOND) as i16;
+                }
             }
         }
 
@@ -2003,7 +2018,7 @@ impl GameState for MenuState {
                 } else if self.iDisplayError == DISPLAY_ERROR_MAP_FILTER {
                     gp.rm.menu_font_large.draw_centered(g, 320, 405, "No Maps Meet All Filter Conditions!");
                 } else if self.iDisplayError == DISPLAY_ERROR_NET {
-                    gp.rm.menu_font_large.draw_chop_centered(g, 320, 405, 470, self.net_error);
+                    gp.rm.menu_font_large.draw_chop_centered(g, 320, 405, 470, &self.net_error);
                 }
 
                 self.iDisplayErrorTimer -= 1;
