@@ -160,6 +160,10 @@ impl CrtLite {
     unsafe fn with_context(context: SDL_GLContext) -> Result<Self, String> {
         SDL_GL_SetSwapInterval(if smw_platform::want_vsync() { 1 } else { 0 });
         let gl = load_gl();
+        // A WebGL canvas keeps its one context, so the renderer's vertex arrays can still be enabled.
+        for i in 0..gl.get_parameter_i32(glow::MAX_VERTEX_ATTRIBS) as u32 {
+            gl.disable_vertex_attrib_array(i);
+        }
         let program = link_program(&gl, glsl(), VERTEX, FRAGMENT)?;
         let es = glsl() == Glsl::Es100;
         let input = gl.create_texture()?;
