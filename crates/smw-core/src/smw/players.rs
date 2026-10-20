@@ -43,6 +43,27 @@ impl Clone for Players {
         let slots = self.slots.iter().map(|&p| if p.is_null() { p } else { Box::into_raw(Box::new(unsafe { (*p).clone() })) }).collect();
         Players { order: self.order.clone(), slots, generations: self.generations.clone() }
     }
+
+    /// Copies `source` like `clone`, but into the players already allocated in the same slots.
+    fn clone_from(&mut self, source: &Self) {
+        for &p in self.slots.iter().skip(source.slots.len()).filter(|p| !p.is_null()) {
+            drop(unsafe { Box::from_raw(p) });
+        }
+        self.slots.resize(source.slots.len(), std::ptr::null_mut());
+        for (dst, &src) in self.slots.iter_mut().zip(&source.slots) {
+            match (dst.is_null(), src.is_null()) {
+                (false, false) => unsafe { (**dst).clone_from(&*src) },
+                (true, false) => *dst = Box::into_raw(Box::new(unsafe { (*src).clone() })),
+                (false, true) => {
+                    drop(unsafe { Box::from_raw(*dst) });
+                    *dst = std::ptr::null_mut();
+                }
+                (true, true) => {}
+            }
+        }
+        self.order.clone_from(&source.order);
+        self.generations.clone_from(&source.generations);
+    }
 }
 
 impl Drop for Players {

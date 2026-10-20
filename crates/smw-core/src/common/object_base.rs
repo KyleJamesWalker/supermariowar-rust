@@ -229,11 +229,23 @@ impl CObject {
 /// A copy of an object, for `Game::clone_match`.
 pub trait CloneObject {
     fn clone_object(&self) -> Ptr<dyn CObjectTrait>;
+    /// Copies this object over `dst` in place when `dst` is the same type; false otherwise.
+    fn clone_object_into(&self, dst: &mut dyn CObjectTrait) -> bool;
 }
 
 impl<T: CObjectTrait + Clone> CloneObject for T {
     fn clone_object(&self) -> Ptr<dyn CObjectTrait> {
         Ptr::from_box(Box::new(self.clone()))
+    }
+
+    fn clone_object_into(&self, dst: &mut dyn CObjectTrait) -> bool {
+        match dst.as_any().downcast_mut::<T>() {
+            Some(dst) => {
+                dst.clone_from(self);
+                true
+            }
+            None => false,
+        }
     }
 }
 

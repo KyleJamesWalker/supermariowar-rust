@@ -67,6 +67,45 @@ impl Clone for CObjectContainer {
         let m_list = self.m_list.iter().map(copy_of).collect();
         CObjectContainer { m_list, index: self.index, slots, generations: self.generations.clone(), _alias: Aliased::new() }
     }
+
+    /// Copies `source` like `clone`, but copies each object over the one in the same slot when their types match.
+    fn clone_from(&mut self, source: &Self) {
+        let mut old = std::mem::take(&mut self.slots);
+        for obj in std::mem::take(&mut self.m_list) {
+            if old.get(obj.id.slot as usize) != Some(&Some(obj)) {
+                obj.delete();
+            }
+        }
+        self.slots = source
+            .slots
+            .iter()
+            .enumerate()
+            .map(|(slot, s)| {
+                let reused = old.get_mut(slot).and_then(Option::take);
+                let src = (*s)?;
+                if let Some(mut dst) = reused {
+                    if src.clone_object_into(&mut *dst) {
+                        return Some(dst);
+                    }
+                    dst.delete();
+                }
+                Some(src.clone_object())
+            })
+            .collect();
+        for obj in old.into_iter().flatten() {
+            obj.delete();
+        }
+        self.m_list = source
+            .m_list
+            .iter()
+            .map(|obj| match source.slots.get(obj.id.slot as usize) {
+                Some(Some(listed)) if listed == obj => self.slots[obj.id.slot as usize].unwrap(),
+                _ => obj.clone_object(),
+            })
+            .collect();
+        self.index = source.index;
+        self.generations.clone_from(&source.generations);
+    }
 }
 
 impl Drop for CObjectContainer {
