@@ -88,7 +88,6 @@ A read-only profile on 2026-10-20 of a headless 4-CPU replay on an Apple-silicon
 - A Very Hard CPU rebuilds its navigation graph every 8 ticks on maps with platforms, with 300 or more allocations per build, and `route` allocates its scratch buffers per call. Reuse the buffers and store the edges as two flat vectors (`ai_nav.rs`, S). One graph shared by all CPUs per tick changes gameplay. Batch it with other AI work.
 - On a 60 Hz display, interpolation records each tick and replays it once per present, for no visual gain. Rasterize directly when the refresh rate is at or below the tick rate (`main.rs`, `gs_gameplay.rs`, S).
 - Small per-frame allocations: `draw_platforms` clones two vectors six times a frame (`map.rs`), `touch::overlay` clones the cutouts and builds a new quad vector every present (`touch.rs`), and `display_list::begin` regrows its command vector every tick (S each).
-- A headless replay spends about 1.4 s of 2.5 s asleep in `services::delay` calls from the map preview widgets and the live-record poll. The golden sweeps pay about 80 s per run. Make `delay` a no-op in the headless services (S).
 - Startup on the device is unmeasured: about 230 PNGs decode through `flate2`'s Rust backend, and a missing `maps/cache/mapsummary.txt` loads every map. Log per-phase startup times first, then consider `zlib-rs` and shipping the cache (S).
 
 ## Parked
