@@ -2,10 +2,11 @@
 
 use super::blob::Blob;
 use super::clock::{time_now, TimePoint};
+use super::log::verbose;
 use super::player::Player;
 use super::util::{cstr_field, strncpy_sec};
 use smw::common_netplay::protocol_definitions::*;
-use smw::common_netplay::protocol_packages::{CurrentRoom, GameHostInfo, MessageHeader, PlayerInfo, RoomChatMsg};
+use smw::common_netplay::protocol_packages::{CurrentRoom, MessageHeader, RoomChatMsg};
 use smw::globals::Ptr;
 
 const REMOTE_PKG_SIZE_LIMIT: usize = 20000; /* bytes in worst case */
@@ -88,7 +89,7 @@ impl Room {
                     }
                 }
             } else {
-                println!("  R-{}: slot {} taken by {:p}", self.roomID, p, self.players[p as usize].as_ptr());
+                verbose!("  R-{}: slot {} taken by {:p}", self.roomID, p, self.players[p as usize].as_ptr());
             }
             p += 1;
         }
@@ -124,6 +125,10 @@ impl Room {
         player.skinPackage.set_player_id(0xFF);
     }
 
+    pub fn is_host(&self, player: Ptr<Player>) -> bool {
+        self.players.get(self.hostPlayerNumber as usize) == Some(&player)
+    }
+
     pub fn set_gamemode(&mut self, id: u8, goal: u16) {
         self.gamemodeID = id;
         self.gamemodeGoal = goal;
@@ -151,13 +156,12 @@ impl Room {
         // Send every player information about the other players.
         for p in 0..4u8 {
             if !self.players[p as usize].is_null() {
-                println!("Sending ROOM_CHANGED:");
-                println!("  id: {}", package.roomID);
-                println!("  name: {}", cstr_field(&package.name));
-                println!("  p1: {}", cstr_field(&package.playerName[0]));
-                println!("  p2: {}", cstr_field(&package.playerName[1]));
-                println!("  p3: {}", cstr_field(&package.playerName[2]));
-                println!("  p4: {}", cstr_field(&package.playerName[3]));
+                verbose!(
+                    "Sending ROOM_CHANGED: id {}, name {}, players [{}]",
+                    { package.roomID },
+                    cstr_field(&package.name),
+                    package.playerName.iter().map(|n| cstr_field(n)).collect::<Vec<_>>().join(", ")
+                );
                 package.remotePlayerNumber = p;
                 self.players[p as usize].send_data(package.as_bytes());
             }
@@ -192,7 +196,7 @@ impl Room {
     }
 
     pub fn change_and_send_map(&mut self, data: &[u8]) {
-        println!("chageandsendmap");
+        verbose!("chageandsendmap");
         debug_assert!(self.hostPlayerNumber < 4);
 
         // Some basic package validation
@@ -206,7 +210,7 @@ impl Room {
     }
 
     pub fn change_and_send_game_mode_settings(&mut self, data: &[u8]) {
-        println!("chageandsendgms");
+        verbose!("chageandsendgms");
         debug_assert!(self.hostPlayerNumber < 4);
 
         // Some basic package validation
@@ -237,7 +241,7 @@ impl Room {
 
     /// Sends one blob to the player in slot `index`, if there is one.
     pub fn send_blob_to(&mut self, index: u8, blob: BlobRef) {
-        println!("  sendBlobTo {}", index);
+        verbose!("  sendBlobTo {}", index);
         debug_assert!(self.hostPlayerNumber < 4);
         debug_assert!(index < 4);
         if self.players[index as usize].is_null() {
@@ -286,8 +290,6 @@ impl Room {
         }
         self.visible = false;
     }
-
-    pub fn start_game_if_everybody_ready(&mut self) {}
 }
 
 /// Which blob to send: the room's map or mode settings, or a player's skin.

@@ -187,6 +187,18 @@ impl CGM_Star {
 }
 
 impl CGameModeTrait for CGM_Star {
+    fn harness_hash(&self, h: &mut crate::smw::rollback::Fnv) {
+        self.gm().harness_hash(h);
+        self.gameClock.harness_hash(h);
+        for id in self.starItem {
+            h.object(id);
+        }
+        for id in self.starPlayer {
+            h.player(id);
+        }
+        h.u32(self.iCurrentModeType as u32);
+        h.bools(&[self.fDisplayTimer]);
+    }
     crate::impl_cgamemode_plumbing!();
 
     fn init(&mut self, g: &mut Game) {

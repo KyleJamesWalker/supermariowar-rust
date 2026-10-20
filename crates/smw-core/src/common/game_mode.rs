@@ -6,6 +6,7 @@ use crate::common::player_kill_styles::KillStyle;
 use crate::common::player_kill_types::PlayerKillType;
 use crate::globals::{Aliased, Ptr};
 use crate::smw::gamemodes::game_mode as gm;
+use crate::smw::rollback::Fnv;
 use crate::smw::player::CPlayer;
 use std::any::Any;
 use std::ops::{Deref, DerefMut};
@@ -90,6 +91,13 @@ impl CGameMode {
     pub fn get_reverse_scoring(&self) -> bool {
         self.fReverseScoring
     }
+
+    /// The base fields of `CGameModeTrait::harness_hash`.
+    pub fn harness_hash(&self, h: &mut Fnv) {
+        h.u32(self.gamemode as u32);
+        h.i16s(&[self.winningteam, self.goal]);
+        h.bools(&[self.gameover, self.playedwarningsound, self.fReverseScoring]);
+    }
 }
 
 /// Which mode `CGameValues::gamemode` names: a standard mode by `Game::gamemodes` index, or a minigame.
@@ -124,6 +132,10 @@ pub trait CGameModeTrait: Any + CloneGameMode {
     }
     fn think(&mut self, g: &mut Game) {
         gm::cgamemode_think(g, self)
+    }
+    /// Feeds the mode's simulated state into a desync checksum; overrides add their own fields to the base ones.
+    fn harness_hash(&self, h: &mut Fnv) {
+        self.gm().harness_hash(h);
     }
     fn draw_background(&mut self, g: &mut Game) {}
     fn draw_foreground(&mut self, g: &mut Game) {}

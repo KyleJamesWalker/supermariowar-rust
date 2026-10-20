@@ -217,6 +217,13 @@ impl OMO_KingOfTheHillZone {
 }
 
 impl CObjectTrait for OMO_KingOfTheHillZone {
+    fn harness_hash_object(&mut self, h: &mut crate::smw::rollback::Fnv) {
+        for id in self.playersTouching {
+            h.player(id);
+        }
+        h.i16s(&self.playersTouchingCount);
+        h.i16s(&[self.totalTouchingPlayers, self.iPlayerID, self.colorID, self.scoretimer, self.frame, self.relocatetimer, self.size, self.multiplier, self.multipliertimer]);
+    }
     crate::impl_cobject_plumbing!();
 
     fn draw(&mut self, g: &mut Game) {

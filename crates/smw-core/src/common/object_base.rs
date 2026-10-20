@@ -229,11 +229,23 @@ impl CObject {
 /// A copy of an object, for `Game::clone_match`.
 pub trait CloneObject {
     fn clone_object(&self) -> Ptr<dyn CObjectTrait>;
+    /// Copies this object over `dst` in place when `dst` is the same type; false otherwise.
+    fn clone_object_into(&self, dst: &mut dyn CObjectTrait) -> bool;
 }
 
 impl<T: CObjectTrait + Clone> CloneObject for T {
     fn clone_object(&self) -> Ptr<dyn CObjectTrait> {
         Ptr::from_box(Box::new(self.clone()))
+    }
+
+    fn clone_object_into(&self, dst: &mut dyn CObjectTrait) -> bool {
+        match dst.as_any().downcast_mut::<T>() {
+            Some(dst) => {
+                dst.clone_from(self);
+                true
+            }
+            None => false,
+        }
     }
 }
 
@@ -258,6 +270,8 @@ pub trait CObjectTrait: Any + CloneObject {
     fn as_io_block(&mut self) -> Option<&mut dyn IO_BlockTrait> {
         None
     }
+    /// Feeds an over-map object's simulated state beyond `CObject` into a desync checksum.
+    fn harness_hash_object(&mut self, _h: &mut crate::smw::rollback::Fnv) {}
     fn as_io_moving_object(&mut self) -> Option<&mut dyn IO_MovingObjectTrait> {
         None
     }

@@ -43,6 +43,10 @@ impl CGM_TimeLimit {
 }
 
 impl CGameModeTrait for CGM_TimeLimit {
+    fn harness_hash(&self, h: &mut crate::smw::rollback::Fnv) {
+        self.gm().harness_hash(h);
+        self.gameClock.harness_hash(h);
+    }
     crate::impl_cgamemode_plumbing!();
 
     fn init(&mut self, g: &mut Game) {

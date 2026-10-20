@@ -257,6 +257,10 @@ impl CObjectTrait for MO_CheepCheep {
 }
 
 impl IO_MovingObjectTrait for MO_CheepCheep {
+    fn harness_hash(&mut self, h: &mut crate::smw::rollback::Fnv) {
+        crate::smw::objects::moving::moving_object::mo_harness_hash(self, h);
+        h.bools(&[self.frozen]);
+    }
     crate::impl_io_moving_object_plumbing!();
 
     fn die(&mut self, g: &mut Game) {

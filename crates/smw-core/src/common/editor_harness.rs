@@ -45,8 +45,10 @@ pub type Dumper = fn(g: &mut Game, out: &mut dyn Write);
 
 /// The harness state, in `Game::editor_harness`.
 pub struct EditorHarness {
-    /// Set by `init`.
+    /// Set by `init` when any `SMW_REPLAY`, `SMW_FRAMES`, `SMW_DUMP` or `SMW_SHOT_FRAMES` is set.
     active: bool,
+    /// `SMW_REPLAY` is set: the editors read the scripted key and button state instead of the real one.
+    scripted: bool,
     /// `SMW_NOLIMIT`: no frame delay.
     noLimit: bool,
     /// `SMW_FRAMES`, or -1 for no limit.
@@ -75,6 +77,7 @@ impl EditorHarness {
     pub const fn new() -> Self {
         EditorHarness {
             active: false,
+            scripted: false,
             noLimit: false,
             maxFrames: -1,
             dump: None,
@@ -347,8 +350,11 @@ pub fn init(g: &mut Game) {
         }
         h(gp.get()).shotDir = env("SMW_SHOT_DIR").unwrap_or_else(|| ".".to_string());
 
-        h(gp.get()).active = true;
-        push_frame_events(g);
+        h(gp.get()).scripted = env("SMW_REPLAY").is_some();
+        h(gp.get()).active = ["SMW_REPLAY", "SMW_FRAMES", "SMW_DUMP", "SMW_SHOT_FRAMES"].iter().any(|name| env(name).is_some());
+        if h(gp.get()).active {
+            push_frame_events(g);
+        }
     }
 }
 
@@ -411,20 +417,20 @@ pub fn frame_delay(g: &mut Game, delay: u32) {
     }
 }
 
-/// `SDL_GetKeyboardState(NULL)`; after `init`, the scripted key state, since pushed events do not update SDL's.
+/// `SDL_GetKeyboardState(NULL)`; in a scripted session, the scripted key state, since pushed events do not update SDL's.
 pub fn keyboard_state(g: &mut Game) -> *const u8 {
     let mut gp = g.ptr();
-    if h(gp.get()).active {
+    if h(gp.get()).scripted {
         h(gp.get()).keys.as_ptr()
     } else {
         crate::services::services(gp.get()).keyboard.state().as_ptr()
     }
 }
 
-/// `SDL_GetMouseState(NULL, NULL)`; after `init`, the scripted button mask.
+/// `SDL_GetMouseState(NULL, NULL)`; in a scripted session, the scripted button mask.
 pub fn mouse_state(g: &mut Game) -> u32 {
     let mut gp = g.ptr();
-    if h(gp.get()).active {
+    if h(gp.get()).scripted {
         h(gp.get()).buttons
     } else {
         crate::services::services(gp.get()).keyboard.mouse_buttons()

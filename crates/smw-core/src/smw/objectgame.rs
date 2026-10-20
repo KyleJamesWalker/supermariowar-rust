@@ -357,6 +357,7 @@ pub fn check_secret(g: &mut Game, id: i16) {
 
                 let object = createpowerup(g, SECRET3_POWERUP as i16, randomPos, true, false);
                 check_secret_poof(g, object);
+                break;
             }
         }
     } else if id == 3 && !g.game_values.unlocksecretunlocked[3] {

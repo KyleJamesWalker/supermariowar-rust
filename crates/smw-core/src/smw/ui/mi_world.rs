@@ -115,16 +115,6 @@ pub struct MI_World {
 }
 crate::impl_base!(MI_World => ui_control: UI_Control);
 
-/// `teamids[iTeam][iMember]` as one flat array: member 3 reads the next team's first slot, past the end reads `teamcounts`.
-fn teamids_flat(g: &mut Game, iTeam: i16, iMember: i16) -> i16 {
-    let idx = iTeam as usize * 3 + iMember as usize;
-    if idx < 12 {
-        g.game_values.teamids[idx / 3][idx % 3]
-    } else {
-        g.game_values.teamcounts[idx - 12]
-    }
-}
-
 
 impl MI_World {
     pub fn new(g: &mut Game) -> Self {
@@ -337,8 +327,7 @@ impl MI_World {
         if self.iSleepTurns > 0 {
             self.iSleepTurns -= 1;
             if self.iSleepTurns <= 0 {
-                g.backgroundmusic[5] = sfxMusic::from_file(g, gp.worldmusiclist.current_music(g.g_worldmap.get_music_category(), g.g_worldmap.get_world_name()))
-                    .unwrap_or_else(|e| std::panic::panic_any(e));
+                g.backgroundmusic[5] = sfxMusic::from_file_or_silence(g, gp.worldmusiclist.current_music(g.g_worldmap.get_music_category(), g.g_worldmap.get_world_name()));
                 gp.backgroundmusic[5].play(g, false, false);
             }
         } else {
@@ -490,7 +479,7 @@ impl MI_World {
             fUsedItem = true;
             if_sound_on_play(g, &mut gp.rm.sfx_collectpowerup);
 
-            g.backgroundmusic[5] = sfxMusic::from_file(g, gp.worldmusiclist.current_music(WorldMusicCategory::Sleep, "")).unwrap_or_else(|e| std::panic::panic_any(e));
+            g.backgroundmusic[5] = sfxMusic::from_file_or_silence(g, gp.worldmusiclist.current_music(WorldMusicCategory::Sleep, ""));
             gp.backgroundmusic[5].play(g, false, false);
         } else if p == NUM_POWERUPS + 1 {
             //Cloud (allows player to skip stages)
@@ -1028,8 +1017,7 @@ impl UI_ControlTrait for MI_World {
                                 //Door Keys
                                 let iKeyType = iType - NUM_POWERUPS - 5;
                                 if fDoor[iKeyType as usize] {
-                                    // iTeamMember is the team's member count here, one past its last member.
-                                    let iPlayer = teamids_flat(g, self.iControllingTeam, iTeamMember);
+                                    let iPlayer = keysPlayer as i16;
                                     fUsedItem = self.use_powerup(g, iPlayer, self.iControllingTeam, iPowerup, false);
                                 }
                             }

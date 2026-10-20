@@ -53,6 +53,11 @@ impl CObjectTrait for PU_LeafPowerup {
 }
 
 impl IO_MovingObjectTrait for PU_LeafPowerup {
+    fn harness_hash(&mut self, h: &mut crate::smw::rollback::Fnv) {
+        crate::smw::objects::moving::moving_object::mo_harness_hash(self, h);
+        h.f32s(&[self.dFloatAngle, self.dFloatCenterX, self.dFloatCenterY, self.desty]);
+        h.bools(&[self.fFloatDirectionRight]);
+    }
     crate::impl_io_moving_object_plumbing!();
 }
 

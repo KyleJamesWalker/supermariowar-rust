@@ -98,10 +98,15 @@ fn factor_blend(src: u32, dst: u32, factor: u32) -> u32 {
     out
 }
 
-/// `Blit8888to8888PixelAlpha` (blend, no alpha modulation, no color key).
+/// `Blit8888to8888PixelAlpha` (blend, no alpha modulation, no color key). `None` means the result is `dst`.
 #[inline]
-fn blend_pixel_alpha(src: u32, dst: u32) -> u32 {
-    factor_blend(src | 0xFF00_0000, dst, src >> 24)
+fn blend_pixel_alpha(src: u32, dst: u32) -> Option<u32> {
+    // The same result as the blend: factor 255 yields `src`, factor 0 yields `dst`.
+    match src >> 24 {
+        255 => Some(src),
+        0 => None,
+        a => Some(factor_blend(src | 0xFF00_0000, dst, a)),
+    }
 }
 
 /// `SDL_Blit_ARGB8888_ARGB8888_Modulate_Blend` (blend with alpha modulation, no color key).
@@ -421,31 +426,59 @@ fn blit_or_clip(src: &Pixels, state: &BlitState, src_rect: Option<&Rect>, dst: &
 
 /// `SDL_LowerBlit` on rectangles already clipped by `blit`.
 fn lower_blit(src: &Pixels, state: &BlitState, sr: &Rect, dst: &mut PixelsMut, dx: i32, dy: i32) {
-    let blend = state.blend == BlendMode::Blend;
-    let modulate = state.alpha_mod != 255;
     let alpha_mod = state.alpha_mod as u32;
     let key = state.color_key.map(|k| k & RGB_MASK);
+    match (state.blend == BlendMode::Blend, key, state.alpha_mod != 255) {
+        (false, key, false) => blit_rows(src, sr, dst, dx, dy, key, |s, _| Some(s)),
+        (false, key, true) => blit_rows(src, sr, dst, dx, dy, key, |s, _| Some((s & RGB_MASK) | (mult_div_255(s >> 24, alpha_mod) << 24))),
+        (true, None, false) => blit_rows(src, sr, dst, dx, dy, None, blend_pixel_alpha),
+        (true, None, true) => blit_rows(src, sr, dst, dx, dy, None, |s, d| Some(blend_modulate(s, d, alpha_mod))),
+        (true, key, false) => blit_rows(src, sr, dst, dx, dy, key, |s, d| Some(blend_slow(s, d, None))),
+        (true, key, true) => blit_rows(src, sr, dst, dx, dy, key, |s, d| Some(blend_slow(s, d, Some(alpha_mod)))),
+    }
+}
 
+/// Picks the `blit_rows_with` instance for the color key and the two layouts.
+#[inline(always)]
+fn blit_rows(src: &Pixels, sr: &Rect, dst: &mut PixelsMut, dx: i32, dy: i32, key: Option<u32>, op: impl Fn(u32, u32) -> Option<u32>) {
+    let k = key.unwrap_or(0);
+    match (key.is_some(), src.alpha, dst.alpha) {
+        (false, false, false) => blit_rows_with::<false, false, false>(src, sr, dst, dx, dy, k, op),
+        (false, false, true) => blit_rows_with::<false, false, true>(src, sr, dst, dx, dy, k, op),
+        (false, true, false) => blit_rows_with::<false, true, false>(src, sr, dst, dx, dy, k, op),
+        (false, true, true) => blit_rows_with::<false, true, true>(src, sr, dst, dx, dy, k, op),
+        (true, false, false) => blit_rows_with::<true, false, false>(src, sr, dst, dx, dy, k, op),
+        (true, false, true) => blit_rows_with::<true, false, true>(src, sr, dst, dx, dy, k, op),
+        (true, true, false) => blit_rows_with::<true, true, false>(src, sr, dst, dx, dy, k, op),
+        (true, true, true) => blit_rows_with::<true, true, true>(src, sr, dst, dx, dy, k, op),
+    }
+}
+
+#[inline(always)]
+fn blit_rows_with<const KEYED: bool, const SRC_ALPHA: bool, const DST_ALPHA: bool>(
+    src: &Pixels,
+    sr: &Rect,
+    dst: &mut PixelsMut,
+    dx: i32,
+    dy: i32,
+    key: u32,
+    op: impl Fn(u32, u32) -> Option<u32>,
+) {
     for row in 0..sr.h {
         let s0 = (sr.y + row) as usize * src.pitch + sr.x as usize;
         let d0 = (dy + row) as usize * dst.pitch + dx as usize;
         let srow = &src.pixels[s0..s0 + sr.w as usize];
         let drow = &mut dst.pixels[d0..d0 + sr.w as usize];
         for (s, d) in srow.iter().zip(drow.iter_mut()) {
-            let s = if src.alpha { *s } else { *s | 0xFF00_0000 };
-            if let Some(k) = key {
-                if s & RGB_MASK == k {
-                    continue;
-                }
+            let s = if SRC_ALPHA { *s } else { *s | 0xFF00_0000 };
+            if KEYED && s & RGB_MASK == key {
+                continue;
             }
-            let out = match (blend, key.is_some(), modulate) {
-                (false, _, false) => s,
-                (false, _, true) => (s & RGB_MASK) | (mult_div_255(s >> 24, alpha_mod) << 24),
-                (true, false, false) => blend_pixel_alpha(s, *d),
-                (true, false, true) => blend_modulate(s, *d, alpha_mod),
-                (true, true, m) => blend_slow(s, *d, m.then_some(alpha_mod)),
-            };
-            *d = if dst.alpha { out } else { out | 0xFF00_0000 };
+            match op(s, *d) {
+                Some(out) => *d = if DST_ALPHA { out } else { out | 0xFF00_0000 },
+                None if !DST_ALPHA => *d |= 0xFF00_0000,
+                None => {}
+            }
         }
     }
 }
@@ -594,9 +627,19 @@ pub fn convert_indexed(w: i32, h: i32, pitch: usize, indices: &[u8], palette: &[
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use sdl2::sys::*;
+
+    /// Runs SDL calls from parallel tests one at a time, after SDL's lazy CPU feature detection, which races.
+    pub(crate) fn sdl_lock() -> std::sync::MutexGuard<'static, ()> {
+        static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+        static INIT: std::sync::Once = std::sync::Once::new();
+        INIT.call_once(|| unsafe {
+            SDL_SIMDGetAlignment();
+        });
+        LOCK.lock().unwrap_or_else(|e| e.into_inner())
+    }
 
     /// xorshift32, so the cases are the same on every run.
     struct Rng(u32, bool);
@@ -689,6 +732,7 @@ mod tests {
 
     /// Blits random surfaces in one source state through both blitters and compares pixels and the written rect.
     fn check_blits(blend: BlendMode, keyed: bool, alpha_mod: Option<u8>, seed: u32) {
+        let _sdl = sdl_lock();
         let mut rng = Rng::new(seed);
         // Real SDL2 matches sdl2-compat only on opaque and transparent pixels for this path.
         rng.1 = !(blend == BlendMode::Blend && !keyed && alpha_mod.is_none()) || linked_sdl_is_sdl2_compat();
@@ -741,6 +785,15 @@ mod tests {
     }
 
     #[test]
+    fn pixel_alpha_shortcut_matches_blend() {
+        let mut rng = Rng::new(0x5EED);
+        for _ in 0..1_000_000 {
+            let (s, d) = (rng.pixel(), rng.next());
+            assert_eq!(blend_pixel_alpha(s, d).unwrap_or(d), factor_blend(s | 0xFF00_0000, d, s >> 24), "src {s:08x} dst {d:08x}");
+        }
+    }
+
+    #[test]
     fn copy_matches_sdl() {
         check_blits(BlendMode::None, false, Option::None, 1);
     }
@@ -772,6 +825,7 @@ mod tests {
 
     #[test]
     fn scaled_blend_matches_sdl() {
+        let _sdl = sdl_lock();
         if !linked_sdl_is_sdl2_compat() {
             eprintln!("scaled blits follow sdl2-compat; skipping on real SDL2");
             return;
@@ -817,6 +871,7 @@ mod tests {
     /// ARGB8888 and XRGB8888 pairs in the states `blit_supported` accepts, against SDL.
     #[test]
     fn xrgb_layouts_match_sdl() {
+        let _sdl = sdl_lock();
         let mut rng = Rng::new(8);
         rng.1 = linked_sdl_is_sdl2_compat();
         let states = [
@@ -892,6 +947,7 @@ mod tests {
 
     #[test]
     fn fill_rect_matches_sdl() {
+        let _sdl = sdl_lock();
         let mut rng = Rng::new(5);
         for case in 0..300 {
             let (w, h) = (rng.range(1, 24), rng.range(1, 24));
@@ -916,6 +972,7 @@ mod tests {
 
     #[test]
     fn indexed_conversion_matches_sdl() {
+        let _sdl = sdl_lock();
         let mut rng = Rng::new(6);
         for case in 0..50 {
             let (w, h) = (rng.range(1, 20), rng.range(1, 20));

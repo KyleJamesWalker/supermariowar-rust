@@ -47,6 +47,11 @@ impl CGM_Chase {
 }
 
 impl CGameModeTrait for CGM_Chase {
+    fn harness_hash(&self, h: &mut crate::smw::rollback::Fnv) {
+        self.gm().harness_hash(h);
+        h.object(self.key);
+        h.i16s(&[self.counter]);
+    }
     fn gm(&self) -> &CGameMode {
         &self.cgame_mode
     }

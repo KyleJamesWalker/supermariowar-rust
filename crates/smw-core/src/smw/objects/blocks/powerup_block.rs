@@ -144,6 +144,15 @@ pub trait B_PowerupBlockTrait: IO_BlockTrait {
     }
 }
 
+impl B_PowerupBlock {
+    /// The powerup block's own fields for `IO_BlockTrait::harness_hash`, shared with `B_ViewBlock`.
+    pub fn hash_powerup_fields(&self, h: &mut crate::smw::rollback::Fnv) {
+        h.i16s(&[self.iCountWeight, self.timer, self.drawFrame, self.animationTimer]);
+        h.i16s(&self.settings);
+        h.bools(&[self.side]);
+    }
+}
+
 /// Implements `pb`, `pb_mut` for a type that derefs to `B_PowerupBlock`.
 #[macro_export]
 macro_rules! impl_powerup_block_plumbing {
@@ -583,6 +592,11 @@ impl CObjectTrait for B_PowerupBlock {
 
 impl IO_BlockTrait for B_PowerupBlock {
     crate::impl_io_block_plumbing!();
+
+    fn harness_hash(&self, h: &mut crate::smw::rollback::Fnv) {
+        self.block().harness_hash(h);
+        self.hash_powerup_fields(h);
+    }
     crate::impl_powerup_block_io_block_overrides!();
 }
 

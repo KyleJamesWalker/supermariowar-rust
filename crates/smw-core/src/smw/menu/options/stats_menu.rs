@@ -10,7 +10,7 @@ use crate::game::Game;
 use crate::smw::stats::{clock, Lifetime};
 
 /// Label and value text rows laid out on screen.
-const ROWS: usize = 16;
+const ROWS: usize = 18;
 
 /// Lifetime stats table with Reset Stats and a confirmation dialog.
 #[derive(Default)]
@@ -66,7 +66,7 @@ impl UI_StatsMenu {
         let menu_plain_field = g.rm.menu_plain_field;
 
         for i in 0..ROWS {
-            let y = 44 + i as i16 * 22;
+            let y = 42 + i as i16 * 21;
             let label = Ctl::new(MI_Text::new(g, "", 40, y, 0, false, TextAlign::LEFT), g);
             let value = Ctl::new(MI_Text::new(g, "", 600, y, 0, false, TextAlign::RIGHT), g);
             this.add_non_control(label.id());

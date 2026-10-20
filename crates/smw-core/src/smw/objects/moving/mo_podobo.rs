@@ -138,5 +138,10 @@ impl CObjectTrait for MO_Podobo {
 }
 
 impl IO_MovingObjectTrait for MO_Podobo {
+    fn harness_hash(&mut self, h: &mut crate::smw::rollback::Fnv) {
+        crate::smw::objects::moving::moving_object::mo_harness_hash(self, h);
+        h.i16s(&[self.iHiddenPlane]);
+        h.bools(&[self.fIsSpawned]);
+    }
     crate::impl_io_moving_object_plumbing!();
 }
