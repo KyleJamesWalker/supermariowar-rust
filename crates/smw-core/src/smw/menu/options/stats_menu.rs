@@ -1,4 +1,4 @@
-//! Options > Stats: the lifetime totals of this device's human players (smw/stats.rs), and Reset Stats.
+//! Options > Stats: the lifetime totals of this device's human players (see `smw::stats`), and Reset Stats.
 
 use crate::common::ui::menu_code::*;
 use crate::common::ui::mi_button::MI_Button;
@@ -9,9 +9,11 @@ use crate::common::uimenu::UI_Menu;
 use crate::game::Game;
 use crate::smw::stats::{clock, Lifetime};
 
+/// Label and value text rows laid out on screen.
 const ROWS: usize = 16;
 
 #[derive(Default)]
+/// Lifetime stats table with Reset Stats and a confirmation dialog.
 pub struct UI_StatsMenu {
     pub ui_menu: UI_Menu,
     labels: Vec<Ctl<MI_Text>>,
@@ -106,6 +108,7 @@ impl UI_StatsMenu {
         this
     }
 
+    /// Shows or hides the Reset All Stats dialog.
     fn show_dialog(&mut self, g: &mut Game, on: bool) {
         g.ctl(self.dialog).set_visible(on);
         g.ctl(self.dialog_are_you).set_visible(on);
@@ -125,6 +128,7 @@ impl UI_StatsMenu {
         }
     }
 
+    /// Opens the reset confirmation with No focused, remembering the focus to restore.
     pub fn open_reset_dialog(&mut self, g: &mut Game) {
         self.show_dialog(g, true);
         self.remember_current();
@@ -133,6 +137,7 @@ impl UI_StatsMenu {
         self.set_cancel_code(MENU_CODE_STATS_RESET_NO);
     }
 
+    /// Closes the confirmation; `reset` wipes the saved lifetime stats and refreshes the rows.
     pub fn close_reset_dialog(&mut self, g: &mut Game, reset: bool) {
         if reset {
             crate::smw::stats::reset_lifetime(g);

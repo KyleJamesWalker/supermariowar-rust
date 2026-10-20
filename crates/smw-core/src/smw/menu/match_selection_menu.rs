@@ -1,4 +1,4 @@
-//! Port of src/smw/menu/MatchSelectionMenu.cpp
+//! The match type menu: single game, tournament, tour, world or minigame, with each type's sub-choice.
 
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
@@ -15,16 +15,22 @@ use crate::globals::*;
 use crate::smw::ui::mi_world_preview_display::MI_WorldPreviewDisplay;
 
 #[derive(Default)]
+/// Match type picker; only the sub-field for the selected type is visible.
 pub struct UI_MatchSelectionMenu {
     pub ui_menu: UI_Menu,
 
+    /// 320x240 preview picture for the selected match type.
     pub miMatchSelectionDisplayImage: Ctl<MI_Image>,
 
     pub miMatchSelectionField: Ctl<MI_SelectField<MatchType>>,
+    /// Wins needed to take a tournament, 2 to 10.
     pub miTournamentField: Ctl<MI_SelectField<i16>>,
+    /// Index into the tour list.
     pub miTourField: Ctl<MI_SelectField<i16>>,
+    /// Index into the world list.
     pub miWorldField: Ctl<MI_SelectField<i16>>,
     pub miMinigameField: Ctl<MI_SelectField<Minigame>>,
+    /// Miniature of the selected world, shown in place of the preview picture.
     pub miWorldPreviewDisplay: Ctl<MI_WorldPreviewDisplay>,
 
     pub miMatchSelectionStartButton: Ctl<MI_Button>,
@@ -74,7 +80,6 @@ impl UI_MatchSelectionMenu {
         let mut f = this.miTourField;
         for iTour in 0..g.tourlist.count() {
             let szTemp = get_name_from_file_name(&g.tourlist.at(iTour).to_string_lossy(), true);
-            // strcat(szTemp, " Tour");
             g.ctl(f).add(szTemp, iTour as i16);
         }
         g.ctl(f).set_output_ptr(&mut g.game_values.tourindex);
@@ -143,6 +148,7 @@ impl UI_MatchSelectionMenu {
         this
     }
 
+    /// Shows the sub-field and preview for `game_values.matchtype`.
     pub fn selection_changed(&mut self, g: &mut Game) {
         let matchtype = g.game_values.matchtype;
         g.ctl(self.miTournamentField).set_visible(matchtype == MatchType::Tournament);
@@ -150,7 +156,6 @@ impl UI_MatchSelectionMenu {
         g.ctl(self.miWorldField).set_visible(matchtype == MatchType::World);
         g.ctl(self.miMinigameField).set_visible(matchtype == MatchType::MiniGame);
 
-        // miMatchSelectionDisplayImage->Show(game_values.matchtype != MatchType::World);
         g.ctl(self.miWorldPreviewDisplay).set_visible(matchtype == MatchType::World);
 
         if matchtype == MatchType::World {
@@ -160,10 +165,12 @@ impl UI_MatchSelectionMenu {
         }
     }
 
+    /// Reloads the world preview for `game_values.worldindex`.
     pub fn world_map_changed(&mut self, g: &mut Game) {
         g.ctl(self.miWorldPreviewDisplay).set_world(g);
     }
 
+    /// Unhides the Minigame match type, selects it and shows the minigame field.
     pub fn activate_minigame_field(&mut self, g: &mut Game) {
         g.ctl(self.miMatchSelectionField).hide_item(MatchType::MiniGame, false);
         g.ctl(self.miMatchSelectionField).set_current_value(MatchType::MiniGame);

@@ -1,4 +1,4 @@
-//! Port of src/smw/menu/TournamentScoreboardMenu.cpp
+//! The tournament or tour scoreboard shown between games.
 
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
@@ -11,6 +11,7 @@ use crate::globals::*;
 use crate::smw::ui::mi_tournament_scoreboard::MI_TournamentScoreboard;
 
 #[derive(Default)]
+/// Scoreboard plus a Next button; Next and cancel both return to game setup.
 pub struct UI_TournamentScoreboardMenu {
     pub ui_menu: UI_Menu,
 

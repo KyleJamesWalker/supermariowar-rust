@@ -1,4 +1,4 @@
-//! Port of src/smw/menu/MenuTemplate.cpp
+//! Skeleton to copy when adding a new menu screen.
 
 use crate::common::uimenu::UI_Menu;
 

@@ -1,4 +1,4 @@
-//! Port of src/smw/menu/options/TeamOptionsMenu.cpp
+//! Team options: friendly collision, team colors and tournament control.
 
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;

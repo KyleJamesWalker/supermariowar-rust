@@ -1,3 +1,5 @@
+//! Menu controls specific to the game: player, team, map, world and tournament widgets.
+
 pub mod mi_announcer_field;
 pub mod mi_bonus_wheel;
 pub mod mi_chat_message_box;

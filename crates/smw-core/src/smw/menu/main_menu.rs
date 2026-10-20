@@ -1,4 +1,4 @@
-//! Port of src/smw/menu/MainMenu.cpp
+//! The title screen menu: start, quick game, player count, multiplayer, options, controls and exit.
 
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
@@ -20,6 +20,7 @@ pub struct UI_MainMenu {
 
     miSMWTitle: Ctl<MI_Image>,
     miSMWVersion: Ctl<MI_Image>,
+    /// Build tag or short commit, top right; hidden during replays.
     miBuildVersion: Ctl<MI_Text>,
 
     miMainStartButton: Ctl<MI_Button>,
@@ -77,8 +78,7 @@ impl UI_MainMenu {
 
         this.miPlayerSelect = Ctl::new(MI_PlayerSelect::new(g.rm.menu_player_select, 120, 250, "Players", 400, 140), g);
 
-        // Upstream's web build disables Multiplayer, stacks Options over Controls and has no Exit. Here every
-        // build uses the native layout, so replays navigate the same; on the web Exit ends the session.
+        // Every build uses the same layout so replays navigate the same; on the web Exit ends the session.
         this.miMultiplayerButton = Ctl::new(MI_Button::new(g, selectfield, 120, 322, "Multiplayer", 400, TextAlign::LEFT), g);
         g.ctl(this.miMultiplayerButton).set_code(MENU_CODE_TO_NET_SERVERS_MENU);
 

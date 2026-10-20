@@ -1,4 +1,4 @@
-//! Port of src/smw/menu/PlayerControlsMenu.cpp
+//! One player's control settings: input device and key bindings.
 
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
@@ -34,6 +34,7 @@ impl UI_PlayerControlsMenu {
         this
     }
 
+    /// Points the bindings editor at player `playerID` (0 to 3).
     pub fn set_player(&mut self, g: &mut Game, playerID: i16) {
         g.ctl(self.miInputContainer).set_player(g, playerID);
     }

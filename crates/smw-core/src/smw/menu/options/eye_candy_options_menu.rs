@@ -1,4 +1,4 @@
-//! Port of src/smw/menu/options/EyeCandyOptionsMenu.cpp
+//! Eye candy options: spawn, award and scoreboard styles, crunch, crown, countdown and notices.
 
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;

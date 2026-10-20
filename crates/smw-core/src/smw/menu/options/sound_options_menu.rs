@@ -1,4 +1,4 @@
-//! Port of src/smw/menu/options/SoundOptionsMenu.cpp
+//! Music and sound options: volumes, next music, announcer, sound pack and music playlists.
 
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
@@ -16,6 +16,7 @@ use crate::smw::ui::mi_announcer_field::MI_AnnouncerField;
 use crate::smw::ui::mi_packs_field::MI_PacksField;
 use crate::smw::ui::mi_playlist_field::MI_PlaylistField;
 
+/// Volume steps on a 0 to 128 scale.
 const VOLUMES: &[(&str, i16)] = &[
     ("Off", 0),
     ("1", 16),
@@ -37,6 +38,7 @@ pub struct UI_SoundOptionsMenu {
     pub miPlayNextMusicField: Ctl<MI_SelectField<bool>>,
     pub miAnnouncerField: Ctl<MI_AnnouncerField>,
     pub miPlaylistField: Ctl<MI_PlaylistField>,
+    /// Index into the world music list, applied on `MENU_CODE_WORLD_MUSIC_CHANGED`.
     pub miWorldMusicField: Ctl<MI_SelectField<i16>>,
     pub miSoundPackField: Ctl<MI_PacksField>,
     pub miSoundOptionsMenuBackButton: Ctl<MI_Button>,
@@ -134,6 +136,7 @@ impl UI_SoundOptionsMenu {
         this
     }
 
+    /// The selected index into the world music list.
     pub fn get_current_world_music_id(&self, g: &Game) -> i16 {
         g.ctl(self.miWorldMusicField).current_value()
     }

@@ -1,4 +1,4 @@
-//! Port of src/smw/menu/OptionsMenu.cpp
+//! The options menu: buttons into each settings category, plus the Refresh Maps confirmation.
 
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
@@ -27,6 +27,7 @@ pub struct UI_OptionsMenu {
     pub miPowerupSettingsMenuButton: Ctl<MI_Button>,
     pub miGraphicsOptionsMenuButton: Ctl<MI_Button>,
     pub miEyeCandyOptionsMenuButton: Ctl<MI_Button>,
+    /// Drawn disabled and sends no code when the platform has no sound.
     pub miSoundOptionsMenuButton: Ctl<MI_Button>,
     pub miGenerateMapThumbsButton: Ctl<MI_Button>,
     pub miStatsButton: Ctl<MI_Button>,
@@ -37,6 +38,7 @@ pub struct UI_OptionsMenu {
     pub miOptionsMenuRightHeaderBar: Ctl<MI_Image>,
     pub miOptionsMenuHeaderText: Ctl<MI_Text>,
 
+    /// The Refresh Maps "Are You Sure?" dialog, hidden until [`Self::show_thumbnails_popup`].
     pub miGenerateThumbsDialogImage: Ctl<MI_Image>,
     pub miGenerateThumbsDialogAreYouText: Ctl<MI_Text>,
     pub miGenerateThumbsDialogSureText: Ctl<MI_Text>,
@@ -162,6 +164,7 @@ impl UI_OptionsMenu {
         this
     }
 
+    /// Opens the Refresh Maps confirmation with No focused, remembering the focus to restore.
     pub fn show_thumbnails_popup(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         g.ctl(self.miGenerateThumbsDialogImage).set_visible(true);
@@ -177,6 +180,7 @@ impl UI_OptionsMenu {
         self.set_cancel_code(MENU_CODE_GENERATE_THUMBS_RESET_NO);
     }
 
+    /// Closes the confirmation and restores the remembered focus.
     pub fn hide_thumbnails_popup(&mut self, g: &mut Game) {
         g.ctl(self.miGenerateThumbsDialogImage).set_visible(false);
         g.ctl(self.miGenerateThumbsDialogAreYouText).set_visible(false);

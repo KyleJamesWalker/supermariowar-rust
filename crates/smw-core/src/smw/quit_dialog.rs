@@ -5,7 +5,7 @@ use crate::game::Game;
 use crate::smw::game_state::{GameStateManager, StateId};
 use smw_platform::{Input, InputEvent};
 
-/// In a match the exit dialog asks instead.
+/// True during a match (a netplay v2 session or any state but menu and splash), where the exit dialog asks instead.
 pub fn in_match(g: &mut Game) -> bool {
     crate::smw::net_v2::owns_tick(g) || !matches!(GameStateManager::instance(g).currentState, StateId::Menu | StateId::Splash)
 }

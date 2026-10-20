@@ -1,4 +1,4 @@
-//! Port of src/smw/menu/BonusWheelMenu.cpp
+//! The bonus wheel screen where a match, tournament, tour or world winner spins for a powerup.
 
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
@@ -8,6 +8,7 @@ use crate::globals::*;
 use crate::smw::ui::mi_bonus_wheel::MI_BonusWheel;
 
 #[derive(Default)]
+/// Holds only the bonus wheel; cancel sends `MENU_CODE_BONUS_DONE`.
 pub struct UI_BonusWheelMenu {
     pub ui_menu: UI_Menu,
 

@@ -1,4 +1,4 @@
-//! Port of src/smw/menu/options/PowerupSettingsMenu.cpp
+//! Item settings: item use speed, item and hidden block respawn, swap style, bonus wheel and stored items.
 
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
@@ -13,6 +13,7 @@ use crate::globals::*;
 use crate::smw::menu::options::select_field;
 use crate::smw::ui::mi_stored_powerup_reset_button::MI_StoredPowerupResetButton;
 
+/// Respawn choices in frames, 60 per labeled second; 0 is off.
 const RESPAWN_TIMES: &[(&str, i16)] = &[
     ("Off", 0),
     ("5 Seconds", 300),
@@ -40,7 +41,9 @@ pub struct UI_PowerupSettingsMenu {
     pub miStoredPowerupDelayField: Ctl<MI_SelectField<i16>>,
     pub miItemRespawnField: Ctl<MI_SelectField<i16>>,
     pub miSwapStyleField: Ctl<MI_SelectField<i16>>,
+    /// Writes `bonuswheel`: 0 off, 1 after a tournament win, 2 after every game.
     pub miBonusWheelField: Ctl<MI_SelectField<i16>>,
+    /// Writes `keeppowerup`: whether a bonus wheel item lasts past the next spin.
     pub miKeepPowerupField: Ctl<MI_SelectField<bool>>,
     pub miHiddenBlockRespawnField: Ctl<MI_SelectField<i16>>,
     pub miStoredPowerupResetButton: Ctl<MI_StoredPowerupResetButton>,

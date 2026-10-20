@@ -1,4 +1,4 @@
-//! Port of src/smw/menu/PlayerControlsSelectMenu.cpp
+//! The controls menu: one button per player into their control settings.
 
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;

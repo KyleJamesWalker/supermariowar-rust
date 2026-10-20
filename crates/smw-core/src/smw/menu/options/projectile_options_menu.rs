@@ -1,4 +1,4 @@
-//! Port of src/smw/menu/options/ProjectileOptionsMenu.cpp
+//! Weapons and projectiles options: lifetimes, hammer delay and power, boomerang style, feather jumps.
 
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
@@ -13,6 +13,7 @@ use crate::common::uimenu::UI_Menu;
 use crate::globals::*;
 use crate::smw::menu::options::select_field;
 
+/// Lifetimes in frames, 60 per labeled second.
 const LIFE_1_TO_10: &[(&str, i16)] = &[
     ("1 Second", 60),
     ("2 Seconds", 120),
@@ -26,6 +27,7 @@ const LIFE_1_TO_10: &[(&str, i16)] = &[
     ("10 Seconds", 600),
 ];
 
+/// Lifetimes in frames, 60 per labeled second; 0 is unlimited.
 const LIFE_UNLIMITED_TO_30: &[(&str, i16)] = &[
     ("Unlimited", 0),
     ("1 Second", 60),
@@ -45,6 +47,7 @@ const LIFE_UNLIMITED_TO_30: &[(&str, i16)] = &[
 ];
 
 #[derive(Default)]
+/// Per-weapon settings in two columns, each under a weapon name label.
 pub struct UI_ProjectileOptionsMenu {
     pub ui_menu: UI_Menu,
 

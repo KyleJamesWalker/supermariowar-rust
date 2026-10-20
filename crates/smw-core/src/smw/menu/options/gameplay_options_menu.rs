@@ -1,4 +1,4 @@
-//! Port of src/smw/menu/options/GameplayOptionsMenu.cpp
+//! Gameplay options: respawn, shields, bounds, suicide, warp locks, bots, point speed and secrets.
 
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
@@ -21,14 +21,21 @@ use crate::smw::menu::options::{select_field, OFF_ON};
 pub struct UI_GameplayOptionsMenu {
     pub ui_menu: UI_Menu,
 
+    /// Writes `respawn` in half-second steps, 0 to 20.
     pub miRespawnField: Ctl<MI_SelectField<i16>>,
     pub miShieldStyleField: Ctl<MI_SelectField<ShieldStyle>>,
+    /// Writes `shieldtime` in frames, 60 per labeled second.
     pub miShieldTimeField: Ctl<MI_SelectField<i16>>,
+    /// Writes `outofboundstime` in seconds; 0 is infinite.
     pub miBoundsTimeField: Ctl<MI_SelectField<i16>>,
+    /// Writes `suicidetime` in frames, 60 per labeled second; 0 is off.
     pub miSuicideTimeField: Ctl<MI_SelectField<i16>>,
     pub miWarpLockStyleField: Ctl<MI_SelectField<WarpLockStyle>>,
+    /// Writes `warplocktime` in frames, 60 per labeled second; 0 is off.
     pub miWarpLockTimeField: Ctl<MI_SelectField<i16>>,
+    /// Writes `cpudifficulty`, 0 (very easy) to 4 (very hard).
     pub miBotsField: Ctl<MI_SelectField<i16>>,
+    /// Writes `pointspeed`, frames between points in timed scoring modes; lower is faster.
     pub miPointSpeedField: Ctl<MI_SelectField<i16>>,
     pub miSecretsField: Ctl<MI_SelectField<bool>>,
     pub miGameplayOptionsMenuBackButton: Ctl<MI_Button>,

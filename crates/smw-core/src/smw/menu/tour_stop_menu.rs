@@ -1,4 +1,4 @@
-//! Port of src/smw/menu/TourStopMenu.cpp
+//! The tour stop screen shown before each stop of a tour, with an Exit Tour dialog.
 
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
@@ -65,6 +65,7 @@ impl UI_TourStopMenu {
         this
     }
 
+    /// Opens the Exit Tour dialog with No focused and cancel disabled.
     pub fn open_exit_dialog(&mut self, g: &mut Game) {
         g.ctl(self.miTourStopExitDialogImage).set_visible(true);
         g.ctl(self.miTourStopExitDialogExitTourText).set_visible(true);
@@ -79,6 +80,7 @@ impl UI_TourStopMenu {
         self.reset_menu(g);
     }
 
+    /// Hides the Exit Tour dialog and restores the remembered focus.
     pub fn close_exit_dialog(&mut self, g: &mut Game) {
         g.ctl(self.miTourStopExitDialogImage).set_visible(false);
         g.ctl(self.miTourStopExitDialogExitTourText).set_visible(false);

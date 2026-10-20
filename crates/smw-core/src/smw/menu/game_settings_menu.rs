@@ -1,4 +1,4 @@
-//! Port of src/smw/menu/GameSettingsMenu.cpp
+//! The game setup menu: mode, goal, map and map filters, plus the Exit Tournament dialog.
 
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
@@ -18,6 +18,7 @@ use crate::globals::*;
 
 use crate::smw::ui::mi_map_filter_scroll::MI_MapFilterScroll;
 
+/// Names of the built-in map filters, in filter index order.
 const g_szAutoFilterNames: [&str; NUM_AUTO_FILTERS as usize] = [
     "Death Tiles",
     "Warps",
@@ -32,6 +33,7 @@ const g_szAutoFilterNames: [&str; NUM_AUTO_FILTERS as usize] = [
     "Hidden Blocks",
     "Map Items",
 ];
+/// Icon index for each built-in map filter.
 const g_iAutoFilterIcons: [i16; NUM_AUTO_FILTERS as usize] = [37, 29, 33, 1, 0, 6, 40, 73, 19, 87, 17, 118];
 
 const GM_LAST: usize = GAMEMODE_LAST as usize;
@@ -40,16 +42,20 @@ const GM_LAST: usize = GAMEMODE_LAST as usize;
 pub struct UI_GameSettingsMenu {
     pub ui_menu: UI_Menu,
 
+    /// Filter list popup, built-in filters first, then user filters; hidden until [`Self::open_map_filters`].
     pub miMapFilterScroll: Ctl<MI_MapFilterScroll>,
     pub miMapField: Ctl<MI_MapField>,
+    /// One goal field per game mode; only the selected mode's is visible.
     pub miGoalField: [Ctl<MI_SelectField<i16>>; GM_LAST],
 
+    /// Game mode picker; writes `currentgamemode`.
     pub miModeField: Ctl<MI_ImageSelectField>,
     pub miModeSettingsButton: Ctl<MI_Button>,
     pub miSettingsStartButton: Ctl<MI_Button>,
     pub miMapFiltersButton: Ctl<MI_Button>,
     pub miMapThumbnailsButton: Ctl<MI_Button>,
 
+    /// Icon next to Filters, visible while `fFiltersOn`.
     pub miMapFiltersOnImage: Ctl<MI_Image>,
 
     pub miGameSettingsLeftHeaderBar: Ctl<MI_Image>,
@@ -87,7 +93,6 @@ impl UI_GameSettingsMenu {
             let mut mode = g.gamemodes[iGameMode].ptr();
             let mut field = Ctl::new(MI_SelectField::<i16>::new(spr_selectfield, 70, 125, mode.gm().get_goal_name(), 352, 120), g);
             this.miGoalField[iGameMode] = field;
-            // miGoalField[iGameMode]->SetKey(gamemodes[iGameMode]->goal);
             g.ctl(field).set_visible(iGameMode == 0);
 
             for iGameModeOption in 0..GAMEMODE_NUM_OPTIONS {
@@ -204,6 +209,7 @@ impl UI_GameSettingsMenu {
         this
     }
 
+    /// Shows the selected mode's goal field, and Settings for every mode but Owned.
     pub fn refresh_game_mode_buttons(&mut self, g: &mut Game) {
         // Unhide/hide the settings button
         let current = g.ctl(self.miModeField).current_value();
@@ -215,6 +221,7 @@ impl UI_GameSettingsMenu {
         }
     }
 
+    /// Shows the filter list popup and focuses it, remembering the focus to restore.
     pub fn open_map_filters(&mut self, g: &mut Game) {
         g.ctl(self.miMapFilterScroll).set_visible(true);
         self.remember_current();
@@ -225,6 +232,7 @@ impl UI_GameSettingsMenu {
         self.reset_menu(g);
     }
 
+    /// Hides the filter list, restores focus and updates the filters-on icon.
     pub fn close_map_filters(&mut self, g: &mut Game) {
         g.ctl(self.miMapFilterScroll).set_visible(false);
 
@@ -237,6 +245,7 @@ impl UI_GameSettingsMenu {
         g.ctl(self.miMapFiltersOnImage).set_visible(g.game_values.fFiltersOn);
     }
 
+    /// Opens the Exit Tournament dialog with No focused and cancel disabled.
     pub fn open_exit_dialog(&mut self, g: &mut Game) {
         g.ctl(self.miGameSettingsExitDialogImage).set_visible(true);
         g.ctl(self.miGameSettingsExitDialogTournamentText).set_visible(true);
@@ -252,6 +261,7 @@ impl UI_GameSettingsMenu {
         self.reset_menu(g);
     }
 
+    /// Hides the Exit Tournament dialog and restores the remembered focus.
     pub fn close_exit_dialog(&mut self, g: &mut Game) {
         g.ctl(self.miGameSettingsExitDialogImage).set_visible(false);
         g.ctl(self.miGameSettingsExitDialogTournamentText).set_visible(false);
@@ -270,6 +280,7 @@ impl UI_GameSettingsMenu {
         g.ctl(self.miGameSettingsMenuHeaderText).set_text(string);
     }
 
+    /// Selects game mode `gmID` and refreshes the goal field and Settings button.
     pub fn game_mode_changed(&mut self, g: &mut Game, gmID: i16) {
         g.ctl(self.miModeField).set_current_value(gmID);
 
@@ -288,6 +299,7 @@ impl UI_GameSettingsMenu {
         g.ctl(self.miMapField).get_map_name().to_string()
     }
 
+    /// True when Start is the menu's initial focus.
     pub fn is_on_start_btn(&self) -> bool {
         self.initial_focus() == self.miSettingsStartButton.id()
     }
