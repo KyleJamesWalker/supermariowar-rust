@@ -20,7 +20,7 @@ pub fn measure() -> String {
     );
     // SAFETY: single-threaded tool; SDL returns a static name, empty when unnamed, for every scancode below the count.
     unsafe {
-        std::env::set_var("SDL_VIDEODRIVER", "dummy");
+        sdl2::sys::SDL_SetHintWithPriority(sdl2::sys::SDL_HINT_VIDEODRIVER.as_ptr().cast(), c"dummy".as_ptr(), sdl2::sys::SDL_HintPriority::SDL_HINT_OVERRIDE);
         assert_eq!(SDL_InitSubSystem(SDL_INIT_VIDEO), 0, "SDL_InitSubSystem failed");
         for s in 0..SDL_Scancode::SDL_NUM_SCANCODES as i32 {
             let name = CStr::from_ptr(SDL_GetScancodeName(s)).to_string_lossy();
