@@ -71,6 +71,11 @@ A full-codebase review on 2026-10-19, at the head of the GPU shader stack, confi
 - WebRTC callbacks in `smw-peer` unwrap their mutex, so one panicking callback poisons it and the game thread panics on its next poll. Recover the poisoned lock, as `smw-sdl2/input.rs` does (`native.rs`, S).
 - `smw_relay` spawns a thread per TCP connection before any limit applies, an idle socket holds one for 5 s, and signaling accepts the default 64 MiB messages. Cap accepted connections, limit signaling messages to a few KiB, and cap peers per room (`websocket.rs`, `signal.rs`, M).
 - `rollback.rs` reads `SMW_V2_STATE_LOG` from the environment on every save. Read it once (S).
+- A `MSG_START_PART` with a part count of 0 leaves no parts to wait for, so the joiner restores zero bytes and abandons the match. Any peer can abort a start this way. Reject a count of 0, with the host-only check above (`net_v2.rs`, S).
+- If the host cannot read its own map, `capture_shared` sends an empty one (`unwrap_or_default`), and every joiner then fails in `load_map`. Fail the start on the host with a message (`checkpoint.rs`, S).
+- A joiner whose READY reaches the host after `MSG_GO` stalls the host's session until the 10 s disconnect timeout, while the joiner waits out its 20 s deadline. Re-send GO to a late READY, or abandon the start (`net_v2.rs`, S).
+- `smw-sdl2/audio.rs` calls `std::env::set_var("SDL_AUDIODRIVER", ...)` while other threads may read the environment, which is a data race. Use an SDL hint or `SDL_AudioInit("dummy")` instead (S).
+- The host's match start may name an absolute map path, and the joiner loads that local file. Accept only settings-folder and data-relative names (`checkpoint.rs`, S).
 
 ### Next
 
@@ -83,6 +88,13 @@ A full-codebase review on 2026-10-19, at the head of the GPU shader stack, confi
 - The display list copies the whole 640x480 map surface when animated tiles redraw, about 1.2 MB per animation step, and builds a `HashMap` per presented frame (`display_list.rs`, S).
 - The lobby logs seven lines per player on every room update and one per room-list request. Put them behind a verbose flag (`server.rs`, `room.rs`, S).
 - The lobby's network layer is a `static mut` singleton, so two lobbies in one process clash. Make it a field of `SMWServer` (`server.rs`, S).
+- A WebRTC handshake that fails never reports `Disconnected`, so the game learns of it only from the 20 s start deadline (`smw-peer/src/native.rs`, S). Fold into the disconnect notice above.
+- `rollback_sweep` runs on Linux only, so a rollback divergence on macOS or Windows passes CI. Run it on all three (`ci.yml`, S).
+- `display_list.rs` scans every recorded command for each write to an off-screen surface. Track which surfaces were blitted from instead (S).
+- The relay's client and signaling threads poll every 4 ms, about 250 wakeups a second per idle connection. Block on reads, or poll slower when nothing is queued (`websocket.rs`, `signal.rs`, S).
+- `peer_socket.js` parses signaling JSON without a try/catch, and the peer inboxes on both web and native are unbounded, so a flooding peer grows memory (S).
+- A user map over the 20,000-byte network limit makes its room silently unlisted: the map change message is skipped. Tell the host (`net.rs`, `file_compressor.rs`, S). No shipped map is over the limit.
+- The netplay v2 handshake bytes carry no version, so mixed builds cannot detect a format change except through the lobby protocol version. Add a version byte to `MSG_SLOT` (`net_v2.rs`, S).
 
 ### Later
 
@@ -93,7 +105,19 @@ A full-codebase review on 2026-10-19, at the head of the GPU shader stack, confi
 - Only one local player per peer can play online (`net_v2.rs` hard-codes `KeySlot::Local(0)`); couch players in an online match need a room slot model (M).
 - The overlay uploads its vertex buffer once per quad. Batch the quads (`shader_overlay.rs`, S).
 - Fuzz the `bincode` decode of GGRS packets from peers (`smw-peer`, S), and test the relay's connection and message limits (S).
-- Unconfirmed: whether anything can move the `String` that `MI_TextField::szOutValue` points to, whether the world menu catches a world file that fails to parse, and whether `smw-peer` should retry a failed ICE handshake.
+- Once the desync checksum is deeper, assert it per replay, so a platform difference fails CI (S).
+- The SDL3 audio callbacks allocate on the audio thread for every voice and music packet. Reuse a buffer per voice (`smw-sdl3/audio.rs`, S).
+- Any player's Start toggles the shared pause, with no owner or timeout, so one player can hold a match paused. Let only the pauser resume, or resume after a timeout (`rollback.rs`, S). The snapshot also carries the full mixer state; trim it with the snapshot work above.
+- A dropped or failed WebRTC connection is never retried, on native or web; after a network blip the only way out is leaving the match (`smw-peer`, M).
+- The lobby has no rate limit or per-address connection cap beyond `max_clients` (`websocket.rs`, `config.rs`, S to M).
+- The LAN listener lists any `SMWLAN1` datagram's sender as a server, so anyone on the network can add an entry. Ask the host's lobby for server info before listing it (`lan_beacon.rs`, S).
+- The lobby's `remove_inactive_players` is empty, so idle players linger until the WebSocket's 60 s timeout (`server.rs`, S).
+- Switching the shader rebuilds the window without keeping its position or size (`smw-sdl2/video.rs`, S).
+- The shared pause takes Start from a hard-coded bit position (`1 << 13`) in `COutputControl`'s key order. Name the key index (`rollback.rs`, S).
+- `fps_limiter::after_flip` spins until the tick boundary, but only `SMW_NOLIMIT` runs reach it and they return early, so it is dead code beside `paced_frame`. Remove it (S).
+- `harness::frame_end` flushes the dump file every frame, which slows the headless sweeps. Flush on exit and on failure (`harness.rs`, S).
+- A room cannot start when the signaling URL and room id exceed 159 bytes, and the players get no message. Check `SMW_SIGNAL_URL`'s length at startup (`server.rs`, S).
+- Unconfirmed: whether anything can move the `String` that `MI_TextField::szOutValue` points to, whether the world menu catches a world file that fails to parse, whether a host-sent tour-stop line or menu skin can panic the joiner's parser, and how `smw-peer` behaves under TURN after a dropped connection.
 
 ## Parked
 
