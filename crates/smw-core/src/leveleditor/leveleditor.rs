@@ -5121,7 +5121,7 @@ pub fn pasteselectedtiles(g: &mut Game, movex: i32, movey: i32) {
                         if ed(gp.get()).move_replace {
                             g.g_map.mapdatatop[iNewX][iNewY] = c.tiletype;
                         } else {
-                            update_tile_type(g, j as i16, kk as i16);
+                            update_tile_type(g, iNewX as i16, iNewY as i16);
                         }
 
                         for iType in 0..NUMSPAWNAREATYPES as usize {
