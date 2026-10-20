@@ -444,7 +444,8 @@ const MAX_SAVED_FRAMES: i32 = 16;
 /// A save for GGRS, with its checksum on every `checksum_every`-th frame, also written to SMW_V2_STATE_LOG.
 fn logged_save(g: &mut Game, frame: i32, checksum_every: i32) -> (MatchState, Option<u128>) {
     let sum = (frame % checksum_every.max(1) == 0).then(|| checksum(g));
-    if let Ok(path) = std::env::var("SMW_V2_STATE_LOG") {
+    static STATE_LOG: std::sync::OnceLock<Option<String>> = std::sync::OnceLock::new();
+    if let Some(path) = STATE_LOG.get_or_init(|| std::env::var("SMW_V2_STATE_LOG").ok()) {
         let mut gp = g.ptr();
         let mut dump = Vec::new();
         if let Some(gameplay) = gp.gps.as_mut() {
