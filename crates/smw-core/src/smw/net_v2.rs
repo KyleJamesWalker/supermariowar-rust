@@ -27,6 +27,8 @@ const MSG_GO: u8 = 4;
 const MSG_LEAVE: u8 = 5;
 /// Match start bytes per `MSG_START_PART`.
 const PART_BYTES: usize = 16 * 1024;
+/// The largest match start a peer sends or takes; a real one is about 20 KiB.
+const MAX_START_BYTES: usize = 1024 * 1024;
 /// How long the start handshake may take before the match is abandoned.
 const START_DEADLINE: Duration = Duration::from_secs(20);
 /// Frames between repeats of the handshake messages.
@@ -136,11 +138,17 @@ pub fn match_starting(g: &mut Game) -> bool {
     let host = g.netplay.theHostIsMe;
     let my_slot = g.netplay.remotePlayerNumber as u8;
     let start = if host {
-        match crate::smw::checkpoint::capture_shared(g) {
-            Ok(start) => start,
-            Err(e) => {
-                println!("[net] v2: cannot start the match: {e}");
-                g.netplay.match_notice = Some("Cannot read the map for this match".to_string());
+        let start = crate::smw::checkpoint::capture_shared(g);
+        let too_large = start.as_ref().is_ok_and(|s| s.len() > MAX_START_BYTES);
+        match start {
+            Ok(start) if !too_large => start,
+            failed => {
+                match failed {
+                    Ok(start) => println!("[net] v2: cannot start the match: its start is {} bytes", start.len()),
+                    Err(e) => println!("[net] v2: cannot start the match: {e}"),
+                }
+                let notice = if too_large { "This match is too large to send" } else { "Cannot read the map for this match" };
+                g.netplay.match_notice = Some(notice.to_string());
                 for peer in socket.connected_peers().to_vec() {
                     socket.send(RELIABLE, peer, &slot_message(my_slot));
                     socket.send(RELIABLE, peer, &[MSG_LEAVE]);
@@ -487,11 +495,14 @@ fn parse_slot(token: &str) -> Option<KeySlot> {
 struct StartParts(Vec<Option<Vec<u8>>>);
 
 impl StartParts {
-    /// Takes part `index` of `count`; the whole match start once every part is in. A count of 0, an index past it, or
-    /// a count that changes mid-transfer is an error.
+    /// Takes part `index` of `count`; the whole match start once every part is in. A count of 0, an index past it, a
+    /// count that changes mid-transfer, or a start over `MAX_START_BYTES` is an error.
     fn add(&mut self, index: usize, count: usize, bytes: &[u8]) -> Result<Option<Vec<u8>>, String> {
         if index >= count {
             return Err(format!("the host sent match start part {index} of {count}"));
+        }
+        if count > MAX_START_BYTES.div_ceil(PART_BYTES) || bytes.len() > PART_BYTES {
+            return Err("The host's match start is too large".to_string());
         }
         if self.0.is_empty() {
             self.0 = vec![None; count];
@@ -888,6 +899,14 @@ mod tests {
         let mut parts = StartParts::default();
         assert_eq!(parts.add(0, 3, b"a"), Ok(None));
         assert!(parts.add(1, 2, b"b").is_err(), "a changed count");
+    }
+
+    #[test]
+    fn start_parts_refuse_oversized_starts() {
+        let most = MAX_START_BYTES / PART_BYTES;
+        assert_eq!(StartParts::default().add(0, most, &[0; PART_BYTES]), Ok(None));
+        assert!(StartParts::default().add(0, most + 1, b"x").is_err(), "too many parts");
+        assert!(StartParts::default().add(0, 1, &[0; PART_BYTES + 1]).is_err(), "an oversized part");
     }
 
     #[test]
