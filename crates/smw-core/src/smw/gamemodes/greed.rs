@@ -1,4 +1,4 @@
-//! Port of src/smw/gamemodes/Greed.cpp
+//! Greed mode: getting hit spills coins; a team with no coins left is removed.
 
 use crate::smw::players::PlayerId;
 use crate::game::Game;
@@ -18,6 +18,7 @@ use crate::smw::gamemodes::game_mode::*;
 use crate::smw::objects::moving::mo_coin::MO_Coin;
 use crate::smw::player::CPlayer;
 
+/// Base coins lost to each kill style, before the greed multiplier (in halves) is applied.
 const fn kill_style_damage(style: KillStyle) -> i16 {
     match style {
         KillStyle::Stomp => 5,
@@ -50,14 +51,14 @@ const fn kill_style_damage(style: KillStyle) -> i16 {
     }
 }
 
-//Greed mode (players try to steal each other's coins)
+/// Greed mode: teams start with the goal in coins and steal each other's by knocking them loose.
 #[derive(Clone)]
 pub struct CGM_Greed {
     pub cgm_classic: CGM_Classic,
 }
 impl_base!(CGM_Greed => cgm_classic: CGM_Classic);
 
-//Greed - steal other players coins - if you have 0 coins, you're removed from the game!
+/// Spawns `iDamage` coins at `pos` that fly out in random upward directions.
 fn drop_coins(g: &mut Game, player: PlayerId, iDamage: i16, pos: Vec2s) {
         let mut gp = g.ptr();
     for _k in 0..iDamage {
@@ -80,6 +81,8 @@ impl CGM_Greed {
         this
     }
 
+    /// Spills the player's coins for a hit by `style` and shields them instead of killing them.
+    /// Returns `Removed` when the team runs out of coins, otherwise `NonKill`.
     pub fn release_coins(&mut self, g: &mut Game, mut player: PlayerId, style: KillStyle) -> PlayerKillType {
         let mut gp = g.ptr();
         if_sound_on_play(g, &mut gp.rm.sfx_cannon);

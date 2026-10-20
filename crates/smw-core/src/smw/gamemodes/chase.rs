@@ -1,4 +1,4 @@
-//! Port of src/smw/gamemodes/Chase.cpp
+//! Phanto chase mode: hold the key to score while phantos hunt the holder.
 
 use crate::smw::object_container::ObjectId;
 use crate::smw::players::PlayerId;
@@ -18,12 +18,14 @@ use crate::smw::objects::overmap::wo_phanto::OMO_Phanto;
 use crate::smw::player::CPlayer;
 use std::any::Any;
 
-//Chase (hold a key for points while phantos chase you)
+/// Phanto chase mode: the key holder earns a point every `ticks(pointspeed)` ticks.
 #[derive(Clone)]
 pub struct CGM_Chase {
     pub cgame_mode: CGameMode,
 
-    key: ObjectId,    /// Frames toward the next point; never reset between games, like the C++ function-local static.
+    /// The phanto key object.
+    key: ObjectId,
+    /// Ticks toward the holder's next point; `init` does not reset it.
     counter: i16,
 }
 impl_base!(CGM_Chase => cgame_mode: CGameMode);
@@ -38,6 +40,7 @@ impl CGM_Chase {
         this
     }
 
+    /// Returns the player carrying the key, or `PlayerId::NONE`.
     pub fn get_key_holder(&mut self, g: &Game) -> PlayerId {
         g.object_as::<CO_PhantoKey>(self.key).map_or(PlayerId::NONE, |key| key.owner)
     }

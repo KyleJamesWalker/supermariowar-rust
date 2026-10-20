@@ -1,4 +1,4 @@
-//! Port of src/smw/gamemodes/Health.cpp
+//! Health mode: classic lives with a health bar; a life is lost only when health runs out.
 
 use crate::smw::players::PlayerId;
 use crate::game::Game;
@@ -14,12 +14,12 @@ use crate::smw::player::CPlayer;
 
 #[derive(Clone)]
 
+/// Health mode. Per team, `subscore[0]` is current health and `subscore[1]` is maximum health.
 pub struct CGM_Health {
     pub cgm_classic: CGM_Classic,
 }
 impl_base!(CGM_Health => cgm_classic: CGM_Classic);
 
-//mariowar (x lives - counting down)
 impl CGM_Health {
     pub fn new() -> Self {
         let mut this = CGM_Health { cgm_classic: CGM_Classic::new() };
@@ -44,6 +44,7 @@ impl CGameModeTrait for CGM_Health {
         }
     }
 
+    // Bomb and ice blast hits cost 2 health; a hit that leaves health refreshes the shield.
     fn playerkilledplayer(&mut self, g: &mut Game, inflictor: PlayerId, mut other: PlayerId, style: KillStyle) -> PlayerKillType {
         let mut gp = g.ptr();
         if self.gameover {
@@ -102,6 +103,7 @@ impl CGameModeTrait for CGM_Health {
         PlayerKillType::NonKill
     }
 
+    // Extra lives restore health, capped at the maximum.
     fn playerextraguy(&mut self, g: &mut Game, mut player: PlayerId, iType: i16) {
         if !self.gameover {
             g.player(player).score(g).subscore[0] += iType;

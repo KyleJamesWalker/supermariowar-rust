@@ -1,4 +1,4 @@
-//! Port of src/smw/gamemodes/MiniBoss.cpp
+//! World-map boss minigame: whoever lands the final hit on the boss wins.
 
 use crate::smw::players::PlayerId;
 use crate::game::Game;
@@ -23,13 +23,14 @@ use crate::smw::objects::walkingenemy::we_koopa::MO_Koopa;
 use crate::smw::player::CPlayer;
 use std::any::Any;
 
-//Boss Mode
-//Person to score fatal hit to boss wins!
+/// Boss minigame. Teams share a life pool that drops on every death; a team is removed at zero.
 #[derive(Clone)]
 pub struct CGM_Boss_MiniGame {
     pub cgame_mode: CGameMode,
 
+    /// Ticks until the next koopa or podobo spawn.
     enemytimer: i16,
+    /// Ticks until the next powerup card spawn in the fire boss fight.
     poweruptimer: i16,
     iBossType: Boss,
 }
@@ -43,6 +44,7 @@ impl CGM_Boss_MiniGame {
         this
     }
 
+    /// Ends the match with the player's team as winner and zeroes every other team's score.
     pub fn set_winner(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut gp = g.ptr();
         self.winningteam = g.player(player).get_team_id();
@@ -69,7 +71,6 @@ impl CGM_Boss_MiniGame {
             gp.backgroundmusic[1].play(g, true, false);
         }
 
-        //game_values.noexit = true;
 
         true
     }

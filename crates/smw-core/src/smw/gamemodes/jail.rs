@@ -1,4 +1,4 @@
-//! Port of src/smw/gamemodes/Jail.cpp
+//! Jail mode: frag limit where killed players are jailed until freed.
 
 use crate::smw::players::PlayerId;
 use crate::game::Game;
@@ -15,20 +15,14 @@ use crate::smw::gamemodes::game_mode::*;
 
 use crate::smw::player::CPlayer;
 
-//Similar to frag limit but:
-//When a player is killed by another player, they get a "jail" marker
-//Jailed players move slowly
-//Jailed players can be freed by teammates
-//If all players on a team are jailed, bonus kill goes to other team
-//Similar to frag limit, but players get bonus frags for the number of players they have "owned"
+/// Jail mode: frag limit scoring, but a killed player is jailed (slowed) until a teammate frees
+/// them. Jailing a whole team awards a bonus point under the classic and owned jail styles.
 #[derive(Clone)]
 pub struct CGM_Jail {
     pub cgm_frag: CGM_Frag,
 }
 impl_base!(CGM_Jail => cgm_frag: CGM_Frag);
 
-//Owned:
-//Frag limit death match, but players get bonus frags for the number of players they have "owned"
 impl CGM_Jail {
     pub fn new() -> Self {
         let mut this = CGM_Jail { cgm_frag: CGM_Frag::new() };
@@ -66,6 +60,8 @@ fn emplace_poof(g: &mut Game, player: PlayerId) {
     ));
 }
 
+/// Scores the kill, frees the killer and jails the victim, then applies the jail-style team bonus.
+/// When a bonus is awarded, the affected jailed players are released (their jail timer zeroed).
 pub fn cgm_jail_playerkilledplayer(g: &mut Game, this: &mut CGM_Jail, mut inflictor: PlayerId, mut other: PlayerId, _style: KillStyle) -> PlayerKillType {
         let mut gp = g.ptr();
     if !this.gameover {
@@ -246,6 +242,7 @@ pub fn cgm_jail_playerkilledplayer(g: &mut Game, this: &mut CGM_Jail, mut inflic
     PlayerKillType::Normal
 }
 
+/// Adds `iType` points and frees the player from jail.
 pub fn cgm_jail_playerextraguy(g: &mut Game, this: &mut CGM_Jail, mut player: PlayerId, iType: i16) {
     if !this.gameover {
         g.player(player).score(g).adjust_score(g, iType);

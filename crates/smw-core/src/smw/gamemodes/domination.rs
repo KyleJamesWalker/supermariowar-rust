@@ -1,4 +1,4 @@
-//! Port of src/smw/gamemodes/Domination.cpp
+//! Domination mode: claim area blocks; owned blocks earn points over time.
 
 use crate::smw::players::PlayerId;
 use crate::game::Game;
@@ -13,6 +13,8 @@ use crate::smw::objects::overmap::wo_area::OMO_Area;
 use crate::smw::player::CPlayer;
 use std::any::Any;
 
+/// Applies the domination death rules to every area owned by `other`'s color: relocate,
+/// steal for `player` (when not `NONE`) or reset to unowned.
 fn adjust_player_areas(g: &mut Game, container: &CObjectContainer, player: PlayerId, other: PlayerId) {
     let n = container.list().len();
     for i in 0..n {
@@ -35,9 +37,7 @@ fn adjust_player_areas(g: &mut Game, container: &CObjectContainer, player: Playe
     }
 }
 
-//Domination (capture the area blocks)
-//Touch all the dotted blocks to turn them your color
-//The more blocks you have, the faster you rack up points
+/// Domination: touch area blocks to claim them; the more blocks a team owns, the faster it scores.
 #[derive(Clone)]
 pub struct CGM_Domination {
     pub cgame_mode: CGameMode,
@@ -55,6 +55,7 @@ impl CGM_Domination {
     }
 }
 
+/// Spawns the configured number of areas. Settings above 10 and 18 scale with player count.
 pub fn cgm_domination_init<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T) {
         let mut gp = g.ptr();
     gm::cgamemode_init(g, this);
@@ -78,6 +79,7 @@ pub fn cgm_domination_init<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut 
     }
 }
 
+/// Applies the area death rules to the victim's areas; kills score nothing.
 pub fn cgm_domination_playerkilledplayer<T: CGameModeTrait + ?Sized>(g: &mut Game, _this: &mut T, player: PlayerId, other: PlayerId, _style: KillStyle) -> PlayerKillType {
         let mut gp = g.ptr();
     //Update areas the dead player owned
@@ -86,6 +88,7 @@ pub fn cgm_domination_playerkilledplayer<T: CGameModeTrait + ?Sized>(g: &mut Gam
     PlayerKillType::Normal
 }
 
+/// Applies the area death rules to the player's areas with nobody to steal them.
 pub fn cgm_domination_playerkilledself<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T, player: PlayerId, style: KillStyle) -> PlayerKillType {
         let mut gp = g.ptr();
     gm::cgamemode_playerkilledself(g, this, player, style);
@@ -96,6 +99,7 @@ pub fn cgm_domination_playerkilledself<T: CGameModeTrait + ?Sized>(g: &mut Game,
     PlayerKillType::Normal
 }
 
+/// Awards 10 points per extra life.
 pub fn cgm_domination_playerextraguy<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: PlayerId, iType: i16) {
     if !this.gm().gameover {
         g.player(player).score(g).adjust_score(g, (10 * iType as i32) as i16);
@@ -103,6 +107,7 @@ pub fn cgm_domination_playerextraguy<T: CGameModeTrait + ?Sized>(g: &mut Game, t
     }
 }
 
+/// Ends the match when the player's team reaches the goal; warns at 80%.
 pub fn cgm_domination_check_winner<T: CGameModeTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: PlayerId) -> PlayerKillType {
     if this.gm().goal > -1 {
         if g.player(player).score(g).score >= this.gm().goal {

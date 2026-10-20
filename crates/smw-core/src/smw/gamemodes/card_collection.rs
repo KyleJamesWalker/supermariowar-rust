@@ -1,4 +1,4 @@
-//! Port of src/smw/gamemodes/CardCollection.cpp
+//! Card collection mode: collect and bank sets of three cards for points.
 
 use crate::smw::players::PlayerId;
 use crate::game::Game;
@@ -18,11 +18,13 @@ use crate::smw::objects::moving::mo_collection_card::MO_CollectionCard;
 use crate::smw::player::CPlayer;
 use std::any::Any;
 
-//Collection (collect cards for points)
+/// Card collection mode. Per team, `subscore[0]` is cards held (0-3), `subscore[1]` packs each
+/// card's kind in 2 bits (0 mushroom, 1 flower, 2 star) and `subscore[2]` counts bank ticks.
 #[derive(Clone)]
 pub struct CGM_Collection {
     pub cgame_mode: CGameMode,
 
+    /// Ticks since the last card spawn check.
     timer: i16,
 }
 impl_base!(CGM_Collection => cgame_mode: CGameMode);
@@ -37,6 +39,7 @@ impl CGM_Collection {
         this
     }
 
+    /// Drops the player's team's most recent card at the player's position, if the team holds any.
     pub fn release_card(&mut self, g: &mut Game, mut player: PlayerId) {
         if g.player(player).score(g).subscore[0] > 0 {
             let pos = Vec2s::new((g.player(player).center_x() as i32 - 16) as i16, (g.player(player).center_y() as i32 - 16) as i16);
@@ -66,6 +69,7 @@ impl CGM_Collection {
     }
 }
 
+/// Spawns a random field card: 40% mushroom, 40% flower, 20% star.
 fn spawn_card(g: &mut Game) {
         let mut gp = g.ptr();
     let iRandom: i16 = RANDOM_INT(gp.get(), 5) as i16;
@@ -124,7 +128,7 @@ impl CGameModeTrait for CGM_Collection {
             return;
         }
 
-        //Check if this team has collected 3 cards
+        // A team holding 3 cards for `banktime` ticks banks them: matching sets score 2, 3 or 5, mixed 1.
         for iScore in 0..g.score_cnt as usize {
             if g.score[iScore].subscore[0] >= 3 {
                 g.score[iScore].subscore[2] += 1;

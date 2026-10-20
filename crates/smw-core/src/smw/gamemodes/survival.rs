@@ -1,4 +1,4 @@
-//! Port of src/smw/gamemodes/Survival.cpp
+//! Survival mode: classic lives while dodging thwomps, podobos and Bowser fire.
 
 use crate::smw::players::PlayerId;
 use crate::game::Game;
@@ -19,19 +19,23 @@ use crate::smw::player::CPlayer;
 
 #[derive(Clone)]
 
+/// Survival mode: classic scoring with weighted-random hazards falling or flying in.
 pub struct CGM_Survival {
     pub cgm_classic: CGM_Classic,
 
+    /// Ticks until the next hazard spawn.
     pub timer: i16,
+    /// Spawns since `rate` last dropped; it drops by one every `ticks(10)` spawns.
     pub ratetimer: i16,
+    /// Base spawn interval, starting at `3 * density` and falling to `density`.
     pub rate: i16,
+    /// Most recent hazard: 0 thwomp, 1 podobo, 2 Bowser fire.
     pub iSelectedEnemy: i16,
+    /// Sum of the configured hazard weights, at least 1.
     pub iEnemyWeightCount: i16,
 }
 impl_base!(CGM_Survival => cgm_classic: CGM_Classic);
 
-//Survival Mode! - just like mario war classic, but you have
-// to dodge thwomps from the sky.  Idea from ziotok.
 impl CGM_Survival {
     pub fn new() -> Self {
         let mut this = CGM_Survival { cgm_classic: CGM_Classic::new(), timer: 0, ratetimer: 0, rate: 0, iSelectedEnemy: 0, iEnemyWeightCount: 0 };
