@@ -388,9 +388,7 @@ pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter
             rDotDst = Rect { x: iBulletPathX as i32, y: rPathDst.y + ((ts - dot) >> 1), w: dot, h: dot };
             g.rm.sprite(g.rm.spr_platformpath).draw_src_to(&rDotSrc, dst, &rDotDst);
 
-            iBulletPathX = (iBulletPathX as i32
-                + if (hazard.iparam[0] as f32) < 0.0 { -(iBulletPathSpacing as i32) } else { iBulletPathSpacing as i32 })
-                as i16;
+            iBulletPathX = (iBulletPathX as i32 + iBulletPathSpacing as i32) as i16;
         }
     } else if hazard.itype == 3 {
         let rect = &g_rFlameRects[hazard.iparam[1] as usize][2];
