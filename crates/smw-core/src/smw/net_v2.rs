@@ -654,7 +654,15 @@ impl V2Match {
             }
         }
 
-        let others_left = self.socket.receive(RELIABLE).iter().any(|(_, msg)| msg.first() == Some(&MSG_LEAVE));
+        let mut others_left = false;
+        for (peer, msg) in self.socket.receive(RELIABLE) {
+            match msg.first() {
+                Some(&MSG_LEAVE) => others_left = true,
+                // A joiner repeats READY until it hears GO.
+                Some(&MSG_READY) if self.host && self.slots.contains_key(&peer) => self.socket.send(RELIABLE, peer, &[MSG_GO]),
+                _ => {}
+            }
+        }
         if others_left {
             println!("[net] v2: another player ended the match");
             return self.abandon(g);
