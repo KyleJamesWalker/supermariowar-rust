@@ -904,8 +904,8 @@ impl NetClient {
             return;
         }
 
-        let full_size = u16::from_ne_bytes([data[3], data[4]]);
-        let compressed_size = u16::from_ne_bytes([data[5], data[6]]);
+        let full_size = u16::from_le_bytes([data[3], data[4]]);
+        let compressed_size = u16::from_le_bytes([data[5], data[6]]);
 
         println!("[net] Map arrived (C:{} unC:{})", compressed_size, full_size);
 
@@ -979,8 +979,8 @@ impl NetClient {
             return;
         }
 
-        let full_size = u16::from_ne_bytes([data[4], data[5]]);
-        let compressed_size = u16::from_ne_bytes([data[6], data[7]]);
+        let full_size = u16::from_le_bytes([data[4], data[5]]);
+        let compressed_size = u16::from_le_bytes([data[6], data[7]]);
 
         println!("[net] Skin arrived (from: {}, C:{} unC:{})", playerID, compressed_size, full_size);
 

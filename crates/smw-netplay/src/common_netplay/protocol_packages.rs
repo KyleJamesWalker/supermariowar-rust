@@ -1,7 +1,10 @@
 //! The lobby protocol's messages. Each goes on the wire as the raw bytes of its `#[repr(C)]` struct, so padding
-//! is spelled out as zeroed `_padN` fields and multi-byte fields are in native byte order.
+//! is spelled out as zeroed `_padN` fields and multi-byte fields are little-endian.
 
 use super::protocol_definitions::*;
+
+#[cfg(not(target_endian = "little"))]
+compile_error!("lobby messages are sent as their structs' raw bytes, which the protocol defines as little-endian");
 
 /// `as_bytes` / `from_bytes` for a `#[repr(C)]` package made only of integers, floats and byte arrays.
 #[macro_export]
