@@ -35,7 +35,7 @@ pub fn measure(data_dir: &Path) -> String {
     );
     // SAFETY: single-threaded tool; every chunk and track is checked non-null and freed once while the mixer is open.
     unsafe {
-        std::env::set_var("SDL_AUDIODRIVER", "dummy");
+        sdl2::sys::SDL_SetHintWithPriority(sdl2::sys::SDL_HINT_AUDIODRIVER.as_ptr().cast(), c"dummy".as_ptr(), sdl2::sys::SDL_HintPriority::SDL_HINT_OVERRIDE);
         SDL_InitSubSystem(SDL_INIT_AUDIO);
         assert_eq!(Mix_OpenAudio(44100, AUDIO_S16 as u16, 2, 2048), 0, "Mix_OpenAudio failed");
         let (mut frequency, mut format, mut channels) = (0, 0u16, 0);
@@ -79,6 +79,7 @@ mod tests {
 
     #[test]
     fn table_matches_sdl_mixer() {
+        let _mixer = crate::audio::tests::MIXER.lock().unwrap_or_else(|p| p.into_inner());
         let measured = measure(Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/../../data")));
         const TABLE: &str = include_str!("../../smw-core/src/common/sfx_durations.txt");
         for (n, (want, got)) in TABLE.lines().zip(measured.lines()).enumerate() {

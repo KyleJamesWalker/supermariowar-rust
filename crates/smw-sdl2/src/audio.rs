@@ -194,8 +194,11 @@ impl AudioOut for Sdl2Audio {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
+
+    /// Held by every test that opens SDL_mixer, which is process-wide.
+    pub(crate) static MIXER: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
     /// A mono 16-bit PCM WAV of `samples` silent samples at 44100 Hz.
     fn wav(samples: u32) -> Vec<u8> {
@@ -217,9 +220,9 @@ mod tests {
         w
     }
 
-    /// One test, since both open SDL's process-wide audio.
     #[test]
     fn falls_back_to_dummy_and_reloading_an_id_replaces_what_plays() {
+        let _mixer = MIXER.lock().unwrap_or_else(|p| p.into_inner());
         // SAFETY: the hint name and value are static C strings.
         unsafe {
             sdl2::sys::SDL_SetHintWithPriority(sdl2::sys::SDL_HINT_AUDIODRIVER.as_ptr().cast(), c"no-such-driver".as_ptr(), sdl2::sys::SDL_HintPriority::SDL_HINT_OVERRIDE);
