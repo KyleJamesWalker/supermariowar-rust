@@ -17,7 +17,7 @@ Players get CRT and other display effects from the RetroArch shader collection, 
 - **Feature gate:** librashader builds SPIRV-Cross and glslang from C++. The `shaders` feature on `smw-sdl2` (passed through as `smw/shaders`) keeps that out of the Android, web, muOS and aarch64 builds.
 - **Settings:** a Graphics option lists the bundled presets, then the player's, with Off first. Off keeps today's renderer. An integer scaling option keeps the image at whole multiples of 640x480, where scanlines look even.
 
-`guides/REPLAY.md` lists the development options. `SMW_SHADER=<preset.slangp>` selects a preset. `SMW_WINDOW_SCALE=<n>` opens the window at n times 640x480. `SMW_SHADER_SHOT=<n>` saves the shader output of present n as `shader_<n>.bmp` in `SMW_SHOT_DIR`.
+`guides/REPLAY.md` lists the development options. `SMW_SHADER=<preset.slangp>` selects a preset. `SMW_WINDOW_SCALE=<n>` opens the window at n times 640x480. `SMW_SHADER_SHOT=<n>` saves the window after present n as `shader_<n>.bmp` in `SMW_SHOT_DIR`.
 
 ## Alternatives considered
 
