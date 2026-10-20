@@ -827,6 +827,10 @@ impl NetClient {
 
     fn handle_room_changed_message(&mut self, g: &mut Game, data: &[u8]) {
         let pkg = pkgs::CurrentRoom::from_bytes(data);
+        if !room_change_is_valid(&pkg) {
+            println!("[error] Corrupt room change arrived");
+            return;
+        }
 
         g.netplay.currentRoom.roomID = pkg.roomID;
         g.netplay.currentRoom.name = cstr_field(&pkg.name);
@@ -1348,3 +1352,28 @@ pub fn net_skin_path(g: &mut Game, player: usize) -> Option<String> {
     Path::new(&path).exists().then_some(path)
 }
 
+/// Whether a `NET_NOTICE_ROOM_CHANGE`'s slots and mode are in range, since they index the room's arrays.
+fn room_change_is_valid(pkg: &pkgs::CurrentRoom) -> bool {
+    pkg.remotePlayerNumber < 4 && pkg.hostPlayerNumber < 4 && (pkg.gamemodeID as GameModeType) < GAMEMODE_LAST
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn room_changes_with_slots_or_mode_out_of_range_are_rejected() {
+        let mut pkg = pkgs::CurrentRoom::new();
+        pkg.remotePlayerNumber = 3;
+        pkg.hostPlayerNumber = 3;
+        pkg.gamemodeID = (GAMEMODE_LAST - 1) as u8;
+        assert!(room_change_is_valid(&pkg));
+        for bad in [
+            pkgs::CurrentRoom { remotePlayerNumber: 4, ..pkg },
+            pkgs::CurrentRoom { hostPlayerNumber: 0xFF, ..pkg },
+            pkgs::CurrentRoom { gamemodeID: GAMEMODE_LAST as u8, ..pkg },
+        ] {
+            assert!(!room_change_is_valid(&bad));
+        }
+    }
+}
