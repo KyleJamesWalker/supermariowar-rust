@@ -14,6 +14,9 @@ use super::match_room;
 use smw::globals::Ptr;
 use super::unordered_map::UnorderedMap;
 
+/// How long a new connection has to send `NET_REQUEST_CONNECT` before a full lobby may drop it.
+const IDENTIFY_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
+
 /// The lobby: connected players, their rooms, and starting a room's match.
 pub struct SMWServer {
     /// `None` only while `update` hands it the server.
@@ -259,8 +262,22 @@ impl SMWServer {
         }).find(|name| !taken(name)).unwrap()
     }
 
+    /// When the lobby is full, disconnects connections older than `IDENTIFY_TIMEOUT` that never sent `NET_REQUEST_CONNECT`.
     fn remove_inactive_players(&mut self) {
-        if self.maxPlayerCount as usize <= self.players.len() {}
+        if (self.maxPlayerCount as usize) > self.players.len() {
+            return;
+        }
+        let stale: Vec<u64> =
+            self.players.iter().filter(|(_, p)| !p.connected && p.joinTime.elapsed() >= IDENTIFY_TIMEOUT).map(|(&id, _)| id).collect();
+        for playerID in stale {
+            self.player_leaves_room(playerID);
+            if let Some(mut player) = self.players.remove(&playerID) {
+                log(&format!("[info] {} dropped: it never connected.", player.address_to_string()));
+                if let Some(client) = player.network_client.as_mut() {
+                    client.disconnect();
+                }
+            }
+        }
     }
 
     fn send_visible_room_entries(&mut self, client: &mut dyn NetPeer) {
@@ -988,6 +1005,24 @@ mod tests {
         assert!(!server.init_without_log_file(""));
         server.v2.signal_url = format!("wss://{}/signal", "x".repeat(110));
         assert!(server.init_without_log_file(""));
+    }
+
+    #[test]
+    fn a_full_lobby_drops_connections_that_never_connected() {
+        let mut server = server();
+        server.set_max_players(2);
+        connect(&mut server, 1, "Named");
+        let silent = Outbox::default();
+        server.on_connect(&mut (), Box::new(TestPeer { id: 2, outbox: silent.clone() }));
+        let next = Outbox::default();
+        server.on_connect(&mut (), Box::new(TestPeer { id: 3, outbox: next.clone() }));
+        assert_eq!(codes(&next), [NET_RESPONSE_CONNECT_SERVERFULL], "a new silent connection keeps its slot");
+
+        server.players.get_mut(&2).unwrap().joinTime -= IDENTIFY_TIMEOUT;
+        server.on_connect(&mut (), Box::new(TestPeer { id: 3, outbox: next.clone() }));
+        assert!(codes(&next).is_empty());
+        assert_eq!(*silent.borrow(), [Vec::<u8>::new()], "the stale connection is disconnected");
+        assert!(server.players.contains_key(&1) && server.players.contains_key(&3) && !server.players.contains_key(&2));
     }
 
     #[test]
