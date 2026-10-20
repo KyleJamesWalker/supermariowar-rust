@@ -3298,6 +3298,7 @@ pub(crate) mod tests {
 
     #[test]
     fn spawn_area_outside_the_map_fails_to_load() {
+        let _g = lock_globals();
         let area = SpawnArea { left: 15, top: 1, width: 6, height: 12, size: 84 };
         let (checked, caught) = caught_panics(|| catch_runtime_error(|| map_reader::check_spawn_area(&area)));
         assert!(checked.is_none());
