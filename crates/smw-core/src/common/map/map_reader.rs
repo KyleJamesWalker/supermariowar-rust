@@ -5,7 +5,7 @@ use crate::game::Game;
 use crate::globals::Aliased;
 use crate::common::file_io::{throw_runtime_error, BinaryFile};
 use crate::common::global_constants::{MAPHEIGHT, MAPWIDTH, MAXWARPS};
-use crate::common::map::{CMap, MapHazard, ReadType, Warp, ThrowBox, WARP_UNDEFINED};
+use crate::common::map::{CMap, MapHazard, ReadType, SpawnArea, Warp, ThrowBox, WARP_UNDEFINED};
 use crate::smw::gs_gameplay::MapBlock_WpnBreakLeaf;
 use crate::common::version::Version;
 
@@ -193,6 +193,15 @@ pub(super) fn checked_float(what: &str, value: f32) -> f32 {
         throw_runtime_error(&format!("Damaged map: {what} {value} is not within {MAX_MAP_FLOAT}"));
     }
     value
+}
+
+/// Fails the load on a spawn area that reaches outside the map, where a player would spawn off screen.
+pub(super) fn check_spawn_area(area: &SpawnArea) {
+    checked_index("spawn area left", area.left as i32, MAPWIDTH);
+    checked_index("spawn area top", area.top as i32, MAPHEIGHT);
+    checked_range("spawn area width", area.width as i32, 0, MAPWIDTH - area.left as i32);
+    checked_range("spawn area height", area.height as i32, 0, MAPHEIGHT - area.top as i32);
+    checked_range("spawn area size", area.size as i32, 0, MAPWIDTH * MAPHEIGHT);
 }
 
 /// Fails the load on a tile object type no block exists for; -1 is no object.

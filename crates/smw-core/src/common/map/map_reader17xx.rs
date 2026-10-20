@@ -4,7 +4,7 @@ use crate::game::Game;
 use crate::common::file_io::BinaryFile;
 use crate::common::game_values::default_powerup_setting;
 use crate::common::global_constants::*;
-use crate::common::map::map_reader::{check_object_type, check_platform_size, check_warp, checked_count, checked_float, checked_index, MapReader};
+use crate::common::map::map_reader::{check_object_type, check_platform_size, check_spawn_area, check_warp, checked_count, checked_float, checked_index, MapReader};
 use crate::common::map::map_reader_constants::g_szBackgroundConversion;
 use crate::common::map::{read_type_preview, read_type_summary, CMap, ReadType, TilesetTile, WarpEnterDirection};
 use crate::common::math::vec2::Vec2f;
@@ -156,6 +156,7 @@ impl MapReader {
                 a.width = mapfile.read_i32() as i16;
                 a.height = mapfile.read_i32() as i16;
                 a.size = mapfile.read_i32() as i16;
+                check_spawn_area(a);
 
                 map.totalspawnsize[i] = map.totalspawnsize[i].wrapping_add(a.size);
             }

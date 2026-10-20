@@ -3287,6 +3287,15 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn spawn_area_outside_the_map_fails_to_load() {
+        let area = SpawnArea { left: 15, top: 1, width: 6, height: 12, size: 84 };
+        let (checked, caught) = caught_panics(|| catch_runtime_error(|| map_reader::check_spawn_area(&area)));
+        assert!(checked.is_none());
+        assert_eq!(caught, ["Damaged map: spawn area width 6 is not in 0..=5"]);
+        assert!(catch_runtime_error(|| map_reader::check_spawn_area(&SpawnArea { width: 5, ..area })).is_some());
+    }
+
+    #[test]
     fn warp_entrance_without_exit_fails_to_load() {
         let g = map_game();
         let mut gp = g.ptr();
