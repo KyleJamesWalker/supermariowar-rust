@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/blocks/BounceBlock.cpp
+//! Bounce block: bumps up when hit from below, killing or launching whoever stands on it.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -20,6 +20,7 @@ use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
 
 #[derive(Clone)]
 
+/// Plain bumpable block; `state` 0 idle, 1 rising, 2 settling back. The hidden kind appears when hit from below.
 pub struct B_BounceBlock {
     pub io_block: IO_Block,
 }

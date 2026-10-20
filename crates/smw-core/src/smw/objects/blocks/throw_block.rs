@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/blocks/ThrowBlock.cpp
+//! Throw block: a map block a player can pull out and carry as a throwable brick.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -21,14 +21,21 @@ use crate::smw::player::CPlayer;
 
 #[derive(Clone)]
 
+/// Grabbable block; taking it removes it from the map and hands the player a brick of the same kind.
 pub struct B_ThrowBlock {
     pub io_block: IO_Block,
 
+    /// Number of animation frames.
     pub iNumSprites: i16,
+    /// Ticks per animation frame.
     pub animationSpeed: i16,
+    /// X offset (pixels) of the current animation frame.
     pub drawFrame: i16,
+    /// Tick counter toward the next animation frame.
     pub animationTimer: i16,
+    /// Width (pixels) of the frame strip.
     pub animationWidth: i16,
+    /// Kind of brick handed out; also the sprite row.
     pub iType: ThrowBlockType,
 }
 impl_base!(B_ThrowBlock => io_block: IO_Block);
@@ -55,6 +62,7 @@ impl B_ThrowBlock {
         b
     }
 
+    /// Hands `player` a brick and removes this block, if the player can take it.
     pub fn give_block_to_player(&mut self, g: &mut Game, mut player: PlayerId) {
         let mut gp = g.ptr();
         let mut rm = g.rm;

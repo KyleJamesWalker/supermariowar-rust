@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/blocks/DonutBlock.cpp
+//! Donut block: jiggles while stood on, then falls as a temporary platform.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -19,11 +19,15 @@ use crate::smw::player::CPlayer;
 
 #[derive(Clone)]
 
+/// Block that falls after a player stands on it for `ticks(50)`.
 pub struct B_DonutBlock {
     pub io_block: IO_Block,
 
+    /// Ticks stood on without a break.
     pub counter: i16,
+    /// Horizontal draw offset (pixels) of the jiggle, +2 or -2.
     pub jigglex: i16,
+    /// Tick counter between jiggle steps.
     pub jigglecounter: i16,
 }
 impl_base!(B_DonutBlock => io_block: IO_Block);
@@ -33,6 +37,7 @@ impl B_DonutBlock {
         B_DonutBlock { io_block: IO_Block::new(g, nspr, pos), counter: 0, jigglex: 0, jigglecounter: 0 }
     }
 
+    /// Turns the block into a falling platform credited to `iPlayerId`.
     pub fn trigger_behavior_player(&mut self, g: &mut Game, iPlayerId: i16) {
         //The falling block uses this block's own graphic instead of a tileset tile
         let tile = TilesetTile { iID: TILESETNONE as i16, iCol: 0, iRow: 0 };
@@ -95,6 +100,7 @@ impl CObjectTrait for B_DonutBlock {
 impl IO_BlockTrait for B_DonutBlock {
     crate::impl_io_block_plumbing!();
 
+    // `state` holds the standing player's global ID plus 1; `update` clears it every tick.
     fn hittop_player(&mut self, g: &mut Game, player: PlayerId, useBehavior: bool) -> bool {
         io_block_hittop_player(g, self, player, useBehavior);
 

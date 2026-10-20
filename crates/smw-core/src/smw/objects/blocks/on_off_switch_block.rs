@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/blocks/OnOffSwitchBlock.cpp
+//! On/off switch: hitting it toggles every switch and switch block of its color.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -25,15 +25,19 @@ use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
 
 #[derive(Clone)]
 
+/// Switch whose `state` is 0 on or 3 off; 1-2 and 4-5 are the bump that returns to it.
 pub struct B_OnOffSwitchBlock {
     pub io_block: IO_Block,
 
+    /// Color of the switches and blocks it toggles.
     pub m_color: SwitchColor,
+    /// Sprite x offset (pixels) for the color.
     pub iSrcX: i16,
 }
 impl_base!(B_OnOffSwitchBlock => io_block: IO_Block);
 
 impl B_OnOffSwitchBlock {
+    /// `iState` 0 starts the switch off.
     pub fn new(g: &mut Game, nspr: SpriteId, pos: Vec2s, color: SwitchColor, iState: i16) -> Self {
         let mut b = B_OnOffSwitchBlock { io_block: IO_Block::new(g, nspr, pos), m_color: SwitchColor::Red, iSrcX: 0 };
         b.iw = (g.rm.sprite(b.spr).get_width() as i16) >> 2;
@@ -48,10 +52,12 @@ impl B_OnOffSwitchBlock {
         b
     }
 
+    /// Toggles between on and off, keeping any bump in progress.
     pub fn flip_state(&mut self) {
         self.state = if self.state < 3 { self.state + 3 } else { self.state - 3 };
     }
 
+    /// Bumps the switch and toggles all switches and switch blocks of its color, crediting `playerID` for any crush.
     pub fn trigger_behavior_player(&mut self, g: &mut Game, playerID: i16) {
         let mut gp = g.ptr();
         if self.state == 0 || self.state == 3 {

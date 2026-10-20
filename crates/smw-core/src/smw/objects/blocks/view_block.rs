@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/blocks/ViewBlock.cpp
+//! Clear powerup block that shows which powerup it will give, cycling through them.
 
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
@@ -15,13 +15,18 @@ use crate::smw::objects::blocks::powerup_block::*;
 
 #[derive(Clone)]
 
+/// Powerup block that releases the powerup currently shown inside it.
 pub struct B_ViewBlock {
     pub b_powerup_block: B_PowerupBlock,
 
+    /// Ticks the current powerup has been shown; it changes after `ticks(10 * weight)`.
     pub poweruptimer: i16,
+    /// Powerup shown and released next.
     pub powerupindex: i16,
 
+    /// All weights are 0, so the block shows and gives nothing.
     pub fNoPowerupsSelected: bool,
+    /// Sum of the powerup weights.
     pub iCountWeight: i16,
 }
 impl_base!(B_ViewBlock => b_powerup_block: B_PowerupBlock);
@@ -53,6 +58,7 @@ impl B_ViewBlock {
         b
     }
 
+    /// Picks the next shown powerup at random by weight.
     fn get_next_powerup(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         if self.fNoPowerupsSelected {
