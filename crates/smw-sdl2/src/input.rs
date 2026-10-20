@@ -52,6 +52,12 @@ fn raw_finger(f: &SDL_TouchFingerEvent) -> Option<RawFinger> {
 const TAP_CODE: i32 = 0x5441;
 pub(crate) const QUIT_REQUEST_CODE: i32 = 0x5152;
 
+/// A key event's scancode, read as an `i32`: SDL may store values `SDL_Scancode` has no variant for.
+pub(crate) fn scancode(e: &SDL_Event) -> i32 {
+    // SAFETY: `SDL_Scancode` is a 4-byte C enum, so any value it holds reads as an `i32`.
+    unsafe { std::ptr::addr_of!(e.key.keysym.scancode).cast::<i32>().read() }
+}
+
 fn state(down: bool) -> u8 {
     (if down { SDL_PRESSED } else { SDL_RELEASED }) as u8
 }
@@ -65,14 +71,13 @@ pub fn from_sdl(e: &SDL_Event) -> Input {
         let event = if is(SDL_QUIT) {
             InputEvent::Quit
         } else if is(SDL_KEYDOWN) || is(SDL_KEYUP) {
-            let k = e.key;
             InputEvent::Key {
-                key: Keycode(k.keysym.sym),
-                scancode: k.keysym.scancode as i32,
-                mods: k.keysym.mod_,
+                key: Keycode(e.key.keysym.sym),
+                scancode: scancode(e),
+                mods: e.key.keysym.mod_,
                 down: is(SDL_KEYDOWN),
-                repeat: k.repeat != 0,
-                window: k.windowID,
+                repeat: e.key.repeat != 0,
+                window: e.key.windowID,
             }
         } else if is(SDL_JOYAXISMOTION) {
             InputEvent::PadAxis { pad: PadSlot(e.jaxis.which), axis: e.jaxis.axis, value: e.jaxis.value }
@@ -157,8 +162,7 @@ pub fn to_sdl(input: &Input) -> SDL_Event {
                 e.key.windowID = window;
                 e.key.state = state(down);
                 e.key.repeat = repeat as u8;
-                // A scancode that is not an `SDL_Scancode` variant is undefined behavior here.
-                e.key.keysym.scancode = std::mem::transmute::<i32, sdl2::sys::SDL_Scancode>(scancode);
+                std::ptr::addr_of_mut!(e.key.keysym.scancode).cast::<i32>().write(scancode);
                 e.key.keysym.sym = key.0;
                 e.key.keysym.mod_ = mods;
             }
@@ -303,6 +307,13 @@ mod tests {
         round_trip(InputEvent::Mouse { window: 1, which: 0, event: MouseEvent::Wheel { x: 0, y: -1 } });
         round_trip(InputEvent::Tap { x: 639, y: 0 });
         round_trip(InputEvent::Other(0x200));
+    }
+
+    #[test]
+    fn every_scancode_round_trips_including_ones_sdl2_sys_lacks() {
+        for scancode in [i32::MIN, -1, 0, 1, 3, 4, 129, 130, 132, 165, 175, 222, 223, 232, 256, 290, 291, 511, 512, 513, i32::MAX] {
+            round_trip(InputEvent::Key { key: Keycode(0), scancode, mods: 0, down: true, repeat: false, window: 1 });
+        }
     }
 
     #[test]
