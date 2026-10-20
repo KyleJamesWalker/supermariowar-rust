@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/overmap/WO_Area.cpp
+//! Domination mode area: a player claims it by touching it alone, then scores over time.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -17,20 +17,30 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class area (for Domination mode)
 //------------------------------------------------------------------------------
+/// Capturable area; two or more players touching at once leave it neutral.
 #[derive(Clone)]
 pub struct OMO_Area {
     pub io_over_map_object: IO_OverMapObject,
 
+    /// Number of areas in play; more areas allow them to sit closer together.
     pub numareas: i16,
 
+    /// Index into `players` of the owner, or -1.
     pub iPlayerID: i16,
+    /// Owner's team, or -1.
     pub iTeamID: i16,
 
+    /// Owner's color, or -1 when neutral.
     pub colorID: i16,
+    /// Ticks toward the owner's next point, every `ticks(2 * pointspeed)`.
     pub scoretimer: i16,
+    /// Sprite x offset (pixels) for the owner's color.
     pub frame: i16,
+    /// Ticks at the current spot; the area moves at the relocation setting.
     pub relocatetimer: i16,
+    /// Players touching the area this tick.
     pub totalTouchingPlayers: i16,
+    /// The one player touching this tick, or `PlayerId::NONE` if none or contested.
     pub touchingPlayer: PlayerId,
 }
 impl_base!(OMO_Area => io_over_map_object: IO_OverMapObject);
@@ -58,6 +68,7 @@ impl OMO_Area {
         this
     }
 
+    /// Moves the area to a random spawn point away from other areas, trying up to 33 times.
     pub fn place_area(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
 
@@ -77,6 +88,7 @@ impl OMO_Area {
         self.set_yi(y);
     }
 
+    /// Makes the area neutral.
     pub fn reset(&mut self) {
         self.iPlayerID = -1;
         self.iTeamID = -1;
@@ -90,6 +102,7 @@ impl OMO_Area {
         self.colorID
     }
 
+    /// Gives the area to `player` if a different color holds it.
     pub fn set_owner(&mut self, g: &mut Game, player: PlayerId) {
         let mut gp = g.ptr();
         if self.colorID != g.player(player).colorID {

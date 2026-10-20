@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/overmap/WO_RaceGoal.cpp
+//! Race mode goal: teams tag the goals in order, and the last is the finish line.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -22,6 +22,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class race goal (for Race mode)
 //------------------------------------------------------------------------------
+/// Offsets (pixels) of each team's tag flag on a goal, by team count minus 2.
 pub static flagpositions: [[[i16; 2]; 4]; 3] = [
     [[18, 20], [34, 20], [0, 0], [0, 0]],
     [[18, 20], [34, 20], [26, 36], [0, 0]],
@@ -30,16 +31,25 @@ pub static flagpositions: [[[i16; 2]; 4]; 3] = [
 
 #[derive(Clone)]
 
+/// Numbered goal that drifts around the screen and shows which teams have tagged it.
 pub struct OMO_RaceGoal {
     pub io_over_map_object: IO_OverMapObject,
 
+    /// Position of this goal in the race order.
     pub goalID: i16,
+    /// Color of the player who tagged it, per team, or -1.
     pub tagged: [i16; 4],
+    /// Drift direction (radians).
     pub angle: f32,
+    /// Turn per tick (radians), rerolled when `anglechangetimer` runs out.
     pub anglechange: f32,
+    /// Ticks left before `anglechange` is rerolled.
     pub anglechangetimer: i16,
+    /// Drift speed (pixels per tick) from the race speed setting.
     pub speed: f32,
+    /// Number of goals in the race.
     pub quantity: i16,
+    /// The last goal in the race.
     pub isfinishline: bool,
 }
 impl_base!(OMO_RaceGoal => io_over_map_object: IO_OverMapObject);
@@ -55,7 +65,7 @@ impl OMO_RaceGoal {
             anglechange: 0.0,
             anglechangetimer: 0,
             speed: 0.0,
-            // C++ leaves this uninitialized when placeRaceGoal() reads it below.
+            // `place_race_goal` below reads this before it is set from the settings.
             quantity: 0,
             isfinishline: false,
         };
@@ -88,12 +98,14 @@ impl OMO_RaceGoal {
         this
     }
 
+    /// Rerolls the turn rate and the time until the next reroll.
     pub fn change_angle(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         self.anglechange = vel((RANDOM_INT(gp.get(), 101) - 50) as f32 * 0.0002f32);
         self.anglechangetimer = ticks(RANDOM_INT(gp.get(), 50) + 100) as i16;
     }
 
+    /// Uses the map's location for this goal if there is one; else a random spot away from other goals.
     pub fn place_race_goal(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         let mut x: i16 = 0;
@@ -123,10 +135,12 @@ impl OMO_RaceGoal {
         self.set_yi(y);
     }
 
+    /// Clears `teamID`'s tag.
     pub fn reset(&mut self, teamID: i16) {
         self.tagged[teamID as usize] = -1;
     }
 
+    /// Color that tagged the goal for `teamID`, or -1.
     pub fn is_tagged(&self, teamID: i16) -> i16 {
         self.tagged[teamID as usize]
     }

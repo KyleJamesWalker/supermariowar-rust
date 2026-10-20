@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/overmap/WO_KingOfTheHillZone.cpp
+//! King of the hill zone: the team with a majority inside scores, with a growing multiplier.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -15,28 +15,41 @@ use crate::impl_base;
 use crate::smw::objects::overmap::over_map_object::{IO_OverMapObject, IO_OverMapObjectTrait};
 use crate::smw::player::CPlayer;
 
+/// Blocked tiles allowed inside the zone by size (2 to 5), for placement tries under 16, 32, 48 and 63.
 const iKingOfTheHillZoneLimits: [[i16; 4]; 4] = [[0, 0, 1, 2], [0, 1, 2, 4], [0, 2, 4, 7], [0, 2, 5, 12]];
 
 //------------------------------------------------------------------------------
 // class KingOfTheHillArea (for King of the Hill mode)
 //------------------------------------------------------------------------------
+/// Square zone `size` tiles wide that sits on solid ground and relocates over time.
 #[derive(Clone)]
 pub struct OMO_KingOfTheHillZone {
     pub io_over_map_object: IO_OverMapObject,
 
+    /// A player from each team touching the zone this tick.
     pub playersTouching: [PlayerId; 4],
+    /// Players per team touching the zone this tick.
     pub playersTouchingCount: [i16; 4],
+    /// All players touching the zone this tick.
     pub totalTouchingPlayers: i16,
 
+    /// Index into `players` of the controlling team's player, or -1.
     pub iPlayerID: i16,
 
+    /// Controlling color, or -1.
     pub colorID: i16,
+    /// Progress toward the next point; grows by the leading team's margin each tick.
     pub scoretimer: i16,
+    /// Sprite x offset (pixels) for the controlling color.
     pub frame: i16,
+    /// Ticks at the current spot; the zone moves at the relocation setting.
     pub relocatetimer: i16,
+    /// Width and height in tiles, at least 2.
     pub size: i16,
 
+    /// Points per score; grows every 5 scores up to the max multiplier setting.
     pub multiplier: i16,
+    /// Scores toward the next multiplier step.
     pub multipliertimer: i16,
 }
 impl_base!(OMO_KingOfTheHillZone => io_over_map_object: IO_OverMapObject);
@@ -81,6 +94,7 @@ impl OMO_KingOfTheHillZone {
         this
     }
 
+    /// Picks a random spot resting on solid ground, accepting more blocked tiles inside on later tries.
     pub fn place_area(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
 
@@ -189,6 +203,7 @@ impl OMO_KingOfTheHillZone {
         self.iy = ((y as i32) << 5) as i16;
     }
 
+    /// Makes the zone neutral.
     pub fn reset(&mut self) {
         self.iPlayerID = -1;
         self.colorID = -1;
@@ -266,7 +281,7 @@ impl CObjectTrait for OMO_KingOfTheHillZone {
         }
 
         if self.iPlayerID != -1 && !g.mode().gameover {
-            // Speed of point accumulation is proportional to how many players are in zone
+            // Points come faster the more the leading team outnumbers everyone else in the zone.
             self.scoretimer = (self.scoretimer as i32 + (((iMax as i32) << 1) - self.totalTouchingPlayers as i32)) as i16;
 
             if self.scoretimer as i32 >= ticks(g.game_values.pointspeed as i32) {

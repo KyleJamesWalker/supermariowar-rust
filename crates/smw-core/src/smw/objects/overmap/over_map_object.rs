@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/overmap/OverMapObject.cpp
+//! Base for over-map objects: sprite animation and straight-line motion, with no map or object collision.
 
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
@@ -14,23 +14,30 @@ use std::ops::{Deref, DerefMut};
 //------------------------------------------------------------------------------
 // class OverMapObject - moving objects that don't collide with map or objects, just player
 //------------------------------------------------------------------------------
+/// Base state for over-map objects; positions and sizes are in pixels.
 #[derive(Clone)]
 pub struct IO_OverMapObject {
     pub cobject: CObject,
 
+    /// Number of animation frames in the sprite strip.
     pub iNumSprites: i16,
+    /// X offset (pixels) of the current animation frame.
     pub drawframe: i16,
+    /// Tick counter toward the next animation frame.
     pub animationtimer: i16,
+    /// Width (pixels) of the frame strip; `drawframe` wraps back to `animationOffsetX` here.
     pub animationWidth: i16,
 
+    /// Source offset (pixels) of the first frame in the sprite.
     pub animationOffsetX: i16,
     pub animationOffsetY: i16,
+    /// Ticks per animation frame; 0 stops the animation.
     pub animationspeed: i16,
 }
 impl_base!(IO_OverMapObject => cobject: CObject);
 
 impl IO_OverMapObject {
-    /// Pass `-1` for the C++ default arguments.
+    /// Collision and animation arguments of `-1` use the sprite frame size and zero offsets.
     #[allow(clippy::too_many_arguments)]
     pub fn new(g: &mut Game, nspr: SpriteId,
         pos: Vec2s,
@@ -57,7 +64,6 @@ impl IO_OverMapObject {
             animationspeed: 0,
         };
         o.objectType = object_overmap;
-        // movingObjectType = movingobject_none;
 
         o.iNumSprites = iNumSpr;
 
@@ -103,6 +109,7 @@ impl IO_OverMapObject {
     }
 }
 
+/// Draws the current animation frame, offset from the collision box.
 pub fn io_over_map_object_draw<T: IO_OverMapObjectTrait + ?Sized>(g: &mut Game, this: &mut T) {
     let o = this.omo();
     g.rm.sprite(o.spr).draw_src(
@@ -113,6 +120,7 @@ pub fn io_over_map_object_draw<T: IO_OverMapObjectTrait + ?Sized>(g: &mut Game, 
     );
 }
 
+/// Draws at half scale for the map preview, offset by `iOffsetX`, `iOffsetY` (pixels).
 pub fn io_over_map_object_draw_offset<T: IO_OverMapObjectTrait + ?Sized>(g: &mut Game, this: &mut T, iOffsetX: i16, iOffsetY: i16) {
     let o = this.omo();
     let rm = g.rm;
@@ -131,6 +139,7 @@ pub fn io_over_map_object_draw_offset<T: IO_OverMapObjectTrait + ?Sized>(g: &mut
     );
 }
 
+/// Moves by the current velocity, then animates.
 pub fn io_over_map_object_update<T: IO_OverMapObjectTrait + ?Sized>(this: &mut T) {
     {
         let o = this.omo_mut();
@@ -143,6 +152,7 @@ pub fn io_over_map_object_update<T: IO_OverMapObjectTrait + ?Sized>(this: &mut T
     this.animate();
 }
 
+/// Advances `drawframe` every `animationspeed` ticks.
 pub fn io_over_map_object_animate(o: &mut IO_OverMapObject) {
     if o.animationspeed > 0 && {
         o.animationtimer += 1;
@@ -157,12 +167,12 @@ pub fn io_over_map_object_animate(o: &mut IO_OverMapObject) {
 }
 
 /// Virtual interface added by `IO_OverMapObject`. Implementors forward `CObjectTrait::draw` and
-/// `update` to `io_over_map_object_*` unless the C++ class overrides them; `collide_*` stay no-ops.
-/// `draw(short, short)` is `draw_offset`.
+/// `update` to `io_over_map_object_*` unless they need their own behavior; `collide_*` stay no-ops.
 pub trait IO_OverMapObjectTrait: CObjectTrait {
     fn omo(&self) -> &IO_OverMapObject;
     fn omo_mut(&mut self) -> &mut IO_OverMapObject;
 
+    /// Draws at half scale for the map preview.
     fn draw_offset(&mut self, g: &mut Game, iOffsetX: i16, iOffsetY: i16) {
         let mut gp = g.ptr();
         io_over_map_object_draw_offset(gp.get(), self, iOffsetX, iOffsetY)

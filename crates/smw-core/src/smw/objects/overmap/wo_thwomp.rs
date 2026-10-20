@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/overmap/WO_Thwomp.cpp
+//! Thwomp hazard that falls from the top of the screen.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -17,6 +17,7 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class thwomp (for thwomp mode)
 //------------------------------------------------------------------------------
+/// Falling thwomp; it spares players with no score left unless the mode goal is unlimited.
 #[derive(Clone)]
 pub struct OMO_Thwomp {
     pub io_over_map_object: IO_OverMapObject,
