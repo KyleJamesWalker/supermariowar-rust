@@ -1,6 +1,7 @@
 //! Netplay v2 matches: every peer restores the host's match start, then the match runs under a GGRS P2P session over
 //! the room's WebRTC connections. Recordings keep each frame as a `#@ v2` line, which a replay plays without the network.
 
+use crate::common::global_constants::MAX_PLAYERS;
 use crate::common::input::COutputControl;
 use crate::game::Game;
 use crate::smw::harness;
@@ -8,12 +9,14 @@ use crate::smw::player::PlayerKeys;
 use crate::smw::network::net_record;
 use crate::smw::rollback::{self, GgrsConfig, KeySlot, Keys, MatchState, Req};
 use ggrs::{GgrsError, GgrsEvent, P2PSession, PlayerType, SessionBuilder, SessionState};
-use smw_peer::{PeerId, PeerSocket, RELIABLE};
+use smw_peer::{PeerId, PeerSocket, PeerState, RELIABLE};
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
 
-/// `[MSG_SLOT, slot]`: the sender's room slot. Reliable-channel messages start with one of these kinds.
+/// `[MSG_SLOT, HANDSHAKE_VERSION, slot]`: the sender's room slot. Reliable-channel messages start with one of these kinds.
 const MSG_SLOT: u8 = 1;
+/// The handshake's format; a peer announcing another one cannot play this build.
+const HANDSHAKE_VERSION: u8 = 1;
 /// `[MSG_START_PART, index u16 LE, count u16 LE, bytes]`: one part of the host's match start.
 const MSG_START_PART: u8 = 2;
 /// A joiner to the host: the match start is restored.
@@ -24,6 +27,8 @@ const MSG_GO: u8 = 4;
 const MSG_LEAVE: u8 = 5;
 /// Match start bytes per `MSG_START_PART`.
 const PART_BYTES: usize = 16 * 1024;
+/// The largest match start a peer sends or takes; a real one is about 20 KiB.
+const MAX_START_BYTES: usize = 1024 * 1024;
 /// How long the start handshake may take before the match is abandoned.
 const START_DEADLINE: Duration = Duration::from_secs(20);
 /// Frames between repeats of the handshake messages.
@@ -38,6 +43,8 @@ const DESYNC_INTERVAL: u32 = 30;
 const DISCONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 /// Silence after which GGRS reports a peer as interrupted.
 const INTERRUPTED_AFTER: Duration = Duration::from_secs(1);
+/// How long a notice stays over the match.
+const NOTICE_FRAMES: u32 = 4 * crate::common::global_constants::TICKS_PER_SECOND;
 
 /// Where a [`V2Match`] is: the start handshake, or the running GGRS session.
 enum Phase {
@@ -55,10 +62,18 @@ pub struct V2Match {
     others: usize,
     /// Each other peer's room slot, from its `MSG_SLOT`.
     slots: BTreeMap<PeerId, u8>,
+    /// The host's room slot (`hostPlayerNumber`).
+    host_slot: u8,
+    /// The peer whose `MSG_SLOT` claimed the host's slot; a joiner takes the match start, GO and LEAVE only from it.
+    host_peer: Option<PeerId>,
+    /// Peers whose slot claim was refused, so each is logged once.
+    refused: Vec<PeerId>,
+    /// SMW_V2_ROGUE, for tests: a joiner that also claims the host's slot and sends its own start parts and GO.
+    rogue: bool,
     /// The host's match start (`checkpoint::capture_shared`); empty on a joiner.
     start: Vec<u8>,
     /// The match start parts a joiner has received so far.
-    parts: Vec<Option<Vec<u8>>>,
+    parts: StartParts,
     /// The joiners that sent `MSG_READY`; host only.
     ready: Vec<PeerId>,
     /// The match start is in place: from the outset on the host, after restoring it on a joiner.
@@ -80,6 +95,11 @@ pub struct V2Match {
     desyncs: u32,
     /// Remote players GGRS dropped for good.
     gone: usize,
+    /// The room's player names by slot when the match started; the lobby drops a player who disconnects.
+    names: [String; 4],
+    /// Peers already named in a desync notice.
+    desynced: Vec<PeerId>,
+    notice: Notice,
     perf: V2Perf,
     /// This frame's `#@ v2` tokens, while recording.
     rec: Option<Vec<String>>,
@@ -102,6 +122,7 @@ pub fn match_starting(g: &mut Game) -> bool {
     if !g.netplay.active {
         return false;
     }
+    g.netplay.match_notice = None;
     if net_record::replaying(g) {
         if !net_record::has_v2(g) {
             return false;
@@ -111,22 +132,50 @@ pub fn match_starting(g: &mut Game) -> bool {
         start_replay(g);
         return !host;
     }
-    let Some((socket, others)) = gp.netplay.client.take_peer_socket() else {
+    let Some((mut socket, others)) = gp.netplay.client.take_peer_socket() else {
         println!("[net] v2: the lobby sent no WebRTC room");
         crate::smw::game_state::GameStateManager::instance(g).change_state_to(gp.get(), crate::smw::game_state::StateId::Menu);
         return true;
     };
     let host = g.netplay.theHostIsMe;
+    let my_slot = g.netplay.remotePlayerNumber as u8;
+    let start = if host {
+        let start = crate::smw::checkpoint::capture_shared(g);
+        let too_large = start.as_ref().is_ok_and(|s| s.len() > MAX_START_BYTES);
+        match start {
+            Ok(start) if !too_large => start,
+            failed => {
+                match failed {
+                    Ok(start) => println!("[net] v2: cannot start the match: its start is {} bytes", start.len()),
+                    Err(e) => println!("[net] v2: cannot start the match: {e}"),
+                }
+                let notice = if too_large { "This match is too large to send" } else { "Cannot read the map for this match" };
+                g.netplay.match_notice = Some(notice.to_string());
+                for peer in socket.connected_peers().to_vec() {
+                    socket.send(RELIABLE, peer, &slot_message(my_slot));
+                    socket.send(RELIABLE, peer, &[MSG_LEAVE]);
+                }
+                gp.netplay.client.linger(socket);
+                to_menu(g, false);
+                return true;
+            }
+        }
+    } else {
+        Vec::new()
+    };
     g.netplay.v2_match = true;
-    let start = if host { crate::smw::checkpoint::capture_shared(g) } else { Vec::new() };
     let mut m = V2Match {
         socket,
         host,
-        my_slot: g.netplay.remotePlayerNumber as u8,
+        my_slot,
         others,
         slots: BTreeMap::new(),
+        host_slot: g.netplay.hostPlayerNumber,
+        host_peer: None,
+        refused: Vec::new(),
+        rogue: std::env::var_os("SMW_V2_ROGUE").is_some(),
         start,
-        parts: Vec::new(),
+        parts: StartParts::default(),
         ready: Vec::new(),
         restored: host,
         go: false,
@@ -139,6 +188,9 @@ pub fn match_starting(g: &mut Game) -> bool {
         rollback_ticks: 0,
         desyncs: 0,
         gone: 0,
+        names: g.netplay.currentRoom.playerNames.clone(),
+        desynced: Vec::new(),
+        notice: Notice::default(),
         perf: V2Perf::default(),
         rec: None,
     };
@@ -216,10 +268,69 @@ fn local_input(g: &mut Game, local_device: &mut COutputControl) -> bool {
     crate::smw::gs_gameplay::update_exit_pause_dialog(g, gameplay.countdown_state())
 }
 
-/// The end of a running match's frame: the pause or exit dialog, and the music.
-fn draw_dialogs(g: &mut Game) {
+/// A line shown over the match for a few seconds: a desync, or a player who dropped out or left.
+#[derive(Default)]
+struct Notice {
+    text: String,
+    frames: u32,
+}
+
+/// Logs `text`, shows it over the match for `NOTICE_FRAMES` and records it as an `n` token.
+fn notify(rec: &mut Option<Vec<String>>, notice: &mut Notice, text: String) {
+    println!("[net] v2: {text}");
+    show_notice(rec, notice, text, NOTICE_FRAMES);
+}
+
+/// Shows `text` for `frames`, or hides the notice when `text` is empty, and records it as `n<frames>.<text>`.
+fn show_notice(rec: &mut Option<Vec<String>>, notice: &mut Notice, text: String, frames: u32) {
+    note(rec, format!("n{frames}.{}", harness::base64_encode(text.as_bytes())));
+    *notice = Notice { text, frames };
+}
+
+/// A recorded [`show_notice`] token's frames and text.
+fn parse_notice(data: &str) -> Option<(u32, String)> {
+    let (frames, text) = data.split_once('.')?;
+    Some((frames.parse().ok()?, String::from_utf8(harness::base64_decode(text)?).ok()?))
+}
+
+/// The room's name for the player in `slot`.
+fn player_name(names: &[String], slot: u8) -> String {
+    match names.get(slot as usize) {
+        Some(name) if !name.is_empty() && name != "(empty)" => name.clone(),
+        _ => format!("Player {}", slot as u32 + 1),
+    }
+}
+
+/// The room's name for the player on `peer`.
+fn peer_name(names: &[String], slots: &BTreeMap<PeerId, u8>, peer: PeerId) -> String {
+    slots.get(&peer).map_or_else(|| "A player".to_string(), |&slot| player_name(names, slot))
+}
+
+/// The room's occupied slots, other than `my_slot`, that are not in `heard`.
+fn missing_slots(names: &[String], my_slot: u8, heard: &[u8]) -> Vec<u8> {
+    (0..names.len() as u8).filter(|&slot| slot != my_slot && names[slot as usize] != "(empty)" && !heard.contains(&slot)).collect()
+}
+
+/// The notice while `peer` is silent, which `NetworkResumed` takes down again.
+fn lag_text(names: &[String], slots: &BTreeMap<PeerId, u8>, peer: PeerId) -> String {
+    format!("{} is lagging", peer_name(names, slots, peer))
+}
+
+/// A match that ended early leaves its last notice for the room menu.
+fn keep_notice(g: &mut Game, notice: &Notice) {
+    if !notice.text.is_empty() {
+        g.netplay.match_notice = Some(notice.text.clone());
+    }
+}
+
+/// The end of a running match's frame: the pause or exit dialog, the notice, and the music.
+fn draw_dialogs(g: &mut Game, notice: &mut Notice) {
     if g.game_values.flags.pausegame || g.game_values.flags.exitinggame {
         crate::smw::gs_gameplay::draw_exit_pause_dialog(g);
+    }
+    if notice.frames > 0 && !notice.text.is_empty() {
+        notice.frames -= 1;
+        crate::smw::gs_menu::draw_message_bar(g, &notice.text);
     }
     if g.main_loop.stats_page {
         crate::smw::stats::draw_page(g);
@@ -244,6 +355,7 @@ pub struct V2Replay {
     targets: Vec<KeySlot>,
     local_device: COutputControl,
     saves: BTreeMap<i32, MatchState>,
+    notice: Notice,
 }
 
 fn start_replay(g: &mut Game) {
@@ -254,6 +366,7 @@ fn start_replay(g: &mut Game) {
         targets: Vec::new(),
         local_device: g.game_values.playerInput.outputControls[0],
         saves: BTreeMap::new(),
+        notice: Notice::default(),
     }));
 }
 
@@ -319,10 +432,19 @@ fn replay_tick(g: &mut Game, frame: u32) {
             ("i", _) => {
                 local_input(g, &mut r.local_device);
             }
-            ("d", _) => draw_dialogs(g),
+            ("d", _) => draw_dialogs(g, &mut r.notice),
+            ("n", data) => {
+                let Some((frames, text)) = parse_notice(data) else {
+                    harness::fail(format!("the replay's v2 notice at frame {frame} is damaged"));
+                };
+                r.notice = Notice { text, frames };
+            }
             ("e", kind) => {
                 match kind {
-                    "A" => to_menu(g, true),
+                    "A" => {
+                        keep_notice(g, &r.notice);
+                        to_menu(g, true)
+                    }
                     "L" => to_menu(g, false),
                     _ => {}
                 }
@@ -371,6 +493,65 @@ fn parse_slot(token: &str) -> Option<KeySlot> {
     }
 }
 
+/// The parts of the host's match start a joiner has received.
+#[derive(Default)]
+struct StartParts(Vec<Option<Vec<u8>>>);
+
+impl StartParts {
+    /// Takes part `index` of `count`; the whole match start once every part is in. A count of 0, an index past it, a
+    /// count that changes mid-transfer, or a start over `MAX_START_BYTES` is an error.
+    fn add(&mut self, index: usize, count: usize, bytes: &[u8]) -> Result<Option<Vec<u8>>, String> {
+        if index >= count {
+            return Err(format!("the host sent match start part {index} of {count}"));
+        }
+        if count > MAX_START_BYTES.div_ceil(PART_BYTES) || bytes.len() > PART_BYTES {
+            return Err("The host's match start is too large".to_string());
+        }
+        if self.0.is_empty() {
+            self.0 = vec![None; count];
+        } else if self.0.len() != count {
+            return Err(format!("the host's match start changed from {} to {count} parts", self.0.len()));
+        }
+        self.0[index] = Some(bytes.to_vec());
+        if !self.0.iter().all(Option::is_some) {
+            return Ok(None);
+        }
+        Ok(Some(self.0.iter().flatten().flatten().copied().collect()))
+    }
+}
+
+/// This player's `MSG_SLOT`.
+fn slot_message(slot: u8) -> [u8; 3] {
+    [MSG_SLOT, HANDSHAKE_VERSION, slot]
+}
+
+/// Records `peer`'s claim on room `slot`. Refuses a slot out of range, this player's own, one another peer holds, and
+/// a peer that changes its slot, so two GGRS handles never play one player.
+fn claim_slot(slots: &mut BTreeMap<PeerId, u8>, my_slot: u8, peer: PeerId, slot: u8) -> Result<(), String> {
+    if slot as i32 >= MAX_PLAYERS || slot == my_slot {
+        return Err(format!("slot {slot} is not another player's"));
+    }
+    if let Some((_, held)) = slots.iter().find(|&(&p, &s)| p != peer && s == slot) {
+        return Err(format!("slot {held} is already taken"));
+    }
+    match slots.insert(peer, slot) {
+        Some(old) if old != slot => {
+            slots.insert(peer, old);
+            Err(format!("slot {slot} after claiming slot {old}"))
+        }
+        _ => Ok(()),
+    }
+}
+
+/// The slot in a peer's `MSG_SLOT`, or why this build cannot play with that peer.
+fn read_slot_message(msg: &[u8]) -> Result<u8, String> {
+    match msg {
+        [MSG_SLOT, HANDSHAKE_VERSION, slot] => Ok(*slot),
+        [MSG_SLOT, version, _] => Err(format!("handshake version {version}, this build speaks {HANDSHAKE_VERSION}")),
+        _ => Err(format!("a handshake without a version, this build speaks {HANDSHAKE_VERSION}")),
+    }
+}
+
 /// Ends the match on this client and gives the joiner's own settings back.
 fn finish(g: &mut Game) {
     let mut gp = g.ptr();
@@ -398,8 +579,7 @@ impl V2Match {
 
     /// Sends this player's slot and, on the host, the match start in parts.
     fn announce(&mut self) {
-        let slot = [MSG_SLOT, self.my_slot];
-        self.send_all(&slot);
+        self.send_all(&slot_message(self.my_slot));
         if self.host {
             let parts: Vec<Vec<u8>> = self.start.chunks(PART_BYTES).map(|c| c.to_vec()).collect();
             let count = parts.len() as u16;
@@ -410,27 +590,39 @@ impl V2Match {
                 msg.extend_from_slice(&part);
                 self.send_all(&msg);
             }
+        } else if self.rogue {
+            self.send_all(&slot_message(self.host_slot));
+            self.send_all(&[MSG_START_PART, 0, 0, 0, 0]);
+            self.send_all(&[MSG_START_PART, 0, 0, 1, 0, b'x']);
+            self.send_all(&[MSG_GO]);
         }
     }
 
     /// Handles the handshake messages; a joiner restores the match start once all its parts arrived.
     fn receive_reliable(&mut self, g: &mut Game) -> Result<(), String> {
         for (peer, msg) in self.socket.receive(RELIABLE) {
+            let from_host = self.host_peer == Some(peer);
             match msg.first() {
-                Some(&MSG_SLOT) if msg.len() == 2 => {
-                    self.slots.insert(peer, msg[1]);
+                Some(&MSG_SLOT) => {
+                    let slot = read_slot_message(&msg).map_err(|e| {
+                        println!("[net] v2: peer {:08x}: {e}", peer.0 >> 96);
+                        let name = msg.get(2).map_or_else(|| "A player".to_string(), |&slot| player_name(&self.names, slot));
+                        format!("{name} runs another game version")
+                    })?;
+                    match claim_slot(&mut self.slots, self.my_slot, peer, slot) {
+                        Ok(()) if !self.host && slot == self.host_slot => self.host_peer = Some(peer),
+                        Ok(()) => {}
+                        Err(e) if !self.refused.contains(&peer) => {
+                            self.refused.push(peer);
+                            println!("[net] v2: ignoring peer {:08x}: {e}", peer.0 >> 96);
+                        }
+                        Err(_) => {}
+                    }
                 }
-                Some(&MSG_START_PART) if msg.len() >= 5 && !self.host => {
+                Some(&MSG_START_PART) if msg.len() >= 5 && from_host && !self.restored => {
                     let index = u16::from_le_bytes([msg[1], msg[2]]) as usize;
                     let count = u16::from_le_bytes([msg[3], msg[4]]) as usize;
-                    if self.parts.len() != count {
-                        self.parts = vec![None; count];
-                    }
-                    if index < count {
-                        self.parts[index] = Some(msg[5..].to_vec());
-                    }
-                    if !self.restored && self.parts.iter().all(Option::is_some) {
-                        let bytes: Vec<u8> = self.parts.iter().flatten().flatten().copied().collect();
+                    if let Some(bytes) = self.parts.add(index, count, &msg[5..])? {
                         if self.rec.is_some() {
                             let data = harness::base64_encode(&crate::smw::network::file_compressor::deflate(&bytes));
                             note(&mut self.rec, format!("r{}.{data}", self.my_slot));
@@ -442,12 +634,15 @@ impl V2Match {
                         self.send_all(&ready);
                     }
                 }
-                Some(&MSG_READY) if self.host => {
+                Some(&MSG_READY) if self.host && self.slots.contains_key(&peer) => {
                     if !self.ready.contains(&peer) {
                         self.ready.push(peer);
                     }
                 }
-                Some(&MSG_GO) if !self.host => self.go = true,
+                Some(&MSG_GO) if from_host => self.go = true,
+                Some(&MSG_LEAVE) if self.slots.contains_key(&peer) => {
+                    return Err(format!("{} left before the match started", peer_name(&self.names, &self.slots, peer)));
+                }
                 _ => {}
             }
         }
@@ -457,13 +652,27 @@ impl V2Match {
     /// The handshake: slots from everyone, the match start to the joiners, READY back to the host, then the host's GO.
     /// Every message repeats until GO, since a peer may still be connecting or not yet reading. False ends it.
     fn start_step(&mut self, g: &mut Game) -> bool {
-        self.socket.update_peers();
+        let dropped = self.socket.update_peers().into_iter().find(|&(_, state)| state == PeerState::Disconnected);
+        if let Some((peer, _)) = dropped {
+            println!("[net] v2: peer {:08x} disconnected during the start", peer.0 >> 96);
+            let missing = self.missing_players();
+            let name = match self.slots.get(&peer) {
+                Some(&slot) => player_name(&self.names, slot),
+                None if !missing.is_empty() => missing.join(", "),
+                None => "A player".to_string(),
+            };
+            notify(&mut self.rec, &mut self.notice, format!("{name} could not connect"));
+            return false;
+        }
         if let Err(e) = self.receive_reliable(g) {
-            println!("[net] v2: {e}");
+            notify(&mut self.rec, &mut self.notice, e);
             return false;
         }
         if self.opened.elapsed() > START_DEADLINE {
             println!("[net] v2: the match did not start within {} s", START_DEADLINE.as_secs());
+            let missing = self.missing_players();
+            let text = if missing.is_empty() { "The match did not start in time".to_string() } else { format!("{} did not connect", missing.join(", ")) };
+            notify(&mut self.rec, &mut self.notice, text);
             return false;
         }
         self.ticks += 1;
@@ -496,9 +705,19 @@ impl V2Match {
             }
             Err(e) => {
                 println!("[net] v2: cannot start the GGRS session: {e}");
+                notify(&mut self.rec, &mut self.notice, "Cannot start the match".to_string());
                 false
             }
         }
+    }
+
+    /// The room's other players this peer has not heard from: no slot, or on the host, no READY.
+    fn missing_players(&self) -> Vec<String> {
+        let heard: Vec<u8> = match self.host {
+            true => self.ready.iter().filter_map(|peer| self.slots.get(peer).copied()).collect(),
+            false => self.slots.values().copied().collect(),
+        };
+        missing_slots(&self.names, self.my_slot, &heard).into_iter().map(|slot| player_name(&self.names, slot)).collect()
     }
 
     /// Builds the GGRS session; handles follow room slot order, so every peer numbers the players alike.
@@ -538,6 +757,7 @@ impl V2Match {
     /// False, for `tick`.
     fn abandon(&mut self, g: &mut Game) -> bool {
         self.send_all(&[MSG_LEAVE]);
+        keep_notice(g, &self.notice);
         note(&mut self.rec, "eA".to_string());
         to_menu(g, true);
         false
@@ -553,22 +773,42 @@ impl V2Match {
                 GgrsEvent::DesyncDetected { frame, local_checksum, remote_checksum, addr } => {
                     self.desyncs += 1;
                     println!("[net] v2: desync at frame {frame} with {:08x}: {local_checksum:x} vs {remote_checksum:x}", addr.0 >> 96);
+                    if !self.desynced.contains(&addr) {
+                        self.desynced.push(addr);
+                        notify(&mut self.rec, &mut self.notice, format!("Out of sync with {}", peer_name(&self.names, &self.slots, addr)));
+                    }
                 }
                 GgrsEvent::Disconnected { addr } => {
                     self.gone += 1;
                     println!("[net] v2: peer {:08x} disconnected", addr.0 >> 96);
+                    notify(&mut self.rec, &mut self.notice, format!("{} dropped out", peer_name(&self.names, &self.slots, addr)));
                 }
                 GgrsEvent::NetworkInterrupted { addr, disconnect_timeout } => {
-                    println!("[net] v2: peer {:08x} silent; dropped in {} ms unless it returns", addr.0 >> 96, disconnect_timeout)
+                    println!("[net] v2: peer {:08x} silent; dropped in {} ms unless it returns", addr.0 >> 96, disconnect_timeout);
+                    let frames = (disconnect_timeout as u64 * crate::common::global_constants::TICKS_PER_SECOND as u64 / 1000) as u32;
+                    show_notice(&mut self.rec, &mut self.notice, lag_text(&self.names, &self.slots, addr), frames);
                 }
-                GgrsEvent::NetworkResumed { addr } => println!("[net] v2: peer {:08x} back", addr.0 >> 96),
+                GgrsEvent::NetworkResumed { addr } => {
+                    println!("[net] v2: peer {:08x} back", addr.0 >> 96);
+                    if self.notice.text == lag_text(&self.names, &self.slots, addr) {
+                        show_notice(&mut self.rec, &mut self.notice, String::new(), 0);
+                    }
+                }
                 _ => {}
             }
         }
 
-        let others_left = self.socket.receive(RELIABLE).iter().any(|(_, msg)| msg.first() == Some(&MSG_LEAVE));
-        if others_left {
-            println!("[net] v2: another player ended the match");
+        let mut leaver = None;
+        for (peer, msg) in self.socket.receive(RELIABLE) {
+            match msg.first() {
+                Some(&MSG_LEAVE) => leaver = Some(peer),
+                // A joiner repeats READY until it hears GO.
+                Some(&MSG_READY) if self.host && self.slots.contains_key(&peer) => self.socket.send(RELIABLE, peer, &[MSG_GO]),
+                _ => {}
+            }
+        }
+        if let Some(peer) = leaver {
+            notify(&mut self.rec, &mut self.notice, format!("{} left the match", peer_name(&self.names, &self.slots, peer)));
             return self.abandon(g);
         }
         if self.gone >= self.others {
@@ -598,10 +838,6 @@ impl V2Match {
         let started = Instant::now();
         let requests = match session.advance_frame() {
             Ok(requests) => requests,
-            Err(GgrsError::PredictionThreshold) => {
-                self.perf.waits += 1;
-                return true;
-            }
             Err(e) => {
                 println!("[net] v2: {e}");
                 return false;
@@ -613,6 +849,10 @@ impl V2Match {
             }
         }
         let advances = requests.iter().filter(|r| matches!(r, ggrs::GgrsRequest::AdvanceFrame { .. })).count() as u64;
+        // At the prediction window GGRS returns no AdvanceFrame rather than `PredictionThreshold`.
+        if advances == 0 {
+            self.perf.waits += 1;
+        }
         self.rollback_ticks += advances.saturating_sub(1);
         self.ticks += 1;
         if self.ticks % 600 == 0 {
@@ -636,7 +876,77 @@ impl V2Match {
             return false;
         }
         note(&mut self.rec, "d".to_string());
-        draw_dialogs(g);
+        draw_dialogs(g, &mut self.notice);
         true
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn slot_messages_carry_the_handshake_version() {
+        assert_eq!(read_slot_message(&slot_message(2)), Ok(2));
+        assert!(read_slot_message(&[MSG_SLOT, HANDSHAKE_VERSION + 1, 2]).is_err());
+        assert!(read_slot_message(&[MSG_SLOT, 2]).is_err());
+    }
+
+    #[test]
+    fn start_parts_assemble_in_any_order() {
+        let mut parts = StartParts::default();
+        assert_eq!(parts.add(1, 2, b"cd"), Ok(None));
+        assert_eq!(parts.add(1, 2, b"cd"), Ok(None), "a resent part");
+        assert_eq!(parts.add(0, 2, b"ab"), Ok(Some(b"abcd".to_vec())));
+    }
+
+    #[test]
+    fn start_parts_refuse_bad_counts() {
+        assert!(StartParts::default().add(0, 0, b"").is_err(), "no parts");
+        assert!(StartParts::default().add(2, 2, b"x").is_err(), "an index past the count");
+        let mut parts = StartParts::default();
+        assert_eq!(parts.add(0, 3, b"a"), Ok(None));
+        assert!(parts.add(1, 2, b"b").is_err(), "a changed count");
+    }
+
+    #[test]
+    fn start_parts_refuse_oversized_starts() {
+        let most = MAX_START_BYTES / PART_BYTES;
+        assert_eq!(StartParts::default().add(0, most, &[0; PART_BYTES]), Ok(None));
+        assert!(StartParts::default().add(0, most + 1, b"x").is_err(), "too many parts");
+        assert!(StartParts::default().add(0, 1, &[0; PART_BYTES + 1]).is_err(), "an oversized part");
+    }
+
+    #[test]
+    fn missing_slots_skip_empty_and_own() {
+        let names = ["Ann", "(empty)", "Bo", "Cy"].map(String::from);
+        assert_eq!(missing_slots(&names, 0, &[]), vec![2, 3]);
+        assert_eq!(missing_slots(&names, 0, &[3]), vec![2]);
+        assert!(missing_slots(&names, 2, &[0, 3]).is_empty());
+    }
+
+    #[test]
+    fn notices_are_recorded_as_tokens() {
+        let (mut rec, mut notice) = (Some(Vec::new()), Notice::default());
+        notify(&mut rec, &mut notice, "Bo dropped out".to_string());
+        show_notice(&mut rec, &mut notice, String::new(), 0);
+        let tokens = rec.unwrap();
+        assert_eq!(parse_notice(&tokens[0][1..]), Some((NOTICE_FRAMES, "Bo dropped out".to_string())));
+        assert_eq!(parse_notice(&tokens[1][1..]), Some((0, String::new())));
+        assert!(notice.text.is_empty());
+    }
+
+    #[test]
+    fn slot_claims_are_unique() {
+        let (a, b) = (PeerId(1), PeerId(2));
+        let mut slots = BTreeMap::new();
+        assert!(claim_slot(&mut slots, 0, a, 1).is_ok());
+        assert!(claim_slot(&mut slots, 0, a, 1).is_ok(), "a repeated claim");
+        assert!(claim_slot(&mut slots, 0, b, 1).is_err(), "another peer's slot");
+        assert!(claim_slot(&mut slots, 0, b, 0).is_err(), "this player's slot");
+        assert!(claim_slot(&mut slots, 0, b, MAX_PLAYERS as u8).is_err(), "out of range");
+        assert!(claim_slot(&mut slots, 0, a, 2).is_err(), "a changed slot");
+        assert!(claim_slot(&mut slots, 0, b, 2).is_ok());
+        assert_eq!(slots, BTreeMap::from([(a, 1), (b, 2)]));
     }
 }

@@ -292,14 +292,41 @@ fn clone_frenzy() {
 }
 
 /// Netplay v2 rollback (docs/design/NETPLAY_V2.md): from frame `at`, the match runs under GGRS's sync test, which
-/// loads the state from `check` ticks back and re-runs them every tick and fails on any checksum difference.
+/// loads the state from `check` ticks back and re-runs them every tick and fails on any checksum difference. The
+/// checksum at the end must match the golden, so a platform whose simulation differs fails too.
 fn rollback_mid_match(name: &str, at: Option<u32>, ticks: u32, check: usize) -> u32 {
-    stats_after(name, at, ticks, Some(check)).0
+    let (ran, _, sum) = stats_after(name, at, ticks, Some(check));
+    if ran > 0 {
+        let at = at.map_or("-".to_string(), |at| at.to_string());
+        assert_rollback_checksum(&format!("{name} {at} {ticks}"), sum);
+    }
+    ran
+}
+
+/// The rollback checksums each run must end on, one `<replay> <frame or -> <ticks> <checksum>` line per run.
+const ROLLBACK_CHECKSUMS: &str = "tools/golden/rollback_checksums.txt";
+static CHECKSUM_FILE: Mutex<()> = Mutex::new(());
+
+/// Checks `sum` against the golden for `key`, or records it with SMW_WRITE_ROLLBACK_CHECKSUMS=1.
+fn assert_rollback_checksum(key: &str, sum: u128) {
+    let _file = CHECKSUM_FILE.lock().unwrap_or_else(|e| e.into_inner());
+    let path = repo().join(ROLLBACK_CHECKSUMS);
+    let text = std::fs::read_to_string(&path).unwrap_or_default();
+    let golden = text.lines().find_map(|l| l.rsplit_once(' ').filter(|(k, _)| *k == key).map(|(_, v)| v.to_string()));
+    let actual = format!("{sum:016x}");
+    if std::env::var_os("SMW_WRITE_ROLLBACK_CHECKSUMS").is_some() {
+        let mut lines: Vec<String> = text.lines().filter(|l| l.rsplit_once(' ').is_none_or(|(k, _)| k != key)).map(String::from).collect();
+        lines.push(format!("{key} {actual}"));
+        lines.sort();
+        std::fs::write(&path, lines.join("\n") + "\n").unwrap();
+    } else {
+        assert_eq!(golden.as_deref(), Some(actual.as_str()), "{key}: rollback checksum; SMW_WRITE_ROLLBACK_CHECKSUMS=1 records it in {ROLLBACK_CHECKSUMS}");
+    }
 }
 
 /// Runs `ticks` ticks of the match from frame `at`, under the sync test with `check`, or plainly without it, and
-/// returns how many ran and the match stats at the end.
-fn stats_after(name: &str, at: Option<u32>, ticks: u32, check: Option<usize>) -> (u32, smw::smw::stats::MatchStats) {
+/// returns how many ran and the match stats and checksum at the end.
+fn stats_after(name: &str, at: Option<u32>, ticks: u32, check: Option<usize>) -> (u32, smw::smw::stats::MatchStats, u128) {
     use smw::common::game_values::AppState;
     use smw::smw::game_state::StateId;
     use smw::smw::rollback::{handle_requests, GgrsConfig, KeySlot, Keys};
@@ -310,6 +337,7 @@ fn stats_after(name: &str, at: Option<u32>, ticks: u32, check: Option<usize>) ->
     let mut failure = None;
     let mut in_match = 0;
     let mut stats = smw::smw::stats::MatchStats::new();
+    let mut sum = 0;
     let mut plain = false;
     sandboxed(&tools.join("replays").join(format!("{}.txt", name)), &out, None, |argv, services| {
         let g = smw::game::Game::create();
@@ -366,6 +394,7 @@ fn stats_after(name: &str, at: Option<u32>, ticks: u32, check: Option<usize>) ->
             ran += 1;
         }
         stats = g.game_values.stats;
+        sum = smw::smw::rollback::checksum(g);
         smw::smw::main::shutdown(g);
     });
     let _ = std::fs::remove_dir_all(&out);
@@ -373,14 +402,14 @@ fn stats_after(name: &str, at: Option<u32>, ticks: u32, check: Option<usize>) ->
         panic!("{}", failure);
     }
     assert!(ran == 0 || ran >= ticks.min(300), "{}: only {} ticks under rollback", name, ran);
-    (ran, stats)
+    (ran, stats, sum)
 }
 
 /// Rolled-back ticks must not count twice: the sync test's re-runs leave the same stats as a plain run.
 #[test]
 fn rollback_keeps_match_stats() {
-    let (ran, rolled) = stats_after("cpu_ctf", Some(1500), 400, Some(7));
-    let (plain_ran, plain) = stats_after("cpu_ctf", Some(1500), 400, None);
+    let (ran, rolled, _) = stats_after("cpu_ctf", Some(1500), 400, Some(7));
+    let (plain_ran, plain, _) = stats_after("cpu_ctf", Some(1500), 400, None);
     assert_eq!((ran, plain_ran), (400, 400));
     assert!(plain.players.iter().any(|p| p.jumps > 0 && p.alive_ticks > 0), "no stats counted");
     assert_eq!(rolled, plain);
@@ -394,6 +423,227 @@ fn rollback_capture_the_flag() {
 #[test]
 fn rollback_frenzy() {
     assert_eq!(rollback_mid_match("frenzy_cpu", Some(1200), 400, 7), 400);
+}
+
+/// A v2 match's shared pause: any player's start pauses it, and only that player's start resumes it.
+#[test]
+fn v2_pause_belongs_to_the_pauser() {
+    use smw::smw::rollback::{advance, KeySlot, Keys};
+
+    let out = std::env::temp_dir().join(format!("smw-headless-{}-v2-pause", std::process::id()));
+    let mut paused = Vec::new();
+    sandboxed(&repo().join("tools").join("replays").join("frenzy_cpu.txt"), &out, None, |argv, services| {
+        let g = smw::game::Game::create();
+        g.services = Some(services);
+        smw::globals::init_globals(g);
+        g.RootDataDirectory = argv[2].clone();
+        smw::smw::main::startup(g);
+        smw::smw::main::gameloop_start(g);
+        while smw::smw::harness::frame(g) < 1200 {
+            smw::smw::main::frame(g);
+        }
+        g.netplay.v2_match = true;
+        let start = Keys(1 << (2 * smw::common::input::KEY_GAME_START + 1));
+        let slots = [KeySlot::Local(0), KeySlot::Local(1), KeySlot::Local(2), KeySlot::Local(3)];
+        for presser in [1, 0, 2, 1, 3] {
+            let keys: Vec<(KeySlot, Keys)> = slots.iter().enumerate().map(|(p, &s)| (s, if p == presser { start } else { Keys(0) })).collect();
+            advance(g, &keys, true);
+            paused.push((g.game_values.flags.pausegame, g.game_values.flags.pauseowner));
+        }
+        g.netplay.v2_match = false;
+        smw::smw::main::shutdown(g);
+    });
+    let _ = std::fs::remove_dir_all(&out);
+    assert_eq!(paused, [(true, 1), (true, 1), (true, 1), (false, -1), (true, 3)]);
+}
+
+/// Prints the average cost of a rollback save, a load and a plain tick over `ticks` ticks of the first match, from its
+/// 300th tick, played on `map` when given.
+fn snapshot_cost(name: &str, map: Option<&str>, ticks: u32) {
+    use smw::smw::rollback::{load, save};
+    use std::time::{Duration, Instant};
+
+    let out = std::env::temp_dir().join(format!("smw-headless-{}-snapshot-cost-{}", std::process::id(), name));
+    let mut replay = repo().join("tools").join("replays").join(format!("{}.txt", name));
+    if let Some(map) = map {
+        let text = std::fs::read_to_string(&replay).unwrap();
+        let text: String = text.lines().map(|l| if l.starts_with("#@ map=") { format!("#@ map={map}\n") } else { format!("{l}\n") }).collect();
+        replay = std::env::temp_dir().join(format!("smw-headless-{}-snapshot-cost-{}.txt", std::process::id(), name));
+        std::fs::write(&replay, text).unwrap();
+    }
+    let (mut saving, mut loading, mut ticking, mut ran) = (Duration::ZERO, Duration::ZERO, Duration::ZERO, 0);
+    sandboxed(&replay, &out, None, |argv, services| {
+        let g = smw::game::Game::create();
+        g.services = Some(services);
+        smw::globals::init_globals(g);
+        g.RootDataDirectory = argv[2].clone();
+        smw::smw::main::startup(g);
+        smw::smw::main::gameloop_start(g);
+        let mut in_match = 0;
+        while in_match < 300 && g.game_values.appstate != smw::common::game_values::AppState::Quit {
+            smw::smw::main::frame(g);
+            in_match = if g.gsm.currentState == smw::smw::game_state::StateId::Gameplay { in_match + 1 } else { 0 };
+        }
+        while ran < ticks && g.gsm.currentState == smw::smw::game_state::StateId::Gameplay {
+            let t = Instant::now();
+            let state = save(g);
+            saving += t.elapsed();
+            let t = Instant::now();
+            load(g, &state);
+            loading += t.elapsed();
+            let t = Instant::now();
+            smw::smw::main::frame(g);
+            ticking += t.elapsed();
+            ran += 1;
+        }
+        smw::smw::main::shutdown(g);
+    });
+    let _ = std::fs::remove_dir_all(&out);
+    if map.is_some() {
+        let _ = std::fs::remove_file(&replay);
+    }
+    let avg = |d: Duration| d.as_secs_f64() * 1000.0 / ran.max(1) as f64;
+    println!("SNAPSHOT {name} {}: {ran} ticks, save {:.4} ms, load {:.4} ms, tick {:.4} ms", map.unwrap_or("-"), avg(saving), avg(loading), avg(ticking));
+}
+
+/// Run with --ignored --nocapture. Log Balancing has animated tiles and four moving platforms.
+#[test]
+#[ignore]
+fn rollback_snapshot_cost() {
+    snapshot_cost("frenzy_cpu", None, 600);
+    snapshot_cost("cpu_greed", None, 600);
+    snapshot_cost("cpu_greed", Some("Log Balancing"), 600);
+}
+
+/// Damaged copies of shipped maps that still load must also start a match and play a few ticks: the values a map
+/// load accepts are the ones match setup and play index with. Half the cases overwrite random bytes; the other half
+/// set random map fields (hazards, items, blocks, tile types, warps, switches, platform paths) to small or extreme
+/// values and save the map, so the damage reaches the sections after the tiles.
+#[test]
+fn damaged_maps_that_load_play() {
+    use smw::common::map::{read_type_full, CMap, MapHazard, MapItem, Warp};
+    use smw::common::math::vec2::Vec2f;
+    use smw::common::moving_platform_paths::{EllipsePath, MovingPlatformPathTrait, StraightPath, StraightPathContinuous};
+    use smw::common::tile_types::TileType;
+    use smw::smw::rollback::{advance, KeySlot, Keys};
+
+    let maps = [
+        "worlds/Sky World/smb3 5-9.map",
+        "maps/4matsy_Cloud Props.map",
+        "maps/4matsy_Splitting Headache.map",
+        "maps/MrMister_MrIslandBattle.map",
+        "maps/special/two52_special_fireboss_minigame.map",
+    ];
+    let out = std::env::temp_dir().join(format!("smw-headless-{}-map-fuzz", std::process::id()));
+    let mut failures = Vec::new();
+    let mut played = 0;
+    sandboxed(&repo().join("tools").join("replays").join("frenzy_cpu.txt"), &out, None, |argv, services| {
+        let g = smw::game::Game::create();
+        g.services = Some(services);
+        smw::globals::init_globals(g);
+        g.RootDataDirectory = argv[2].clone();
+        smw::smw::main::startup(g);
+        smw::smw::main::gameloop_start(g);
+        while smw::smw::harness::frame(g) < 1200 {
+            smw::smw::main::frame(g);
+        }
+        let path = out.join("fuzz.map");
+        let path = path.to_str().unwrap();
+        let slots = [KeySlot::Local(0), KeySlot::Local(1), KeySlot::Local(2), KeySlot::Local(3)];
+        let mut seed: u32 = 1;
+        let mut next = move || {
+            seed = seed.wrapping_mul(1_103_515_245).wrapping_add(12_345);
+            (seed >> 8) as i32
+        };
+        // Mostly small values, sometimes the extremes of the field's type.
+        let value = |next: &mut dyn FnMut() -> i32| match next() % 8 {
+            0 => i16::MIN as i32,
+            1 => i16::MAX as i32,
+            _ => next() % 48 - 2,
+        };
+        for name in maps {
+            let original = repo().join("data").join(name);
+            let original = original.to_str().unwrap();
+            for case in 0..48 {
+                let mut gp = g.ptr();
+                smw::smw::gs_gameplay::clean_up(g);
+                if case % 2 == 0 {
+                    let mut bytes = std::fs::read(original).unwrap();
+                    for _ in 0..1 + case % 8 {
+                        let at = 16 + next() as usize % (bytes.len() - 16);
+                        bytes[at] = next() as u8;
+                    }
+                    std::fs::write(path, &bytes).unwrap();
+                } else {
+                    assert!(gp.g_map.load_map(g, original, read_type_full));
+                    let m: &mut CMap = &mut gp.g_map;
+                    for _ in 0..1 + case % 4 {
+                        let (x, y) = ((next() % 20) as usize, (next() % 15) as usize);
+                        match next() % 8 {
+                            0 => {
+                                let mut h = MapHazard { itype: (next() % 8) as i16, ix: (next() % 40) as i16, iy: (next() % 30) as i16, ..MapHazard::default() };
+                                for p in h.iparam.iter_mut() {
+                                    *p = value(&mut next) as i16;
+                                }
+                                for p in h.dparam.iter_mut() {
+                                    *p = value(&mut next) as f32 / 7.0;
+                                }
+                                m.maphazards.truncate(29);
+                                m.maphazards.push(h);
+                            }
+                            1 => {
+                                m.mapitems.truncate(31);
+                                m.mapitems.push(MapItem { itype: (next() % 6) as u8, ix: x as i16, iy: y as i16 });
+                            }
+                            2 => {
+                                m.objectdata[x][y].iType = (next() % 31 - 1) as i16;
+                                m.objectdata[x][y].fHidden = next() % 2 == 0;
+                                for s in m.objectdata[x][y].iSettings.iter_mut() {
+                                    *s = (value(&mut next) as i8) as i16;
+                                }
+                            }
+                            3 => m.mapdatatop[x][y] = TileType::from_i32(next() % 24),
+                            4 => m.warpdata[x][y] = Warp { direction: next() % 5 - 1, connection: (next() % 10) as i16, id: 0 },
+                            5 => m.iSwitches[(next() % 4) as usize] = value(&mut next) as i16,
+                            6 if !m.platforms.is_empty() => {
+                                let mut f = || value(&mut next) as f32 * 7.0;
+                                let (a, b, c, d, e) = (f(), f(), f(), f(), f() / 49.0);
+                                let path: Box<dyn MovingPlatformPathTrait> = match next() % 3 {
+                                    0 => Box::new(StraightPath::new(e, Vec2f::new(a, b), Vec2f::new(c, d), false)),
+                                    1 => Box::new(StraightPathContinuous::new(e, Vec2f::new(a, b), c / 49.0, false)),
+                                    _ => Box::new(EllipsePath::new(e / 7.0, c / 49.0, Vec2f::new(a, b), Vec2f::new(c, d), false)),
+                                };
+                                let platform = m.platforms[next() as usize % m.platforms.len()];
+                                m.platform(platform).pPath = path;
+                                m.platform(platform).iDrawLayer = (next() % 5) as i16;
+                            }
+                            _ => m.nospawn[(next() % 6) as usize][x][y] = next() % 2 == 0,
+                        }
+                    }
+                    gp.g_map.save_map(g, path);
+                }
+                if !gp.g_map.load_map(g, path, read_type_full) {
+                    continue;
+                }
+                let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    smw::smw::gs_menu::enter_gameplay_tail(g);
+                    for tick in 0..30u16 {
+                        let keys: Vec<(KeySlot, Keys)> = slots.iter().map(|&s| (s, Keys(tick.wrapping_mul(0x9e37)))).collect();
+                        advance(g, &keys, true);
+                    }
+                }));
+                played += 1;
+                if let Err(e) = result {
+                    let msg = e.downcast_ref::<String>().cloned().or_else(|| e.downcast_ref::<&str>().map(|s| s.to_string())).unwrap_or_default();
+                    failures.push(format!("{name} case {case}: {msg}"));
+                }
+            }
+        }
+        smw::smw::main::shutdown(g);
+    });
+    let _ = std::fs::remove_dir_all(&out);
+    assert!(played > 100, "only {played} damaged maps loaded");
+    assert!(failures.is_empty(), "{} of {played} damaged maps failed to play:\n{}", failures.len(), failures.join("\n"));
 }
 
 /// Every replay's first match under rollback; `SMW_ROLLBACK_SWEEP=<substring>` picks replays. Run with --ignored.

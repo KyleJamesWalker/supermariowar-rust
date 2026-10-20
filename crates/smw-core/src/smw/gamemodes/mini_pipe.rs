@@ -76,6 +76,11 @@ impl CGM_Pipe_MiniGame {
 }
 
 impl CGameModeTrait for CGM_Pipe_MiniGame {
+    fn harness_hash(&self, h: &mut crate::smw::rollback::Fnv) {
+        self.gm().harness_hash(h);
+        h.i16s(&[self.iNextItemTimer, self.iBonusTimer, self.iBonusType, self.iBonusTeam]);
+        h.bools(&[self.fSlowdown]);
+    }
     fn gm(&self) -> &CGameMode {
         &self.cgame_mode
     }

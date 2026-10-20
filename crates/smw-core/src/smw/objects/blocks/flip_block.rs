@@ -162,6 +162,11 @@ impl CObjectTrait for B_FlipBlock {
 impl IO_BlockTrait for B_FlipBlock {
     crate::impl_io_block_plumbing!();
 
+    fn harness_hash(&self, h: &mut crate::smw::rollback::Fnv) {
+        self.block().harness_hash(h);
+        h.i16s(&[self.counter, self.frame, self.timer]);
+    }
+
     fn reset(&mut self) {
         self.frame = 0;
         self.counter = 0;

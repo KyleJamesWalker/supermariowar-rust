@@ -100,6 +100,11 @@ impl CObjectTrait for B_DonutBlock {
 impl IO_BlockTrait for B_DonutBlock {
     crate::impl_io_block_plumbing!();
 
+    fn harness_hash(&self, h: &mut crate::smw::rollback::Fnv) {
+        self.block().harness_hash(h);
+        h.i16s(&[self.counter, self.jigglex, self.jigglecounter]);
+    }
+
     // `state` holds the standing player's global ID plus 1; `update` clears it every tick.
     fn hittop_player(&mut self, g: &mut Game, player: PlayerId, useBehavior: bool) -> bool {
         io_block_hittop_player(g, self, player, useBehavior);

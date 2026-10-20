@@ -233,6 +233,13 @@ impl CObjectTrait for CO_Flag {
 }
 
 impl IO_MovingObjectTrait for CO_Flag {
+    fn harness_hash(&mut self, h: &mut crate::smw::rollback::Fnv) {
+        crate::smw::objects::moving::moving_object::mo_harness_hash(self, h);
+        h.i16s(&[self.timer, self.teamID, self.owner_throw_timer]);
+        h.object(self.flagbase);
+        h.player(self.owner_throw);
+        h.bools(&[self.fLastFlagDirection, self.fInBase, self.centerflag]);
+    }
     crate::impl_io_moving_object_plumbing!();
     fn as_carried_object(&mut self) -> Option<&mut dyn MO_CarriedObjectTrait> {
         Some(self)

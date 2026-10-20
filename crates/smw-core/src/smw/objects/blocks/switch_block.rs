@@ -75,6 +75,11 @@ impl CObjectTrait for B_SwitchBlock {
 impl IO_BlockTrait for B_SwitchBlock {
     crate::impl_io_block_plumbing!();
 
+    fn harness_hash(&self, h: &mut crate::smw::rollback::Fnv) {
+        self.block().harness_hash(h);
+        h.i16s(&[self.iSrcX]);
+    }
+
     fn collide_player_dir(&mut self, g: &mut Game, player: PlayerId, direction: i16, useBehavior: bool) -> bool {
         if self.state != 0 || !useBehavior {
             return true;

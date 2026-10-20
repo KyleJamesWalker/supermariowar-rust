@@ -128,6 +128,10 @@ impl CObjectTrait for PU_SecretPowerup {
 }
 
 impl IO_MovingObjectTrait for PU_SecretPowerup {
+    fn harness_hash(&mut self, h: &mut crate::smw::rollback::Fnv) {
+        crate::smw::objects::moving::moving_object::mo_harness_hash(self, h);
+        h.i16s(&[self.itemtype]);
+    }
     crate::impl_io_moving_object_plumbing!();
     fn as_powerup(&mut self) -> Option<&mut dyn MO_PowerupTrait> {
         Some(self)

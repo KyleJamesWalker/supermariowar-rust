@@ -65,8 +65,7 @@ impl OMO_RaceGoal {
             anglechange: 0.0,
             anglechangetimer: 0,
             speed: 0.0,
-            // `place_race_goal` below reads this before it is set from the settings.
-            quantity: 0,
+            quantity: g.game_values.gamemodesettings.race.quantity,
             isfinishline: false,
         };
         this.iw = (g.rm.sprite(this.spr).get_width() as i16 as i32 >> 1) as i16;
@@ -93,7 +92,6 @@ impl OMO_RaceGoal {
         this.place_race_goal(g);
 
         this.speed = vel(g.game_values.gamemodesettings.race.speed as f32 / 4.0f32);
-        this.quantity = g.game_values.gamemodesettings.race.quantity;
         this.isfinishline = this.goalID as i32 == this.quantity as i32 - 1;
         this
     }
@@ -151,6 +149,12 @@ impl OMO_RaceGoal {
 }
 
 impl CObjectTrait for OMO_RaceGoal {
+    fn harness_hash_object(&mut self, h: &mut crate::smw::rollback::Fnv) {
+        h.i16s(&[self.goalID, self.anglechangetimer, self.quantity]);
+        h.i16s(&self.tagged);
+        h.f32s(&[self.angle, self.anglechange, self.speed]);
+        h.bools(&[self.isfinishline]);
+    }
     crate::impl_cobject_plumbing!();
 
     fn draw(&mut self, g: &mut Game) {

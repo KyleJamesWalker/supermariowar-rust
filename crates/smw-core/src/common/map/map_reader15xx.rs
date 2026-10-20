@@ -4,7 +4,7 @@ use crate::game::Game;
 use crate::common::file_io::BinaryFile;
 use crate::common::game_values::default_powerup_setting;
 use crate::common::global_constants::*;
-use crate::common::map::map_reader::MapReader;
+use crate::common::map::map_reader::{check_object_type, checked_index, MapReader};
 use crate::common::map::map_reader_constants::g_szBackgroundConversion;
 use crate::common::map::{read_type_summary, CMap, ReadType};
 
@@ -23,6 +23,7 @@ impl MapReader {
         for j in 0..MAPHEIGHT as usize {
             for i in 0..MAPWIDTH as usize {
                 let iTileID: i16 = mapfile.read_i32() as i16;
+                checked_index("tile", iTileID as i32, TILESETSIZE);
 
                 let tile = &mut map.mapdata[i][j][1];
                 tile.iID = g.g_tilesetmanager.classic_tileset_index() as i16;
@@ -44,6 +45,7 @@ impl MapReader {
                 if map.objectdata[i][j].iType == 6 {
                     map.objectdata[i][j].iType = -1;
                 }
+                check_object_type(map.objectdata[i][j].iType);
 
                 map.objectdata[i][j].fHidden = false;
 
@@ -58,18 +60,19 @@ impl MapReader {
 
     pub(super) fn read_background_1500(&mut self, map: &mut CMap, mapfile: &mut BinaryFile) {
         map.backgroundID = mapfile.read_i32() as i16;
-        map.szBackgroundFile = g_szBackgroundConversion[map.backgroundID as usize].to_string();
+        let background = checked_index("background", map.backgroundID as i32, g_szBackgroundConversion.len() as i32);
+        map.szBackgroundFile = g_szBackgroundConversion[background].to_string();
     }
 
     pub(super) fn read_music_category_1500(&mut self, map: &mut CMap, _mapfile: &mut BinaryFile) {
         map.musicCategoryID = g_iMusicCategoryConversion[map.backgroundID as usize];
     }
 
-    pub(super) fn load_1500(&mut self, g: &mut Game, map: &mut CMap, mapfile: &mut BinaryFile, readtype: ReadType) -> bool {
+    pub(super) fn load_1500(&mut self, g: &mut Game, map: &mut CMap, mapfile: &mut BinaryFile, readtype: ReadType) {
         self.read_autofilters(map, mapfile);
 
         if readtype == read_type_summary {
-            return true;
+            return;
         }
 
         map.clear_platforms();
@@ -88,7 +91,5 @@ impl MapReader {
         for iSwitch in 0..4 {
             map.iSwitches[iSwitch] = 0;
         }
-
-        true
     }
 }

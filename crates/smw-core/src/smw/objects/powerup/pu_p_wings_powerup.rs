@@ -41,8 +41,11 @@ impl CObjectTrait for PU_PWingsPowerup {
     }
     fn collide_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut player = player;
-        g.player(player).set_powerup(g, 8);
-        self.dead = true;
+        if self.state > 0 {
+            g.player(player).set_powerup(g, 8);
+            self.dead = true;
+        }
+
         false
     }
 }

@@ -90,6 +90,9 @@ impl IO_FlameCannon {
 }
 
 impl CObjectTrait for IO_FlameCannon {
+    fn harness_hash_object(&mut self, h: &mut crate::smw::rollback::Fnv) {
+        h.i16s(&[self.iFreq, self.iTimer, self.iCycle, self.iFrame, self.iDirection]);
+    }
     crate::impl_cobject_plumbing!();
 
     fn update(&mut self, g: &mut Game) {

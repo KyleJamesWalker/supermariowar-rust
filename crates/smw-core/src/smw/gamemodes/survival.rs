@@ -31,7 +31,7 @@ pub struct CGM_Survival {
     pub rate: i16,
     /// Most recent hazard: 0 thwomp, 1 podobo, 2 Bowser fire.
     pub iSelectedEnemy: i16,
-    /// Sum of the configured hazard weights, at least 1.
+    /// Sum of the configured hazard weights; 0 picks each hazard with equal odds.
     pub iEnemyWeightCount: i16,
 }
 impl_base!(CGM_Survival => cgm_classic: CGM_Classic);
@@ -60,14 +60,18 @@ impl CGM_Survival {
             }
         }
 
-        //Randomly choose an enemy from the weighted list
-        let iRandEnemy: i32 = RANDOM_INT(gp.get(), self.iEnemyWeightCount as i32) + 1;
-        self.iSelectedEnemy = 0;
-        let mut iWeightCount: i32 = g.game_values.gamemodesettings.survival.enemyweight[self.iSelectedEnemy as usize] as i32;
+        if self.iEnemyWeightCount == 0 {
+            self.iSelectedEnemy = RANDOM_INT(gp.get(), NUMSURVIVALENEMIES as i32) as i16;
+        } else {
+            //Randomly choose an enemy from the weighted list
+            let iRandEnemy: i32 = RANDOM_INT(gp.get(), self.iEnemyWeightCount as i32) + 1;
+            self.iSelectedEnemy = 0;
+            let mut iWeightCount: i32 = g.game_values.gamemodesettings.survival.enemyweight[self.iSelectedEnemy as usize] as i32;
 
-        while iWeightCount < iRandEnemy {
-            self.iSelectedEnemy += 1;
-            iWeightCount += g.game_values.gamemodesettings.survival.enemyweight[self.iSelectedEnemy as usize] as i32;
+            while iWeightCount < iRandEnemy {
+                self.iSelectedEnemy += 1;
+                iWeightCount += g.game_values.gamemodesettings.survival.enemyweight[self.iSelectedEnemy as usize] as i32;
+            }
         }
 
         if 0 == self.iSelectedEnemy {
@@ -100,6 +104,10 @@ impl CGM_Survival {
 }
 
 impl CGameModeTrait for CGM_Survival {
+    fn harness_hash(&self, h: &mut crate::smw::rollback::Fnv) {
+        self.gm().harness_hash(h);
+        h.i16s(&[self.timer, self.ratetimer, self.rate, self.iSelectedEnemy, self.iEnemyWeightCount]);
+    }
     crate::impl_cgamemode_plumbing!();
 
     fn init(&mut self, g: &mut Game) {
@@ -113,10 +121,6 @@ impl CGameModeTrait for CGM_Survival {
         self.iEnemyWeightCount = 0;
         for iEnemy in 0..NUMSURVIVALENEMIES as usize {
             self.iEnemyWeightCount += g.game_values.gamemodesettings.survival.enemyweight[iEnemy];
-        }
-
-        if self.iEnemyWeightCount == 0 {
-            self.iEnemyWeightCount = 1;
         }
     }
 
