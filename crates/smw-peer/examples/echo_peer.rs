@@ -1,6 +1,5 @@
-//! A native peer for tools/web_peer_test.mjs: greets every peer on both channels, then echoes each packet back
-//! on the channel it came from with `echo:` in front. Usage: `echo_peer <room url> <seconds>`.
-//! `SMW_TURN_URL`, `SMW_TURN_USERNAME` and `SMW_TURN_CREDENTIAL` add a TURN server and use relays only.
+//! A native peer for tools/web_peer_test.mjs: greets every peer on both channels and echoes each packet back on its
+//! channel with `echo:` in front. Usage: `echo_peer <room url> <seconds>`; `SMW_TURN_*` force a TURN relay.
 
 use smw_peer::{IceConfig, IceServer, PeerSocket, PeerState, RELIABLE, UNRELIABLE};
 use std::time::{Duration, Instant};
