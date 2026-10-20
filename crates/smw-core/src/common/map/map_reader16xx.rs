@@ -163,11 +163,6 @@ impl MapReader {
                 a.width = src.width;
                 a.height = src.height;
                 a.size = src.size;
-
-                if self.fix_spawnareas {
-                    a.width -= a.left;
-                    a.height -= a.top;
-                }
             }
         }
     }
