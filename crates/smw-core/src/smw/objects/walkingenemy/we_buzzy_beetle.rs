@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/walkingenemy/WE_BuzzyBeetle.cpp
+//! Buzzy beetle: a walking enemy that leaves a buzzy shell and is immune to weak weapons.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;

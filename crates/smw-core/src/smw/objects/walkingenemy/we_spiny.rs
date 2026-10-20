@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/walkingenemy/WE_Spiny.cpp
+//! Spiny: a walking enemy that kills players who land on it unless they wear a Kuribo's shoe.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
