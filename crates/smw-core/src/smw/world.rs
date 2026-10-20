@@ -104,11 +104,10 @@ fn stoi(text: &str) -> i32 {
     v as i32
 }
 
-/// A world file's music category; values past `COUNT` (corrupt files) become `Grass`.
+/// A world file's music category; values outside the categories (corrupt files) become `Grass`.
 fn world_music_category_from_int(v: i32) -> WorldMusicCategory {
-    let v = v as u8;
-    if v <= WorldMusicCategory::COUNT as u8 {
-        unsafe { std::mem::transmute::<u8, WorldMusicCategory>(v) }
+    if (0..WorldMusicCategory::COUNT as i32).contains(&v) {
+        unsafe { std::mem::transmute::<u8, WorldMusicCategory>(v as u8) }
     } else {
         WorldMusicCategory::Grass
     }
