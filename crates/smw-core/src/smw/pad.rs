@@ -1,4 +1,4 @@
-//! Not in upstream: which pads the players get, and pads plugged in or removed while the game runs. The backend
+//! Which pads the players get, and pads plugged in or removed while the game runs. The backend
 //! opens and translates them (smw_platform::Pads).
 
 use crate::game::{Device, Game, MAX_DEVICES};
@@ -6,7 +6,9 @@ use crate::services::services;
 use smw_platform::{PadChange, PadInfo};
 use std::sync::atomic::{AtomicU32, AtomicU64, AtomicUsize, Ordering};
 
+/// Pad bookkeeping inside `Game`.
 pub struct PadState {
+    /// `SMW_DEBUG_INPUT` is set: log a loop heartbeat and run the stall watchdog.
     debug_input: bool,
 }
 
@@ -16,6 +18,7 @@ impl PadState {
     }
 }
 
+/// Bumped on every change to `Game::devices`, so menus can tell their pad list is stale.
 static GENERATION: AtomicU32 = AtomicU32::new(0);
 
 /// Opens every connected pad unless a replay supplies its own devices; `translate` as `SMW_PAD_TRANSLATE`.
@@ -66,6 +69,7 @@ pub fn generation() -> u32 {
     GENERATION.load(Ordering::Relaxed)
 }
 
+/// Marks the device table as changed (`generation`).
 pub fn devices_changed() {
     GENERATION.fetch_add(1, Ordering::Relaxed);
 }
@@ -105,6 +109,7 @@ pub fn debug_frame(g: &mut Game, frame: u32) {
 static FRAME: AtomicU32 = AtomicU32::new(0);
 static PHASE: AtomicUsize = AtomicUsize::new(0);
 static BEATS: AtomicU64 = AtomicU64::new(0);
+/// Names of the main loop phases `phase` reports, by index.
 const PHASES: [&str; 8] = ["startup", "fps limiter", "sound", "recorder", "replay events", "update", "frame end", "flip"];
 
 /// Marks the main loop's progress for the `SMW_DEBUG_INPUT` watchdog; `phase` indexes `PHASES`.

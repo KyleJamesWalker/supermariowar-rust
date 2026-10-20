@@ -1,4 +1,4 @@
-//! Port of src/smw/main.cpp
+//! Startup, the main loop and shutdown, and which input each player gets.
 
 use crate::game::{Device, Game, MAX_DEVICES};
 use crate::common::cmd_args as cmd;
@@ -38,7 +38,7 @@ extern "C" {
     fn time(t: *mut i64) -> i64;
 }
 
-/// Empty in the reference build, which is compiled outside a git checkout.
+/// Empty: the build embeds no git revision or date.
 const GIT_REVISION: &str = "";
 const GIT_DATE: &str = "";
 
@@ -58,6 +58,7 @@ extern "C" {
     fn emscripten_run_script_int(script: *const std::ffi::c_char) -> i32;
 }
 
+/// Runs frames until the game quits; in the browser the page's animation frames run them (`gameloop_frame_web`).
 pub fn gameloop(g: &mut Game) {
     unsafe {
         gameloop_start(g);
@@ -213,6 +214,7 @@ fn draw_fps_overlay(g: &mut Game) {
     }
 }
 
+/// Draws the FPS overlay, presents the screen and feeds the `SMW_PERF` log.
 unsafe fn present(g: &mut Game, frame_start: std::time::Instant, update_end: std::time::Instant) {
     let mut gp = g.ptr();
     draw_fps_overlay(gp.get());
@@ -302,6 +304,7 @@ unsafe fn paced_frame(g: &mut Game) {
     crate::services::delay(gp.get(), (wait_us / 1000.0).max(0.0) as u32);
 }
 
+/// Creates the resource manager, the map and the file lists; panics when there are no maps.
 pub fn create_globals(g: &mut Game) {
         let mut gp = g.ptr();
     // this instance will contain the other relevant objects
@@ -311,7 +314,6 @@ pub fn create_globals(g: &mut Game) {
     g.filterslist = Ptr::new_box(FiltersList::new(g));
     g.maplist = Ptr::new_box(MapList::new(g, false));
 
-    //TODO: add proper test via size
     if g.maplist.is_empty() {
         std::panic::panic_any("Empty map directory!".to_string());
     }
@@ -341,8 +343,9 @@ pub fn create_globals(g: &mut Game) {
     update_music_with_overrides(g, &mut gp.get().musiclist, &mut gp.get().worldmusiclist);
 }
 
+/// Fills `Game::devices` with the open pads, or with the replay's devices when watching one.
 pub fn init_joysticks(g: &mut Game) {
-    // Not in upstream: a replay opens no pads, so a connected one cannot act in it.
+    // A replay opens no pads, so a connected one cannot act in it.
     let replay = harness::replay_joysticks(g);
     #[cfg(not(target_os = "emscripten"))]
     let pads = {
@@ -360,13 +363,13 @@ pub fn init_joysticks(g: &mut Game) {
     crate::smw::touch::init(g);
 }
 
-/// Not in upstream: every launch gives the players the connected joysticks first, then the right
+/// Every launch gives the players the connected joysticks first, then the right
 /// keyboard set (player 1's keyboard bindings), then the left one (player 2's), and makes them human.
 /// The page's touch controls press the right set's default keys, so while they are on, the right set
 /// goes to player 1 ahead of the joysticks. A joystick's bindings belong to it
 /// (`inputConfiguration[pad][1]`), so they follow it between players.
 /// The first launch with pads keeps the players' saved settings in `PAD_PLAYERS_FILE`; the next launch
-/// without pads puts them back, so only launches after a pad session differ from upstream.
+/// without pads puts them back.
 /// With Android's touch controls (`touch::session`) the touch keys take player 1 or the slot after the pads,
 /// the keyboard sets get no other player, and the rest are bots, also when no pad is connected.
 fn assign_inputs(g: &mut Game) {
@@ -432,7 +435,7 @@ fn assign_inputs(g: &mut Game) {
     }
 }
 
-/// Not in upstream: a pad connected after launch (`pad::hotplug`, or a replay's `jadd` line) gets a player as at
+/// A pad connected after launch (`pad::hotplug`, or a replay's `jadd` line) gets a player as at
 /// launch, once no match is on.
 fn assign_hotplugged(g: &mut Game) {
         let mut gp = g.ptr();
@@ -455,9 +458,10 @@ fn assign_hotplugged(g: &mut Game) {
     }
 }
 
-/// Not in the C++: the main loop's own state.
+/// The main loop's own state.
 #[derive(Clone)]
 pub struct MainLoopState {
+    /// The web loop's last `emscripten_get_now` in ms, and the wall time in ms not yet spent on ticks.
     #[cfg(target_os = "emscripten")]
     web_last_time: f64,
     #[cfg(target_os = "emscripten")]
@@ -465,6 +469,7 @@ pub struct MainLoopState {
     /// A replay of a touch session: whether no pad was open at launch, as Android's `touch::init` decides.
     #[cfg(target_os = "emscripten")]
     web_replay_touch_first: Option<bool>,
+    /// A pad was connected; the players are reassigned once no match is on.
     hotplug_pending: bool,
     /// `SMW_PERF` read on the first frame, then the frame-time log it turns on.
     perf: Option<Option<crate::smw::perf_log::PerfLog>>,
@@ -563,6 +568,7 @@ fn touch_controls_on(g: &mut Game) -> bool {
 /// The players' settings (`playercontrol`, one number each) from before pads were assigned.
 const PAD_PLAYERS_FILE: &str = "pad_players.txt";
 
+/// Fills `Game::gamemodes` by mode index, plus the bonus house and minigame modes.
 pub fn create_gamemodes(g: &mut Game) {
     //set game modes
     g.gamemodes[0].set(Box::new(CGM_Classic::new()));
@@ -598,6 +604,7 @@ pub fn create_gamemodes(g: &mut Game) {
     g.boxesgamemode.set(Box::new(CGM_Boxes_MiniGame::new()));
 }
 
+/// Precomputes the swirl spawn effect: four arms of 25 points spiralling in from a 100 px radius.
 pub fn init_spawnlocations(g: &mut Game) {
     //Calculate the swirl spawn effect locations
     let mut spawnradius: f32 = 100.0;
@@ -633,6 +640,7 @@ pub fn main() {
     run(std::env::args().collect());
 }
 
+/// Runs the game with `argv` on the SDL2 backend.
 pub fn run(argv: Vec<String>) {
     run_with(argv, None);
 }
@@ -661,7 +669,7 @@ pub fn run_with(argv: Vec<String>, services: Option<smw_platform::Services>) {
         harness::prepare_watch(g, &cmd.replay, cmd.replay_speed, cmd.segment);
     }
 
-    // C++ catches `const char*`, `std::string`, `std::exception` and `...` around main_game().
+    // A panic in the game shows an error box and exits with status 1.
     let mut gp = g.ptr();
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| main_game(gp.get())));
     if let Err(payload) = result {
@@ -710,8 +718,6 @@ pub fn startup(g: &mut Game) {
 
         init_joysticks(g);
 
-        //currently this only sets the title, not the icon.
-        //setting the icon isn't implemented in sdl ->  i'll ask on the mailing list
         let title = format!("{} {} {}", TITLESTRING, GIT_REVISION, GIT_DATE);
         gfx_settitle(g, &title);
 

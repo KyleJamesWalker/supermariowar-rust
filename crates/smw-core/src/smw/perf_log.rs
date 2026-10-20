@@ -6,8 +6,10 @@ use std::time::Instant;
 
 /// One tick of wall time.
 const BUDGET_US: u64 = 1_000_000 / TICKS_PER_SECOND as u64;
+/// Frames per report: five seconds of ticks.
 const REPORT_FRAMES: u32 = 300;
 
+/// Frame time totals for the current report, in microseconds.
 #[derive(Clone)]
 pub struct PerfLog {
     frames: u32,
@@ -18,12 +20,14 @@ pub struct PerfLog {
 }
 
 impl PerfLog {
+    /// A log when `SMW_PERF` is set to anything but 0.
     pub fn from_env() -> Option<Self> {
         std::env::var_os("SMW_PERF")
             .is_some_and(|v| v != "0")
             .then_some(PerfLog { frames: 0, update_us: 0, flip_us: 0, worst_us: 0, over_budget: 0 })
     }
 
+    /// Adds one frame's times (update and draw, then present) and prints a report every `REPORT_FRAMES`.
     pub fn record(&mut self, frame_start: Instant, update_end: Instant, flip_end: Instant) {
         let update = (update_end - frame_start).as_micros() as u64;
         let flip = (flip_end - update_end).as_micros() as u64;

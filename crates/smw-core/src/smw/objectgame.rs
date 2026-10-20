@@ -1,4 +1,4 @@
-//! Port of src/smw/objectgame.cpp
+//! Spawns powerups, ends players' projectiles, and unlocks the hidden secrets.
 
 use crate::game::Game;
 use crate::common::eyecandy::EC_SingleAnimation;
@@ -43,6 +43,7 @@ use crate::smw::objects::powerup::pu_star_powerup::PU_StarPowerup;
 use crate::smw::objects::powerup::pu_tanooki::PU_Tanooki;
 use crate::smw::player::get_player_from_global_id;
 
+/// The regular powerups by powerup code (0 to `NUM_POWERUPS - 1`).
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum PowerupType {
@@ -78,6 +79,7 @@ pub enum PowerupType {
 crate::enum_from_u8!(PowerupType, 27);
 
 /// The `static_cast` targets `createpowerup` sorts a new object into.
+/// A new object, sorted by the kind of handling `createpowerup` gives it.
 enum Spawned {
     None,
     Powerup(Ptr<dyn MO_PowerupTrait>),
@@ -125,6 +127,7 @@ fn spawn_regular_powerup(g: &mut Game, r#type: PowerupType, spawnPos: Vec2s, mov
     }
 }
 
+/// Objects for the negative powerup codes (`HEALTH_POWERUP`, `COIN_POWERUP`, ...).
 fn spawn_special_powerup(g: &mut Game, r#type: i16, spawnPos: Vec2s) -> Spawned {
         let mut gp = g.ptr();
     static iCoinValue: [i16; 4] = [3, 5, 2, 10];
@@ -179,6 +182,7 @@ fn as_moving<T: IO_MovingObjectTrait>(p: Ptr<T>) -> Ptr<dyn IO_MovingObjectTrait
     Ptr::from_raw(p.as_ptr() as *mut dyn IO_MovingObjectTrait)
 }
 
+/// Kills `object` with an explosion when it is a player's projectile, returning it to the owner's count.
 pub fn removeifprojectile(g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>, playsound: bool, forcedead: bool) {
         let mut gp = g.ptr();
     if object.dead {
@@ -196,6 +200,7 @@ pub fn removeifprojectile(g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait
         let iPlayerID = object.iPlayerID;
         let mut fDie = true;
 
+        // Without `hammerpower`, hammers pass through what they hit unless `forcedead`.
         if r#type == movingobject_hammer && !g.game_values.hammerpower {
             fDie = false;
         }
@@ -223,6 +228,8 @@ pub fn removeifprojectile(g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait
     }
 }
 
+/// Adds powerup `iType` (negative for the special codes) at `pos`; `side` is whether it moves right, and
+/// `spawn` false places it as already out of its block. Without a powerup it fires a podobo. Null when the container is full.
 pub fn createpowerup(g: &mut Game, iType: i16, pos: Vec2s, side: bool, spawn: bool) -> Ptr<dyn IO_MovingObjectTrait> {
         let mut gp = g.ptr();
     let mut rm = g.rm;
@@ -308,6 +315,7 @@ fn check_secret_poof(g: &mut Game, object: Ptr<dyn IO_MovingObjectTrait>) {
     }
 }
 
+/// Spawns secret `id` (0 to 3) at a random spot once its unlock conditions are met.
 pub fn check_secret(g: &mut Game, id: i16) {
     if !g.game_values.secretsenabled {
         return;

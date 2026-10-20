@@ -1,4 +1,4 @@
-//! Port of src/smw/platform/network/null/NetworkLayerNULL.h
+//! A network layer that never connects, for builds with the `no_network` feature.
 
 use crate::common_netplay::network_interface::NetworkEventHandler;
 use crate::game::Game;

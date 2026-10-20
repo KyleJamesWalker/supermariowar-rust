@@ -1,3 +1,4 @@
+//! The game itself: its states, gameplay, CPU players, objects, menus, netplay and main loop.
 pub mod ai;
 pub mod ai_nav;
 pub mod auto_advance;
