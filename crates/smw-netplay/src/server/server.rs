@@ -13,20 +13,10 @@ use super::match_room;
 use smw::globals::Ptr;
 use super::unordered_map::UnorderedMap;
 
-/// The network layer every [`SMWServer`] listens on.
-static mut netLayer: Option<Box<dyn NetworkLayer>> = None;
-
-/// Installs the network layer; call it before [`SMWServer::init`].
-pub fn set_net_layer(layer: Box<dyn NetworkLayer>) {
-    unsafe { netLayer = Some(layer) };
-}
-
-fn net_layer() -> &'static mut dyn NetworkLayer {
-    unsafe { netLayer.as_deref_mut().expect("set_net_layer before SMWServer::init") }
-}
-
 /// The lobby: connected players, their rooms, and starting a room's match.
 pub struct SMWServer {
+    /// `None` only while `update` hands it the server.
+    netLayer: Option<Box<dyn NetworkLayer>>,
     serverName: String,
     /// The `NET_RESPONSE_SERVERINFO` reply, kept in step with the config.
     serverInfo: ServerInfo,
@@ -66,8 +56,9 @@ impl V2Settings {
 }
 
 impl SMWServer {
-    pub fn new() -> Self {
+    pub fn new(netLayer: Box<dyn NetworkLayer>) -> Self {
         SMWServer {
+            netLayer: Some(netLayer),
             serverName: "SMW Server".to_string(),
             serverInfo: ServerInfo::with("SMW Server", 0, 20 /* maxPlayerCount */),
             maxPlayerCount: 20,
@@ -99,7 +90,7 @@ impl SMWServer {
 
         self.read_config(config_path);
 
-        if !net_layer().init(self.maxPlayerCount as u64) {
+        if !self.netLayer.as_mut().is_some_and(|layer| layer.init(self.maxPlayerCount as u64)) {
             return false;
         }
 
@@ -179,7 +170,9 @@ impl SMWServer {
 
     /// Handles the network events that arrived since the last call.
     pub fn update(&mut self, _running: &mut bool) {
-        net_layer().listen(self);
+        let Some(mut layer) = self.netLayer.take() else { return };
+        layer.listen(self);
+        self.netLayer = Some(layer);
     }
 
     /*
@@ -507,7 +500,9 @@ impl SMWServer {
         self.rooms.clear();
         self.players.clear();
 
-        net_layer().cleanup();
+        if let Some(layer) = self.netLayer.as_mut() {
+            layer.cleanup();
+        }
 
         log_silently("-- Server stopped --");
         log_close();
@@ -701,9 +696,7 @@ mod tests {
     }
 
     fn server() -> SMWServer {
-        static ONCE: std::sync::Once = std::sync::Once::new();
-        ONCE.call_once(|| set_net_layer(Box::new(NoLayer)));
-        SMWServer::new()
+        SMWServer::new(Box::new(NoLayer))
     }
 
     fn connect(server: &mut SMWServer, id: u64, name: &str) -> Outbox {
