@@ -16,8 +16,18 @@ fn throw_error(msg: String) -> ! {
     panic!("{}", msg)
 }
 
-/// Always fullscreen on Android.
-unsafe fn create_window(fullscreen: bool, extra_flags: u32) -> *mut SDL_Window {
+/// Where a rebuilt window goes: the old window's position and size, and whether it was maximized.
+#[derive(Clone, Copy)]
+struct Placement {
+    x: i32,
+    y: i32,
+    w: i32,
+    h: i32,
+    maximized: bool,
+}
+
+/// Always fullscreen on Android. Without a `place`, the window is centered.
+unsafe fn create_window(fullscreen: bool, extra_flags: u32, place: Option<Placement>) -> *mut SDL_Window {
     let mut window_flags = SDL_WindowFlags::SDL_WINDOW_RESIZABLE as u32 | extra_flags;
     if fullscreen || cfg!(target_os = "android") {
         window_flags |= SDL_WindowFlags::SDL_WINDOW_FULLSCREEN_DESKTOP as u32;
@@ -28,14 +38,11 @@ unsafe fn create_window(fullscreen: bool, extra_flags: u32) -> *mut SDL_Window {
     // SMW_WINDOW_DISPLAY opens it centered on that display (0 is the primary one).
     let display = std::env::var("SMW_WINDOW_DISPLAY").ok().and_then(|d| d.parse::<i32>().ok()).filter(|d| (0..SDL_GetNumVideoDisplays()).contains(d));
     let pos = display.map_or(SDL_WINDOWPOS_CENTERED, |d| SDL_WINDOWPOS_CENTERED | d);
-    let window = SDL_CreateWindow(
-        b"smw\0".as_ptr() as *const _,
-        pos,
-        pos,
-        SCREEN_W as i32 * scale,
-        SCREEN_H as i32 * scale,
-        window_flags,
-    );
+    let (x, y, w, h) = place.map_or((pos, pos, SCREEN_W as i32 * scale, SCREEN_H as i32 * scale), |p| (p.x, p.y, p.w, p.h));
+    if place.is_some_and(|p| p.maximized) {
+        window_flags |= SDL_WindowFlags::SDL_WINDOW_MAXIMIZED as u32;
+    }
+    let window = SDL_CreateWindow(c"smw".as_ptr(), x, y, w, h, window_flags);
     if window.is_null() {
         throw_error(format!("Couldn't create window: {}\n", sdl_error()));
     }
@@ -164,13 +171,13 @@ impl Drop for Sdl2Video {
 impl Sdl2Video {
     /// Makes the window and its presenter: the built-in one for a `builtin:<name>` preset, the librashader one for
     /// a `.slangp` file, else the renderer. Err says why the preset did not load; the window then uses the renderer.
-    unsafe fn create(&mut self, fullscreen: bool, preset: Option<&std::path::Path>) -> Result<(), String> {
+    unsafe fn create(&mut self, fullscreen: bool, preset: Option<&std::path::Path>, place: Option<Placement>) -> Result<(), String> {
         let mut result = Ok(());
         #[cfg(feature = "gl")]
         if let Some(name) = preset.and_then(|p| p.to_str()).and_then(|p| p.strip_prefix("builtin:")) {
             crate::crt_lite::request_context();
             let flags = SDL_WindowFlags::SDL_WINDOW_OPENGL as u32 | SDL_WindowFlags::SDL_WINDOW_ALLOW_HIGHDPI as u32;
-            self.window = create_window(fullscreen, flags);
+            self.window = create_window(fullscreen, flags, place);
             match crate::crt_lite::CrtLite::new(self.window, name) {
                 Ok(lite) => {
                     self.vsync = lite.vsync();
@@ -181,14 +188,14 @@ impl Sdl2Video {
                 Err(e) => {
                     SDL_DestroyWindow(self.window);
                     SDL_GL_ResetAttributes();
-                    return self.create(fullscreen, Option::None).and(Err(e));
+                    return self.create(fullscreen, Option::None, place).and(Err(e));
                 }
             }
         }
         #[cfg(feature = "shaders")]
         if let Some(preset) = preset {
             crate::shader::request_context();
-            self.window = create_window(fullscreen, crate::shader::window_flags());
+            self.window = create_window(fullscreen, crate::shader::window_flags(), place);
             match crate::shader::ShaderPresenter::new(self.window, preset) {
                 Ok(shader) => {
                     self.vsync = shader.vsync();
@@ -207,7 +214,7 @@ impl Sdl2Video {
         if preset.is_some() {
             result = Err("this build runs only the built-in shaders".to_string());
         }
-        self.window = create_window(fullscreen, 0);
+        self.window = create_window(fullscreen, 0, place);
         (self.renderer, self.vsync) = create_renderer(self.window);
         self.texture = create_screen_texture(self.renderer);
         self.apply_integer_scale();
@@ -303,7 +310,7 @@ impl Video for Sdl2Video {
             let preset = std::env::var_os("SMW_SHADER").map(std::path::PathBuf::from).or(self.pending_shader.take());
             #[cfg(not(feature = "gl"))]
             let preset: Option<std::path::PathBuf> = Option::None;
-            if let Err(e) = self.create(fullscreen, preset.as_deref()) {
+            if let Err(e) = self.create(fullscreen, preset.as_deref(), Option::None) {
                 eprintln!("[gfx] Shader preset unavailable, using the renderer: {e}");
             }
         }
@@ -332,9 +339,20 @@ impl Video for Sdl2Video {
         }
         // SAFETY: the window is open, so `destroy` frees live objects and `create` replaces them.
         unsafe {
-            let fullscreen = SDL_GetWindowFlags(self.window) & SDL_WindowFlags::SDL_WINDOW_FULLSCREEN_DESKTOP as u32 != 0;
+            let flags = SDL_GetWindowFlags(self.window);
+            let fullscreen = flags & SDL_WindowFlags::SDL_WINDOW_FULLSCREEN_DESKTOP as u32 != 0;
+            let maximized = flags & SDL_WindowFlags::SDL_WINDOW_MAXIMIZED as u32 != 0;
+            let place = (!fullscreen).then(|| {
+                let mut p = Placement { x: 0, y: 0, w: 0, h: 0, maximized };
+                if maximized {
+                    SDL_RestoreWindow(self.window);
+                }
+                SDL_GetWindowPosition(self.window, &mut p.x, &mut p.y);
+                SDL_GetWindowSize(self.window, &mut p.w, &mut p.h);
+                p
+            });
             self.destroy();
-            self.create(fullscreen, preset)
+            self.create(fullscreen, preset, place)
         }
     }
 
