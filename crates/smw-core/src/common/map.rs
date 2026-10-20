@@ -3247,7 +3247,29 @@ pub(crate) mod tests {
             m.objectdata[0][0].iType = 11;
             m.objectdata[0][0].iSettings[0] = setting;
         };
+        let item = |itype: MapItemType, ix: i16| move |m: &mut CMap| m.mapitems = vec![MapItem { itype, ix, iy: 1 }];
+        let hazard = |itype: i16, iy: i16, iparam: [i16; 2], dparam: f32| {
+            move |m: &mut CMap| m.maphazards = vec![MapHazard { itype, ix: 2, iy, iparam: [iparam[0], iparam[1], 0, 0, 0], dparam: [dparam, 0.0, 0.0, 0.0, 0.0] }]
+        };
+        let next = f32::from_bits(1.0f32.to_bits() + 1);
+        let path_speed = |speed: f32| {
+            move |m: &mut CMap| {
+                let path = StraightPath::new(speed, crate::common::math::vec2::Vec2f::new(64.0, 64.0), crate::common::math::vec2::Vec2f::new(128.0, 64.0), false);
+                m.platform(m.platforms[0]).pPath = Box::new(path);
+            }
+        };
+        let object = |iType: i16| move |m: &mut CMap| m.objectdata[0][0].iType = iType;
         let cases: Vec<(&str, Vec<u8>)> = vec![
+            ("item type", patched(&item(0, 1), &item(1, 1), 0, &9i32.to_le_bytes())),
+            ("item column", patched(&item(0, 1), &item(0, 2), 0, &(MAPWIDTH + 5).to_le_bytes())),
+            ("hazard type", patched(&hazard(3, 1, [60, 0], 0.0), &hazard(4, 1, [60, 0], 0.0), 0, &9i32.to_le_bytes())),
+            ("hazard row", patched(&hazard(3, 1, [60, 0], 0.0), &hazard(3, 2, [60, 0], 0.0), 0, &(2 * MAPHEIGHT).to_le_bytes())),
+            ("hazard frequency", patched(&hazard(3, 1, [60, 0], 0.0), &hazard(3, 1, [61, 0], 0.0), 0, &0i32.to_le_bytes())),
+            ("hazard direction", patched(&hazard(3, 1, [60, 0], 0.0), &hazard(3, 1, [60, 1], 0.0), 0, &7i32.to_le_bytes())),
+            ("hazard count", patched(&hazard(0, 1, [5, 0], 0.0), &hazard(0, 1, [6, 0], 0.0), 0, &100i32.to_le_bytes())),
+            ("hazard parameter", patched(&hazard(0, 1, [5, 0], 1.0), &hazard(0, 1, [5, 0], next), 0, &f32::NAN.to_le_bytes())),
+            ("platform path value", patched(&path_speed(1.0), &path_speed(next), 0, &f32::INFINITY.to_le_bytes())),
+            ("object type", patched(&object(0), &object(2), 0, &[40])),
             ("music category", patched(&|m| m.musicCategoryID = 1, &|m| m.musicCategoryID = 2, 0, &200i32.to_le_bytes())),
             ("item count", patched(&|m| m.mapitems = vec![MapItem::default(); 1], &|m| m.mapitems = vec![MapItem::default(); 2], 0, &(MAXMAPITEMS + 1).to_le_bytes())),
             ("hazard count", patched(&|m| m.maphazards = vec![MapHazard::default(); 1], &|m| m.maphazards = vec![MapHazard::default(); 2], 0, &(MAXMAPHAZARDS + 1).to_le_bytes())),
@@ -3262,6 +3284,20 @@ pub(crate) mod tests {
             assert!(caught.len() == 1 && caught[0].starts_with(&format!("Damaged map: {what} ")), "{what}: {caught:?}");
             assert!(g.g_map.platforms.is_empty() && g.g_map.mapitems.is_empty() && g.g_map.numwarpexits == 0, "{what} left map data");
         }
+    }
+
+    #[test]
+    fn warp_entrance_without_exit_fails_to_load() {
+        let g = map_game();
+        let mut gp = g.ptr();
+        let _g = lock_globals();
+        let base = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/maps/4matsy_Cloud Props.map");
+        assert!(gp.g_map.load_map(g, base, read_type_full));
+        assert!(gp.g_map.warpexits[..gp.g_map.numwarpexits as usize].iter().all(|e| e.connection != 9));
+        gp.g_map.warpdata[0][0] = Warp { direction: 0, connection: 9, id: 0 };
+        let (checked, caught) = caught_panics(|| catch_runtime_error(|| map_reader::check_warp_exits(&gp.g_map)));
+        assert!(checked.is_none());
+        assert_eq!(caught, ["Damaged map: warp connection 9 has no exit"]);
     }
 
     /// Same text as tools/ref/map_list_dump.cpp prints after `---`.
