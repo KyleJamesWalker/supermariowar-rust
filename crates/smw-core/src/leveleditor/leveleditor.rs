@@ -4159,7 +4159,7 @@ pub fn editor_backgrounds(g: &mut Game) -> i32 {
                     free_background_surfaces(g);
 
                     ed(gp.get()).editor_backgrounds_initialized = false;
-                    return EDITOR_EDIT;
+                    return EDITOR_QUIT;
                 }
 
                 SDL_KEYDOWN_EV => {
@@ -4526,8 +4526,8 @@ pub fn display_help(g: &mut Game) -> i32 {
     //handle messages
     while poll_event(g, &mut ed(gp.get()).event) != 0 {
         match ed(gp.get()).event.type_() {
-            SDL_QUIT_EV => return 0,
-            SDL_KEYDOWN_EV => return 0,
+            SDL_QUIT_EV => return EDITOR_QUIT,
+            SDL_KEYDOWN_EV => return EDITOR_EDIT,
             _ => {}
         }
     }
