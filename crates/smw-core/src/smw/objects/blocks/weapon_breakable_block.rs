@@ -44,9 +44,9 @@ pub enum WeaponDamageType {
 
 crate::enum_from_u8!(WeaponDamageType, 10);
 
+/// Block broken by one weapon type; `state` runs 0 intact, 1 just broken, 2 removed.
 #[derive(Clone)]
 
-/// Block broken by one weapon type; `state` runs 0 intact, 1 just broken, 2 removed.
 pub struct B_WeaponBreakableBlock {
     pub io_block: IO_Block,
 

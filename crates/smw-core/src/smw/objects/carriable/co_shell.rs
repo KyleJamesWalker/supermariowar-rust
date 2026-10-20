@@ -717,14 +717,6 @@ impl MO_CarriedObjectTrait for CO_Shell {
 
     fn kick(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        /*
-        if (superkick)
-        {
-            vel = 10.0f;
-            fSmoking = true;
-            ifSoundOnPlay(rm->sfx_cannon);
-        }
-        */
 
         let mut fVel: f32;
         let fPlayerBonusVel: f32 = g.player(self.owner).velx / 2.0;

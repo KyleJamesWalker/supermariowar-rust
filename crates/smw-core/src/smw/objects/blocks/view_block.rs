@@ -13,9 +13,9 @@ use crate::globals::Ptr;
 use crate::impl_base;
 use crate::smw::objects::blocks::powerup_block::*;
 
+/// Powerup block that releases the powerup currently shown inside it.
 #[derive(Clone)]
 
-/// Powerup block that releases the powerup currently shown inside it.
 pub struct B_ViewBlock {
     pub b_powerup_block: B_PowerupBlock,
 

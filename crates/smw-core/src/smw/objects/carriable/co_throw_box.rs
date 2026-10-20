@@ -154,18 +154,6 @@ impl CObjectTrait for CO_ThrowBox {
             return self.kill_player(g, player);
         }
 
-        /*
-        //Kill player when another player is holding the box
-        else
-        {
-            if (owner && player != owner && (game_values.teamcollision == TeamCollisionStyle::On || player->teamID != owner->teamID))
-            {
-                    iPlayerID = owner->globalID;
-                    iTeamID = owner->teamID;
-                    return KillPlayer(player);
-            }
-        }*/
-
         // Otherwise allow them to pick this box up
         if self.owner.is_none() && g.player(player).isready() {
             if g.player(player).accept_item(self.as_carried_ptr()) {

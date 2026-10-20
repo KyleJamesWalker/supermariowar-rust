@@ -19,9 +19,9 @@ use crate::smw::objects::moving::mo_carried_object::MO_CarriedObjectTrait;
 use crate::smw::objects::throw_block_type::ThrowBlockType;
 use crate::smw::player::CPlayer;
 
+/// Grabbable block; taking it removes it from the map and hands the player a brick of the same kind.
 #[derive(Clone)]
 
-/// Grabbable block; taking it removes it from the map and hands the player a brick of the same kind.
 pub struct B_ThrowBlock {
     pub io_block: IO_Block,
 

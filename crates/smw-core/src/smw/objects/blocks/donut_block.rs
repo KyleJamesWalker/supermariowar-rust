@@ -17,9 +17,9 @@ use crate::impl_base;
 use crate::smw::objects::blocks::io_block::*;
 use crate::smw::player::CPlayer;
 
+/// Block that falls after a player stands on it for `ticks(50)`.
 #[derive(Clone)]
 
-/// Block that falls after a player stands on it for `ticks(50)`.
 pub struct B_DonutBlock {
     pub io_block: IO_Block,
 

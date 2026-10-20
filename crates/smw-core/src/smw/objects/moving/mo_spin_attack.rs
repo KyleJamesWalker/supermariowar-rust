@@ -66,16 +66,6 @@ impl CObjectTrait for MO_SpinAttack {
         mo_attack_zone_collide_player(g, self, player)
     }
 
-    /*
-    void MO_SpinAttack::draw()
-    {
-            if (iTimer <= 11 && !dead)
-            {
-                    Rect r = {ix, iy, collisionWidth, collisionHeight};
-                    crate::common::gfx::blit::fill_rect(blitdest, &r, 0xff00);
-            }
-    }
-    */
     fn draw(&mut self, g: &mut Game) {}
 
     fn update(&mut self, g: &mut Game) {

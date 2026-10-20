@@ -106,15 +106,6 @@ pub fn mo_attack_zone_collide_player<T: MO_AttackZoneTrait + ?Sized>(g: &mut Gam
     true
 }
 
-/*void MO_AttackZone::draw()
-{
-        if (!dead)
-        {
-                Rect r = {ix, iy, collisionWidth, collisionHeight};
-                crate::common::gfx::blit::fill_rect(blitdest, &r, 0xf000);
-        }
-}*/
-
 /// Counts down `iTimer` and removes the zone when it runs out.
 pub fn mo_attack_zone_update<T: MO_AttackZoneTrait + ?Sized>(this: &mut T) {
     let z = this.az_mut();

@@ -29,9 +29,9 @@ pub static flagpositions: [[[i16; 2]; 4]; 3] = [
     [[18, 20], [34, 20], [18, 36], [34, 36]],
 ];
 
+/// Numbered goal that drifts around the screen and shows which teams have tagged it.
 #[derive(Clone)]
 
-/// Numbered goal that drifts around the screen and shows which teams have tagged it.
 pub struct OMO_RaceGoal {
     pub io_over_map_object: IO_OverMapObject,
 

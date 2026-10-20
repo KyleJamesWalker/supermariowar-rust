@@ -89,9 +89,9 @@ pub static g_iSledgeBrotherWaitTime: [[[i16; 2]; 5]; 3] = [
     [[30, 50], [25, 45], [20, 40], [15, 30], [10, 20]],
 ];
 
+/// Boss that paces between five spots, throwing projectiles, jumping and taunting until its hit points run out.
 #[derive(Clone)]
 
-/// Boss that paces between five spots, throwing projectiles, jumping and taunting until its hit points run out.
 pub struct MO_SledgeBrother {
     pub io_moving_object: IO_MovingObject,
 

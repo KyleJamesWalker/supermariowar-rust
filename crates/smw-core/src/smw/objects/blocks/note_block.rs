@@ -29,9 +29,9 @@ pub enum NoteBlockType {
 
 crate::enum_from_u8!(NoteBlockType, 3);
 
+/// Note block; `state` 1 and 2 are a sideways wobble, 3 and 4 a vertical one, each returning to 0.
 #[derive(Clone)]
 
-/// Note block; `state` 1 and 2 are a sideways wobble, 3 and 4 a vertical one, each returning to 0.
 pub struct B_NoteBlock {
     pub io_block: IO_Block,
 

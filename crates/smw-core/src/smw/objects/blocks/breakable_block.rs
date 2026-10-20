@@ -139,11 +139,6 @@ impl IO_BlockTrait for B_BreakableBlock {
         if useBehavior && self.state == 0 {
             self.trigger_behavior(g);
 
-            //When breaking a block, you smash through with a small velocity, but this allows for breaking two blocks at once
-            /*
-            if (player->vely < -VELMAXBREAKBLOCK)
-                player->vely = -VELMAXBREAKBLOCK;
-            */
             g.player(player).vely = cap_falling_velocity(-g.player(player).vely * BOUNCESTRENGTH);
             g.player(player).set_yf((self.iposy as i32 + self.ih as i32) as f32 + 0.2f32);
 

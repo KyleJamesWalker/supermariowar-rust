@@ -30,9 +30,9 @@ use crate::smw::objects::walkingenemy::walking_enemy::MO_WalkingEnemyTrait;
 use crate::smw::player::CPlayer;
 use std::ops::{Deref, DerefMut};
 
+/// Base state for objects that move and animate; positions and sizes are in pixels.
 #[derive(Clone)]
 
-/// Base state for objects that move and animate; positions and sizes are in pixels.
 pub struct IO_MovingObject {
     pub cobject: CObject,
 

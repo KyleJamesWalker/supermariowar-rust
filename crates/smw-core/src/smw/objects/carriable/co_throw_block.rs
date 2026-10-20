@@ -423,14 +423,6 @@ impl MO_CarriedObjectTrait for CO_ThrowBlock {
 
     fn kick(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        /*
-        if (superkick)
-        {
-            vel = 12.0f;
-            fSmoking = true;
-            ifSoundOnPlay(rm->sfx_cannon);
-        }
-        */
 
         self.iDeathTime = 0;
 

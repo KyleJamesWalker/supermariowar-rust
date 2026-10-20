@@ -18,9 +18,9 @@ use crate::smw::objects::blocks::io_block::*;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
 
+/// Plain bumpable block; `state` 0 idle, 1 rising, 2 settling back. The hidden kind appears when hit from below.
 #[derive(Clone)]
 
-/// Plain bumpable block; `state` 0 idle, 1 rising, 2 settling back. The hidden kind appears when hit from below.
 pub struct B_BounceBlock {
     pub io_block: IO_Block,
 }

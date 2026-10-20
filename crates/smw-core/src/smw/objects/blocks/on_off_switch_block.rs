@@ -23,9 +23,9 @@ use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::objects::switch_color::SwitchColor;
 use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
 
+/// Switch whose `state` is 0 on or 3 off; 1-2 and 4-5 are the bump that returns to it.
 #[derive(Clone)]
 
-/// Switch whose `state` is 0 on or 3 off; 1-2 and 4-5 are the bump that returns to it.
 pub struct B_OnOffSwitchBlock {
     pub io_block: IO_Block,
 

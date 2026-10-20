@@ -292,21 +292,6 @@ impl CObjectTrait for MO_Boomerang {
                     self.state = 2;
                     self.fFlipped = true;
 
-                    /*
-                    CPlayer * player = GetPlayerFromGlobalID(iPlayerID);
-
-                    //No wrap boomerang
-                    if (player)
-                    {
-                        if ((player->ix < ix && velx > 0) || (player->ix > ix && velx < 0))
-                                    velx = -velx;
-                    }
-                    else
-                    {
-                            velx = -velx;
-                    }
-                    */
-
                     self.velx = -self.velx; // Wrap Boomerang
                 }
             } else if self.state == 2 {
@@ -356,21 +341,6 @@ impl CObjectTrait for MO_Boomerang {
                     // Remove boomerang if player was removed from game
                     self.forcedead(g);
                     return;
-
-                    /*
-                    //Die at nearest edge if player was removed from game
-                    if (velx > 0)
-                            velx = 5.0f;
-                    else
-                            velx = -5.0f;
-
-                    if ((fx < 0.0f && fOldX >= 0.0f) ||
-                            (fx + iw >= App::screenWidth && fOldX + iw < App::screenWidth))
-                    {
-                            forcedead();
-                            return;
-                    }
-                    */
                 }
             }
         }
