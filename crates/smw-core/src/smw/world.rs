@@ -1638,8 +1638,7 @@ impl WorldMap {
             }
         }
 
-        // Compares the column, not the row, against the height.
-        if iCol < self.iHeight - 1 && tile.iCompleted >= -1 {
+        if iRow < self.iHeight - 1 && tile.iCompleted >= -1 {
             let iType = self.tiles.at(c, r + 1).iType - 2;
 
             if iType >= 0 && iType <= 3 {
