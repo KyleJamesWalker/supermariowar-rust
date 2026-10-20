@@ -25,9 +25,9 @@ struct VirtualChannel {
     end: u32,
 }
 
+/// The music slot: the track, its end in `sfx_ticks` ms, and the time left while paused.
 #[derive(Clone)]
 
-/// The music slot: the track, its end in `sfx_ticks` ms, and the time left while paused.
 struct VirtualMusic {
     music: Option<TrackId>,
     forever: bool,

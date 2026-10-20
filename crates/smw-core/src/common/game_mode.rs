@@ -51,9 +51,9 @@ pub struct SModeOption {
     pub iValue: i16,
 }
 
+/// What every game mode has: its id, goal and win state.
 #[derive(Clone)]
 
-/// What every game mode has: its id, goal and win state.
 pub struct CGameMode {
     /// The winning team once the game is over, or -1.
     pub winningteam: i16,

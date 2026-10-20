@@ -56,9 +56,9 @@ pub fn cap_side_velocity(vel: f32) -> f32 {
     vel
 }
 
+/// What every game object has: position, size, velocity, collision box and sprite.
 #[derive(Clone)]
 
-/// What every game object has: position, size, velocity, collision box and sprite.
 pub struct CObject {
     pub objectType: ObjectType,
 
