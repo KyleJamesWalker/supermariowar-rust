@@ -4544,7 +4544,7 @@ pub fn resize_world(g: &mut Game) -> i32 {
     0
 }
 
-/// Saves worlds/screenshots/<world>.png, _preview.png and _thumb.png, reloading the world from its file to draw each.
+/// Saves `worlds/screenshots/<world>.png`, `_preview.png` and `_thumb.png`, reloading the world from its file to draw each.
 pub fn takescreenshot(g: &mut Game) {
         let mut gp = g.ptr();
     // SAFETY: `sScreenshot` is a live surface until it is freed at the end of its pass.

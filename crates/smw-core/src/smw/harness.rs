@@ -1381,7 +1381,7 @@ fn directive_fields(line: &str) -> Vec<(String, String)> {
     fields
 }
 
-/// Segment mode: SMW_SEGMENT=<k>, or `#@ segment=<k>` in the replay (a clip). Finds checkpoint k,
+/// Segment mode: `SMW_SEGMENT=<k>`, or `#@ segment=<k>` in the replay (a clip). Finds checkpoint k,
 /// starts the frame counter at its frame and ends the replay where the match left gameplay.
 fn load_segment(g: &mut Game, path: &str) {
     let mut gp = g.ptr();

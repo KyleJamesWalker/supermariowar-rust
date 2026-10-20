@@ -4536,7 +4536,7 @@ pub fn display_help(g: &mut Game) -> i32 {
     DISPLAY_HELP
 }
 
-/// Asks for a name and saves the map as maps/<name>.map.
+/// Asks for a name and saves the map as `maps/<name>.map`.
 pub fn save_as(g: &mut Game) -> i32 {
         let mut gp = g.ptr();
     let mut fileName = String::new();
@@ -5174,7 +5174,7 @@ pub fn getcenterselection(g: &mut Game, x: &mut i32, y: &mut i32) {
     *y = ((bottom - top) >> 1) + top;
 }
 
-/// Saves the map, platforms and hazards as maps/screenshots/<map>.png, <map>_preview.png and <map>_thumb.png.
+/// Saves the map, platforms and hazards as `maps/screenshots/<map>.png`, `<map>_preview.png` and `<map>_thumb.png`.
 pub fn takescreenshot(g: &mut Game) {
     let mut gp = g.ptr();
     // SAFETY: `g.screen`, `g.blitdest` and the sprite surfaces stay live for the editor's whole run.

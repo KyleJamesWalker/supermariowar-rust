@@ -225,7 +225,7 @@ impl SMWServer {
         log(&format!("{} : <{}> connected.", player.network_client.as_ref().unwrap().address_as_string(), cstr_field(&package.playerName)));
     }
 
-    /// The requested name, or the first free "<name> <n>" if another player has it.
+    /// The requested name, or the first free `<name> <n>` if another player has it.
     fn unique_name(&self, playerID: u64, requested: &[u8]) -> Vec<u8> {
         let base: &[u8] = if requested.is_empty() { b"Player" } else { requested };
         let taken = |name: &[u8]| self.players.iter().any(|(&id, p)| id != playerID && p.name.eq_ignore_ascii_case(name));
