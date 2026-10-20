@@ -1,4 +1,4 @@
-//! Port of src/server/Blob.cpp
+//! An owned byte buffer for the messages a room relays to its players.
 
 #[derive(Default)]
 pub struct Blob {

@@ -1,11 +1,11 @@
-//! Global-state infrastructure (see docs/guides/CODE_CONVENTIONS.md) and re-exports of every C++ global.
+//! Global-state handle types (see docs/guides/CODE_CONVENTIONS.md) and the free-standing globals of `common::global`.
 use crate::game::Game;
 
 pub use smw_globals::{Aliased, Global, Owned, Ptr};
 
 pub use crate::common::global::*;
 
-/// Runs the constructors of C++ globals that have static storage, in C++ definition order.
+/// Fills the `Game` fields that need setup before anything else runs, in dependency order.
 pub fn init_globals(g: &mut Game) {
     crate::common::global::init_globals(g);
     crate::smw::world::init_globals(g);

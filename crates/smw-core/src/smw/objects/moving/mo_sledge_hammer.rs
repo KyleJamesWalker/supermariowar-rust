@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/moving/MO_SledgeHammer.cpp
+//! Sledge brother hammer: a heavy thrown hammer that kills any unshielded player it hits.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -31,10 +31,14 @@ use crate::smw::player::{get_player_from_global_id, CPlayer};
 pub struct MO_SledgeHammer {
     pub io_moving_object: IO_MovingObject,
 
+    /// Global ID of the owning player, or -1 for a boss throw.
     pub playerID: i16,
+    /// Team of the owning player, or -1.
     pub teamID: i16,
+    /// Sprite row offset (pixels): 32 per owner color, row 0 for the boss.
     pub colorOffset: i16,
 
+    /// `explode` makes an explosion; otherwise it splits into three super hammers.
     pub fSuper: bool,
 }
 impl_base!(MO_SledgeHammer => io_moving_object: IO_MovingObject);
@@ -72,6 +76,7 @@ impl MO_SledgeHammer {
         o
     }
 
+    /// Bursts into an explosion or three super hammers credited to `playerID`.
     pub fn explode(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         let mut rm = g.rm;

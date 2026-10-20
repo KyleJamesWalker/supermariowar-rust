@@ -1,4 +1,5 @@
-//! Port of src/common/sfx.cpp
+//! Sound effects and music. A virtual mixer driven by `SfxState::sfx_ticks` owns all game-visible sound state,
+//! and the audio service plays the same commands as output only (docs/guides/REPLAY.md, "Sound").
 
 use crate::game::Game;
 use crate::common::sfx_durations;
@@ -16,6 +17,7 @@ fn sdl_get_ticks(g: &mut Game) -> u32 {
 }
 
 
+/// A mixer channel: the sound on it and when it ends, in `sfx_ticks` ms.
 #[derive(Clone, Copy)]
 struct VirtualChannel {
     chunk: Option<SoundId>,
@@ -23,6 +25,7 @@ struct VirtualChannel {
     end: u32,
 }
 
+/// The music slot: the track, its end in `sfx_ticks` ms, and the time left while paused.
 #[derive(Clone)]
 
 struct VirtualMusic {
@@ -36,19 +39,18 @@ struct VirtualMusic {
 /// The sound subsystem's part of `Game`.
 #[derive(Clone)]
 pub struct SfxState {
+    /// Whether `musicfinished` should restart the background music when a play-once track ends.
     pub fResumeMusic: bool,
-    // Clock for the sfxSound::play() retrigger throttle; the replay harness swaps it (cpp-harness.patch).
+    /// The mixer's clock in ms, for end times and the retrigger throttle; the replay harness swaps it.
     pub sfx_ticks: fn(&mut Game) -> u32,
+    /// `sfxSound::play` reports success, and throttles, even when no channel is free.
     pub sfx_ignore_channel_failure: bool,
-    // Not in upstream: a virtual mixer driven by sfx_ticks owns all game-visible sound state in every run, and the
-    // audio service plays the same commands as output only (docs/guides/REPLAY.md, "Sound"). Seeded runs log every
-    // command to sfx_events.
+    /// Log every mixer command to `sfx_events`; seeded runs turn it on.
     pub sfx_log_events: bool,
     pub sfx_events: Vec<String>,
-    // Whether the audio service plays anything; headless replays only run the virtual mixer.
+    /// Whether the audio service plays anything; headless replays only run the virtual mixer.
     pub sfx_audible: bool,
-    /// The C++ links `extern void musicfinished()` from GSGameplay.cpp (an empty one in the editors).
-    /// The port resolves that link at runtime: gs_gameplay assigns its `musicfinished` here.
+    /// Called when a play-once track ends; a no-op unless something assigns it.
     pub musicfinished: fn(),
     v_channels: [VirtualChannel; sfxSound::k_channels],
     v_music: VirtualMusic,
@@ -59,6 +61,7 @@ pub struct SfxState {
     sounds: BTreeMap<u32, SoundPlay>,
 }
 
+/// Which channels a sound is on, as a bit mask, and when it last started.
 #[derive(Clone, Copy, Default)]
 struct SoundPlay {
     channels: u16,
@@ -153,6 +156,7 @@ fn mix_halt_channel(g: &mut Game, channel: i32) {
     }
 }
 
+/// Ends the channels and the play-once track whose time is up, calling `musicfinished` for the track.
 pub fn sfx_virtual_advance(g: &mut Game) {
     let mut gp = g.ptr();
     let now = (sfx_state(g).sfx_ticks)(gp.get());
@@ -172,9 +176,9 @@ pub fn sfx_virtual_advance(g: &mut Game) {
     }
 }
 
-/// `std::unique_ptr<Mix_Chunk, MixDeleter>`: the audio service's copy of a sound, and the game that loaded it.
+/// The audio service's copy of a sound, freed on drop, and the game that loaded it.
 pub struct MixChunkPtr(Option<SoundId>, Ptr<Game>);
-/// `std::unique_ptr<Mix_Music, MixDeleter>`: the audio service's copy of a track, and the game that loaded it.
+/// The audio service's copy of a track, freed on drop, and the game that loaded it; null in a copy.
 pub struct MixMusicPtr(Option<TrackId>, Ptr<Game>);
 
 impl Drop for MixChunkPtr {
@@ -191,7 +195,7 @@ impl Drop for MixChunkPtr {
     }
 }
 
-/// A copy in a cloned match (`Game::clone_match`) names the original's track and frees nothing.
+/// A copy in a cloned match (`Game::clone_match`) names the source game's track and frees nothing.
 impl Clone for MixMusicPtr {
     fn clone(&self) -> Self {
         MixMusicPtr(self.0, Ptr::null())
@@ -211,6 +215,7 @@ impl Drop for MixMusicPtr {
     }
 }
 
+/// Opens the audio device, at exactly 44100 Hz, S16, stereo when `sfx_audible` is set.
 pub fn sfx_init(g: &mut Game) -> bool {
     let mut gp = g.ptr();
     services(gp.get()).audio.open(sfx_state(g).sfx_audible);
@@ -222,17 +227,20 @@ pub fn sfx_close(g: &mut Game) {
     services(gp.get()).audio.close();
 }
 
+/// Halts every channel.
 pub fn sfx_stopallsounds(g: &mut Game) {
     log_event(g, "S haltall".to_string());
     mix_halt_channel(g, -1);
 }
 
+/// Music volume, 0 to 128.
 pub fn sfx_setmusicvolume(g: &mut Game, volume: i32) {
     let mut gp = g.ptr();
     log_event(g, format!("S musicvolume {}", volume));
     services(gp.get()).audio.set_music_volume(volume);
 }
 
+/// Sound effect volume, 0 to 128.
 pub fn sfx_setsoundvolume(g: &mut Game, volume: i32) {
     let mut gp = g.ptr();
     log_event(g, format!("S soundvolume {}", volume));
@@ -250,6 +258,7 @@ pub fn sfx_can_play_audio(g: &mut Game) -> bool {
     services(gp.get()).audio.is_open()
 }
 
+/// A loaded sound effect.
 pub struct sfxSound {
     m_sfx: MixChunkPtr,
     m_duration_ms: u32,
@@ -271,13 +280,14 @@ impl Default for sfxSound {
 }
 
 impl sfxSound {
+    /// Mixer channels.
     pub const k_channels: usize = 16;
 
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Returns `Err` where the C++ throws a `std::string`.
+    /// Loads and decodes a sound file; `Err` holds the message to show.
     pub fn from_file(g: &mut Game, path: &Path) -> Result<Self, String> {
         let mut gp = g.ptr();
         let path_str = path.to_string_lossy().into_owned();
@@ -299,6 +309,7 @@ impl sfxSound {
         })
     }
 
+    /// Starts the sound on a free channel; false if it started within the last 40 ms or no channel is free.
     pub fn play(&mut self, g: &mut Game) -> bool {
         let mut gp = g.ptr();
         let current_time: u32 = (sfx_state(g).sfx_ticks)(gp.get());
@@ -322,6 +333,7 @@ impl sfxSound {
         true
     }
 
+    /// Plays the sound `loops` extra times, or forever when negative.
     pub fn play_loop(&mut self, g: &mut Game, loops: i32) {
         let channel = mix_play_channel(g, self.m_sfx.0, self.m_duration_ms, loops);
         log_event(g, format!("S loop {} loops={} ch={}", self.m_name, loops, channel));
@@ -332,6 +344,7 @@ impl sfxSound {
         sound_play(g, self.key).channels |= 1 << channel;
     }
 
+    /// Halts every channel the sound is on.
     pub fn stop(&mut self, g: &mut Game) {
         log_event(g, format!("S stop {}", self.m_name));
         for i in 0..Self::k_channels {
@@ -352,6 +365,7 @@ impl sfxSound {
     }
 }
 
+/// A loaded music track.
 #[derive(Clone)]
 pub struct sfxMusic {
     m_music: MixMusicPtr,
@@ -373,7 +387,7 @@ impl sfxMusic {
         sfxMusic { _alias: Aliased::new(), m_music: MixMusicPtr(None, Ptr::null()), m_duration: -1.0, m_name: String::new(), m_paused: false }
     }
 
-    /// Returns `Err` where the C++ throws a `std::string`.
+    /// Loads and decodes a music file; `Err` holds the message to show.
     pub fn from_file(g: &mut Game, path: &Path) -> Result<Self, String> {
         let mut gp = g.ptr();
         let path_str = path.to_string_lossy().into_owned();
@@ -395,6 +409,7 @@ impl sfxMusic {
         })
     }
 
+    /// Starts the track, once or looping; `fResume` says whether background music returns after a play-once track.
     pub fn play(&mut self, g: &mut Game, fPlayonce: bool, fResume: bool) {
         let mut gp = g.ptr();
         log_event(g, format!("S music {} once={} resume={}", self.m_name, fPlayonce as i32, fResume as i32));
@@ -443,7 +458,7 @@ impl sfxMusic {
     }
 }
 
-/// Not in the C++: the virtual mixer state a replay checkpoint saves and restores (smw/checkpoint.rs).
+/// The virtual mixer state a replay checkpoint saves and restores (smw/checkpoint.rs).
 /// Chunks and tracks are identified by their owner, so the state survives a reload in another process.
 pub mod checkpoint {
     use super::*;

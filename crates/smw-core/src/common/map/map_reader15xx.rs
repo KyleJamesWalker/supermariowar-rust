@@ -1,4 +1,4 @@
-//! Port of src/common/map/MapReader15xx.cpp
+//! Reader for 1.5 map files: one classic-tileset layer, objects, and a numeric background ID.
 
 use crate::game::Game;
 use crate::common::file_io::BinaryFile;
@@ -8,6 +8,7 @@ use crate::common::map::map_reader::MapReader;
 use crate::common::map::map_reader_constants::g_szBackgroundConversion;
 use crate::common::map::{read_type_summary, CMap, ReadType};
 
+/// Music category for each legacy background ID.
 const g_iMusicCategoryConversion: [i16; 26] = [0, 3, 8, 5, 1, 9, 3, 4, 10, 8, 1, 0, 9, 0, 0, 7, 4, 1, 1, 6, 4, 7, 6, 3, 0, 4];
 
 impl MapReader {
@@ -73,6 +74,7 @@ impl MapReader {
 
         map.clear_platforms();
 
+        // 1.5 files have no version header; the tile data starts at offset 0.
         mapfile.rewind();
 
         map.clear_map();

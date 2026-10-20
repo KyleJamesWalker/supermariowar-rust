@@ -1,14 +1,16 @@
-//! Port of src/common/path.cpp
+//! Path helpers: the settings and data directories, pack path resolution, and names derived from file names.
 
 use crate::game::Game;
 use std::path::Path;
 
 
+/// The settings directory, where options and controls files live.
 pub fn get_home_directory(g: &mut Game) -> String {
     let mut gp = g.ptr();
     crate::services::services(gp.get()).storage.settings_dir().to_string_lossy().into_owned()
 }
 
+/// The directory that holds `data`.
 pub fn get_root_directory(g: &mut Game) -> String {
     let mut gp = g.ptr();
     crate::services::services(gp.get()).storage.root_dir().to_string_lossy().into_owned()
@@ -18,6 +20,7 @@ pub fn file_exists(path: &str) -> bool {
     std::fs::metadata(path).is_ok()
 }
 
+/// Defaults `SMW_Root_Data_Dir` to `./` when it is empty.
 pub fn initialize_paths(g: &mut Game) {
     if !g.SMW_Root_Data_Dir.is_empty() {
         return;
@@ -27,6 +30,7 @@ pub fn initialize_paths(g: &mut Game) {
 }
 
 
+/// `source`, relative to the data directory, as a path under it.
 pub fn convert_path(g: &mut Game, source: &str) -> String {
     if !g.are_paths_initialized {
         g.SMW_Root_Data_Dir = g.RootDataDirectory.clone();
@@ -43,6 +47,7 @@ pub fn convert_path(g: &mut Game, source: &str) -> String {
     g.SMW_Root_Data_Dir.clone() + source
 }
 
+/// A `gfx/packs/` or `sfx/packs/` path resolved in `packdir`, falling back to the Classic pack when it is missing there.
 pub fn convert_path_pack(g: &mut Game, relpath: &str, packdir: &str) -> String {
     const prefixes: [&str; 2] = ["gfx/packs/", "sfx/packs/"];
     for prefix in prefixes {
@@ -68,6 +73,7 @@ pub const fn dir_separator() -> char {
     '/'
 }
 
+/// The part of `path` after its last `/`.
 pub fn get_filename_from_path(path: &str) -> String {
     match path.rfind(dir_separator()) {
         Some(pos) => path[pos + 1..].to_string(),
@@ -75,6 +81,7 @@ pub fn get_filename_from_path(path: &str) -> String {
     }
 }
 
+/// The file name without directory and extension; with `strip_author`, also without the `author_` prefix.
 pub fn get_name_from_file_name(path: &str, strip_author: bool) -> String {
     const PATH_SEPARATOR: char = '/';
 
@@ -101,6 +108,7 @@ pub fn get_name_from_file_name(path: &str, strip_author: bool) -> String {
     path[left_pos..right_pos].to_string()
 }
 
+/// A file name without its `creator_` prefix and 4-character extension, first letter uppercased.
 pub fn strip_creator_and_ext(filename: &str) -> String {
     let first_underscore = match filename.find('_') {
         None => 0,
@@ -118,6 +126,7 @@ pub fn strip_creator_and_ext(filename: &str) -> String {
     without_prefix
 }
 
+/// `path` from just after its first `_`, or else its last `/`, without a 4-character extension.
 pub fn strip_path_and_extension(path: &str) -> String {
     let chop_here = match path.find('_') {
         None => match path.rfind(dir_separator()) {
@@ -131,7 +140,7 @@ pub fn strip_path_and_extension(path: &str) -> String {
     substr_len(without_path, 0, without_path.len().wrapping_sub(4))
 }
 
-/// `std::string::substr(pos, n)`: `n` is clamped to the remaining length (so `npos`-like values take the rest).
+/// A substring of `n` bytes from `pos`; an `n` past the end takes the rest.
 pub fn substr_len(s: &str, pos: usize, n: usize) -> String {
     let end = if n > s.len() - pos { s.len() } else { pos + n };
     s[pos..end].to_string()

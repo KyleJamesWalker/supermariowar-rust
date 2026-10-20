@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/moving/MO_CarriedObject.cpp
+//! Base for objects a player can pick up, hold, drop and kick.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -17,17 +17,23 @@ use std::ops::{Deref, DerefMut};
 //------------------------------------------------------------------------------
 // class CarriedObject - all objects players can carry inheirit from this class
 //------------------------------------------------------------------------------
+/// Base state for carriable objects; `owner` is the player holding it.
 #[derive(Clone)]
 pub struct MO_CarriedObject {
     pub io_moving_object: IO_MovingObject,
 
+    /// A player wearing a Kuribo's shoe can still pick this object up.
     pub fCarriedByKuriboShoe: bool,
 
+    /// Player holding the object, or `PlayerId::NONE`.
     pub owner: PlayerId,
+    /// Shell smoke trail; a smoking shell wins shell-on-shell hits. Nothing sets it, so it stays false.
     pub fSmoking: bool,
 
+    /// Kick speed added to the owner's velocity, horizontally and upward (pixels per tick).
     pub dKickX: f32,
     pub dKickY: f32,
+    /// Hold position relative to the owner (pixels): x when facing left or right, and height above the owner's feet.
     pub iOwnerLeftOffset: i16,
     pub iOwnerRightOffset: i16,
     pub iOwnerUpOffset: i16,
@@ -35,7 +41,7 @@ pub struct MO_CarriedObject {
 impl_base!(MO_CarriedObject => io_moving_object: IO_MovingObject);
 
 impl MO_CarriedObject {
-    /// The 8-argument constructor.
+    /// Animates the whole sprite; see [`Self::new_anim`] for an animation offset or frame size.
     #[allow(clippy::too_many_arguments)]
     pub fn new(g: &mut Game, nspr: SpriteId,
         pos: Vec2s,
@@ -49,7 +55,7 @@ impl MO_CarriedObject {
         Self::new_anim(g, nspr, pos, iNumSpr, aniSpeed, iCollisionWidth, iCollisionHeight, iCollisionOffsetX, iCollisionOffsetY, -1, -1, -1, -1)
     }
 
-    /// The 12-argument constructor.
+    /// Animation and collision arguments of `-1` use the sprite frame size and zero offsets.
     #[allow(clippy::too_many_arguments)]
     pub fn new_anim(g: &mut Game, nspr: SpriteId,
         pos: Vec2s,
@@ -115,6 +121,7 @@ impl MO_CarriedObject {
     }
 }
 
+/// Draws the object, clipped to the pipe while the owner is warping.
 pub fn mo_carried_object_draw<T: MO_CarriedObjectTrait + ?Sized>(g: &mut Game, this: &mut T) {
     let o = this.carried();
     let src = Rect { x: o.drawframe as i32, y: o.animationOffsetY as i32, w: o.iw as i32, h: o.ih as i32 };
@@ -126,6 +133,7 @@ pub fn mo_carried_object_draw<T: MO_CarriedObjectTrait + ?Sized>(g: &mut Game, t
     }
 }
 
+/// Moves the object to its hold position in front of the owner.
 pub fn mo_carried_object_move_to_owner<T: MO_CarriedObjectTrait + ?Sized>(g: &mut Game, this: &mut T) {
     let o = this.carried_mut();
     if !o.owner.is_none() {
@@ -137,6 +145,7 @@ pub fn mo_carried_object_move_to_owner<T: MO_CarriedObjectTrait + ?Sized>(g: &mu
     }
 }
 
+/// Releases the object from its owner and pushes it out of any solid tiles.
 pub fn mo_carried_object_drop<T: MO_CarriedObjectTrait + ?Sized>(g: &mut Game, this: &mut T) {
     {
         let o = this.carried_mut();
@@ -150,6 +159,7 @@ pub fn mo_carried_object_drop<T: MO_CarriedObjectTrait + ?Sized>(g: &mut Game, t
     io_moving_object_collision_detection_checksides(g, this);
 }
 
+/// Throws the object at the owner's velocity plus the kick speed, then drops it.
 pub fn mo_carried_object_kick<T: MO_CarriedObjectTrait + ?Sized>(g: &mut Game, this: &mut T) {
         let mut gp = g.ptr();
     {
@@ -172,13 +182,16 @@ pub trait MO_CarriedObjectTrait: IO_MovingObjectTrait {
     fn carried_mut(&mut self) -> &mut MO_CarriedObject;
     fn as_carried_ptr(&mut self) -> Ptr<dyn MO_CarriedObjectTrait>;
 
+    /// Moves the object to its hold position; called every tick while held.
     fn move_to_owner(&mut self, g: &mut Game) {
         mo_carried_object_move_to_owner(g, self)
     }
 
+    /// Releases the object where it is.
     fn drop(&mut self, g: &mut Game) {
         mo_carried_object_drop(g, self)
     }
+    /// Throws the object forward and up, then releases it.
     fn kick(&mut self, g: &mut Game) {
         mo_carried_object_kick(g, self)
     }

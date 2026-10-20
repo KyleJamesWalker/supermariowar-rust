@@ -1,5 +1,5 @@
 //! Correctly rounded `sinf`, `cosf` and `atan2f` from CORE-MATH (https://core-math.gitlabpages.inria.fr/,
-//! commit 284b3b0e, `src/binary32/{sin,cos,atan2}`), ported to Rust. The C++ reference links the same C files.
+//! commit 284b3b0e, `src/binary32/{sin,cos,atan2}`), ported to Rust, so every platform gets the same bits.
 //!
 //! sinf: Copyright (c) 2022-2025 Alexei Sibidanov.
 //! cosf: Copyright (c) 2022-2023 Alexei Sibidanov.
@@ -241,6 +241,7 @@ fn sinf_big(x: f32) -> f32 {
     (s0 + z * (aa * c0 - bb * (z * s0))) as f32
 }
 
+/// The correctly rounded sine of `x` radians.
 pub fn sinf(x: f32) -> f32 {
     let ax = x.to_bits() << 1;
     if ax > 0x99000000 || ax < 0x73000000 {
@@ -305,6 +306,7 @@ fn cosf_big(x: f32) -> f32 {
     r as f32
 }
 
+/// The correctly rounded cosine of `x` radians.
 pub fn cosf(x: f32) -> f32 {
     let ax = x.to_bits() << 1;
     if ax > 0x99000000 || ax < 0x74000000 {
@@ -429,6 +431,7 @@ const OFF: [f64; 8] = [0.0, PI2, PI, PI2, -0.0, -PI2, -PI, -PI2];
 const OFFL: [f64; 8] = [0.0, PI2L, 2.0 * PI2L, PI2L, -0.0, -PI2L, -2.0 * PI2L, -PI2L];
 const SGN: [f64; 2] = [1.0, -1.0];
 
+/// The correctly rounded angle of (`x`, `y`) in radians, in -π to π.
 pub fn atan2f(y: f32, x: f32) -> f32 {
     let m = [0.0f64, 1.0];
     let (ux, uy) = (x.to_bits(), y.to_bits());

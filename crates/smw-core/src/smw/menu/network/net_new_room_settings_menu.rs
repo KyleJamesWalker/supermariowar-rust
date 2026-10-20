@@ -1,4 +1,4 @@
-//! Port of src/smw/menu/network/NetNewRoomSettingsMenu.cpp
+//! Mode, goal and map choice for a new netplay room.
 
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
@@ -16,14 +16,16 @@ use crate::smw::menu::game_settings_menu::UI_GameSettingsMenu;
 
 const GM_LAST: usize = GAMEMODE_LAST as usize;
 
+/// Mode, goal, map and Random for a netplay room, before naming it or for the next match.
 #[derive(Default)]
 pub struct UI_NetNewRoomSettingsMenu {
     pub ui_menu: UI_Menu,
 
     miModeField: Ctl<MI_ImageSelectField>,
+    /// Copies of the game setup goal fields; only the selected mode's is visible.
     miGoalField: [Ctl<MI_SelectField<i16>>; GM_LAST],
     miModeSettingsButton: Ctl<MI_Button>,
-    /// Not in the C++: roll the mode settings when the match starts, as upstream always did.
+    /// Writes `netplay.randomize_settings`: roll random mode settings when the match starts.
     miRandomizeField: Ctl<MI_SelectField<bool>>,
     miMapField: Ctl<MI_MapField>,
     miContinueButton: Ctl<MI_Button>,
@@ -35,6 +37,7 @@ pub struct UI_NetNewRoomSettingsMenu {
 crate::impl_base!(UI_NetNewRoomSettingsMenu => ui_menu: UI_Menu);
 
 impl UI_NetNewRoomSettingsMenu {
+    /// Builds the menu with mode and goal fields copied from `gsm`.
     pub fn new(g: &mut Game, gsm: &UI_GameSettingsMenu) -> Box<Self> {
         let mut this = Box::<Self>::default();
         let selectfield = g.rm.spr_selectfield;
@@ -93,6 +96,7 @@ impl UI_NetNewRoomSettingsMenu {
         this
     }
 
+    /// Shows the goal field of the selected mode.
     pub fn refresh_game_mode_buttons(&mut self, g: &mut Game) {
         let current = g.ctl(self.miModeField).current_value();
         for iMode in 0..GM_LAST {
@@ -100,10 +104,12 @@ impl UI_NetNewRoomSettingsMenu {
         }
     }
 
+    /// File path of the selected map.
     pub fn get_current_map_path(&self, g: &mut Game) -> String {
         g.ctl(self.miMapField).get_map_file_path(g)
     }
 
+    /// The mode whose goal field is visible, else 0.
     pub fn get_selected_game_mode_id(&self, g: &Game) -> i16 {
         for iGameMode in 0..GM_LAST {
             if g.ctl(self.miGoalField[iGameMode]).is_visible() {

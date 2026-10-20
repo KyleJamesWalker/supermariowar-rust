@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/powerup/PU_CoinPowerup.cpp
+//! Coin powerup for coin and greed modes: adds its value to the collector's score.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -16,6 +16,7 @@ use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::objects::powerup::powerup::{mo_powerup_update, MO_Powerup, MO_PowerupTrait};
 use crate::smw::player::CPlayer;
 
+/// Coin color; selects the 32-pixel sprite row.
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum CoinColor {
@@ -32,10 +33,14 @@ pub enum CoinColor {
 pub struct PU_CoinPowerup {
     pub mo_powerup: MO_Powerup,
 
+    /// Sprite sheet row for the coin color, in pixels.
     pub iColorOffsetY: i16,
+    /// Points added to the collector's score in coin and greed modes.
     pub iValue: i16,
 
+    /// Tick counter for the sparkle overlay; it steps a frame every 4 ticks.
     pub sparkleanimationtimer: i16,
+    /// X offset (pixels) of the current sparkle frame.
     pub sparkledrawframe: i16,
 }
 impl_base!(PU_CoinPowerup => mo_powerup: MO_Powerup);

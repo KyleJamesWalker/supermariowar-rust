@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/carriable/CO_Bomb.cpp
+//! Lit bomb: thrown by players or the bomb sledge brother, it explodes when its fuse runs out.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -21,13 +21,17 @@ use crate::smw::player::{get_player_from_global_id, CPlayer};
 //------------------------------------------------------------------------------
 // class bomb
 //------------------------------------------------------------------------------
+/// Bomb that can be picked up and thrown; picking up an unowned bomb makes the holder its owner.
 #[derive(Clone)]
 pub struct CO_Bomb {
     pub mo_carried_object: MO_CarriedObject,
 
+    /// Sprite row offset (pixels): 38 per owner color, row 0 for no owner.
     pub iColorOffsetY: i16,
+    /// Ticks left on the fuse.
     pub ttl: i16,
 
+    /// Spotlight that follows the bomb while spotlights are on.
     pub sSpotlight: SpotlightId,
 }
 impl_base!(CO_Bomb => mo_carried_object: MO_CarriedObject);

@@ -1,3 +1,5 @@
+//! Map blocks: solid tiles with behavior when players or objects hit them.
+
 pub mod bounce_block;
 pub mod breakable_block;
 pub mod donut_block;

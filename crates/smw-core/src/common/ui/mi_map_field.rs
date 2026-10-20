@@ -1,4 +1,4 @@
-//! Port of src/common/ui/MI_MapField.cpp
+//! The map picker menu item: a map preview with arrows, random pick and type-to-search over the filtered maps.
 
 use crate::common::global_constants::{ticks, vel};
 use crate::common::resource_manager::SpriteId;
@@ -14,11 +14,12 @@ use crate::common::ui::mi_map_preview::MI_MapPreview;
 use crate::common::uicontrol::UI_ControlTrait;
 use crate::globals::*;
 
-/// `maplist->GetCurrent()->second.iIndex`
+/// The selected map's index in the whole map list.
 fn current_map_index(g: &mut Game) -> i16 {
     g.maplist.node_at(g.maplist.get_current()).iIndex
 }
 
+/// Picks the map from `Game::maplist`'s filtered set and shows its preview.
 pub struct MI_MapField {
     pub mi_map_preview: MI_MapPreview,
 
@@ -27,12 +28,15 @@ pub struct MI_MapField {
     pub miModifyImageLeft: Box<MI_Image>,
     pub miModifyImageRight: Box<MI_Image>,
 
+    /// The offset `iSlideListOut` slides toward, 4 pixels per 62.5 Hz tick.
     pub iSlideListOutGoal: i16,
     pub dSlideListRemainder: f32,
 
+    /// Letters typed to jump to a map by name; cleared `iSearchStringTimer` ticks after the last one.
     pub sSearchString: String,
     pub iSearchStringTimer: i16,
 
+    /// Leaves room beside the preview for the map's filter tags.
     pub fShowtags: bool,
 }
 crate::impl_base!(MI_MapField => mi_map_preview: MI_MapPreview);
@@ -73,6 +77,7 @@ impl MI_MapField {
         this
     }
 
+    /// Moves to a random filtered map; `MENU_CODE_MAP_CHANGED` if it changed.
     pub fn choose_random_map(&mut self, g: &mut Game) -> MenuCodeEnum {
         let mut gp = g.ptr();
         let iOldIndex = current_map_index(g);
@@ -86,10 +91,12 @@ impl MI_MapField {
         MENU_CODE_NONE
     }
 
+    /// Moves to the previous filtered map, or ten back with `fScrollFast`; true if the map changed.
     pub fn move_prev(&mut self, g: &mut Game, fScrollFast: bool) -> bool {
         self.move_(g, false, fScrollFast)
     }
 
+    /// Moves to the next filtered map, or ten on with `fScrollFast`; true if the map changed.
     pub fn move_next(&mut self, g: &mut Game, fScrollFast: bool) -> bool {
         self.move_(g, true, fScrollFast)
     }

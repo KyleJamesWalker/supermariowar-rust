@@ -1,4 +1,4 @@
-//! Port of src/smw/network/NetConfigManager.cpp
+//! The saved netplay settings in `servers.toml`: the player name, the room name and the server list.
 
 use crate::game::Game;
 use crate::common::path::get_home_directory;
@@ -7,7 +7,7 @@ use crate::smw::net::{ServerAddress};
 
 const CONFIG_FILENAME: &str = "servers.toml";
 
-/// toml11 v4 `escape_basic_string`, byte by byte with a signed `char`, so bytes from 0x80 pass through.
+/// A TOML basic string, escaped byte by byte; bytes from 0x80 pass through.
 fn toml_basic_string(s: &str) -> String {
     let mut out = vec![b'"'];
     for &c in s.as_bytes() {
@@ -27,8 +27,8 @@ fn toml_basic_string(s: &str) -> String {
     String::from_utf8(out).expect("escaping keeps UTF-8 intact")
 }
 
-/// toml11 v4 `toml::format` of the `{player_name, servers}` table. libc++'s unordered_map puts
-/// `servers` first; an array goes multiline once its approximate inline length passes 60.
+/// The `servers.toml` text: `servers`, `player_name`, then `room_name` if set. The server array goes multiline
+/// once its approximate inline length passes 60.
 fn format_config(player_name: &str, room_name: &str, servers: &[String]) -> String {
     let mut approx_len = 0;
     let mut multiline = false;
@@ -138,6 +138,7 @@ fn read_servers(g: &mut Game, config: &toml::Table) {
     }
 }
 
+/// Loads and saves `servers.toml` in the home directory; LAN entries are not saved.
 #[derive(Default)]
 pub struct NetConfigManager;
 
@@ -174,7 +175,7 @@ impl NetConfigManager {
 mod tests {
     use super::format_config;
 
-    /// Expected bytes from toml11 v4.4.0 (`toml::format`) built with the C++ reference's libc++.
+    /// Pins the saved file's exact bytes.
     #[test]
     fn format_matches_toml11() {
         let s = |v: &[&str]| v.iter().map(|x| x.to_string()).collect::<Vec<_>>();

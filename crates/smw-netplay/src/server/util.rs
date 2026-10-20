@@ -1,8 +1,8 @@
-//! Port of src/server/Util.h
+//! Fixed-size C string helpers for protocol fields.
 
 pub use smw::common_netplay::protocol_packages::cstr_field;
 
-/// `strncpy_sec(destination, source, num)`: `strncpy` then terminate at `num - 1`.
+/// Copies `source` up to its first NUL into `destination[..num]`, NUL-padded, and NUL-terminates at `num - 1`.
 pub fn strncpy_sec(destination: &mut [u8], source: &[u8], num: usize) {
     let mut i = 0;
     while i < num && i < source.len() && source[i] != 0 {

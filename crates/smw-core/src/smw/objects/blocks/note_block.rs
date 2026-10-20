@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/blocks/NoteBlock.cpp
+//! Note block: springs players and objects away from whichever side they hit.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -17,7 +17,7 @@ use crate::smw::objects::blocks::io_block::*;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::player::CPlayer;
 
-/// NOTE: The elements are ordered!
+/// Note block kind; the discriminant is the sprite row and the `superjumptype` given to players, so the order is fixed.
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum NoteBlockType {
@@ -29,17 +29,24 @@ pub enum NoteBlockType {
 
 crate::enum_from_u8!(NoteBlockType, 3);
 
+/// Note block; `state` 1 and 2 are a sideways wobble, 3 and 4 a vertical one, each returning to 0.
 #[derive(Clone)]
 
 pub struct B_NoteBlock {
     pub io_block: IO_Block,
 
+    /// Number of animation frames.
     pub iNumSprites: i16,
+    /// Ticks per animation frame.
     pub animationSpeed: i16,
+    /// X offset (pixels) of the current animation frame.
     pub drawFrame: i16,
+    /// Tick counter toward the next animation frame.
     pub animationTimer: i16,
+    /// Width (pixels) of the frame strip.
     pub animationWidth: i16,
     pub iType: NoteBlockType,
+    /// Sprite row offset (pixels) for the kind.
     pub iTypeOffsetY: i16,
 }
 impl_base!(B_NoteBlock => io_block: IO_Block);

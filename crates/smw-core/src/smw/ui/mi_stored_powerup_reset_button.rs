@@ -1,4 +1,4 @@
-//! Port of src/smw/ui/MI_StoredPowerupResetButton.cpp
+//! The Reset Stored Items button, drawn with the four players' stored powerups.
 
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
@@ -10,6 +10,7 @@ use crate::common::ui::mi_button::MI_Button;
 use crate::common::uicontrol::{TextAlign, UI_ControlTrait};
 use crate::globals::*;
 
+/// A button that also draws each player's stored powerup at its right end.
 pub struct MI_StoredPowerupResetButton {
     pub mi_button: MI_Button,
 }

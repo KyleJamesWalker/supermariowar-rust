@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/blocks/FlipBlock.cpp
+//! Flip block: spins and lets players pass for a while when hit from below; shells and super stomps break it.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -21,27 +21,20 @@ use crate::smw::player::CPlayer;
 
 //------------------------------------------------------------------------------
 // class flip block
-// Known Bug:  If you have two flip blocks vertically aligned like this:
-//
-// ['']  or  ['']['']  etc.
-// ['']      ['']['']
-//
-// And you hit both of them from the bottom, then keep jumping so that the bottom one
-// stops to support you, and then the top one stops spinning, you can "hide" under the
-// top block.  I was thinking about fixing this, but I don't know what the correct
-// behavior should be if you're in a flip block when it stops spinning.  Plus, it is kind
-// of cool to hide under these blocks.  You are somewhat invincible, but someone can come
-// along and hit your support out from under you and you'll fall out and if they have star
-// power, you're dead.  Plus fireballs have a large enough collision box that you can be hit
-// with them too.
+// Trap: a player inside a flip block when it stops spinning stays there, half protected, until the block below is hit.
 //------------------------------------------------------------------------------
+/// Flip block whose `state` runs 0 solid, 1 spinning (passable), 2 broken, 3 removed.
 #[derive(Clone)]
 pub struct B_FlipBlock {
     pub io_block: IO_Block,
 
+    /// Tick counter toward the next spin frame.
     pub counter: i16,
+    /// X offset (pixels) of the current spin frame.
     pub frame: i16,
+    /// Ticks spinning; the block turns solid again at `ticks(240)`.
     pub timer: i16,
+    /// Width (pixels) of the frame strip.
     pub animationWidth: i16,
 }
 impl_base!(B_FlipBlock => io_block: IO_Block);
@@ -62,6 +55,7 @@ impl B_FlipBlock {
         b
     }
 
+    /// Spawns the broken-block debris and sound.
     fn explode(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         let spr = g.rm.spr_brokenflipblock;
@@ -74,6 +68,7 @@ impl B_FlipBlock {
         if_sound_on_play(g, &mut gp.rm.sfx_breakblock);
     }
 
+    /// A moving shell, thrown block or fast box breaks the block; an attack zone starts it spinning.
     fn object_hit_side(&mut self, g: &mut Game, object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
         let mut object = object;
         let r#type = object.get_moving_object_type();

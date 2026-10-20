@@ -1,4 +1,4 @@
-//! Port of src/smw/menu/options/GraphicsOptionsMenu.cpp
+//! Graphics options: top layer, frame rate, fullscreen and the menu, world and game graphics packs.
 
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::common::global_constants::FRAME_RATE_DISPLAY;
@@ -14,15 +14,13 @@ use crate::globals::*;
 use crate::smw::menu::options::select_field;
 use crate::smw::ui::mi_packs_field::MI_PacksField;
 
-/*
-    You can switch between windowed and fullscreen mode,
-    as well as change the graphic packs here.
-*/
+/// Windowed or fullscreen mode, frame rate and the graphics packs.
 #[derive(Default)]
 pub struct UI_GraphicsOptionsMenu {
     pub ui_menu: UI_Menu,
 
     pub miTopLayerField: Ctl<MI_SelectField<bool>>,
+    /// Writes `framelimiter`: `FRAME_RATE_DISPLAY`, or 201 to 207 for a fixed rate.
     pub miFrameLimiterField: Ctl<MI_SelectField<i16>>,
     pub miFullscreenField: Ctl<MI_SelectField<bool>>,
 

@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/powerup/PU_FirePowerup.cpp
+//! Fire flower: gives the player the fireball power.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;

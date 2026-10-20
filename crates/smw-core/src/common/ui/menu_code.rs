@@ -1,18 +1,23 @@
-//! Port of src/common/ui/MenuCode.h
+//! The codes menu controls return to say what happened, and the menu navigation directions.
 
+/// What a control or menu reports back to the menu state; one of the `MENU_CODE_*` constants.
 pub type MenuCodeEnum = i32;
 
+/// Focus moved in that direction.
 pub const MENU_CODE_NEIGHBOR_UP: MenuCodeEnum = 0;
 pub const MENU_CODE_NEIGHBOR_DOWN: MenuCodeEnum = 1;
 pub const MENU_CODE_NEIGHBOR_LEFT: MenuCodeEnum = 2;
 pub const MENU_CODE_NEIGHBOR_RIGHT: MenuCodeEnum = 3;
+/// Nothing happened.
 pub const MENU_CODE_NONE: MenuCodeEnum = 4;
 pub const MENU_CODE_CLICKED: MenuCodeEnum = 5;
+/// The control stopped modifying.
 pub const MENU_CODE_UNSELECT_ITEM: MenuCodeEnum = 6;
 pub const MENU_CODE_INPUT_TYPE_CHANGED: MenuCodeEnum = 7;
 pub const MENU_CODE_INPUT_DEVICE_CHANGED: MenuCodeEnum = 8;
 pub const MENU_CODE_CANCEL_INPUT: MenuCodeEnum = 9;
 pub const MENU_CODE_START_GAME: MenuCodeEnum = 10;
+/// The control started modifying and takes input itself.
 pub const MENU_CODE_MODIFY_ACCEPTED: MenuCodeEnum = 11;
 pub const MENU_CODE_BONUS_DONE: MenuCodeEnum = 12;
 pub const MENU_CODE_EXIT_APPLICATION: MenuCodeEnum = 13;
@@ -128,6 +133,7 @@ pub const MENU_CODE_TO_NET_ROOM_START_IN_PROGRESS: MenuCodeEnum = 116;
 pub const MENU_CODE_NET_ROOM_GO: MenuCodeEnum = 117;
 pub const MENU_CODE_NET_JOIN_ROOM_PASSWORD_OK: MenuCodeEnum = 118;
 
+/// A direction focus can move in; indexes `UI_Control::m_neighbors`.
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum MenuNavDirection {

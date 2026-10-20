@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/moving/MO_BulletBill.cpp
+//! Bullet Bill projectile, fired by a player's powerup or by a map cannon.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -28,24 +28,33 @@ use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
 //------------------------------------------------------------------------------
 // class bulletbill
 //------------------------------------------------------------------------------
+/// Bullet Bill flying straight across the screen; stompable, deadly from the side.
 #[derive(Clone)]
 pub struct MO_BulletBill {
     pub io_moving_object: IO_MovingObject,
 
+    /// Sprite for the falling corpse.
     pub spr_dead: SpriteId,
 
+    /// Owner's color, or 0 for a cannon shot.
     pub iColorID: i16,
 
+    /// Sprite row offset (pixels) for the color, 64 per color.
     pub iColorOffsetY: i16,
+    /// Sprite row offset (pixels) for the direction: 0 left, 32 right.
     pub iDirectionOffsetY: i16,
 
+    /// Fired from a map cannon: no owner, and hidden behind the cannon until it clears it.
     pub fIsSpawned: bool,
+    /// `ClipEdge` value for the side of the cannon the bullet is hidden behind.
     pub iHiddenDirection: i16,
+    /// X (pixels) of the cannon edge the bullet is clipped against.
     pub iHiddenPlane: i16,
 }
 impl_base!(MO_BulletBill => io_moving_object: IO_MovingObject);
 
 impl MO_BulletBill {
+    /// A player's bullet (`isspawned` false) enters from the screen edge behind its direction of travel.
     pub fn new(g: &mut Game, nspr: SpriteId, nsprdead: SpriteId, pos: Vec2s, nspeed: f32, playerID: i16, isspawned: bool) -> Self {
         let mut o = MO_BulletBill {
             io_moving_object: IO_MovingObject::new(g, nspr, pos, 4, 8, 30, 28, 1, 2, -1, -1, -1, -1),
@@ -108,7 +117,7 @@ impl MO_BulletBill {
         o
     }
 
-    // For preview drawing
+    /// Draws at half scale for the map preview, offset by `iOffsetX`, `iOffsetY` (pixels).
     pub fn draw_offset(&mut self, g: &mut Game, iOffsetX: i16, iOffsetY: i16) {
         let surface = g.rm.sprite(self.spr);
         let clipRect = Rect { x: iOffsetX as i32, y: iOffsetY as i32, w: 320, h: 240 };
@@ -126,6 +135,7 @@ impl MO_BulletBill {
         }
     }
 
+    /// Stomped: bounces the player and kills the bullet.
     pub fn hittop(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut gp = g.ptr();
         let mut p = player;
@@ -143,6 +153,7 @@ impl MO_BulletBill {
         false
     }
 
+    /// Side contact: kills an unshielded player other than the owner (teammates only with team collision on).
     pub fn hitother(&mut self, g: &mut Game, player: PlayerId) -> bool {
         if g.player(player).is_shielded() || g.player(player).globalID == self.iPlayerID {
             return false;
@@ -158,6 +169,7 @@ impl MO_BulletBill {
         true
     }
 
+    /// Updates `iDirectionOffsetY` from the sign of `velx`.
     pub fn set_direction_offset(&mut self) {
         self.iDirectionOffsetY = if self.velx < 0.0 { 0 } else { 32 };
     }
@@ -172,7 +184,6 @@ impl CObjectTrait for MO_BulletBill {
     fn update(&mut self, g: &mut Game) {
         let fx = self.fx + self.velx;
         self.set_xf(fx);
-        // setYf(fy + vely);
 
         self.animate();
 

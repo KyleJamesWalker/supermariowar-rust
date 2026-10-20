@@ -1,4 +1,4 @@
-//! Port of src/smw/ui/MI_PlayerSelect.cpp
+//! The main menu Players field: each of the four players set to none, human or CPU.
 
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
@@ -10,6 +10,7 @@ use crate::common::ui::mi_image::MI_Image;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
 
+/// Writes `game_values.playercontrol` (0 none, 1 human, 2 CPU) for each player, keeping at least two in.
 pub struct MI_PlayerSelect {
     pub ui_control: UI_Control,
 
@@ -17,9 +18,12 @@ pub struct MI_PlayerSelect {
 
     pub szName: String,
     pub iWidth: i16,
+    /// Pixels from the left edge to where the player icons area starts.
     pub iIndent: i16,
 
+    /// Player 0 to 3 whose control up and down change; left and right move it.
     pub iSelectedPlayer: i16,
+    /// X offset in pixels of each player's icon from the field's left edge.
     pub iPlayerPosition: [i16; 4],
 
     pub miModifyImage: Box<MI_Image>,
@@ -27,6 +31,7 @@ pub struct MI_PlayerSelect {
 crate::impl_base!(MI_PlayerSelect => ui_control: UI_Control);
 
 impl MI_PlayerSelect {
+    /// `x`, `y`, `width` and `indent` are in pixels.
     pub fn new(nspr: SpriteId, x: i16, y: i16, name: impl Into<String>, width: i16, indent: i16) -> Self {
         let ui_control = UI_Control::new(x, y);
         let mut miModifyImage = Box::new(MI_Image::new(nspr, ui_control.m_pos.x, ui_control.m_pos.y - 6, 32, 128, 78, 78, 4, 1, 8));
@@ -52,6 +57,7 @@ impl MI_PlayerSelect {
         this
     }
 
+    /// Moves the selection ring onto the selected player.
     pub fn set_image_position(&mut self) {
         let x = self.m_pos.x + self.iPlayerPosition[self.iSelectedPlayer as usize] - 22;
         let y = self.m_pos.y - 7;
@@ -145,7 +151,7 @@ impl UI_ControlTrait for MI_PlayerSelect {
         MENU_CODE_NONE
     }
 
-    /// Not in upstream: tapping a player's icon selects that player and steps its control, as Down does.
+    /// Tapping a player's icon selects that player and steps its control, as Down does.
     fn mouse_click(&mut self, g: &mut Game, iMouseX: i16, iMouseY: i16) -> MenuCodeEnum {
         if self.fDisable {
             return MENU_CODE_NONE;

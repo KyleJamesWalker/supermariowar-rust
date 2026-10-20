@@ -1,4 +1,4 @@
-//! Port of src/smw/ui/MI_StringScroll.cpp
+//! A scrolling list of strings, used for the saved server list.
 
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
@@ -10,6 +10,7 @@ use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
 use crate::smw::gs_gameplay::lookup_team_id;
 
+/// One list row.
 pub struct StringScrollElement {
     str: String,
     pub _alias: Aliased,
@@ -20,28 +21,36 @@ impl StringScrollElement {
         StringScrollElement { _alias: Aliased::new(), str: text.to_string() }
     }
 
+    /// Draws the text at row origin `x`, `y`, cut to `max_w` pixels.
     pub fn draw(&self, g: &mut Game, x: i32, y: i32, max_w: u32) {
         let mut gp = g.ptr();
         gp.rm.menu_font_large.draw_chop_right(g, x + 28, y + 5, max_w as i32, &self.str);
     }
 }
 
+/// A list that returns `iAcceptCode` or `iCancelCode` on select or cancel; inactive until [`Self::activate`].
 pub struct MI_StringScroll {
     pub ui_control: UI_Control,
 
     pub items: Vec<StringScrollElement>,
-    /// Index into `items` (the C++ iterator).
+    /// Index into `items` of the selected entry; tracks `iIndex`.
     pub current: usize,
 
     pub spr: SpriteId,
 
+    /// Rows shown at once.
     pub iNumLines: i16,
+    /// Highlighted row on screen, or -1 when the list is inactive.
     pub iSelectedLine: i16,
+    /// Index of the selected entry.
     pub iIndex: u16,
     pub iWidth: i16,
+    /// Index of the first entry shown.
     pub iOffset: i16,
 
+    /// Selection index past which the list scrolls instead of moving the highlight.
     pub iTopStop: i16,
+    /// Selection index after which the list stops scrolling and the highlight moves again.
     pub iBottomStop: i16,
 
     pub sTitle: String,
@@ -52,6 +61,7 @@ pub struct MI_StringScroll {
 crate::impl_base!(MI_StringScroll => ui_control: UI_Control);
 
 impl MI_StringScroll {
+    /// `x`, `y` and `width` are in pixels; `numlines` is the rows shown at once.
     pub fn new(nspr: SpriteId, x: i16, y: i16, width: i16, numlines: i16) -> Self {
         MI_StringScroll {
             ui_control: UI_Control::new(x, y),
@@ -71,6 +81,7 @@ impl MI_StringScroll {
         }
     }
 
+    /// Appends an entry and moves the selection back to the first one.
     pub fn add(&mut self, item: &str) {
         self.items.push(StringScrollElement::new(item));
 
@@ -80,6 +91,7 @@ impl MI_StringScroll {
         self.iBottomStop = (self.items.len() as i64 - self.iNumLines as i64 + self.iTopStop as i64) as i16;
     }
 
+    /// Removes every entry and deactivates the list.
     pub fn clear_items(&mut self) {
         self.items.clear();
         self.current = 0;
@@ -97,10 +109,12 @@ impl MI_StringScroll {
         self.iCancelCode = code;
     }
 
+    /// Highlights the top row so the list takes input visibly.
     pub fn activate(&mut self) {
         self.iSelectedLine = 0;
     }
 
+    /// Removes the highlight.
     pub fn deactivate(&mut self) {
         self.iSelectedLine = -1;
     }
@@ -109,6 +123,7 @@ impl MI_StringScroll {
         self.iIndex
     }
 
+    /// Selects the next entry; false at the end of the list.
     pub fn move_next(&mut self) -> bool {
         if self.items.is_empty() {
             return false;
@@ -130,6 +145,7 @@ impl MI_StringScroll {
         true
     }
 
+    /// Selects the previous entry; false at the start of the list.
     pub fn move_prev(&mut self) -> bool {
         if self.items.is_empty() {
             return false;

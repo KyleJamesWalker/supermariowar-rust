@@ -1,14 +1,23 @@
-//! Not in the C++: the messages between the browser build and `smw_relay`, specified in docs/guides/RELAY.md.
+//! The frames between a game's WebSocket and `smw_relay`'s switch, specified in docs/guides/RELAY.md.
 
+/// Game to relay: open virtual connection `conn` to the address in the payload.
 pub const CONNECT: u8 = 1;
+/// Relay to game: `conn` is open.
 pub const ACCEPTED: u8 = 2;
+/// Relay to game: `conn` was refused.
 pub const REFUSED: u8 = 3;
+/// Either way: one message on `conn`.
 pub const DATA: u8 = 4;
+/// Either way: `conn` is closed.
 pub const DISCONNECT: u8 = 5;
+/// Relay to game, first: the game's own virtual address, on `conn` 0.
 pub const WELCOME: u8 = 9;
 
+/// `[kind u8][conn u16 big-endian]` before the payload.
 pub const HEADER_LEN: usize = 3;
+/// An IPv4 address and a big-endian port.
 pub const ADDRESS_LEN: usize = 6;
+/// The largest WebSocket message the relay accepts, in bytes.
 pub const MAX_MESSAGE_LEN: usize = 64 * 1024;
 
 pub fn encode(kind: u8, conn: u16, payload: &[u8]) -> Vec<u8> {
@@ -19,6 +28,7 @@ pub fn encode(kind: u8, conn: u16, payload: &[u8]) -> Vec<u8> {
     frame
 }
 
+/// `(kind, conn, payload)`; `None` for a frame shorter than the header.
 pub fn decode(frame: &[u8]) -> Option<(u8, u16, &[u8])> {
     if frame.len() < HEADER_LEN {
         return None;

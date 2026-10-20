@@ -13,6 +13,7 @@ pub enum Owner {
     Drawable(usize),
 }
 
+/// The owner for writes drawn by the value at `drawable`.
 pub fn owner_of<T: ?Sized>(drawable: *const T) -> Owner {
     Owner::Drawable(drawable as *const u8 as usize)
 }
@@ -23,6 +24,7 @@ enum Op {
     Fill { rect: Option<Rect>, color: u32 },
 }
 
+/// One recorded screen write; `seq` numbers the owner's writes since [`set_owner`], pairing writes across ticks.
 #[derive(Clone, Copy)]
 pub struct Cmd {
     owner: Owner,
@@ -67,6 +69,7 @@ pub fn begin(screen: *mut Surface, record_only: bool) {
     RECORD.with_borrow_mut(|r| *r = Some(Draw::new()));
 }
 
+/// Stops recording and returns the writes since [`begin`].
 pub fn end() -> Draw {
     SCREEN.set(std::ptr::null_mut());
     RECORD_ONLY.set(false);

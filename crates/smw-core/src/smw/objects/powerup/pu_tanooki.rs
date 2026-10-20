@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/powerup/PU_Tanooki.cpp
+//! Tanooki suit powerup: gives the suit, or stores one if already wearing it.
 
 use crate::smw::players::PlayerId;
 use crate::game::Game;

@@ -1,4 +1,4 @@
-//! Port of src/smw/gamemodes/CaptureTheFlag.cpp
+//! Capture the flag mode.
 
 use crate::smw::object_container::ObjectId;
 use crate::smw::players::PlayerId;
@@ -15,9 +15,8 @@ use crate::smw::objects::carriable::co_flag::CO_Flag;
 use crate::smw::objects::moving::mo_flag_base::MO_FlagBase;
 use crate::smw::player::CPlayer;
 
-//Capture The Flag mode - each team has a base and a flag
-//Protect your colored flag from being taken and score a point
-//for stealing another teams flag and returning it to your base
+/// Capture the flag: each team has a base and a flag. Returning an enemy flag to your
+/// base scores a point; kills score nothing.
 #[derive(Clone)]
 pub struct CGM_CaptureTheFlag {
     pub cgame_mode: CGameMode,

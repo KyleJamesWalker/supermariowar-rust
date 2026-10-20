@@ -1,7 +1,5 @@
-//! Port of src/common/gfx/gfxFont.cpp
-//!
-//! `std::string_view` text is taken as bytes; `char` is signed on the reference platforms, so
-//! bytes >= 0x80 are below `ASCII_FIRST_PRINTABLE` and advance like a space.
+//! Bitmap fonts loaded from a PNG strip of glyphs. Text is drawn byte by byte; bytes below `!`, including every byte
+//! >= 0x80 (read as signed), advance by the width of the first glyph.
 
 use crate::common::gfx::soft_surface::SurfacePtr;
 use crate::common::gfx::soft_surface::Rect;
@@ -12,14 +10,18 @@ use crate::globals::*;
 use std::io::Write;
 use std::path::Path;
 
+/// Character code of the font image's first glyph (`!`).
 const ASCII_FIRST_PRINTABLE: i32 = 33;
 
+/// A glyph's column span in the font image, in pixels.
 #[derive(Clone, Copy, Default)]
 struct GlyphArea {
     x: i32,
     w: i32,
 }
 
+/// A bitmap font: row 0 of the image separates glyphs with magenta markers, rows below hold the glyphs, and
+/// the pixel at (0, 1) is the color key.
 #[derive(Default)]
 pub struct gfxFont {
     m_sprite: gfxSprite,
@@ -36,7 +38,7 @@ impl gfxFont {
         Self::default()
     }
 
-    /// `gfxFont(const std::filesystem::path& path)`; throws `std::string` on failure.
+    /// Loads a font image; panics with a `String` payload when it cannot be read or holds no glyphs.
     pub fn from_path(g: &mut Game, path: &str) -> Self {
         let path_str = Path::new(path).to_string_lossy().into_owned();
 
@@ -48,7 +50,6 @@ impl gfxFont {
         }
     }
 
-    /// `from_path` on an image the software decoder read.
     fn from_decoded(path_str: &str, image: &soft_image::Decoded) -> Self {
         let (width, _) = image.size();
         let raw_magenta = image.map_rgb(255, 0, 255);
@@ -64,11 +65,12 @@ impl gfxFont {
         gfxFont { m_sprite, m_glyph_areas, _alias: Aliased::new() }
     }
 
+    /// Draws `text` with its left edge at `x` and top at `y`, offset by camera shake.
     pub fn draw(&self, g: &mut Game, x: i32, y: i32, text: &str) {
         self.draw_range(g, x, y, text, i32::MIN, i32::MAX);
     }
 
-    /// `draw(x, y, text, dst_min_x, dst_max_x)`
+    /// Draws `text` at (`x`, `y`), skipping glyphs that end left of `dst_min_x` and stopping past `dst_max_x`.
     pub fn draw_range(&self, g: &mut Game, mut x: i32, y: i32, text: &str, dst_min_x: i32, dst_max_x: i32) {
         for &b in text.as_bytes() {
             if dst_max_x < x {
@@ -100,25 +102,30 @@ impl gfxFont {
         }
     }
 
+    /// Draws `text` centered on `x`.
     pub fn draw_centered(&self, g: &mut Game, x: i32, y: i32, text: &str) {
         let mut gp = g.ptr();
         self.draw(gp.get(), x - self.get_width(text) / 2, y, text);
     }
 
+    /// Draws `text` centered on `x`, cut to the `width` pixels around it.
     pub fn draw_chop_centered(&self, g: &mut Game, x: i32, y: i32, mut width: i32, text: &str) {
         width /= 2;
         self.draw_range(g, x - self.get_width(text) / 2, y, text, x - width, x + width);
     }
 
+    /// Draws `text` ending at `x`.
     pub fn draw_right_justified(&self, g: &mut Game, x: i32, y: i32, text: &str) {
         let mut gp = g.ptr();
         self.draw(gp.get(), x - self.get_width(text), y, text);
     }
 
+    /// Draws `text` from `x`, cut at `width` pixels to the right.
     pub fn draw_chop_right(&self, g: &mut Game, x: i32, y: i32, width: i32, text: &str) {
         self.draw_range(g, x, y, text, x, x + width);
     }
 
+    /// Draws `text` right-justified at `x`, cut at `width` pixels to the left.
     pub fn draw_chop_left(&self, g: &mut Game, x: i32, y: i32, width: i32, text: &str) {
         self.draw_range(g, x - self.get_width(text), y, text, x - width, x);
     }
@@ -131,10 +138,12 @@ impl gfxFont {
         }
     }
 
+    /// Glyph height in pixels, excluding the marker row.
     pub fn get_height(&self) -> i32 {
         self.m_sprite.get_height() - 1
     }
 
+    /// Width of `text` in pixels.
     pub fn get_width(&self, text: &str) -> i32 {
         let mut width = 0;
         for &b in text.as_bytes() {

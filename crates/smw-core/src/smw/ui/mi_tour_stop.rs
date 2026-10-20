@@ -1,4 +1,4 @@
-//! Port of src/smw/ui/MI_TourStop.cpp
+//! The read-only summary of a tour or world stage, with its Start button.
 
 use crate::game::Game;
 use crate::common::game_mode::*;
@@ -16,6 +16,7 @@ use crate::common::uicontrol::{TextAlign, UI_Control, UI_ControlTrait};
 use crate::globals::*;
 
 
+/// Disabled fields describing a stop, refreshed by [`Self::refresh`]; only Start takes input.
 pub struct MI_TourStop {
     pub ui_control: UI_Control,
 
@@ -26,8 +27,10 @@ pub struct MI_TourStop {
     miStartButton: Box<MI_Button>,
 
     miBonusField: Option<Box<MI_SelectField<i16>>>,
+    /// World stages only: markers either side of a final stage.
     miEndStageImage: [Option<Box<MI_Image>>; 2],
 
+    /// World stages only: up to 10 bonus icons, each over a background colored by winner place.
     miBonusIcon: [Option<Box<MI_Image>>; 10],
     miBonusBackground: [Option<Box<MI_Image>>; 10],
 
@@ -35,12 +38,13 @@ pub struct MI_TourStop {
     miTourStopMenuRightHeaderBar: Box<MI_Image>,
     miTourStopMenuHeaderText: Box<MI_Text>,
 
+    /// World layout, with the bonus row and final stage markers.
     fIsWorld: bool,
 }
 crate::impl_base!(MI_TourStop => ui_control: UI_Control);
 
 impl MI_TourStop {
-    //Call with x = 70 and y == 80
+    /// `fWorld` builds the world layout with its bonus row.
     pub fn new(g: &mut Game, x: i16, y: i16, fWorld: bool) -> Self {
         let mut gp = g.ptr();
         let fIsWorld = fWorld;
@@ -122,7 +126,7 @@ impl MI_TourStop {
         }
     }
 
-    /// `MI_TourStop::Refresh(short iTourStop)`; hides the `UI_Control::Refresh()` virtual like the C++ overload.
+    /// Shows stop `iTourStop`'s mode, goal, score, map and world bonuses; only game stages (`iStageType` 0) change it.
     pub fn refresh(&mut self, g: &mut Game, iTourStop: i16) {
         let tourstop: Ptr<TourStop> = g.game_values.tour_stop(iTourStop as usize as usize);
 

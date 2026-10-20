@@ -21,7 +21,7 @@ impl Decoded {
     }
 }
 
-/// Decodes 8-bit RGB, 8-bit RGBA and 1-8 bit palette PNGs without a tRNS chunk. Other PNGs return `None`.
+/// Decodes non-interlaced 8-bit RGB, 8-bit RGBA and 1-8 bit palette PNGs without a tRNS chunk. Other PNGs return `None`.
 pub fn decode_png(data: &[u8]) -> Option<Decoded> {
     let mut decoder = png::Decoder::new(std::io::Cursor::new(data));
     decoder.set_transformations(png::Transformations::IDENTITY);

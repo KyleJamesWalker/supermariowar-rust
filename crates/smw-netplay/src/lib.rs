@@ -1,4 +1,4 @@
-//! The netplay protocol (`common_netplay`, C++ src/common_netplay) and the lobby server (`server`, C++ src/server).
+//! The netplay lobby protocol (`common_netplay`) and the lobby server (`server`).
 
 #![allow(
     non_snake_case,

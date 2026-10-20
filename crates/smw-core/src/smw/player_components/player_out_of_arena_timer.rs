@@ -1,4 +1,4 @@
-//! Port of src/smw/player_components/PlayerOutOfArenaTimer.cpp
+//! Out-of-arena timer: a player above the top of the screen too long dies.
 
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -9,7 +9,9 @@ use crate::smw::player::CPlayer;
 
 #[derive(Clone, Default)]
 pub struct PlayerOutOfArenaTimer {
+    /// Ticks toward the next countdown second.
     pub timer: i16,
+    /// Seconds left on the countdown shown above the player; the player dies when it goes below 0.
     pub displaytimer: i16,
     pub _alias: Aliased,
 }
@@ -24,6 +26,7 @@ impl PlayerOutOfArenaTimer {
         self.displaytimer = (g.game_values.outofboundstime as i32 - 1) as i16;
     }
 
+    /// Counts down while the player is fully above the screen and not rising fast.
     pub fn update(&mut self, g: &mut Game, player: &mut CPlayer) {
         if player.iy < 0 {
             if (player.bottom_y() < -1 || (player.bottom_y() <= 1 && player.vely <= vel(0.8f32)))

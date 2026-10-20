@@ -1,4 +1,5 @@
-//! Port of src/common/map.cpp
+//! The level map: tile layers, blocks, warps, spawn areas, hazards and moving platforms, with map file loading,
+//! saving, drawing and previews.
 
 pub mod map_reader;
 pub mod map_reader15xx;
@@ -34,14 +35,18 @@ use std::ffi::{CStr, CString};
 use std::io::Write;
 use std::ptr::{null, null_mut};
 
+/// Frames in an animated tile's cycle.
 pub const NUM_FRAMES_IN_TILE_ANIMATION: i16 = 4;
+/// Ticks per animated tile frame; tile redraws are spread across these ticks.
 pub const NUM_FRAMES_BETWEEN_TILE_ANIMATION: i16 = 8;
 
+/// How much of a map file to read: everything, enough to draw a preview, or only the summary header.
 pub type ReadType = u8;
 pub const read_type_full: ReadType = 0;
 pub const read_type_preview: ReadType = 1;
 pub const read_type_summary: ReadType = 2;
 
+/// Kind of item a map places at load.
 pub type MapItemType = u8;
 pub const GreenSpring: MapItemType = 0;
 pub const Spike: MapItemType = 1;
@@ -50,12 +55,14 @@ pub const GoldenSpring: MapItemType = 3;
 pub const StickyKuriboShoe: MapItemType = 4;
 pub const ThrowBox: MapItemType = 5;
 
+/// A position in pixels.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Point {
     pub x: i16,
     pub y: i16,
 }
 
+/// Direction a player presses to enter a warp tile.
 pub type WarpEnterDirection = i32;
 pub const WARP_DOWN: WarpEnterDirection = 0;
 pub const WARP_LEFT: WarpEnterDirection = 1;
@@ -63,6 +70,7 @@ pub const WARP_UP: WarpEnterDirection = 2;
 pub const WARP_RIGHT: WarpEnterDirection = 3;
 pub const WARP_UNDEFINED: WarpEnterDirection = -1;
 
+/// Direction a player moves when leaving a warp exit.
 pub type WarpExitDirection = i32;
 pub const WARP_EXIT_UP: WarpExitDirection = 0;
 pub const WARP_EXIT_RIGHT: WarpExitDirection = 1;
@@ -70,6 +78,7 @@ pub const WARP_EXIT_DOWN: WarpExitDirection = 2;
 pub const WARP_EXIT_LEFT: WarpExitDirection = 3;
 pub const WARP_EXIT_UNDEFINED: WarpExitDirection = -1;
 
+/// A warp entrance on one tile; tiles with the same `connection` and `id` form one pipe.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Warp {
     pub direction: WarpEnterDirection,
@@ -77,6 +86,7 @@ pub struct Warp {
     pub id: i16,
 }
 
+/// Where a warp sends a player.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct WarpExit {
     pub direction: WarpExitDirection,
@@ -96,6 +106,8 @@ pub struct WarpExit {
     pub locktimer: i16,
 }
 
+/// A rectangle of tiles players can spawn in. `width` and `height` are one less than its span in tiles;
+/// `size` is its tile count, the weight for choosing it.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SpawnArea {
     pub left: i16,
@@ -105,6 +117,7 @@ pub struct SpawnArea {
     pub size: i16,
 }
 
+/// An item placed at tile (`ix`, `iy`).
 #[derive(Clone, Copy, Debug, Default)]
 pub struct MapItem {
     pub itype: MapItemType,
@@ -112,6 +125,8 @@ pub struct MapItem {
     pub iy: i16,
 }
 
+/// A hazard at (`ix`, `iy`) in 16-pixel units. `itype` is 0 fireball chain, 1 rotodiscs, 2 bullet bill cannon,
+/// 3 flame cannon or 4 to 7 piranha plants; the params mean different things per type.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct MapHazard {
     pub itype: i16,
@@ -122,6 +137,8 @@ pub struct MapHazard {
     pub dparam: [f32; NUMMAPHAZARDPARAMS as usize],
 }
 
+/// One tile in a layer: `iID` is a tileset index or `TILESETNONE`, `TILESETANIMATED` or `TILESETUNKNOWN`,
+/// and `iCol`/`iRow` locate it in that tileset (for animated tiles, `iCol` counts 4-frame groups).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct TilesetTile {
     pub iID: i16,
@@ -139,7 +156,7 @@ pub struct PlatformId {
 }
 
 impl PlatformId {
-    /// No platform: what a null `MovingPlatform*` was in the C++.
+    /// No platform.
     pub const NONE: PlatformId = PlatformId { slot: u16::MAX, generation: 0 };
 
     pub fn is_none(self) -> bool {
@@ -155,6 +172,7 @@ impl Default for PlatformId {
 
 #[derive(Clone)]
 
+/// An animated map or platform tile, with its frames prerendered onto the map's animation sheet.
 pub struct AnimatedTile {
     pub id: i16,
     pub layers: [TilesetTile; 4],
@@ -167,7 +185,6 @@ pub struct AnimatedTile {
 }
 
 impl AnimatedTile {
-    /// `new AnimatedTile()` (value-initialized).
     fn new() -> Self {
         AnimatedTile {
             id: 0,
@@ -182,6 +199,8 @@ impl AnimatedTile {
     }
 }
 
+/// The object placed on a tile: `iType` -1 for none, else a block type; `iSettings` hold powerup weights or a
+/// switch state, and `fHidden` blocks start invisible.
 #[derive(Clone, Copy, Debug)]
 pub struct MapBlock {
     pub iType: i16,
@@ -199,7 +218,7 @@ const fn r(x: i32, y: i32, w: i32, h: i32) -> Rect {
     Rect { x, y, w, h }
 }
 
-//[Direction][Frame]
+/// Flame cannon sprite frames by `[direction][frame]`, in pixels of the full-size sheet.
 pub static g_rFlameRects: [[Rect; 4]; 4] = [
     [r(0, 0, 96, 32), r(0, 32, 96, 32), r(0, 64, 96, 32), r(0, 96, 96, 32)],
     [r(96, 0, 96, 32), r(96, 32, 96, 32), r(96, 64, 96, 32), r(96, 96, 96, 32)],
@@ -207,7 +226,7 @@ pub static g_rFlameRects: [[Rect; 4]; 4] = [
     [r(128, 128, 32, 96), r(160, 128, 32, 96), r(192, 128, 32, 96), r(224, 128, 32, 96)],
 ];
 
-//[Type][Direction][Frame]
+/// Piranha plant sprite frames by `[type][direction][frame]`, in pixels of the full-size sheet; zero rects are unused.
 pub static g_rPirhanaRects: [[[Rect; 4]; 4]; 4] = [
     [
         [r(0, 0, 32, 48), r(32, 0, 32, 48), r(64, 0, 32, 48), r(96, 0, 32, 48)],
@@ -235,12 +254,16 @@ pub static g_rPirhanaRects: [[[Rect; 4]; 4]; 4] = [
     ],
 ];
 
+/// Path dot sprite x offset and size in pixels, by draw size (0 full, 1 preview, 2 thumbnail).
 pub static iPlatformPathDotOffset: [i16; 3] = [0, 12, 18];
 pub static iPlatformPathDotSize: [i16; 3] = [12, 6, 4];
 
+/// Fireball sprite size in pixels, by draw size.
 pub static iFireballHazardSize: [i16; 3] = [18, 9, 5];
 
+/// Path marker sprite x offset in pixels, by draw size.
 pub static iStandardOffset: [i16; 3] = [0, 32, 48];
+/// Bullet bill path dot spacing per unit of speed, by draw size.
 pub static dBulletBillFrequency: [f32; 3] = [10.0, 5.0, 2.5];
 
 #[cfg(not(target_os = "emscripten"))]
@@ -251,6 +274,7 @@ fn small_delay(g: &mut Game) {
 #[cfg(target_os = "emscripten")]
 fn small_delay(_g: &mut Game) {}
 
+/// Screen width in pixels at draw size `iSize` (0 full, 1 half, 2 quarter); panics on any other size.
 fn get_screen_width(iSize: i32) -> i32 {
     match iSize {
         0 => App::screenWidth,
@@ -274,6 +298,7 @@ unsafe fn blit(src: *mut Surface, srcrect: *const Rect, dst: *mut Surface, dstre
     crate::common::gfx::blit::upper_blit(src, srcrect, dst, dstrect)
 }
 
+/// Draws `hazard` and its path at draw size `iSize` (0 full, 1 preview, 2 thumbnail), for editors and previews.
 pub fn draw_map_hazard(g: &mut Game, hazard: &MapHazard, iSize: i16, fDrawCenter: bool, dst: *mut Surface) {
         let mut gp = g.ptr();
     let s = iSize as usize;
@@ -433,6 +458,8 @@ unsafe fn blit_platform_tile(g: &mut Game, tile: &TilesetTile, iSize: i16, bltre
     }
 }
 
+/// Draws a platform's tiles and path at draw size `iSize` for editors and previews; `tiles` is column-major.
+/// `fDrawShadow` also marks the start and end positions.
 #[allow(clippy::too_many_arguments)]
 pub fn draw_platform(g: &mut Game, 
     pathtype: PlatformPathType,
@@ -627,7 +654,7 @@ pub fn draw_platform(g: &mut Game,
 
 const MW: usize = MAPWIDTH as usize;
 
-// clang arm64 offsets of CMap members in the C++ reference (tools/ref/cmap_layout.cpp).
+/// Byte offsets of map fields in the reference memory layout (tools/ref/cmap_layout.cpp) that [`CMap::cpp_byte`] reads.
 pub const CPP_OFF_MAPDATA: i32 = 38;
 pub const CPP_OFF_MAPDATATOP: i32 = 7238;
 pub const CPP_OFF_OBJECTDATA: i32 = 7538;
@@ -639,25 +666,33 @@ const MH: usize = MAPHEIGHT as usize;
 const ML: usize = MAPLAYERS as usize;
 const NSPAWN: usize = NUMSPAWNAREATYPES as usize;
 
+/// A loaded map. Grids are indexed `[x][y]` in tiles, 20 wide by 15 high.
 #[derive(Clone)]
 pub struct CMap {
     pub szBackgroundFile: String,
     pub backgroundID: i16,
+    /// Eyecandy effect bit flags for each of the three eyecandy layers.
     pub eyecandy: [i16; 3],
     pub musicCategoryID: i16,
 
     pub iNumRaceGoals: i16,
     pub iNumFlagBases: i16,
 
+    /// Tile layers 0 to 3, back to front; layers 2 and 3 draw over players when the top layer option is on.
     pub mapdata: [[[TilesetTile; ML]; MH]; MW],
+    /// Collision type of each tile.
     pub mapdatatop: [[TileType; MH]; MW],
     pub objectdata: [[MapBlock; MH]; MW],
+    /// The live block object on each tile during play.
     pub blockdata: [[ObjectId; MH]; MW],
+    /// Tiles where each spawn type may not spawn, by `[type][x][y]`.
     pub nospawn: [[[bool; MH]; MW]; NSPAWN],
 
     pub animatedtiles: Vec<Box<AnimatedTile>>,
 
+    /// Platforms loaded with the map.
     pub platforms: Vec<PlatformId>,
+    /// Platforms created during play; removed when they die or the map resets.
     pub tempPlatforms: Vec<PlatformId>,
     platform_slots: Vec<Option<Box<PlatformCell>>>,
     platform_generations: Vec<u16>,
@@ -665,6 +700,7 @@ pub struct CMap {
     pub mapitems: Vec<MapItem>,
     pub maphazards: Vec<MapHazard>,
 
+    /// Spawn areas by spawn type; only the first `numspawnareas[type]` are valid.
     pub spawnareas: [[SpawnArea; MAXSPAWNAREAS as usize]; NSPAWN],
     pub numspawnareas: [i16; NSPAWN],
     pub totalspawnsize: [i16; NSPAWN],
@@ -672,19 +708,25 @@ pub struct CMap {
     pub warpdata: [[Warp; MH]; MW],
     pub numwarpexits: i16,
     pub warpexits: [WarpExit; MAXWARPS as usize],
+    /// Ticks each warp connection has been locked.
     pub warplocktimer: [i16; 10],
     pub warplocked: [bool; 10],
+    /// Highest warp connection number in use.
     pub maxConnection: i16,
 
     pub tilebltrect: Rect,
     pub bltrect: Rect,
 
+    /// Pixel rectangles of the foreground layer redrawn each frame; only the first `numdrawareas` are valid.
     pub drawareas: [Rect; MAXDRAWAREAS as usize],
     pub numdrawareas: i16,
 
+    /// On/off state of the red, green, yellow and blue switches.
     pub iSwitches: [i16; 4],
+    /// Switch blocks in play: indices 0 to 3 are the toggles, 4 to 7 the blocks they control.
     pub switchBlocks: [Vec<ObjectId>; 8],
 
+    /// Map list auto filters (hazards, warps, ice and so on) the map matches.
     pub fAutoFilter: [bool; NUM_AUTO_FILTERS as usize],
 
     pub racegoallocations: [Point; MAXRACEGOALS as usize],
@@ -694,14 +736,19 @@ pub struct CMap {
     pub iTileAnimationTimer: i16,
     pub iTileAnimationFrame: i16,
 
+    /// Tile layers baked into background animation frames: 2 with the top layer option on, else 4.
     pub iAnimatedBackgroundLayers: i16,
+    /// The front and back map buffers animated tiles are redrawn into this tick.
     pub animatedFrontmapSurface: *mut Surface,
+    /// 1024x1024 sheet of every animated tile's prerendered frames.
     pub animatedTilesSurface: gfxSprite,
 
     pub iAnimatedTileCount: i16,
+    /// `animatedtiles` index ranges redrawn on each tick of the animation cycle.
     pub iAnimatedVectorIndices: [i16; NUM_FRAMES_BETWEEN_TILE_ANIMATION as usize + 1],
     pub animatedBackmapSurface: *mut Surface,
 
+    /// Permanent platforms grouped by draw layer.
     pub platformdrawlayer: [Vec<PlatformId>; 5],
 
     pub _alias: Aliased,
@@ -724,7 +771,7 @@ pub fn block_ptr(blocks: &CObjectContainer, id: ObjectId) -> Ptr<dyn IO_BlockTra
 }
 
 impl CMap {
-    /// C++ `new CMap`. Members the C++ leaves default-initialized start at zero.
+    /// An empty map with every field zeroed.
     pub fn new() -> Box<CMap> {
         Box::new(CMap {
             szBackgroundFile: String::new(),
@@ -776,17 +823,17 @@ impl CMap {
         })
     }
 
-    /// Returns the tile flags of the front-most visible tile.
+    /// Collision flags of tile (`x`, `y`). Indexing is column-major, so a `y` past the bottom reads the next column.
     pub fn map(&self, x: i32, y: i32) -> i32 {
         let flat = x * MAPHEIGHT + y;
         if (0..MAPWIDTH * MAPHEIGHT).contains(&flat) {
             return tile_to_flags(self.mapdatatop[(flat / MAPHEIGHT) as usize][(flat % MAPHEIGHT) as usize]) as i32;
         }
-        // Past the end, a non-zero byte belongs to a block pointer, which has no tile flags.
+        // Past the end, reads the bytes of the fields that follow; a block pointer byte has no tile flags.
         self.cpp_byte(CPP_OFF_MAPDATATOP + flat).map_or(0, |b| tile_to_flags(TileType(b)) as i32)
     }
 
-    /// `blocks` is the container that owns the map's blocks (`Game::noncolcontainer`).
+    /// The block at tile (`x`, `y`) in `blocks` (`Game::noncolcontainer`), or null; `y` past the bottom reads the next column.
     pub fn block(&self, blocks: &CObjectContainer, x: i16, y: i16) -> Ptr<dyn IO_BlockTrait> {
         let flat = x as i32 * MAPHEIGHT + y as i32;
         if (0..MAPWIDTH * MAPHEIGHT).contains(&flat) {
@@ -795,7 +842,7 @@ impl CMap {
         Ptr::null()
     }
 
-    /// The C++ `blockdata[x][y] == NULL` test, which compares the pointer without dereferencing it.
+    /// Whether no block sits at (`x`, `y`), with out-of-range cells read through [`cpp_byte`](Self::cpp_byte).
     pub fn block_is_null(&self, x: i16, y: i16) -> bool {
         let flat = x as i32 * MAPHEIGHT + y as i32;
         if (0..MAPWIDTH * MAPHEIGHT).contains(&flat) {
@@ -805,9 +852,8 @@ impl CMap {
         (0..8).all(|i| self.cpp_byte(off + i) == Some(0))
     }
 
-    /// One byte of the C++ CMap object at `off`, so out-of-range C++ indexing (which stays inside the
-    /// object) reads what it would. None is a byte of a non-null block pointer. Covers mapdata through
-    /// nospawn; anything else panics.
+    /// The byte at `off` in the reference memory layout, so out-of-range grid reads return the neighboring field's data.
+    /// `None` is a byte of a non-null block pointer. Covers `mapdata` through `nospawn`; any other offset panics.
     pub fn cpp_byte(&self, off: i32) -> Option<u8> {
         let cells = MAPWIDTH * MAPHEIGHT;
         let cell = |e: i32| ((e / MAPHEIGHT) as usize, (e % MAPHEIGHT) as usize);
@@ -850,14 +896,17 @@ impl CMap {
         panic!("C++ out-of-bounds CMap read at offset {} is not modelled", off);
     }
 
+    /// The warp entrance data at tile (`x`, `y`).
     pub fn warp(&mut self, x: i16, y: i16) -> &mut Warp {
         &mut self.warpdata[x as usize][y as usize]
     }
 
+    /// The placed object data at tile (`x`, `y`).
     pub fn blockat(&mut self, x: i16, y: i16) -> &mut MapBlock {
         &mut self.objectdata[x as usize][y as usize]
     }
 
+    /// Whether spawn type `iType` may spawn on tile (`x`, `y`).
     pub fn spawn(&self, iType: i16, x: i16, y: i16) -> bool {
         !self.nospawn[iType as usize][x as usize][y as usize]
     }
@@ -866,6 +915,7 @@ impl CMap {
         self.warplocked[connection as usize]
     }
 
+    /// Empties every tile, object, warp and no-spawn flag, and clears items, hazards, eyecandy and switches.
     pub fn clear_map(&mut self) {
         for j in 0..MH {
             for i in 0..MW {
@@ -898,6 +948,7 @@ impl CMap {
         self.bltrect.h = TILESIZE;
     }
 
+    /// Removes every permanent and temporary platform.
     pub fn clear_platforms(&mut self) {
         for iLayer in 0..5 {
             self.platformdrawlayer[iLayer].clear();
@@ -916,6 +967,7 @@ impl CMap {
         self.animatedtiles.clear();
     }
 
+    /// Loads the map file `file`; `iReadType` limits how much is read. Logs and returns on a file that will not open.
     pub fn load_map(&mut self, g: &mut Game, file: &str, iReadType: ReadType) {
         let mut gp = g.ptr();
         self.iTileAnimationTimer = 0;
@@ -970,6 +1022,7 @@ impl CMap {
         let _ = std::io::stdout().flush();
     }
 
+    /// Recomputes [`TileType::Gap`] for every tile.
     pub fn update_all_tile_gaps(&mut self, blocks: &CObjectContainer) {
         for j in 0..MAPHEIGHT as i16 {
             for i in 0..MAPWIDTH as i16 {
@@ -978,6 +1031,7 @@ impl CMap {
         }
     }
 
+    /// Recomputes gaps around tile (`i`, `j`) after it changes: the row it is on and the row below.
     pub fn update_tile_gap(&mut self, blocks: &CObjectContainer, i: i16, j: i16) {
         for iRow in j..=j + 1 {
             for iCol in i - 1..=i + 1 {
@@ -997,6 +1051,7 @@ impl CMap {
         }
     }
 
+    /// Marks a non-solid tile a gap when both side neighbors are solid and the three tiles above are not.
     fn set_tile_gap(&mut self, blocks: &CObjectContainer, i: i16, j: i16) {
         let mut iLeftTile = i - 1;
         if iLeftTile < 0 {
@@ -1053,6 +1108,7 @@ impl CMap {
         }
     }
 
+    /// Writes the map as a 1.8.0.4 map file, recomputing warp exits, spawn areas and draw areas.
     pub fn save_map(&mut self, g: &mut Game, file: &str) {
         let mut gp = g.ptr();
         print!("saving map {} ... ", file);
@@ -1618,6 +1674,7 @@ impl CMap {
         println!("done");
     }
 
+    /// Renders the map as a 160x120 thumbnail over its background.
     pub fn create_thumbnail_surface(&mut self, g: &mut Game, fUseClassicPack: bool) -> gfxSprite {
         let sThumbnail = gfxSprite::blank(g, 160, 120);
 
@@ -1658,6 +1715,7 @@ impl CMap {
         sThumbnail
     }
 
+    /// Saves the map's thumbnail as a PNG at `sFile`; errors are ignored.
     pub fn save_thumbnail(&mut self, g: &mut Game, sFile: &str, fUseClassicPack: bool) {
         let sThumbnail = self.create_thumbnail_surface(g, fUseClassicPack);
 
@@ -1667,6 +1725,8 @@ impl CMap {
         }
     }
 
+    /// Rebuilds spawn type `iType`'s areas from open tiles; `fUseTempBlocks` treats every block as a floor and
+    /// `fIgnoreDeath` drops the check for death tiles below.
     fn calculatespawnareas(&mut self, iType: i16, fUseTempBlocks: bool, fIgnoreDeath: bool) {
         let t = iType as usize;
         let mut usedtile = [[false; MH]; MW];
@@ -1822,6 +1882,7 @@ impl CMap {
         }
     }
 
+    /// Redraws the slice of animated tiles assigned to tick `iFrame` of the cycle at the current animation frame.
     fn animate_tiles(&mut self, g: &mut Game, iFrame: i16) {
         let f = iFrame as usize;
         if self.iAnimatedVectorIndices[f] == self.iAnimatedVectorIndices[f + 1] {
@@ -1851,6 +1912,7 @@ impl CMap {
         }
     }
 
+    /// Draws tile layer `layer` onto `targetSurface` and registers any animated tiles it finds.
     fn draw(&mut self, g: &mut Game, targetSurface: *mut Surface, layer: i32) {
         let mut gp = g.ptr();
         unsafe {
@@ -1926,6 +1988,7 @@ impl CMap {
         }
     }
 
+    /// Registers the animated tiles on permanent platforms.
     fn add_platform_animated_tiles(&mut self) {
         for &platform in &self.platforms {
             let iHeight = self.platform(platform).iTileHeight;
@@ -2040,6 +2103,7 @@ impl CMap {
         }
     }
 
+    /// Draws warp markers at preview (16-pixel) or thumbnail (8-pixel) tile size.
     pub fn pre_draw_preview_warps(&mut self, g: &mut Game, targetSurface: *mut Surface, fThumbnail: bool) {
         let mut iTileSize: i16 = 16;
         let mut iScreenshotSize: usize = 0;
@@ -2064,6 +2128,7 @@ impl CMap {
         }
     }
 
+    /// Draws map item markers at preview or thumbnail tile size.
     pub fn pre_draw_preview_map_items(&mut self, g: &mut Game, targetSurface: *mut Surface, fThumbnail: bool) {
         let mut iTileSize: i32 = 16;
         let mut iScreenshotSize: usize = 0;
@@ -2081,6 +2146,7 @@ impl CMap {
         }
     }
 
+    /// Draws the background tile layers at preview or thumbnail size.
     pub fn pre_draw_preview_background(&mut self, g: &mut Game, targetSurface: *mut Surface, fThumbnail: bool) {
         self.draw_preview(g, targetSurface, 0, fThumbnail);
         small_delay(g);
@@ -2097,7 +2163,7 @@ impl CMap {
         }
     }
 
-    /// `preDrawPreviewBackground(gfxSprite*, Surface*, bool)`
+    /// Stretches `background` to preview or thumbnail size on `targetSurface`, then draws the background tile layers.
     pub fn pre_draw_preview_background_spr(&mut self, g: &mut Game, background: &gfxSprite, targetSurface: *mut Surface, fThumbnail: bool) {
         let srcrect = Rect { x: 0, y: 0, w: App::screenWidth, h: App::screenHeight };
 
@@ -2117,6 +2183,7 @@ impl CMap {
         self.pre_draw_preview_background(g, targetSurface, fThumbnail);
     }
 
+    /// Draws blocks at preview or thumbnail size; for a preview, first clears `targetSurface` to the magenta key.
     pub fn pre_draw_preview_blocks(&mut self, g: &mut Game, targetSurface: *mut Surface, fThumbnail: bool) {
         if !fThumbnail {
             unsafe {
@@ -2129,6 +2196,8 @@ impl CMap {
         self.draw_preview_blocks(g, targetSurface, fThumbnail);
     }
 
+    /// Draws the foreground tile layers at preview or thumbnail size; for a preview, first clears `targetSurface` to
+    /// the magenta key.
     pub fn pre_draw_preview_foreground(&mut self, g: &mut Game, targetSurface: *mut Surface, fThumbnail: bool) {
         if !fThumbnail {
             unsafe {
@@ -2241,6 +2310,7 @@ impl CMap {
         }
     }
 
+    /// Renders the background image and background tile layers onto `mapspr`, registering animated tiles.
     pub fn predrawbackground(&mut self, g: &mut Game, background: &gfxSprite, mapspr: &gfxSprite) {
         let mut r = Rect { x: 0, y: 0, w: App::screenWidth, h: App::screenHeight };
 
@@ -2257,6 +2327,7 @@ impl CMap {
         self.add_platform_animated_tiles();
     }
 
+    /// Renders the foreground tile layers onto `foregroundspr` over the magenta key color.
     pub fn predrawforeground(&mut self, g: &mut Game, foregroundspr: &gfxSprite) {
         unsafe {
             let s = foregroundspr.get_surface();
@@ -2269,6 +2340,8 @@ impl CMap {
         }
     }
 
+    /// Prerenders every animated tile's frames onto the animation sheet and draws their first frames into both map
+    /// buffers. Tiles that do not fit on the sheet stop animating.
     pub fn setup_animated_tiles(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         unsafe {
@@ -2436,6 +2509,7 @@ impl CMap {
         }
     }
 
+    /// Moves every platform one tick and removes dead temporary platforms.
     pub fn update_platforms(&mut self, g: &mut Game) {
         for &platform in &self.platforms.clone() {
             let mut p = platform;
@@ -2456,6 +2530,7 @@ impl CMap {
         }
     }
 
+    /// Draws draw layer `iLayer`'s permanent platforms; layer 2 also draws the temporary ones.
     pub fn draw_platforms(&mut self, g: &mut Game, iLayer: i16) {
         for &platform in &self.platformdrawlayer[iLayer as usize].clone() {
             let mut p = platform;
@@ -2473,7 +2548,7 @@ impl CMap {
         crate::common::gfx::display_list::set_owner(crate::common::gfx::display_list::Owner::None);
     }
 
-    /// `drawPlatforms(short iOffsetX, short iOffsetY, short iLayer)`
+    /// Draws draw layer `iLayer`'s permanent platforms at half scale, offset by (`iOffsetX`, `iOffsetY`), for the map preview.
     pub fn draw_platforms_offset(&mut self, g: &mut Game, iOffsetX: i16, iOffsetY: i16, iLayer: i16) {
         for &platform in &self.platformdrawlayer[iLayer as usize].clone() {
             let mut p = platform;
@@ -2481,7 +2556,7 @@ impl CMap {
         }
     }
 
-    /// `movingPlatformCollision(CPlayer*)`; defined in smw/player.cpp.
+    /// Collides `player` with every platform, stopping once the player is no longer in play.
     pub fn moving_platform_collision_player(&mut self, g: &mut Game, player: PlayerId) {
         for i in 0..self.platforms.len() {
             let mut p = self.platforms[i];
@@ -2500,7 +2575,7 @@ impl CMap {
         }
     }
 
-    /// `movingPlatformCollision(IO_MovingObject*)`
+    /// Collides `object` with every platform.
     pub fn moving_platform_collision_object(&mut self, g: &mut Game, object: Ptr<dyn IO_MovingObjectTrait>) {
         for i in 0..self.platforms.len() {
             let mut p = self.platforms[i];
@@ -2513,6 +2588,7 @@ impl CMap {
         }
     }
 
+    /// Pushes `object` out of every platform's solid tiles; returns whether any overlapped it.
     pub fn moving_platform_check_sides(&mut self, object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
         let mut fRet = false;
         for i in 0..self.platforms.len() {
@@ -2528,6 +2604,7 @@ impl CMap {
         fRet
     }
 
+    /// Returns permanent platforms to their path start and removes the temporary ones.
     pub fn reset_platforms(&mut self, g: &mut Game) {
         for &platform in &self.platforms.clone() {
             let mut p = platform;
@@ -2539,6 +2616,7 @@ impl CMap {
         }
     }
 
+    /// Locks warp `connection`, or every connection when it is -1.
     pub fn lockconnection(&mut self, connection: i32) {
         if connection == -1 {
             for iConnection in 0..=self.maxConnection {
@@ -2549,6 +2627,7 @@ impl CMap {
         }
     }
 
+    /// A random exit of `connection` other than `currentID`, or the `currentID` exit when it is the only one.
     pub fn get_random_warp_exit(&mut self, g: &mut Game, connection: i32, currentID: i32) -> Ptr<WarpExit> {
         let mut gp = g.ptr();
         let mut indices = [0i32; MAXWARPS as usize];
@@ -2595,6 +2674,7 @@ impl CMap {
         }
     }
 
+    /// Advances warp lock timers and the tile animation one tick.
     pub fn update(&mut self, g: &mut Game) {
         for iConnection in 0..=self.maxConnection {
             let c = iConnection as usize;
@@ -2633,6 +2713,8 @@ impl CMap {
         }
     }
 
+    /// Picks a random pixel position for a `width` x `height` object in spawn type `iType`'s areas. Returns `false`
+    /// when the spot overlaps a platform's no-spawn zone.
     pub fn findspawnpoint(&mut self, g: &mut Game, iType: i16, x: &mut i16, y: &mut i16, width: i16, height: i16, tilealigned: bool) -> bool {
         let mut gp = g.ptr();
         let t = iType as usize;
@@ -2708,6 +2790,7 @@ impl CMap {
         true
     }
 
+    /// Stores `platform` in a free slot and returns its handle.
     fn insert_platform(&mut self, mut platform: Box<MovingPlatform>) -> PlatformId {
         let slot = match self.platform_slots.iter().position(Option::is_none) {
             Some(slot) => slot,
@@ -2723,6 +2806,7 @@ impl CMap {
         id
     }
 
+    /// Frees `id`'s slot and invalidates every handle to it.
     fn remove_platform(&mut self, id: PlatformId) {
         if self.try_platform(id).is_some() {
             self.platform_slots[id.slot as usize] = None;
@@ -2730,6 +2814,7 @@ impl CMap {
         }
     }
 
+    /// The platform `id` names, or `None` if it was removed.
     #[allow(clippy::mut_from_ref)]
     pub fn try_platform(&self, id: PlatformId) -> Option<&'static mut MovingPlatform> {
         let slot = id.slot as usize;
@@ -2740,11 +2825,12 @@ impl CMap {
         Some(unsafe { &mut *platform })
     }
 
-    /// Panics on a removed platform, where the C++ read freed memory.
+    /// The platform `id` names; panics if it was removed.
     pub fn platform(&self, id: PlatformId) -> &'static mut MovingPlatform {
         self.try_platform(id).unwrap_or_else(|| panic!("no platform {:?}", id))
     }
 
+    /// Adds a platform that belongs to the map and draws on its draw layer.
     pub fn add_permanent_platform(&mut self, platform: Box<MovingPlatform>) -> PlatformId {
         let layer = platform.iDrawLayer as usize;
         let id = self.insert_platform(platform);
@@ -2753,6 +2839,7 @@ impl CMap {
         id
     }
 
+    /// Adds a platform created during play.
     pub fn add_temporary_platform(&mut self, platform: Box<MovingPlatform>) -> PlatformId {
         let id = self.insert_platform(platform);
         self.tempPlatforms.push(id);
@@ -2775,6 +2862,7 @@ impl CMap {
         false
     }
 
+    /// Draws the foreground map buffer's draw areas over the play field.
     pub fn drawfrontlayer(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         for k in 0..self.numdrawareas as usize {
@@ -2783,6 +2871,8 @@ impl CMap {
         }
     }
 
+    /// Whether two tiles form an unlocked warp entrance facing `iDirection`; for up and down `iData1`/`iData2` are
+    /// columns and `iData3` the row, else `iData1` is the column and `iData2`/`iData3` rows.
     pub fn checkforwarp(&self, iData1: i16, iData2: i16, iData3: i16, iDirection: i16) -> bool {
         let (warp1, warp2) = if iDirection == 0 || iDirection == 2 {
             (&self.warpdata[iData1 as usize][iData3 as usize], &self.warpdata[iData2 as usize][iData3 as usize])
@@ -2797,6 +2887,7 @@ impl CMap {
             && self.warpexits[warp1.id as usize].locktimer <= 0
     }
 
+    /// Moves solid tiles down into empty lower layers of the same cell.
     pub fn optimize(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         for j in 0..MH {
@@ -2840,7 +2931,7 @@ pub(crate) mod tests {
     static INIT: Once = Once::new();
     static GLOBALS: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
-    /// Tests that touch C++ globals hold this so they don't run concurrently.
+    /// Tests that touch the game globals hold this so they don't run concurrently.
     pub(crate) fn lock_globals() -> std::sync::MutexGuard<'static, ()> {
         GLOBALS.lock().unwrap_or_else(|e| e.into_inner())
     }
@@ -3107,7 +3198,7 @@ pub(crate) mod tests {
         o
     }
 
-    /// Compares MapList against the original C++ (`tools/ref/map_list_dump.sh`); set `SMW_MAP_LIST_DUMP`.
+    /// Compares MapList with the reference dump binary (`tools/ref/map_list_dump.sh`); set `SMW_MAP_LIST_DUMP`.
     #[test]
     fn matches_cpp_map_list_dump() {
         let g = map_game();
@@ -3128,8 +3219,8 @@ pub(crate) mod tests {
         assert_eq!(actual.lines().count(), expected.lines().count());
     }
 
-    /// Compares against the original C++ (`tools/ref/map_dump.sh` builds it). Skipped when the
-    /// binary is absent; set `SMW_MAP_DUMP` to its path.
+    /// Compares every map with the reference dump binary (`tools/ref/map_dump.sh` builds it). Skipped unless
+    /// `SMW_MAP_DUMP` holds its path.
     #[test]
     fn matches_cpp_map_dump() {
         let g = map_game();

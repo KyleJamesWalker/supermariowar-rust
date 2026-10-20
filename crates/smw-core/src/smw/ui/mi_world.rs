@@ -1,4 +1,4 @@
-//! Port of src/smw/ui/MI_World.cpp
+//! The world map control: movement, AI turns, vehicles, warps, items and the inventory popups.
 
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -18,39 +18,54 @@ use crate::smw::world::{WorldMapTile, WORLD_BRIDGE_SPRITE_OFFSET};
 use crate::common::gfx::gfx_sprite::gfxSprite;
 use crate::common::math::trig::{cosf, sinf};
 
+/// Draws and drives `g_worldmap` for the team in control; positions are in screen pixels unless noted.
 pub struct MI_World {
     pub ui_control: UI_Control,
 
+    /// -2 entry stars, -1 taking input, 4 warp fade out, 5 fade in, 6 control switch stars out, 7 stars back in.
     iState: i16,
+    /// Per team inventory popup: 0 closed, 1 opening, 2 closing, 3 open.
     iStateTransition: [i16; 4],
+    /// Per team popup slide height in pixels, 0 to 32.
     iItemPopupDrawY: [i16; 4],
+    /// Per team target popup offset, 64 pixels per stack slot; `iPopupOffsetsCurrent` slides toward it.
     iPopupOffsets: [i16; 4],
     iPopupOffsetsCurrent: [i16; 4],
+    /// Teams in popup stack order; the first `iNumPopups` are valid.
     iPopupOrder: [i16; 4],
     iNumPopups: i16,
+    /// Y of the stored item bar, sliding between -48 and 16.
     iStoredItemPopupDrawY: i16,
 
     iPopupFlag: [bool; 4],
 
+    /// Per team selected item column in its popup; `iItemPage` holds the page.
     iItemCol: [i16; 4],
     iItemPage: [i16; 4],
 
+    /// Double-buffered map surfaces: one is shown while the other is redrawn over 16 frames.
     map_sprites: [gfxSprite; 2],
     rectSrcSurface: Rect,
     rectDstSurface: Rect,
 
     iCurrentSurfaceIndex: i16,
+    /// Step 0 to 16 of the off-screen surface redraw.
     iCycleIndex: i16,
+    /// Nonzero while the off-screen surface needs a full redraw after the view moved.
     iDrawFullRefresh: i16,
 
+    /// Tile animation x offset in pixels, 0 to 96.
     iAnimationFrame: i16,
 
+    /// Screen offset of the map's top-left corner; likewise `iMapOffsetY`.
     iMapOffsetX: i16,
     iMapOffsetY: i16,
 
+    /// First tile column drawn into the map surfaces; likewise `iMapDrawOffsetRow` for rows.
     iMapDrawOffsetCol: i16,
     iMapDrawOffsetRow: i16,
 
+    /// Draw offsets the off-screen surface is being redrawn for.
     iNextMapDrawOffsetCol: i16,
     iNextMapDrawOffsetRow: i16,
 
@@ -61,16 +76,22 @@ pub struct MI_World {
     iDstOffsetX: i16,
     iDstOffsetY: i16,
 
+    /// Team in control; `iControllingPlayerId` is the player whose sprite walks the map.
     iControllingTeam: i16,
     iControllingPlayerId: i16,
+    /// Direction back to the previous tile (0 up, 1 down, 2 left, 3 right), always allowed.
     iReturnDirection: i16,
 
+    /// A vehicle reached the player; the next input starts its stage.
     fForceStageStart: bool,
+    /// Vehicle whose stage is being played, or -1 for a map stage.
     iVehicleId: i16,
 
+    /// Destination tile of the warp being taken.
     iWarpCol: i16,
     iWarpRow: i16,
 
+    /// Warp fade alpha, 0 to 255, changing by `dScreenfadeRate` per frame.
     dScreenfade: f32,
     dScreenfadeRate: f32,
 
@@ -79,18 +100,22 @@ pub struct MI_World {
     iTeleportStarAnimationFrame: i16,
     iTeleportStarAnimationTimer: i16,
 
+    /// The AI found nothing to do and waits until something changes.
     fNoInterestingMoves: bool,
 
+    /// Turns the vehicles stay asleep after a music box.
     iSleepTurns: i16,
+    /// The player is a cloud and can pass stages and vehicles.
     fUsingCloud: bool,
 
+    /// Frames until the AI presses select on its stage.
     iPressSelectTimer: i16,
     /// The player whose select key the AI presses when the timer runs out.
     pressSelectKeys: usize,
 }
 crate::impl_base!(MI_World => ui_control: UI_Control);
 
-/// `game_values.teamids[iTeam][iMember]` read as the flat C++ array, where a member index of 3 runs into the next row.
+/// `teamids[iTeam][iMember]` as one flat array: member 3 reads the next team's first slot, past the end reads `teamcounts`.
 fn teamids_flat(g: &mut Game, iTeam: i16, iMember: i16) -> i16 {
     let idx = iTeam as usize * 3 + iMember as usize;
     if idx < 12 {
@@ -156,8 +181,7 @@ impl MI_World {
         }
     }
 
-    /// `iStateTransition[iTeamId]`; `LookupTeamID` gives -1 for players outside the game, and the C++
-    /// then reads the preceding member `iState`.
+    /// `iStateTransition[iTeamId]`, or `iState` for -1, the team of a player outside the game.
     fn state_transition(&self, iTeamId: i16) -> i16 {
         if iTeamId < 0 {
             self.iState
@@ -166,6 +190,7 @@ impl MI_World {
         }
     }
 
+    /// Resets the view and state for a newly loaded world, starting with the entry stars.
     pub fn init(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         self.iCycleIndex = 0;
@@ -231,7 +256,7 @@ impl MI_World {
         }
     }
 
-    /// `MI_World::SetControllingTeam`; hides `UI_Control::SetControllingTeam` like the C++.
+    /// Hands control to a random player of team `iWinningTeam` and shows their sprite on the map.
     pub fn set_controlling_team(&mut self, g: &mut Game, iWinningTeam: i16) {
         let mut gp = g.ptr();
         self.iControllingTeam = iWinningTeam;
@@ -243,6 +268,7 @@ impl MI_World {
         self.fNoInterestingMoves = false;
     }
 
+    /// Announces which player or team is in control.
     pub fn display_team_control_announcement(&mut self, g: &mut Game) {
         let ct = self.iControllingTeam as usize;
         let szMessage = if g.game_values.teamcounts[ct] <= 1 {
@@ -262,6 +288,7 @@ impl MI_World {
         ));
     }
 
+    /// Scores the stage just won with the points modifier, marks it done, and advances the turn unless it was a bonus house.
     pub fn set_current_stage_to_completed(&mut self, g: &mut Game, iWinningTeam: i16) {
         let mut gp = g.ptr();
         let mut iBonusAdd: i16 = 0;
@@ -284,8 +311,6 @@ impl MI_World {
             let iPlayerCurrentTile = g.g_worldmap.get_player_current_tile();
 
             let tile = g.g_worldmap.tiles.at_mut(iPlayerCurrentTile.x as usize, iPlayerCurrentTile.y as usize);
-            //tile->iForegroundSprite = game_values.colorids[game_values.teamids[iWinningTeam][0]] + WORLD_WINNING_TEAM_SPRITE_OFFSET; //Update with team completed sprite
-            //tile->fAnimated = false; //Update with team completed sprite
             tile.iCompleted = g.game_values.colorids[g.game_values.teamids[wt][0] as usize];
             let iType = tile.iType;
 
@@ -301,10 +326,12 @@ impl MI_World {
         }
     }
 
+    /// Turns the player back from a cloud.
     pub fn clear_cloud(&mut self) {
         self.fUsingCloud = false;
     }
 
+    /// Ends a turn: counts down sleep or moves the vehicles, then flips the bridges.
     fn advance_turn(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         if self.iSleepTurns > 0 {
@@ -326,6 +353,7 @@ impl MI_World {
         self.fNoInterestingMoves = false;
     }
 
+    /// Redraws step `iCycleIndex` (0 to 15) of the off-screen surface; other values do nothing.
     fn update_map_surface(&mut self, g: &mut Game, iCycleIndex: i16) {
         let mut gp = g.ptr();
         if iCycleIndex >= 0 && iCycleIndex <= 15 {
@@ -341,6 +369,7 @@ impl MI_World {
         }
     }
 
+    /// Scrolls the view to follow the player within the map edges, centring maps smaller than the screen.
     fn set_map_offset(&mut self, g: &mut Game) {
         let iPlayerDrawPos = g.g_worldmap.get_player_position();
         let w32 = (g.g_worldmap.iWidth as i32) << 5;
@@ -373,6 +402,7 @@ impl MI_World {
         }
     }
 
+    /// Sets the draw offsets so the 24x19-tile surfaces cover the player's tile.
     fn reposition_map_image(&mut self, g: &mut Game) {
         let iPlayerCurrentTile = g.g_worldmap.get_player_current_tile();
 
@@ -398,6 +428,7 @@ impl MI_World {
         self.iNextMapDrawOffsetRow = self.iMapDrawOffsetRow;
     }
 
+    /// Restarts the off-screen redraw with a full refresh if the player's destination moves the draw offsets.
     fn restart_draw_cycle_if_needed(&mut self, g: &mut Game) {
         self.iNextMapDrawOffsetCol = self.iMapDrawOffsetCol;
         self.iNextMapDrawOffsetRow = self.iMapDrawOffsetRow;
@@ -430,13 +461,14 @@ impl MI_World {
         }
     }
 
-    /// The paired `g_worldmap.UpdateTile(map_sprites[0..2], ...)` calls.
+    /// Redraws one tile on both map surfaces; `col` and `row` are relative to the draw offsets.
     fn update_tile_both(&mut self, g: &mut Game, col: i16, row: i16) {
         let mut gp = g.ptr();
         gp.g_worldmap.update_tile(g, self.map_sprites[0].get_surface(), col, row, self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
         gp.g_worldmap.update_tile(g, self.map_sprites[1].get_surface(), col, row, self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
     }
 
+    /// Uses item `iIndex` of team `iTeam`'s inventory for `iPlayer`; true if it took effect and was removed.
     fn use_powerup(&mut self, g: &mut Game, iPlayer: i16, iTeam: i16, iIndex: i16, fPopupIsUp: bool) -> bool {
         let mut gp = g.ptr();
         let iPlayerCurrentTile = g.g_worldmap.get_player_current_tile();
@@ -447,13 +479,6 @@ impl MI_World {
         let mut fUsedItem = false;
 
         if p < NUM_POWERUPS {
-            /*
-            //Comment this in to give the powerup to all members of the team
-            for (short iPlayer = 0; iPlayer < game_values.teamcounts[iTeam]; iPlayer++)
-            {
-                game_values.storedpowerups[game_values.teamids[iTeam][iPlayer]] = iPowerup;
-            }*/
-
             //Give the powerup only to the player that selected it
             g.game_values.storedpowerups[iPlayer as usize] = iPowerup;
 
@@ -587,6 +612,7 @@ impl MI_World {
         fUsedItem
     }
 
+    /// Selects stage `iStage` and returns the code that starts it, forced for AI teams and bonus houses.
     fn init_game(&mut self, g: &mut Game, iStage: i16, iPlayer: i16, fNeedAiControl: bool) -> MenuCodeEnum {
         g.game_values.tourstopcurrent = iStage as usize;
         g.game_values.worldskipscoreboard = false;
@@ -608,6 +634,7 @@ impl MI_World {
         }
     }
 
+    /// Turns the player into a cloud, or back, with a poof.
     fn use_cloud(&mut self, g: &mut Game, fUseCloud: bool) {
         let mut gp = g.ptr();
         self.fUsingCloud = fUseCloud;
@@ -624,7 +651,7 @@ impl MI_World {
         ));
     }
 
-    /// The movement test shared by the four directions of `SendInput`.
+    /// Whether the player may leave `tile` in `iDirection`: a connection, no door, and an open stage, the way back or a cloud.
     #[allow(clippy::too_many_arguments)]
     fn can_move(&self, g: &mut Game, tile: &WorldMapTile, iDirection: usize, iBridgeType: i16, iDoorCol: i16, iDoorRow: i16, iReturnDir: i16, fVehicleInTile: bool) -> bool {
         (tile.fConnection[iDirection] || tile.iConnectionType == iBridgeType)
@@ -786,7 +813,6 @@ impl UI_ControlTrait for MI_World {
                 self.iDrawFullRefresh = 2; //Draw one full refresh to next surface
 
                 gp.g_worldmap.draw_map_to_surface(g, -1, true, self.map_sprites[0].get_surface(), self.iMapDrawOffsetCol, self.iMapDrawOffsetRow, self.iAnimationFrame);
-                //g_worldmap.DrawMapToSurface(-1, true, map_sprites[1].getSurface(), iMapDrawOffsetCol, iMapDrawOffsetRow, iAnimationFrame);
 
                 self.iState = 5;
                 self.dScreenfade = 255.0;
@@ -1002,7 +1028,7 @@ impl UI_ControlTrait for MI_World {
                                 //Door Keys
                                 let iKeyType = iType - NUM_POWERUPS - 5;
                                 if fDoor[iKeyType as usize] {
-                                    // iTeamMember is the member count left by the loop above, as in the C++.
+                                    // iTeamMember is the team's member count here, one past its last member.
                                     let iPlayer = teamids_flat(g, self.iControllingTeam, iTeamMember);
                                     fUsedItem = self.use_powerup(g, iPlayer, self.iControllingTeam, iPowerup, false);
                                 }

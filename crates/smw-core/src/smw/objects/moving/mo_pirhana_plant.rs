@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/moving/MO_PirhanaPlant.cpp
+//! Map pirhana plant hazard that periodically grows out of a pipe, some kinds spitting fireballs.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -28,19 +28,29 @@ use crate::smw::player::{CPlayer, PlayerState};
 //------------------------------------------------------------------------------
 // class IO_PirhanaPlant - pirhana plant that appears on a certain frequency
 //------------------------------------------------------------------------------
+/// Plant whose `state` cycles 0 hidden, 1 growing, 2 out, 3 retreating; its collision box grows with it.
 #[derive(Clone)]
 pub struct MO_PirhanaPlant {
     pub io_moving_object: IO_MovingObject,
 
+    /// 0 green fireball plant (random aim), 1 red fireball plant (aims at the nearest player), 2 tall and 3 short biting plants.
     pub iType: i16,
+    /// Direction the plant grows: 0 up, 1 down, 2 left, 3 right.
     pub iDirection: i16,
+    /// Base wait between appearances in 62.5 Hz ticks; each wait is one to two times this.
     pub iFreq: i16,
+    /// Ticks left hidden, or ticks spent fully out.
     pub iTimer: i16,
+    /// Tick counter for the biting animation.
     pub iAnimationTimer: i16,
+    /// Sprite frame: aim direction 0 to 3 for fireball plants, mouth frame for biting plants.
     pub iFrame: i16,
+    /// Tick counter between re-aims of the red plant.
     pub iActionTimer: i16,
+    /// How far the plant sticks out of its pipe (pixels).
     pub fExtent: f32,
 
+    /// Plant in the map preview; spits preview-size fireballs.
     pub fPreview: bool,
 }
 impl_base!(MO_PirhanaPlant => io_moving_object: IO_MovingObject);
@@ -116,7 +126,7 @@ impl MO_PirhanaPlant {
         o
     }
 
-    // For preview drawing
+    /// Draws at half scale for the map preview, offset by `iOffsetX`, `iOffsetY` (pixels).
     pub fn draw_offset(&mut self, g: &mut Game, iOffsetX: i16, iOffsetY: i16) {
         let mut gp = g.ptr();
         if self.state > 0 {
@@ -139,6 +149,7 @@ impl MO_PirhanaPlant {
         }
     }
 
+    /// Pops the plant back into its pipe and restarts the wait.
     pub fn kill_plant(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         if self.state == 0 {
@@ -167,6 +178,7 @@ impl MO_PirhanaPlant {
         self.fExtent = 0.0;
     }
 
+    /// Sets how far the plant sticks out, moving its origin for plants that grow up or left.
     fn set_extent(&mut self, extent: i16) {
         let delta = if self.iDirection <= 1 {
             let d = extent - self.collisionHeight;
@@ -185,6 +197,7 @@ impl MO_PirhanaPlant {
         }
     }
 
+    /// Rolls the next wait and, for the green plant, a random aim that does not face off screen.
     pub fn set_new_timer(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         self.iTimer = ticks(self.iFreq as i32 + RANDOM_INT(gp.get(), self.iFreq as i32)) as i16;
@@ -202,6 +215,7 @@ impl MO_PirhanaPlant {
         }
     }
 
+    /// Fireball heading (radians) for the current aim frame.
     fn get_fireball_angle(&self) -> f32 {
         if self.iDirection <= 1 {
             if self.iFrame == 0 {

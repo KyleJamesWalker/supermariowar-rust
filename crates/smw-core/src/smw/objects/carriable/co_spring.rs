@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/carriable/CO_Spring.cpp
+//! Carriable spring: bounces players who land on it into a high jump.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -20,11 +20,14 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class spring
 //------------------------------------------------------------------------------
+/// Spring that compresses and launches a player who lands on it; `state` 2 while it animates.
 #[derive(Clone)]
 pub struct CO_Spring {
     pub mo_carried_object: MO_CarriedObject,
 
+    /// Super spring: a higher jump and its own sprite row.
     pub fSuper: bool,
+    /// Sprite row offset (pixels): 32 for a super spring.
     pub iOffsetY: i16,
 }
 impl_base!(CO_Spring => mo_carried_object: MO_CarriedObject);
@@ -46,6 +49,7 @@ impl CO_Spring {
     }
 }
 
+/// A landing calls `hittop`; side contact while idle picks the spring up.
 pub fn co_spring_collide_player<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T, player: PlayerId) -> bool {
     let (owner_null, fOldY, iy, state) = {
         let o = this.spring();
@@ -62,6 +66,7 @@ pub fn co_spring_collide_player<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: 
     false
 }
 
+/// Launches the player into a super jump and starts the spring animation.
 pub fn co_spring_hittop<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T, player: PlayerId) {
         let mut gp = g.ptr();
     let mut player = player;
@@ -90,6 +95,7 @@ pub fn co_spring_hittop<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T, 
     if_sound_on_play(g, &mut gp.rm.sfx_bump);
 }
 
+/// Picks the spring up if the player can hold it.
 pub fn co_spring_hitother<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T, player: PlayerId) {
     let mut player = player;
     if this.spring().owner.is_none() && g.player(player).isready() {
@@ -100,6 +106,7 @@ pub fn co_spring_hitother<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T
     }
 }
 
+/// Follows the holder or runs map physics, and plays the compress animation.
 pub fn co_spring_update<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T) {
     if !this.spring().owner.is_none() {
         this.move_to_owner(g);
@@ -148,6 +155,7 @@ pub fn co_spring_draw<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T) {
     }
 }
 
+/// Moves the spring to a random spawn point and drops it there.
 pub fn co_spring_place<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T) {
     let mut gp = g.ptr();
     {
@@ -169,7 +177,7 @@ pub fn co_spring_place<T: CO_SpringTrait + ?Sized>(g: &mut Game, this: &mut T) {
     MO_CarriedObjectTrait::drop(this, g);
 }
 
-/// Virtuals added by `CO_Spring` (`hittop`), plus the non-virtual `place` so it can dispatch `Drop()`.
+/// Spring behavior shared by springs, spikes and Kuribo's shoes; `hittop` is what a landing does.
 pub trait CO_SpringTrait: MO_CarriedObjectTrait {
     fn spring(&self) -> &CO_Spring;
     fn spring_mut(&mut self) -> &mut CO_Spring;
@@ -178,6 +186,7 @@ pub trait CO_SpringTrait: MO_CarriedObjectTrait {
         co_spring_hittop(g, self, player)
     }
 
+    /// Moves the object to a random spawn point.
     fn place(&mut self, g: &mut Game) {
         co_spring_place(g, self)
     }

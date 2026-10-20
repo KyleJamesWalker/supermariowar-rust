@@ -1,7 +1,8 @@
-//! Not in upstream: the family of a connected pad, for Options > Controls (and later button prompts).
+//! The family of a connected pad, for Options > Controls.
 
 use smw_platform::PadFamily;
 
+/// A pad's maker, by USB vendor ID.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ControllerType {
     Generic,
@@ -11,6 +12,7 @@ pub enum ControllerType {
 }
 
 impl ControllerType {
+    /// The name Options > Controls shows for the pad.
     pub fn label(self) -> &'static str {
         match self {
             ControllerType::Generic => "Controller",
@@ -20,6 +22,7 @@ impl ControllerType {
         }
     }
 
+    /// The family of a USB vendor ID: Microsoft, Sony or Nintendo, else generic.
     pub fn from_vendor(vendor: u16) -> ControllerType {
         match vendor {
             0x045e => ControllerType::Xbox,
@@ -39,7 +42,7 @@ pub fn vendor_from_web_id(id: &str) -> Option<u16> {
     (vendor.len() == 4 && rest.split_once('-').is_some_and(|(p, _)| p.len() == 4)).then(|| u16::from_str_radix(vendor, 16).ok())?
 }
 
-/// The family of backend device `index`, whose name is `name`.
+/// The family of backend device `index`; on the web, the vendor ID in its `name` wins when it has one.
 pub fn controller_type(g: &mut crate::game::Game, index: usize, name: &str) -> ControllerType {
     let family = match crate::services::services(g).pads.family(index) {
         PadFamily::Generic => ControllerType::Generic,

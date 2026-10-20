@@ -1,28 +1,33 @@
-//! Port of src/smw/ObjectContainer.cpp
+//! The containers that own the game's objects, and the handles that find them again.
 
 use crate::game::Game;
 use crate::common::moving_object_types::MovingObjectType;
 use crate::common::object_base::{CObjectTrait, ObjectType};
 use crate::globals::{Aliased, Ptr};
 
+/// Capacity of one container; `add` refuses an object once it holds `MAXOBJECTS - 1`.
 pub const MAXOBJECTS: usize = 300;
 
 /// An object in one of `Game`'s containers. A handle to a deleted object finds nothing.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct ObjectId {
+    /// Index of the container: 0 to 2 for `Game::objectcontainer`, 3 for `Game::noncolcontainer`.
     container: u8,
+    /// Index into the container's slots.
     slot: u16,
+    /// The slot's generation when the handle was made; the slot moves on when its object is freed.
     generation: u32,
 }
 
 impl ObjectId {
-    /// No object: what a null object pointer was in the C++.
+    /// No object.
     pub const NONE: ObjectId = ObjectId { container: u8::MAX, slot: 0, generation: 0 };
 
     pub fn is_none(self) -> bool {
         self == Self::NONE
     }
 
+    /// Index of the container the object lives in (`container`).
     pub fn container(self) -> u8 {
         self.container
     }
@@ -34,14 +39,16 @@ impl Default for ObjectId {
     }
 }
 
-/// `std::vector<std::unique_ptr<CObject>>` with `reserve(MAXOBJECTS)`; the container owns each
-/// object and deletes it in `clean` / `clean_dead_objects`.
+/// An owning list of objects, updated and drawn in insertion order. The container deletes each object in
+/// `clean` or `clean_dead_objects`.
 pub struct CObjectContainer {
+    /// The live objects, in update and draw order.
     m_list: Vec<Ptr<dyn CObjectTrait>>,
     /// The container's number in its objects' `ObjectId`s.
     index: u8,
     /// Each object by its `CObject::id` slot. A freed slot's generation moves on.
     slots: Vec<Option<Ptr<dyn CObjectTrait>>>,
+    /// Each slot's current generation.
     generations: Vec<u32>,
     pub _alias: Aliased,
 }
@@ -76,6 +83,7 @@ impl CObjectContainer {
         CObjectContainer { m_list: Vec::new(), index, slots: Vec::new(), generations: Vec::new(), _alias: Aliased::new() }
     }
 
+    /// The object `id` names, or None once it was deleted or when it belongs to another container.
     pub fn get(&self, id: ObjectId) -> Option<Ptr<dyn CObjectTrait>> {
         let slot = id.slot as usize;
         if id.container != self.index || slot >= self.slots.len() || self.generations[slot] != id.generation {
@@ -106,17 +114,19 @@ impl CObjectContainer {
         obj.delete();
     }
 
-    /// libc++ `reserve(300)` gives exactly 300 and `add` never grows past it.
+    /// Fixed, so the list never grows.
     fn capacity(&self) -> usize {
         MAXOBJECTS
     }
 
+    /// Deletes every listed object.
     pub fn clean(&mut self) {
         for obj in std::mem::take(&mut self.m_list) {
             self.release(obj);
         }
     }
 
+    /// Deletes the objects marked dead, keeping the order of the rest.
     pub fn clean_dead_objects(&mut self) {
         let mut kept: Vec<Ptr<dyn CObjectTrait>> = Vec::with_capacity(self.m_list.len());
         for obj in std::mem::take(&mut self.m_list) {
@@ -129,7 +139,7 @@ impl CObjectContainer {
         self.m_list = kept;
     }
 
-    /// `add(new T(...))`: takes ownership of a `Ptr::new_box` object.
+    /// Takes ownership of a `Ptr::new_box` object; when the container is full it deletes the object and returns false.
     pub fn add<T: CObjectTrait>(&mut self, g: &mut Game, ptr: Ptr<T>) -> bool {
         self.add_dyn(g, Ptr::from_raw(ptr.as_ptr() as *mut dyn CObjectTrait))
     }
@@ -152,9 +162,9 @@ impl CObjectContainer {
         self.release(Ptr::from_raw(ptr.as_ptr() as *mut dyn CObjectTrait));
     }
 
+    /// `add` for an object already behind a trait pointer.
     pub fn add_dyn(&mut self, g: &mut Game, ptr: Ptr<dyn CObjectTrait>) -> bool {
         if self.m_list.len() + 1 >= self.capacity() {
-            //printf("eyecandy list full!\n");
             self.release(ptr); // otherwise memory leak!
             return false;
         }
@@ -165,7 +175,7 @@ impl CObjectContainer {
         true
     }
 
-    /// The C++ range-for captures `end()` once: objects added during the loop wait for the next frame.
+    /// Updates the objects listed when it starts; objects added during the loop wait for the next frame.
     pub fn update(&self, g: &mut Game) {
         let this = self as *const CObjectContainer;
         let n = self.m_list.len();
@@ -186,6 +196,7 @@ impl CObjectContainer {
         crate::common::gfx::display_list::set_owner(crate::common::gfx::display_list::Owner::None);
     }
 
+    /// Distance in pixels from (`ix`, `iy`) to the nearest object of `objectType`, or `sqrt(f32::MAX)` when there is none.
     pub fn get_closest_object(&self, ix: i16, iy: i16, objectType: ObjectType) -> f32 {
         let mut minDist = f32::MAX;
 
@@ -207,6 +218,7 @@ impl CObjectContainer {
         minDist.sqrt()
     }
 
+    /// Distance in pixels to the nearest moving object of `movingObjectType`, or `sqrt(f32::MAX)` when there is none.
     pub fn get_closest_moving_object(&self, ix: i16, iy: i16, movingObjectType: MovingObjectType) -> f32 {
         let mut minDist = f32::MAX;
 

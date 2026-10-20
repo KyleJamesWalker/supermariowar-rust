@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/overmap/WO_OrbitHazard.cpp
+//! Orbiting hazard: one piece of a fireball string or rotodisc circling a fixed center.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -22,9 +22,13 @@ use crate::smw::player::CPlayer;
 pub struct OMO_OrbitHazard {
     pub io_over_map_object: IO_OverMapObject,
 
+    /// Current angle (radians), kept in [0, 2π).
     pub dAngle: f32,
+    /// Angular speed (radians per tick).
     pub dVel: f32,
+    /// Orbit radius (pixels).
     pub dRadius: f32,
+    /// Orbit center (pixels).
     pub dCenter: Vec2f,
 }
 impl_base!(OMO_OrbitHazard => io_over_map_object: IO_OverMapObject);
@@ -79,6 +83,7 @@ impl OMO_OrbitHazard {
         this
     }
 
+    /// Places the sprite centered on its point of the orbit.
     fn calculate_position(&mut self) {
         let x = self.dCenter.x + self.dRadius * cosf(self.dAngle) - self.iw as f32 / 2.0f32;
         self.set_xf(x);

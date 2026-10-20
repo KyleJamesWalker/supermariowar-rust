@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/MysteryMushroomTempPlayer.cpp
+//! Snapshot of a player's movement state, used to swap players with the mystery mushroom.
 
 use crate::smw::players::PlayerId;
 use crate::game::Game;
@@ -9,7 +9,9 @@ use crate::smw::gs_gameplay::scorepowerupoffsets;
 use crate::smw::objects::moving::mo_carried_object::MO_CarriedObjectTrait;
 use crate::smw::player::CPlayer;
 
+/// Position, velocity and powerup of one player, copied out with `set_player` and applied with `get_player`.
 pub struct MysteryMushroomTempPlayer {
+    /// Slot already taken in the current swap.
     pub fUsed: bool,
 
     pub fx: f32,
@@ -27,8 +29,10 @@ pub struct MysteryMushroomTempPlayer {
 
     pub platform: PlatformId,
 
+    /// Stored powerup carried with the swap.
     pub gamepowerup: i16,
 
+    /// Screen position (pixels) of the stored-powerup icon, for the swap animation.
     pub iOldPowerupX: i16,
     pub iOldPowerupY: i16,
     pub _alias: Aliased,
@@ -61,6 +65,7 @@ impl MysteryMushroomTempPlayer {
         }
     }
 
+    /// Copies `player`'s state and `iPowerup` into this snapshot.
     pub fn set_player(&mut self, g: &mut Game, mut player: PlayerId, iPowerup: i16) {
         self.fx = g.player(player).fx;
         self.fy = g.player(player).fy;
@@ -71,22 +76,13 @@ impl MysteryMushroomTempPlayer {
         self.velx = g.player(player).velx;
         self.vely = g.player(player).vely;
 
-        // bobomb = player->bobomb;
-        // powerup = player->powerup;
-
         self.burnupstarttimer = g.player(player).burnup.starttimer;
         self.burnuptimer = g.player(player).burnup.timer;
 
         self.inair = g.player(player).inair;
         self.onice = g.player(player).onice;
-        // invincible = player->invincible;
-        // invincibletimer = player->invincibletimer;
 
         self.platform = g.player(player).platform;
-        // iCapeFrameX = player->iCapeFrameX;
-        // iCapeFrameY = player->iCapeFrameY;
-        // iCapeTimer = player->iCapeTimer;
-        // iCapeYOffset = player->iCapeYOffset;
 
         self.gamepowerup = iPowerup;
 
@@ -95,6 +91,7 @@ impl MysteryMushroomTempPlayer {
         self.iOldPowerupY = (g.player(player).score(g).y as i32 + 25) as i16;
     }
 
+    /// Applies this snapshot to `player`: sets its swap target and returns the stored powerup in `iPowerup`.
     pub fn get_player(&mut self, g: &mut Game, mut player: PlayerId, iPowerup: &mut i16) {
         g.player(player).fNewSwapX = self.fx;
         g.player(player).fNewSwapY = self.fy;
@@ -108,22 +105,13 @@ impl MysteryMushroomTempPlayer {
         g.player(player).velx = self.velx;
         g.player(player).vely = self.vely;
 
-        // player->bobomb = bobomb;
-        // player->powerup = powerup;
-
         g.player(player).burnup.starttimer = self.burnupstarttimer;
         g.player(player).burnup.timer = self.burnuptimer;
 
         g.player(player).inair = self.inair;
         g.player(player).onice = self.onice;
-        // player->invincible = invincible;
-        // player->invincibletimer = invincibletimer;
 
         g.player(player).platform = self.platform;
-        // player->iCapeFrameX = iCapeFrameX;
-        // player->iCapeFrameY	= iCapeFrameY;
-        // player->iCapeTimer = iCapeTimer;
-        // player->iCapeYOffset = iCapeYOffset;
 
         *iPowerup = self.gamepowerup;
 

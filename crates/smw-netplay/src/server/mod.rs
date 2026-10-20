@@ -1,4 +1,4 @@
-//! Port of src/server (the `smw-server` lobby server, built with `IS_SERVER=1`), which `smw_relay` runs.
+//! The netplay lobby server, which `smw_relay` runs.
 
 pub mod blob;
 pub mod clock;

@@ -1,4 +1,4 @@
-//! Port of src/common/ResourceManager.cpp
+//! The resource manager: every sprite, font and sound the game loads from the current graphics and sound packs.
 
 use crate::game::Game;
 use crate::common::gfx::color::RGB;
@@ -12,6 +12,7 @@ use crate::common::sfx::{sfxMusic, sfxSound, sfx_can_play_audio};
 use crate::globals::*;
 use std::path::{Path, PathBuf};
 
+/// The skin file and team color a player's menu sprites were last loaded from.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct LoadedSpriteInfo {
     pub path: PathBuf,
@@ -23,7 +24,7 @@ pub struct LoadedSpriteInfo {
 pub struct SpriteId(u16);
 
 impl SpriteId {
-    /// No sprite: what a null `gfxSprite*` was in the C++.
+    /// No sprite.
     pub const NONE: SpriteId = SpriteId(u16::MAX);
 
     pub fn is_none(self) -> bool {
@@ -34,8 +35,11 @@ impl SpriteId {
 /// A player skin's sprites, one per `PGFX_*` frame.
 pub type StripIds = [SpriteId; PGFX_LAST as usize];
 
+/// Owns every loaded sprite by [`SpriteId`]. Arrays of three are indexed by draw size (0 full, 1 preview,
+/// 2 thumbnail), arrays of four by player.
 #[derive(Default)]
 pub struct CResourceManager {
+    /// Each player's skin, and the mode skins that replace it.
     pub spr_player: [StripIds; 4],
     pub spr_shyguy: [StripIds; 4],
     pub spr_chocobo: [StripIds; 4],
@@ -49,6 +53,7 @@ pub struct CResourceManager {
     pub spr_snow: SpriteId,
     pub spr_rain: SpriteId,
     pub spr_background: SpriteId,
+    /// Double-buffered prerendered map background and foreground.
     pub spr_backmap: [SpriteId; 2],
     pub spr_frontmap: [SpriteId; 2],
     pub spr_overlay: SpriteId,
@@ -84,11 +89,13 @@ pub struct CResourceManager {
     pub spr_tour_markers: SpriteId,
     pub spr_menu_boxed_numbers: SpriteId,
     pub spr_countdown_numbers: SpriteId,
+    /// Preview and thumbnail marker sheets.
     pub spr_thumbnail_warps: [SpriteId; 2],
     pub spr_thumbnail_mapitems: [SpriteId; 2],
     pub spr_platformstarttile: SpriteId,
     pub spr_platformendtile: SpriteId,
     pub spr_platformpath: SpriteId,
+    /// World map sheets, full size and preview.
     pub spr_worldbackground: [SpriteId; 3],
     pub spr_worldforeground: [SpriteId; 3],
     pub spr_worldforegroundspecial: [SpriteId; 3],
@@ -312,6 +319,7 @@ pub struct CResourceManager {
     pub sfx_enterstage: sfxSound,
     pub sfx_gameover: sfxSound,
     pub sfx_pickup: sfxSound,
+    /// Sprite storage, boxed so references stay valid as sprites are added.
     pub sprites: Vec<Box<std::cell::UnsafeCell<gfxSprite>>>,
     pub _alias: Aliased,
 }
@@ -566,7 +574,7 @@ impl CResourceManager {
         }
     }
 
-    /// Not in the C++: every sound, in a fixed order, for replay checkpoints (smw/checkpoint.rs).
+    /// Every sound, in a fixed order, for replay checkpoints (smw/checkpoint.rs).
     pub fn sounds(&mut self) -> Vec<*mut sfxSound> {
         let mut sounds: Vec<*mut sfxSound> = self.sfx_announcer.iter_mut().map(|s| s as *mut sfxSound).collect();
         sounds.extend([
@@ -624,6 +632,7 @@ impl CResourceManager {
         sounds
     }
 
+    /// Loads skin `skinID` of the skin list as `playerID`'s menu sprites; see [`load_menu_skin_path`](Self::load_menu_skin_path).
     pub fn load_menu_skin(&mut self, g: &mut Game, playerID: i16, skinID: i16, colorID: i16, fLoadBothDirections: bool) -> bool {
         let path = g.skinlist.at(skinID as usize).path.clone();
         self.load_menu_skin_path(g, playerID, &path, colorID, fLoadBothDirections)
@@ -634,10 +643,12 @@ impl CResourceManager {
         self.loaded_player_sprites[playerID as usize] = LoadedSpriteInfo::default();
     }
 
+    /// Loads the menu frames of the skin at `path` in team color `colorID` into `playerID`'s sprites, unless they are
+    /// already loaded. Logs and returns `false` on failure.
     pub fn load_menu_skin_path(&mut self, g: &mut Game, playerID: i16, path: &Path, colorID: i16, fLoadBothDirections: bool) -> bool {
         let p = playerID as usize;
         let new_info = LoadedSpriteInfo { path: path.to_path_buf(), colorScheme: colorID };
-        // GSMenu's LoadFullSkin replaces spr_player without updating this cache, as in C++.
+        // Loading a full skin replaces spr_player without updating this cache, so check the sprites too.
         if self.loaded_player_sprites[p] == new_info {
             let both_dirs_present = !self.sprite(self.spr_player[p][PGFX_STANDING_L as usize]).get_surface().is_null()
                 && !self.sprite(self.spr_player[p][PGFX_RUNNING_L as usize]).get_surface().is_null();
@@ -660,16 +671,18 @@ impl CResourceManager {
         }
     }
 
-    /// Panics where the C++ throws (the C++ callers do not catch).
+    /// Loads every frame of the skin at `path` in team color `colorID`; panics if it cannot be loaded.
     pub fn load_full_skin_path(&self, g: &mut Game, path: &Path, colorID: i16) -> SpriteStrip {
         gfx_loadfullskin(g, path, colorID).unwrap_or_else(|what| panic!("{}", what))
     }
 
+    /// Loads every frame of skin `skinID` of the skin list in team color `colorID`; panics if it cannot be loaded.
     pub fn load_full_skin(&self, g: &mut Game, skinID: i16, colorID: i16) -> SpriteStrip {
         let path = g.skinlist.at(skinID as usize).path.clone();
         gfx_loadfullskin(g, &path, colorID).unwrap_or_else(|what| panic!("{}", what))
     }
 
+    /// Loads the gameplay sprites from the current game graphics pack.
     fn load_all_sprites(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         let graphicspack = g.gamegraphicspacklist.current_path().to_string_lossy().into_owned();
@@ -690,7 +703,7 @@ impl CResourceManager {
             bobombPath = convert_path_pack(g, "gfx/packs/modeskins/bobomb.bmp", &graphicspack);
         }
 
-        //Just load menu skins for now (just standing right sprite)
+        // Mode skins in every team color.
         for k in 0..MAX_PLAYERS as i16 {
             self.set_strip(self.spr_shyguy[k as usize], self.load_full_skin_path(g, Path::new(&shyguyPath), k));
             self.set_strip(self.spr_chocobo[k as usize], self.load_full_skin_path(g, Path::new(&chickenPath), k));
@@ -936,7 +949,6 @@ impl CResourceManager {
         *self.sprite(self.spr_tournament_powerup_splash) = builder("gfx/packs/menu/tournament_powerup_splash.png").create(g);
         *self.sprite(self.spr_player_select_background) = builder("gfx/packs/menu/player_select_background.png").create(g);
         *self.sprite(self.spr_player_select_ready) = builder("gfx/packs/menu/player_select_ready.png").create(g);
-        //spr_ipfield = builder("gfx/packs/menu/menu_ipfield.png").create();
         *self.sprite(self.spr_selectfield) = builder("gfx/packs/menu/menu_selectfield.png").create(g);
         *self.sprite(self.spr_selectfielddisabled) = builder("gfx/packs/menu/menu_selectfield_disabled.png").create(g);
         *self.sprite(self.spr_map_filter_icons) = builder("gfx/packs/menu/menu_map_flags.png").create(g);
@@ -982,6 +994,7 @@ impl CResourceManager {
         *self.sprite(self.spr_worldbonushouse) = builder("gfx/packs/world/world_bonushouse.png").create(g);
     }
 
+    /// Loads tilesets, game fonts and gameplay sprites from the current game graphics pack.
     pub fn load_game_graphics(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         let graphicspack = g.gamegraphicspacklist.current_path().to_string_lossy().into_owned();
@@ -994,6 +1007,7 @@ impl CResourceManager {
         self.load_all_sprites(g);
     }
 
+    /// Loads the menu fonts and title screen images from the current menu graphics pack.
     pub fn load_start_graphics(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         let graphicspack = g.menugraphicspacklist.current_path().to_string_lossy().into_owned();
@@ -1002,7 +1016,6 @@ impl CResourceManager {
         self.menu_font_small = gfxFont::from_path(g, &convert_path_pack(gp.get(), "gfx/packs/menu/menu_font_small.png", &graphicspack));
         self.menu_font_large = gfxFont::from_path(g, &convert_path_pack(gp.get(), "gfx/packs/menu/menu_font_large.png", &graphicspack));
 
-        //load basic stuff
         *self.sprite(self.menu_backdrop) = builder("gfx/packs/menu/menu_background.png").without_color_key().create(g);
         *self.sprite(self.menu_smw) = builder("gfx/packs/menu/menu_smw.png").create(g);
         *self.sprite(self.menu_version) = builder("gfx/packs/menu/menu_version.png").create(g);
@@ -1025,7 +1038,7 @@ impl CResourceManager {
         *self.sprite(self.spr_overlay) = builder("gfx/packs/menu/menu_shade.png").create(g);
     }
 
-    /// Panics where the C++ throws on a missing sound (the C++ callers do not catch).
+    /// Loads every sound from the current sound pack; returns `false` without audio and panics on a missing file.
     pub fn load_game_sounds(&mut self, g: &mut Game) -> bool {
         let mut gp = g.ptr();
         g.game_values.soundcapable = false;

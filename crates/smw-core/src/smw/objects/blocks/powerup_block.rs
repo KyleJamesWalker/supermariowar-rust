@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/blocks/PowerupBlock.cpp
+//! Question block: releases a weighted random powerup when hit, then respawns.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -27,20 +27,30 @@ use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
 //------------------------------------------------------------------------------
 // class powerup block
 //------------------------------------------------------------------------------
+/// Item block whose `state` runs 0 ready, 1 rising, 2 settling, 3 used until the item respawn setting.
 #[derive(Clone)]
 pub struct B_PowerupBlock {
     pub io_block: IO_Block,
 
+    /// Sum of `settings`; 0 means the block gives nothing.
     pub iCountWeight: i16,
 
+    /// Ticks used; the block resets at the item respawn setting.
     pub timer: i16,
+    /// The released powerup moves right, away from a hit on the block's left.
     pub side: bool,
+    /// Number of animation frames.
     pub iNumSprites: i16,
+    /// Ticks per animation frame.
     pub animationSpeed: i16,
+    /// X offset (pixels) of the current animation frame.
     pub drawFrame: i16,
+    /// Tick counter toward the next animation frame.
     pub animationTimer: i16,
+    /// Width (pixels) of the frame strip.
     pub animationWidth: i16,
 
+    /// Weight of each powerup, combining map and game settings as the override setting says.
     pub settings: [i16; NUM_POWERUPS as usize],
 }
 impl_base!(B_PowerupBlock => io_block: IO_Block);
@@ -123,11 +133,12 @@ impl B_PowerupBlock {
     }
 }
 
-/// Virtual interface added by `B_PowerupBlock` (`SelectPowerup`).
+/// Powerup block behavior shared with the view block; `select_powerup` picks what comes out.
 pub trait B_PowerupBlockTrait: IO_BlockTrait {
     fn pb(&self) -> &B_PowerupBlock;
     fn pb_mut(&mut self) -> &mut B_PowerupBlock;
 
+    /// Powerup index to release, or `NO_POWERUP`.
     fn select_powerup(&mut self, g: &mut Game) -> i16 {
         b_powerup_block_select_powerup(g, self)
     }
@@ -146,6 +157,7 @@ macro_rules! impl_powerup_block_plumbing {
     };
 }
 
+/// Draws the ready or used frame unless hidden.
 pub fn b_powerup_block_draw<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T) {
     let b = this.pb();
     if !b.hidden {
@@ -158,6 +170,7 @@ pub fn b_powerup_block_draw<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this:
     }
 }
 
+/// Runs the bump, releases the powerup when it settles, and counts down to respawn.
 pub fn b_powerup_block_update<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T) {
         let mut gp = g.ptr();
     io_block_update(g, this);
@@ -215,6 +228,7 @@ pub fn b_powerup_block_update<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, thi
     }
 }
 
+/// Spawns the mode's special item by its chance setting, else the block's own pick.
 fn b_powerup_block_release<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, pos: Vec2s, side: bool) {
     let mut gp = g.ptr();
     let gm = g.mode().gamemode;
@@ -261,12 +275,14 @@ pub fn net_block_ready(g: &mut Game, col: i16, row: i16) -> bool {
     }
 }
 
+/// Makes a used block ready again.
 pub fn b_powerup_block_reset<T: B_PowerupBlockTrait + ?Sized>(this: &mut T) {
     let b = this.pb_mut();
     b.timer = 0;
     b.state = 0;
 }
 
+/// A hidden block only reacts to a hit from below.
 pub fn b_powerup_block_collide_player_dir<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, player: PlayerId, direction: i16, useBehavior: bool) -> bool {
     if this.pb().hidden {
         let b = this.pb();
@@ -280,6 +296,7 @@ pub fn b_powerup_block_collide_player_dir<T: B_PowerupBlockTrait + ?Sized>(g: &m
     io_block_collide_player_dir(g, this, player, direction, useBehavior)
 }
 
+/// Lands the player; a rising block kills or launches them, and a super stomp triggers it.
 pub fn b_powerup_block_hittop_player<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: PlayerId, useBehavior: bool) -> bool {
     io_block_hittop_player(g, this, player, useBehavior);
 
@@ -312,6 +329,7 @@ pub fn b_powerup_block_hittop_player<T: B_PowerupBlockTrait + ?Sized>(g: &mut Ga
     false
 }
 
+/// Bounces the player off, reveals a hidden block and starts the release.
 pub fn b_powerup_block_hitbottom_player<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut player: PlayerId, useBehavior: bool) -> bool {
         let mut gp = g.ptr();
     if useBehavior {
@@ -355,6 +373,7 @@ pub fn b_powerup_block_collide_object_dir<T: B_PowerupBlockTrait + ?Sized>(g: &m
     io_block_collide_object_dir(g, this, object, direction)
 }
 
+/// Lands the object; a fast box triggers the block, a rising block bumps the object.
 pub fn b_powerup_block_hittop_object<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
         let mut gp = g.ptr();
     let iposy = this.pb().iposy;
@@ -385,6 +404,7 @@ pub fn b_powerup_block_hittop_object<T: B_PowerupBlockTrait + ?Sized>(g: &mut Ga
     true
 }
 
+/// Bounces the object off; a moving shell, thrown block, fast box or attack zone triggers the block.
 pub fn b_powerup_block_hitright_object<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
         let mut gp = g.ptr();
     //Object bounces off
@@ -427,6 +447,7 @@ pub fn b_powerup_block_hitright_object<T: B_PowerupBlockTrait + ?Sized>(g: &mut 
     false
 }
 
+/// Bounces the object off; a moving shell, thrown block, fast box or attack zone triggers the block.
 pub fn b_powerup_block_hitleft_object<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
         let mut gp = g.ptr();
     //Object bounces off
@@ -468,6 +489,7 @@ pub fn b_powerup_block_hitleft_object<T: B_PowerupBlockTrait + ?Sized>(g: &mut G
     false
 }
 
+/// Starts the release with no player credited.
 pub fn b_powerup_block_trigger_behavior<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T) {
         let mut gp = g.ptr();
     if this.pb().state == 0 {
@@ -481,6 +503,7 @@ pub fn b_powerup_block_trigger_behavior<T: B_PowerupBlockTrait + ?Sized>(g: &mut
     }
 }
 
+/// Picks a powerup index at random by `settings` weight.
 pub fn b_powerup_block_select_powerup<T: B_PowerupBlockTrait + ?Sized>(g: &mut Game, this: &mut T) -> i16 {
     let mut gp = g.ptr();
     let b = this.pb();

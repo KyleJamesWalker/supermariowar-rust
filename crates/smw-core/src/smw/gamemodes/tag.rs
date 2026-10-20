@@ -1,4 +1,4 @@
-//! Port of src/smw/gamemodes/Tag.cpp
+//! Tag mode: the tagged player bleeds points until they tag someone else.
 
 use crate::smw::players::PlayerId;
 use crate::game::Game;
@@ -16,15 +16,19 @@ use crate::smw::player::CPlayer;
 
 #[derive(Clone)]
 
+/// Tag mode. Teams start at the goal; the tagged player loses a point every `ticks(pointspeed)`
+/// ticks and passes the tag by killing someone. Any death costs 5; a team is removed at zero.
 pub struct CGM_Tag {
     pub cgame_mode: CGameMode,
 
-    pub m_tagged: PlayerId,    /// Frames toward the next point; never reset between games, like the C++ function-local static.
+    /// The tagged player, or `PlayerId::NONE` until `think` reassigns it.
+    pub m_tagged: PlayerId,
+    /// Ticks toward the tagged player's next point loss; `init` does not reset it.
     counter: i16,
 }
 impl_base!(CGM_Tag => cgame_mode: CGameMode);
 
-/// The `j`/`k` loop shared by `think` and `playerkilledself`.
+/// Returns true when, for some team, the other teams' scores total at most 20% of the goal.
 fn tag_warning_needed(g: &mut Game, goal: i16) -> bool {
     let mut countscore: i16 = 0;
     let mut playwarning = false;
@@ -47,13 +51,8 @@ fn tag_warning_needed(g: &mut Game, goal: i16) -> bool {
     playwarning
 }
 
-//tag mode (leper mode suggestion from ziotok)
-//one player is "it"
-//if he killes another player, they become "it"
-//the player that is "it" loses life until dead.
-//the "it" player is chosen at random.  Someone is
-//always "it".
 impl CGM_Tag {
+    /// Tags the highest-scoring living player (lowest under reverse scoring), breaking ties randomly.
     fn reassign(&mut self, g: &mut Game) {
         let fGetHighest = !self.fReverseScoring;
         self.m_tagged = self.get_highest_score_player(g, fGetHighest);

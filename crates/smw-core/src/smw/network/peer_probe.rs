@@ -1,14 +1,17 @@
-//! Netplay v2 groundwork: when the lobby sends `NET_L2P_MATCH_ROOM`, every player also joins the room's WebRTC
-//! mesh and logs whether all pairs connected. The v1 match does not use these connections.
+//! The room's WebRTC mesh: on `NET_L2P_MATCH_ROOM` every player joins the match's signaling room and logs whether
+//! all pairs connected; the match then takes the socket.
 
 use crate::common_netplay::protocol_packages::{cstr_field, MatchRoom};
 use smw_peer::{IceConfig, IceServer, PeerSocket, PeerState};
 use std::time::{Duration, Instant};
 
+/// How long to wait for every peer before logging how many connected.
 const DEADLINE: Duration = Duration::from_secs(15);
 
+/// The room's socket while its peers connect, until `NetClient::take_peer_socket` hands it to the match.
 pub struct PeerProbe {
     socket: PeerSocket,
+    /// How many other players the room has.
     others: usize,
     opened: Instant,
     reported: bool,
@@ -35,10 +38,12 @@ impl PeerProbe {
         PeerProbe { socket: PeerSocket::connect(&room, &ice), others, opened: Instant::now(), reported: false }
     }
 
+    /// The socket and how many other players it should reach.
     pub fn into_socket(self) -> (PeerSocket, usize) {
         (self.socket, self.others)
     }
 
+    /// Once per frame: logs peers coming and going, and once whether all of them connected in time.
     pub fn update(&mut self) {
         for (peer, state) in self.socket.update_peers() {
             let elapsed = self.opened.elapsed().as_millis();
@@ -47,6 +52,7 @@ impl PeerProbe {
                 PeerState::Disconnected => println!("[net] v2: peer {:08x} left after {} ms", peer.0 >> 96, elapsed),
             }
         }
+        // Reliable messages stay queued for the match's start handshake.
         self.socket.receive(smw_peer::UNRELIABLE);
         if self.reported {
             return;

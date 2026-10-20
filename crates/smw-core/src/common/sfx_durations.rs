@@ -1,4 +1,4 @@
-//! Not in upstream: the length SDL2_mixer gives every sound and track in data/, which the virtual mixer
+//! The length SDL2_mixer gives every sound and track in data/, which the virtual mixer
 //! (sfx.rs) turns into channel and music end times. The table is the input for making the virtual mixer
 //! independent of the backend's decoder (docs/design/ARCHITECTURE_V2.md, Audio).
 //!
@@ -7,6 +7,7 @@
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
+/// The raw table, one `chunk` or `music` line per file; its header lines give the format.
 pub const TABLE: &str = include_str!("sfx_durations.txt");
 
 struct Table {

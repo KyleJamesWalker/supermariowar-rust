@@ -1,4 +1,4 @@
-//! Port of src/smw/player_components/PlayerWings.cpp
+//! P-wings sprite drawn on a flying player.
 
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -8,7 +8,9 @@ use crate::smw::player::CPlayer;
 
 #[derive(Clone, Default)]
 pub struct PlayerWings {
+    /// Ticks in the current flap frame; frames change every 8.
     pub iWingsTimer: u8,
+    /// Source x of the wing frame: 0 or 26; 26 when not flying.
     pub iWingsFrame: u16,
     pub _alias: Aliased,
 }
@@ -23,6 +25,7 @@ impl PlayerWings {
         self.iWingsFrame = 0;
     }
 
+    /// Animates and draws the wings, clipped while the player warps.
     pub fn draw(&mut self, g: &mut Game, player: &mut CPlayer) {
         let mut gp = g.ptr();
         if player.flying {

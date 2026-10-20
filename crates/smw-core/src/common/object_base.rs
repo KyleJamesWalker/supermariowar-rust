@@ -1,4 +1,4 @@
-//! Port of src/common/ObjectBase.cpp
+//! The base type and virtual interface of every game object, and velocity caps.
 
 use crate::smw::object_container::ObjectId;
 use crate::smw::players::PlayerId;
@@ -14,6 +14,7 @@ use crate::smw::player::CPlayer;
 use std::any::Any;
 use std::ops::{Deref, DerefMut};
 
+/// An object's broad kind; one of the `object_*` constants.
 pub type ObjectType = i32;
 pub const object_none: ObjectType = 0;
 pub const object_block: ObjectType = 1;
@@ -33,6 +34,7 @@ pub const object_pipe_coin: ObjectType = 14;
 pub const object_pipe_bonus: ObjectType = 15;
 pub const object_phanto: ObjectType = 16;
 
+/// `vel` capped at `MAXVELY` downwards; upward speed is not capped.
 pub fn cap_falling_velocity(vel: f32) -> f32 {
     if vel > MAXVELY {
         return MAXVELY;
@@ -41,6 +43,7 @@ pub fn cap_falling_velocity(vel: f32) -> f32 {
     vel
 }
 
+/// `vel` capped to `MAXSIDEVELY` either way.
 pub fn cap_side_velocity(vel: f32) -> f32 {
     if vel < -MAXSIDEVELY {
         return -MAXSIDEVELY;
@@ -53,27 +56,34 @@ pub fn cap_side_velocity(vel: f32) -> f32 {
     vel
 }
 
+/// What every game object has: position, size, velocity, collision box and sprite.
 #[derive(Clone)]
 
 pub struct CObject {
     pub objectType: ObjectType,
 
+    /// Position in pixels, truncated from `fx`, `fy`; set them through `set_xf` and friends to keep both in step.
     pub ix: i16,
     pub iy: i16,
+    /// Size in pixels, from the sprite unless the type sets it.
     pub iw: i16,
     pub ih: i16,
     pub fx: f32,
     pub fy: f32,
+    /// Velocity in pixels per tick.
     pub velx: f32,
     pub vely: f32,
 
+    /// The collision box size, and its inset from the sprite's corner; the sprite draws at `ix - collisionOffsetX`.
     pub collisionWidth: i16,
     pub collisionHeight: i16,
     pub collisionOffsetX: i16,
     pub collisionOffsetY: i16,
 
     pub spr: SpriteId,
+    /// Per-type state.
     pub state: i16,
+    /// Marked for removal; the container drops it in `clean_dead_objects`.
     pub dead: bool,
 
     pub iNetworkID: i32,
@@ -132,6 +142,7 @@ impl CObject {
     }
     pub fn set_yf(&mut self, yf: f32) {
         self.fy = yf;
+        // Not a floor: an exact negative integer lands one lower.
         self.iy = (if self.fy < 0.0 { self.fy - 1.0 } else { self.fy }) as i16;
     }
     pub fn set_yi(&mut self, yi: i16) {
@@ -177,6 +188,7 @@ impl CObject {
         self.iNetworkID
     }
 
+    /// Whether the object wraps around the screen edges; true when it has no sprite.
     pub fn get_wrap(&self, g: &Game) -> bool {
         if !self.spr.is_none() {
             g.rm.sprite(self.spr).is_wrapping()
@@ -185,6 +197,7 @@ impl CObject {
         }
     }
 
+    /// The map blocks under the object's top-left, top-right, bottom-left and bottom-right corners, or null.
     pub fn get_collision_blocks(&self, g: &mut Game) -> [Ptr<dyn IO_BlockTrait>; 4] {
         let ix = self.ix as i32;
         let iy = self.iy as i32;
@@ -213,7 +226,6 @@ impl CObject {
     }
 }
 
-/// Virtual interface of `CObject`. Overloads: `collide(CPlayer*)` is `collide_player`, `collide(IO_MovingObject*)` is `collide_object`.
 /// A copy of an object, for `Game::clone_match`.
 pub trait CloneObject {
     fn clone_object(&self) -> Ptr<dyn CObjectTrait>;
@@ -225,6 +237,7 @@ impl<T: CObjectTrait + Clone> CloneObject for T {
     }
 }
 
+/// Virtual interface of `CObject`. Overloads: `collide(CPlayer*)` is `collide_player`, `collide(IO_MovingObject*)` is `collide_object`.
 pub trait CObjectTrait: Any + CloneObject {
     fn obj(&self) -> &CObject;
     fn obj_mut(&mut self) -> &mut CObject;

@@ -1,4 +1,4 @@
-//! Port of src/smw/player_components/PlayerSuperStomp.cpp
+//! Super stomp: hover briefly, slam down, and blast attack zones on landing.
 
 use crate::game::Game;
 use crate::common::eyecandy::EC_SuperStompExplosion;
@@ -10,13 +10,18 @@ use crate::globals::*;
 use crate::smw::objects::moving::mo_attack_zone::MO_AttackZone;
 use crate::smw::player::CPlayer;
 
+/// Ticks the slam stays a stomp after the hover ends.
 const SSTOMP_STRENGTH_TIMER: u16 = ticks(40) as u16;
 
 #[derive(Clone, Default)]
 pub struct PlayerSuperStomp {
+    /// Set from the start of a super stomp until the player lands.
     pub superstomp_lock: bool,
+    /// Ticks left hovering in place before the slam.
     pub floating_timer: i16,
+    /// True while slamming down; landing in this state blasts the attack zones.
     pub is_stomping: bool,
+    /// Ticks left before the slam stops counting as a stomp.
     pub iSuperStompExitTimer: i16,
     pub _alias: Aliased,
 }
@@ -35,6 +40,7 @@ impl PlayerSuperStomp {
         self.superstomp_lock = false;
     }
 
+    /// On the ground: clears the lock, re-allows the tanooki statue, and lands a pending stomp.
     pub fn update_on_ground_hit(&mut self, g: &mut Game, player: &mut CPlayer) {
         let mut gp = g.ptr();
         if player.inair {
@@ -82,7 +88,6 @@ impl PlayerSuperStomp {
     }
 
     pub fn start_super_stomping(&mut self, player: &mut CPlayer) {
-        // this function should be called to start the super stomping sequence
         debug_assert!(!self.superstomp_lock);
         debug_assert!(!self.is_stomping);
         debug_assert!(self.floating_timer <= 0);
@@ -116,12 +121,12 @@ impl PlayerSuperStomp {
         }
     }
 
-    // Player is in the stomping phase
+    /// True while slamming down.
     pub fn is_stomping(&self) -> bool {
         self.is_stomping
     }
 
-    // Player is in any of the SuperStomping phases (floating/stomping/falling)
+    /// True in any super stomp phase (hovering, slamming or falling) until the player lands.
     pub fn is_in_super_stomp_state(&self) -> bool {
         self.superstomp_lock
     }

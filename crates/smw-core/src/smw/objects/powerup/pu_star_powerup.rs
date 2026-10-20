@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/powerup/PU_StarPowerup.cpp
+//! Starman: makes the player invincible, or stores a star if already invincible.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;

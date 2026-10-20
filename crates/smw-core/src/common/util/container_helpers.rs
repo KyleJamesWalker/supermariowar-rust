@@ -1,10 +1,10 @@
-//! Port of src/common/util/ContainerHelpers.h
+//! Slice helpers for the `contains` and strict-weak-ordering `sort` calls the game makes.
 
 pub fn contains<T: PartialEq>(list: &[T], item: &T) -> bool {
     list.iter().any(|x| x == item)
 }
 
-// C++ uses std::sort (unstable, libc++ introsort); equal elements may land in a different order.
+/// An unstable sort by a less-than predicate; equal elements may land in any order.
 pub fn sort<T, F: FnMut(&T, &T) -> bool>(list: &mut [T], mut compare: F) {
     list.sort_unstable_by(|a, b| {
         if compare(a, b) {

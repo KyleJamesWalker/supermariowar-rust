@@ -1,4 +1,4 @@
-//! Port of src/smw/gamemodes/Frenzy.cpp
+//! Frenzy mode: frag limit with randomly spawning powerup cards.
 
 use crate::smw::players::PlayerId;
 use crate::game::Game;
@@ -16,20 +16,23 @@ use crate::smw::objectgame::PowerupType;
 use crate::smw::objects::moving::mo_frenzy_card::MO_FrenzyCard;
 use crate::smw::player::CPlayer;
 
-//Just like frag limit, but firepower cards appear randomly
+/// Frenzy mode: frag limit scoring while weighted-random powerup cards spawn on the map.
 #[derive(Clone)]
 pub struct CGM_Frenzy {
     pub cgm_frag: CGM_Frag,
 
+    /// Ticks since the last spawn check.
     pub timer: i16,
+    /// Card index (0 to `NUMFRENZYCARDS - 1`) of the most recently spawned card.
     pub iSelectedPowerup: i16,
+    /// Sum of the configured card weights.
     pub iItemWeightCount: i16,
+    /// Last player to pick up a card, cleared once they lose its power.
+    /// With a quantity of 0, a new card spawns only while this is `NONE`.
     pub m_frenzyowner: PlayerId,
 }
 impl_base!(CGM_Frenzy => cgm_frag: CGM_Frag);
 
-//Fireball:
-//Frag limit death match, but powerup cards appear randomly
 impl CGM_Frenzy {
     pub fn new() -> Self {
         let mut this = CGM_Frenzy { cgm_frag: CGM_Frag::new(), timer: 0, iSelectedPowerup: 0, iItemWeightCount: 0, m_frenzyowner: PlayerId::NONE };
@@ -66,6 +69,7 @@ impl CGameModeTrait for CGM_Frenzy {
     }
 }
 
+/// Resets the spawn timer and owner and totals the card weights.
 pub fn cgm_frenzy_init(g: &mut Game, this: &mut CGM_Frenzy) {
     cgamemode_init(g, this);
     this.timer = 0;
@@ -78,6 +82,7 @@ pub fn cgm_frenzy_init(g: &mut Game, this: &mut CGM_Frenzy) {
     this.set_frenzy_owner(PlayerId::NONE);
 }
 
+/// Picks a card by weight (the last card, a random powerup, when all weights are 0) and spawns it.
 fn spawn_card(g: &mut Game, this: &mut CGM_Frenzy) {
         let mut gp = g.ptr();
     if this.iItemWeightCount == 0 {
@@ -99,6 +104,7 @@ fn spawn_card(g: &mut Game, this: &mut CGM_Frenzy) {
     gp.get().objectcontainer[1].add(g, obj);
 }
 
+/// Spawns cards every `rate` ticks up to the quantity limit and drops an owner who lost the card's power.
 pub fn cgm_frenzy_think(g: &mut Game, this: &mut CGM_Frenzy) {
     if this.gameover {
         this.displayplayertext(g);

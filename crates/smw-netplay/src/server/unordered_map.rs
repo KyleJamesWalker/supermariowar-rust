@@ -1,6 +1,5 @@
-//! libc++ `std::unordered_map` with unique keys: same bucket layout, prime rehash policy and
-//! `std::hash`, so iteration order matches the C++ server (`SMWServer::rooms`).
-//! Checked against `tools/ref/unordered_map_order.cpp`.
+//! A hash map with libc++ `std::unordered_map`'s bucket layout, prime rehash policy and identity hash, so the
+//! lobby's players and rooms iterate in a fixed order.
 
 const NIL: usize = usize::MAX;
 /// `__first_node_` (before-begin) as a bucket predecessor.
@@ -26,9 +25,11 @@ struct Node<K, V> {
     next: usize,
     hash: usize,
     key: K,
+    /// Boxed so pointers to a value, such as a room's players, survive the slab growing.
     value: Box<V>,
 }
 
+/// Nodes live in a slab (`nodes`, reused through `free`) and link into one list in iteration order.
 pub struct UnorderedMap<K, V> {
     nodes: Vec<Option<Node<K, V>>>,
     free: Vec<usize>,
@@ -176,7 +177,7 @@ impl<K: LibcxxHash + Eq, V> UnorderedMap<K, V> {
         }
     }
 
-    /// `operator[]`: the existing value, or `make()` inserted where libc++ would put it.
+    /// The existing value, or `make()` inserted where libc++ would put it.
     pub fn index_or_insert_with(&mut self, key: K, make: impl FnOnce() -> V) -> &mut V {
         let found = self.find_node(&key);
         if found != NIL {
@@ -224,7 +225,7 @@ impl<K: LibcxxHash + Eq, V> UnorderedMap<K, V> {
         &mut self.node_mut(h).value
     }
 
-    /// `m[key] = value`
+    /// Inserts `value`, replacing any value for `key`.
     pub fn insert(&mut self, key: K, value: V) {
         let mut value = Some(value);
         let slot = self.index_or_insert_with(key, || value.take().unwrap());
@@ -289,7 +290,7 @@ impl<K: LibcxxHash + Eq, V> UnorderedMap<K, V> {
         }
     }
 
-    /// `erase(key)`
+    /// Removes `key` and returns its value.
     pub fn remove(&mut self, key: &K) -> Option<V> {
         let cn = self.find_node(key);
         if cn == NIL {
@@ -323,7 +324,7 @@ impl<K: LibcxxHash + Eq, V> UnorderedMap<K, V> {
         Some(*node.value)
     }
 
-    /// `clear()`: keeps the bucket count.
+    /// Removes every entry; the bucket count stays.
     pub fn clear(&mut self) {
         self.nodes.clear();
         self.free.clear();

@@ -1,3 +1,5 @@
+//! Moving objects: projectiles, hazards, attack zones, collectibles and the bases they share.
+
 pub mod mo_attack_zone;
 pub mod mo_bonus_house_chest;
 pub mod mo_boomerang;

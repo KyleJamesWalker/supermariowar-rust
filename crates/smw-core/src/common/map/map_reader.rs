@@ -1,7 +1,5 @@
-//! Port of src/common/map/MapReader.cpp
-//!
-//! The C++ reader class hierarchy (MapReader1500 ... MapReader1802) is one struct tagged with the
-//! concrete class; each `read_*` method dispatches to the override that class would use.
+//! Map file readers for every supported format version. One [`MapReader`] struct is tagged with its format
+//! version, and each `read_*` method dispatches to the section layout that version uses.
 
 use crate::game::Game;
 use crate::globals::Aliased;
@@ -9,6 +7,7 @@ use crate::common::file_io::BinaryFile;
 use crate::common::map::{CMap, ReadType};
 use crate::common::version::Version;
 
+/// Map file format version a reader parses, named by version digits (`R160A` is 1.6.0.10).
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum MapReaderKind {
     R1500,
@@ -23,16 +22,23 @@ pub enum MapReaderKind {
     R1802,
 }
 
+/// Reads one map file of a given format version into a [`CMap`].
 pub struct MapReader {
     pub kind: MapReaderKind,
 
+    /// The tile section stores a no-spawn flag per tile (1.6.1).
     pub parse_nospawn: bool,
+    /// Spawn areas store right and bottom edges; convert them to width and height (1.6.0.10 and 1.6.1).
     pub fix_spawnareas: bool,
 
+    /// Last version digit within 1.7 and 1.8 (0 to 2), which picks section variants.
     pub patch_version: u8,
 
+    /// Highest tileset ID in the 1.8 tileset table, or -1 before it is read.
     pub iMaxTilesetID: i16,
+    /// Map-file tileset ID to loaded tileset index, while reading a 1.8 map's tiles and platforms.
     pub translationid: Option<Vec<i16>>,
+    /// Width and height in tiles of each map-file tileset ID, for bounds-checking tile coordinates.
     pub tilesetwidths: Option<Vec<i16>>,
     pub tilesetheights: Option<Vec<i16>>,
     _alias: Aliased,
@@ -65,6 +71,8 @@ impl MapReader {
         r
     }
 
+    /// Reads `mapfile`, positioned after the version header, into `map`. `readtype` can stop early for a summary
+    /// or preview; returns `false` when a section is over its limit.
     pub fn load(&mut self, g: &mut Game, map: &mut CMap, mapfile: &mut BinaryFile, readtype: ReadType) -> bool {
         use MapReaderKind::*;
         match self.kind {
@@ -153,6 +161,7 @@ impl MapReader {
     }
 }
 
+/// The reader for the newest format version not above `mapversion`; anything below 1.6 reads as 1.5.
 pub fn get_loader_by_version(mapversion: &Version) -> Box<MapReader> {
     use MapReaderKind::*;
     let v = |major, minor, patch, build| Version { major, minor, patch, build };

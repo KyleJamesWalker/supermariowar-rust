@@ -1,3 +1,4 @@
+//! Menu items: labels, images, buttons, select fields, sliders, text fields and the map picker.
 pub mod menu_code;
 pub mod mi_button;
 pub mod mi_image;

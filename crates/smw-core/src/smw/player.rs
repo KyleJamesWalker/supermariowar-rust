@@ -1,4 +1,4 @@
-//! Port of src/smw/player.cpp
+//! The player character: state, movement, powerups, map collision, death and drawing.
 
 use crate::smw::object_container::ObjectId;
 use crate::smw::players::PlayerId;
@@ -66,6 +66,8 @@ use crate::smw::player_components::player_tanooki_suit::PlayerTanookiSuit;
 use crate::smw::player_components::player_warp_status::PlayerWarpStatus;
 use crate::smw::player_components::player_wings::PlayerWings;
 
+/// Life cycle state. Every variant after `Ready` is a warp state, and `state as i16 % 4` gives
+/// the warp's clip edge.
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum PlayerState {
@@ -85,6 +87,7 @@ pub enum PlayerState {
 }
 crate::enum_from_u8!(PlayerState, 12);
 
+/// Powerup action queued by input this tick and carried out by [`CPlayer::commit_action`].
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum PlayerAction {
@@ -100,6 +103,7 @@ pub enum PlayerAction {
     SpinTail,
 }
 
+/// How a death looks: a corpse flying off screen, a squished corpse, or ice shards.
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum PlayerDeathStyle {
@@ -122,90 +126,125 @@ impl Default for PlayerKeys {
     }
 }
 
-/// All C++ members are `pub` so friend classes and components reach them by their C++ names.
+/// One player. Fields are `pub` because components, modes and objects all reach into them.
 #[derive(Clone, Default)]
 pub struct CPlayer {
+    /// This player's own handle in `Game::players`.
     pub id: PlayerId,
+    /// True while tagged in shy guy tag.
     pub shyguy: bool,
 
+    /// Player slot 0-3, stable for the whole match.
     pub globalID: i16,
     pub teamID: i16,
 
     pub collisions: PlayerCollisions,
     pub awardeffects: PlayerAwardEffects,
 
+    /// Input this player reads.
     pub playerKeys: PlayerKeys,
+    /// Input device kind of this player's controls, such as `DEVICE_KEYBOARD`.
     pub playerDevice: i16,
 
     pub tanookisuit: PlayerTanookiSuit,
 
     /// Index into `Game::score`.
     pub score_slot: usize,
+    /// Kills since the last death, and the part of them made while airborne.
     pub killsinrow: i16,
     pub killsinrowinair: i16,
 
+    /// Index of this player in the play order.
     pub localID: i16,
+    /// Position within the team, for laying out the team's HUD.
     pub subTeamID: i16,
+    /// Color 0-3, selecting sprites and palettes.
     pub colorID: i16,
 
+    /// Top-left position in whole pixels, kept in sync with `fx`/`fy` by the setters.
     pub ix: i16,
     pub iy: i16,
+    /// Top-left position in pixels.
     pub fx: f32,
     pub fy: f32,
+    /// Velocity in pixels per tick.
     pub velx: f32,
     pub vely: f32,
+    /// Position at the start of this tick's movement.
     pub fOldX: f32,
     pub fOldY: f32,
+    /// Next tick's `fy` (`fy + vely`, plus platform motion), used by map collision.
     pub fPrecalculatedY: f32,
+    /// `velx` before wind and warps changed it.
     pub oldvelx: f32,
 
+    /// Player swap animation endpoints.
     pub fNewSwapX: f32,
     pub fNewSwapY: f32,
     pub fOldSwapX: f32,
     pub fOldSwapY: f32,
+    /// Source x of the palette column in the player sprite sheet.
     pub iSrcOffsetX: i16,
+    /// Sprites drawn on the scoreboard; follows the current form (chicken, bob-omb, shy guy).
     pub pScoreboardSprite: StripIds,
 
+    /// Swap animation endpoints of the stored-powerup HUD icon.
     pub iNewPowerupX: i16,
     pub iNewPowerupY: i16,
     pub iOldPowerupX: i16,
     pub iOldPowerupY: i16,
 
     pub inair: bool,
+    /// Standing on ice, which lowers acceleration and friction.
     pub onice: bool,
 
+    /// Set while jump is held after a jump, so holding it does not jump again.
     pub lockjump: bool,
+    /// Blocks dropping through solid-on-top tiles until down is released.
     pub lockfall: bool,
+    /// Set while turbo is held after using a powerup, so holding it does not fire again.
     pub lockfire: bool,
     pub throw_star: i16,
 
+    /// Air jumps used since landing (cape double jumps, P-wings takeoff).
     pub extrajumps: i16,
     pub flying: bool,
+    /// Ticks flown on P-wings; flight ends past `ticks(200)`.
     pub flyingtimer: i16,
 
     pub tail: PlayerTail,
     pub spin: PlayerSpinStatus,
     pub wings: PlayerWings,
 
+    /// Ticks left to use a pending spring or note block jump.
     pub superjumptimer: i16,
+    /// Pending super jump: 1 turbo jump, 2 super spring, 3 kuribo shoe hop.
     pub superjumptype: i16,
+    /// Ticks until another hammer or bomb can be thrown.
     pub hammertimer: i16,
 
+    /// Ticks between skid smoke puffs.
     pub frictionslidetimer: i16,
+    /// Ticks between bob-omb fuse smoke puffs.
     pub bobombsmoketimer: i16,
+    /// Ticks between rain splash puffs while running.
     pub rainsteptimer: i16,
 
+    /// The CPU brain, or `None` for a human or net player.
     pub pPlayerAI: Option<Box<dyn CPlayerAITrait>>,
 
     pub sprites: StripIds,
 
+    /// Current `PGFX_*` sprite; odd values face left.
     pub sprite_state: u8,
+    /// Ticks until the run animation switches frame.
     pub sprswitch: i16,
 
     pub invincibility: PlayerInvincibility,
     pub shield: PlayerShield,
 
     pub frozen: bool,
+    /// Ticks left frozen; mashing left or right melts it faster.
     pub frozentimer: i16,
 
     pub kuriboshoe: PlayerKuriboShoe,
@@ -219,10 +258,15 @@ pub struct CPlayer {
 
     pub action: PlayerAction,
 
+    /// Held power: -1 none, 1 fire, 2 hammer, 3 feather, 4 boomerang, 5 ice wand, 6 bomb, 7 leaf,
+    /// 8 P-wings.
     pub powerup: i16,
+    /// Uses left of the held power when its limit setting is on; the power is lost at 0.
     pub projectilelimit: i16,
+    /// This player's projectiles still in play.
     pub projectiles: i32,
 
+    /// True while transformed into a bob-omb; the next attack explodes.
     pub bobomb: bool,
 
     pub cape: PlayerCape,
@@ -232,39 +276,53 @@ pub struct CPlayer {
     pub spawnangle: f32,
     pub spawntimer: i16,
 
+    /// Ticks toward the next respawn countdown step.
     pub waittimer: i16,
     /// Index into `GameplayState::respawnCount`.
     pub respawn_slot: usize,
 
     pub warpstatus: PlayerWarpStatus,
 
+    /// Stored powerup being released; it takes effect when the ring closes in.
     pub powerupused: Option<PowerupType>,
+    /// Radius and angle of the closing ring of icons for `powerupused`.
     pub powerupradius: f32,
     pub powerupangle: f32,
 
+    /// True while turbo is held with nothing carried, so touching an item picks it up.
     pub fAcceptingItem: bool,
+    /// Turbo was pressed this tick.
     pub fPressedAcceptItem: bool,
     pub carriedItem: ObjectId,
 
+    /// Moving platform the player stands on.
     pub platform: PlatformId,
     pub iHorizontalPlatformCollision: i16,
     pub iVerticalPlatformCollision: i16,
     pub iPlatformCollisionPlayerId: i16,
 
+    /// In owned mode, the global id of the player who owns this one, or -1.
     pub ownerPlayerID: i16,
+    /// Source x of the owner's color in the owned tag sprite.
     pub ownerColorOffsetX: i16,
 
     pub jail: PlayerJail,
 
+    /// Drop through solid-on-top tiles this tick.
     pub fallthrough: bool,
 
+    /// Corpse override: 0 normal, 1 chicken, 2 bob-omb, 3 shy guy.
     pub diedas: i16,
 
+    /// Ticks since `spawn_text` last spawned text; it spawns at most every `ticks(20)`.
     pub spawntext: i16,
 
+    /// Player credited if this one dies to a hazard soon after being pushed or bounced, or -1.
     pub iSuicideCreditPlayerID: i16,
+    /// Ticks left on `iSuicideCreditPlayerID`.
     pub iSuicideCreditTimer: i16,
 
+    /// Spotlight following the player when spotlights are on.
     pub sSpotlight: SpotlightId,
 
     pub _alias: Aliased,
@@ -276,6 +334,7 @@ fn b(v: i32) -> bool {
 }
 
 impl CScore {
+    /// Adds `iValue`, clamping at 0; ignored once the game is over.
     pub fn adjust_score(&mut self, g: &mut Game, iValue: i16) {
         if g.mode().gameover {
             return;
@@ -291,6 +350,7 @@ impl CScore {
     }
 }
 
+/// Returns the player with global id `iGlobalID`, or `PlayerId::NONE`.
 pub fn get_player_from_global_id(g: &mut Game, iGlobalID: i16) -> PlayerId {
     for &player in g.players.iter() {
         if g.player(player).globalID == iGlobalID {
@@ -301,6 +361,7 @@ pub fn get_player_from_global_id(g: &mut Game, iGlobalID: i16) -> PlayerId {
     PlayerId::NONE
 }
 
+/// False while paused, exiting or swapping players; always true in netplay.
 pub fn should_update_sprite(g: &mut Game) -> bool {
     if g.netplay.active {
         return true;
@@ -309,6 +370,8 @@ pub fn should_update_sprite(g: &mut Game) -> bool {
     !g.game_values.flags.pausegame && !g.game_values.flags.exitinggame && !g.game_values.flags.swapplayers
 }
 
+/// Kills `killed` on behalf of the player with global id `iKiller`, or as a self-kill when that
+/// player is gone or is `killed`. `fForce` kills even when the mode returns `NonKill`.
 pub fn player_killed_player(g: &mut Game, iKiller: i16, mut killed: PlayerId, deathstyle: PlayerDeathStyle, style: KillStyle, fForce: bool, fKillCarriedItem: bool) -> PlayerKillType {
         let mut gp = g.ptr();
     let mut killer = get_player_from_global_id(g, iKiller);
@@ -337,6 +400,7 @@ pub fn player_killed_player(g: &mut Game, iKiller: i16, mut killed: PlayerId, de
     }
 }
 
+/// The current game mode as `T`, if it is one.
 fn gamemode_as<T: 'static>(g: &mut Game) -> Option<&'static mut T> {
     let mut gp = g.ptr();
     let gm = gp.mode();
@@ -347,7 +411,8 @@ fn gamemode_as<T: 'static>(g: &mut Game) -> Option<&'static mut T> {
 }
 
 impl CPlayer {
-    /// C++ `new CPlayer(...)`; the object must not move because the constructor hands out `this`.
+    /// Creates a player in `Game::players`, binds its input and places it at a spawn point.
+    /// The caller adds the returned handle to the play order.
     #[allow(clippy::too_many_arguments)]
     pub fn new(g: &mut Game, 
         iGlobalID: i16,
@@ -495,6 +560,7 @@ impl CPlayer {
     pub fn isspawning(&self) -> bool {
         self.state == PlayerState::Spawning
     }
+    /// True while entering or leaving a warp.
     pub fn iswarping(&self) -> bool {
         self.state > PlayerState::Ready
     }
@@ -508,6 +574,7 @@ impl CPlayer {
     pub fn get_warp_plane(&self) -> i16 {
         self.warpstatus.get_warp_plane()
     }
+    /// The warp's clip edge as 0-3; meaningful only while warping.
     pub fn get_warp_state(&self) -> i16 {
         self.state as i16 % 4
     }
@@ -525,6 +592,7 @@ impl CPlayer {
         &mut self.shield
     }
 
+    /// The `diedas` corpse override.
     pub fn corpse_type(&self, _: i16) -> i16 {
         self.diedas
     }
@@ -536,6 +604,7 @@ impl CPlayer {
     pub fn pressed_accept_item_key(&self) -> bool {
         self.fPressedAcceptItem
     }
+    /// True when touching a carriable item would pick it up.
     pub fn is_accepting_item(&self) -> bool {
         self.fAcceptingItem && self.tanookisuit.not_statue() && !self.kuriboshoe.is_on()
     }
@@ -549,6 +618,7 @@ impl CPlayer {
             self.projectiles -= 1;
         }
     }
+    /// Adjusts the count of this player's projectiles in play.
     pub fn increase_projectiles_count(&mut self, amount: u32) {
         self.projectiles = (self.projectiles as u32).wrapping_add(amount) as i32;
     }
@@ -574,17 +644,20 @@ impl CPlayer {
         self.id
     }
 
+    /// This player's control state for the tick.
     pub fn keys(&self, g: &Game) -> &'static mut COutputControl {
         g.player_keys(self.playerKeys)
     }
 
+    /// Edge to clip sprites against while warping.
     pub fn clip_edge(&self) -> ClipEdge {
         unsafe { std::mem::transmute::<i32, ClipEdge>((self.state as i16 % 4) as i32) }
     }
 
+    /// Thaws the player over time, faster when mashing, and shields them once free.
     pub fn update_frozen_status(&mut self, g: &mut Game, keymask: i32) {
         if self.frozen {
-            // `~(sprite_state & 0x1)` is never zero, so the left key always thaws.
+            // Left always counts as a mash; right only while the sprite faces left.
             if b(keymask & 4) || (b(self.sprite_state as i32 & 0x1) && b(keymask & 8)) {
                 self.frozentimer -= 5;
             }
@@ -607,10 +680,9 @@ impl CPlayer {
         }
     }
 
+    /// Speeds up toward `direction` (1 right, -1 left) up to the current top speed.
+    /// On the ground it also hops a kuribo shoe and plays skid and rain effects.
     pub fn accelerate(&mut self, g: &mut Game, direction: f32) {
-        // direction is
-        //  1 on moving right
-        // -1 on moving left
         debug_assert!(direction == 1.0 || direction == -1.0);
 
         if self.onice {
@@ -694,6 +766,7 @@ impl CPlayer {
         self.accelerate(g, -1.0);
     }
 
+    /// Applies air, ice or ground friction to `velx`.
     pub fn decrease_velocity(&mut self) {
         //Stop ground velocity when wearing the sticky shoe
         if !self.inair && self.kuriboshoe.get_type() == STICKY {
@@ -733,10 +806,12 @@ impl CPlayer {
         self.inair && self.isready() && !self.superstomp.is_in_super_stomp_state()
     }
 
+    /// Down pressed on a keyboard, or jump pressed while holding down.
     pub fn wants_to_super_stomp(&self, g: &Game) -> bool {
         (self.keys(g).game_down().fPressed && self.playerDevice == DEVICE_KEYBOARD) || (self.keys(g).game_jump().fPressed && self.keys(g).game_down().fDown)
     }
 
+    /// False during a kuribo shoe hop, which cannot start a super stomp.
     pub fn high_jumped(&self) -> bool {
         self.superjumptype != 3 || self.superjumptimer <= 0
     }
@@ -749,6 +824,7 @@ impl CPlayer {
         self.shield.is_on()
     }
 
+    /// True when landing on hazards from above does not hurt.
     pub fn is_invincible_on_bottom(&self) -> bool {
         self.is_invincible() || self.is_shielded() || self.kuriboshoe.is_on()
     }
@@ -757,10 +833,12 @@ impl CPlayer {
         self.superstomp.is_stomping()
     }
 
+    /// The team score this player feeds.
     pub fn score(&self, g: &mut Game) -> &'static mut CScore {
         g.score[self.score_slot].as_ptr().get()
     }
 
+    /// Half-seconds left before this player respawns.
     pub fn respawncounter(&self, g: &mut Game) -> &'static mut i16 {
         &mut crate::smw::gs_gameplay::GameplayState::instance(g).respawnCount[self.respawn_slot]
     }
@@ -769,6 +847,7 @@ impl CPlayer {
         self.diedas = r#type;
     }
 
+    /// Counts down the respawn delay and respawns at zero.
     pub fn update_waiting_for_respawn(&mut self, g: &mut Game) {
         debug_assert!(self.state == PlayerState::Waiting);
 
@@ -787,6 +866,7 @@ impl CPlayer {
         }
     }
 
+    /// Moves to a free spawn point and starts the spawn animation; stays waiting if none is free.
     pub fn respawn(&mut self, g: &mut Game) {
         if self.find_spawn_point(g) {
             //Make sure spawn point isn't inside a tile
@@ -817,6 +897,7 @@ impl CPlayer {
         }
     }
 
+    /// Launches 10-15 podobos, credited to this player, from the bottom of the screen.
     pub fn podobo_rain(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         let mut rm = g.rm;
@@ -899,6 +980,7 @@ impl CPlayer {
         matches!(self.state, PlayerState::EnteringWarpUp | PlayerState::EnteringWarpRight | PlayerState::EnteringWarpDown | PlayerState::EnteringWarpLeft)
     }
 
+    /// Plays the spawn animation for the spawn style, then makes the player ready.
     pub fn update_respawning(&mut self, g: &mut Game) {
         debug_assert!(self.isspawning());
 
@@ -942,6 +1024,7 @@ impl CPlayer {
         }
     }
 
+    /// Applies the stored powerup in `powerupused` and clears it.
     pub fn trigger_powerup(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         let this = self.this();
@@ -1067,6 +1150,7 @@ impl CPlayer {
         self.powerupused = None;
     }
 
+    /// Closes in the stored-powerup ring and triggers the powerup when it reaches the player.
     pub fn update_use_powerup(&mut self, g: &mut Game) {
         debug_assert!(self.powerupused.is_some());
 
@@ -1078,6 +1162,7 @@ impl CPlayer {
         }
     }
 
+    /// Palette for the player's current status, highest priority first.
     pub fn get_player_palette(&self, g: &mut Game) -> PlayerPalette {
         if self.is_invincible() {
             return self.invincibility.get_player_palette();
@@ -1104,6 +1189,7 @@ impl CPlayer {
         gfx_palette::normal
     }
 
+    /// Jump press on the ground: drops through a solid-on-top floor when down is held, else jumps.
     pub fn try_falling_through_platform(&mut self, g: &mut Game, movement_direction: i16) {
         let mut gp = g.ptr();
         //only if on the ground and the jump key was released somewhen after it was pressed the last time
@@ -1159,6 +1245,7 @@ impl CPlayer {
         self.lockjump = true;
     }
 
+    /// Uses the pending `superjumptype` jump.
     pub fn try_super_jumping(&mut self, g: &mut Game, movement_direction: i16) {
         let mut gp = g.ptr();
         debug_assert!(self.superjumptype > 0);
@@ -1182,6 +1269,7 @@ impl CPlayer {
         self.lockjump = true;
     }
 
+    /// Feather air jump, up to `featherjumps` per airtime.
     pub fn try_cape_double_jump(&mut self, g: &mut Game, movement_direction: i16) {
         let mut gp = g.ptr();
         debug_assert!(self.powerup == 3);
@@ -1206,6 +1294,7 @@ impl CPlayer {
         }
     }
 
+    /// Starts P-wings flight from the first air jump.
     pub fn try_start_flying(&mut self, g: &mut Game) {
         debug_assert!(self.powerup == 8);
         if self.kuriboshoe.is_on() || self.flying || self.extrajumps != 0 {
@@ -1219,6 +1308,7 @@ impl CPlayer {
         self.extrajumps += 1;
     }
 
+    /// Leaf tail shake, also allowed for the chicken when chicken gliding is on.
     pub fn try_shaking_tail(&mut self, g: &mut Game) {
         if self.kuriboshoe.is_on() || self.spin.is_spin_in_progress() {
             return;
@@ -1237,6 +1327,7 @@ impl CPlayer {
         }
     }
 
+    /// Starts releasing the stored powerup.
     pub fn try_releasing_powerup(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         if self.tanookisuit.is_statue() || g.mode().gamemode == game_mode_bonus {
@@ -1262,9 +1353,9 @@ impl CPlayer {
 
         if_sound_on_play(g, &mut gp.rm.sfx_storedpowerupsound);
 
-        // only the locally controlled player should be able to send requests
     }
 
+    /// Turbo held: queues the held power's action if its projectile and use limits allow.
     pub fn use_special_powerup(&mut self, g: &mut Game) {
         self.fAcceptingItem = g.carried(self.carriedItem).is_null();
 
@@ -1308,6 +1399,7 @@ impl CPlayer {
         }
     }
 
+    /// Turbo released: drops the carried item with down held, otherwise kicks it.
     pub fn release_carried_item(&mut self, g: &mut Game) {
         self.lockfire = false;
         self.fAcceptingItem = false;
@@ -1333,6 +1425,7 @@ impl CPlayer {
         }
     }
 
+    /// Steers P-wings flight with down, and ends it when frozen or after `ticks(200)` ticks.
     pub fn update_flying_status(&mut self, g: &mut Game) {
         if self.flying {
             //If they player was frozen while flying, cause them to stop flying
@@ -1359,6 +1452,7 @@ impl CPlayer {
         }
     }
 
+    /// Jump released: cuts the jump short, re-arms jumping and ends P-wings flight.
     pub fn enable_free_fall(&mut self, g: &mut Game) {
         self.lockjump = false; //the jump key is not pressed: the player may jump again if he is on the ground
 
@@ -1376,6 +1470,7 @@ impl CPlayer {
         }
     }
 
+    /// One tick of player logic: CPU input, timers, powerups, movement, map collision and sprite.
     pub fn r#move(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         let this = self.this();
@@ -1606,6 +1701,7 @@ impl CPlayer {
         self.update_sprite(gp.get());
     }
 
+    /// Carries out the queued `action`, spawning its projectile or attack.
     pub fn commit_action(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         let mut rm = g.rm;
@@ -1738,6 +1834,7 @@ impl CPlayer {
         self.action = PlayerAction::None;
     }
 
+    /// Picks the sprite for the current state and advances the run animation.
     pub fn update_sprite(&mut self, g: &mut Game) {
         let iReverseSprite: i32 = if g.game_values.reversewalk { 1 } else { 0 };
 
@@ -1898,6 +1995,8 @@ impl CPlayer {
         }
     }
 
+    /// Sets the jump velocity, scaled by `jumpModifier`: slower when slowed or jailed, higher
+    /// with turbo at speed, a fixed hop for a kuribo shoe bounce.
     pub fn jump(&mut self, g: &mut Game, iMove: i16, jumpModifier: f32, fKuriboBounce: bool) {
         if fKuriboBounce {
             self.vely = -VELKURIBOBOUNCE;
@@ -1923,6 +2022,8 @@ impl CPlayer {
         self.pPlayerAI.as_mut().unwrap().think(g, keys);
     }
 
+    /// Plays the death effects, drops carried items and the shoe, and resets for respawn
+    /// unless the team was removed.
     pub fn die(&mut self, g: &mut Game, deathStyle: PlayerDeathStyle, fTeamRemoved: bool, fKillCarriedItem: bool) {
         let mut gp = g.ptr();
         if !fTeamRemoved {
@@ -1934,8 +2035,7 @@ impl CPlayer {
         let ix = self.ix as i32;
         let iy = self.iy as i32;
 
-        //Only show the death gfx if the player is alive when he died
-        //If he is spawning or already dead, then don't show anything
+        // Death effects play unless the player was waiting or spawning; `Dead` still passes this check.
         if self.state >= PlayerState::Dead {
             let iDeathSprite = if deathStyle == PlayerDeathStyle::Jump { PGFX_DEADFLYING } else { PGFX_DEAD } as usize;
 
@@ -2021,7 +2121,7 @@ impl CPlayer {
         }
     }
 
-    // Called by CO_KuriboShoe
+    /// Puts the player in a kuribo shoe of `type`, dropping any item the shoe cannot hold.
     pub fn set_kuribo_shoe(&mut self, g: &mut Game, r#type: KuriboShoeType) {
         debug_assert!(r#type > 0);
         self.kuriboshoe.set_type(r#type);
@@ -2036,6 +2136,7 @@ impl CPlayer {
         self.clear_powerup_states();
     }
 
+    /// Resets per-life state and starts the respawn wait.
     pub fn setup_new_player(&mut self, g: &mut Game) {
         self.pScoreboardSprite = self.sprites;
         self.action = PlayerAction::None;
@@ -2107,6 +2208,7 @@ impl CPlayer {
         g.game_values.unlocksecret3part2[self.globalID as usize] = 0;
     }
 
+    /// Removes held power, bob-omb, tanooki, invincibility and any release in progress.
     pub fn strip_powerups(&mut self) {
         self.bobomb = false;
         self.powerup = -1;
@@ -2116,6 +2218,7 @@ impl CPlayer {
         self.powerupused = None;
     }
 
+    /// Moves to a spawn point for the team; false if none was free.
     pub fn find_spawn_point(&mut self, g: &mut Game) -> bool {
         let mut gp = g.ptr();
         let fRet = gp.g_map.findspawnpoint(g, self.teamID + 1, &mut self.ix, &mut self.iy, PW as i16, PH as i16, false);
@@ -2126,6 +2229,7 @@ impl CPlayer {
         fRet
     }
 
+    /// Floats `szText` up from the player, at most once every `ticks(20)` calls.
     pub fn spawn_text(&mut self, g: &mut Game, szText: &str) {
         self.spawntext += 1;
         if self.spawntext as i32 >= ticks(20) {
@@ -2140,6 +2244,7 @@ impl CPlayer {
         }
     }
 
+    /// Bounces off something stomped: a full jump with jump held (returns true), else a small hop.
     pub fn bouncejump(&mut self, g: &Game) -> bool {
         self.superstomp.reset();
 
@@ -2168,6 +2273,8 @@ impl CPlayer {
         self.awardeffects.add_kills_in_row_in_air_award(g, g.player(this));
     }
 
+    /// This player killed `killed`: awards, mode scoring, then the death unless the mode
+    /// returned `NonKill` (or `fForce`). A frozen victim shatters.
     pub fn killed_player(&mut self, g: &mut Game, mut killed: PlayerId, mut deathstyle: PlayerDeathStyle, style: KillStyle, fForce: bool, fKillCarriedItem: bool) -> PlayerKillType {
         let mut gp = g.ptr();
         let mut killer = self.this();
@@ -2221,6 +2328,7 @@ impl CPlayer {
         iKillType
     }
 
+    /// In tag mode, passes the tag between this player and `o2` if one of them has it.
     pub fn transfer_tag(&mut self, g: &mut Game, mut o2: PlayerId) {
         let mut gp = g.ptr();
         let mut o1 = self.this();
@@ -2265,6 +2373,7 @@ impl CPlayer {
         }
     }
 
+    /// In shy guy tag, a touch spreads shy guy status unless transfers are kills-only.
     pub fn transfer_shy_guy(&mut self, g: &mut Game, o2: PlayerId) {
         let o1 = self.this();
 
@@ -2286,6 +2395,7 @@ impl CPlayer {
         }
     }
 
+    /// Super jumps off a teammate's head when landing on it with jump held.
     pub fn bounce_assist_player(&mut self, g: &mut Game, o2: PlayerId) {
         let mut gp = g.ptr();
         let mut o1 = self.this();
@@ -2342,6 +2452,7 @@ impl CPlayer {
         }
     }
 
+    /// Draws the crown over the leading team's players when that option is on.
     pub fn draw_winner_crown(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         if g.game_values.showwinningcrown && g.g_iWinningPlayer == self.teamID {
@@ -2355,6 +2466,7 @@ impl CPlayer {
         }
     }
 
+    /// Draws the player in its current form with shoe, powerup extras, crown and award rings.
     pub fn draw(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         let this = self.this();
@@ -2499,6 +2611,7 @@ impl CPlayer {
         self.outofarena.draw(g, g.player(this));
     }
 
+    /// Moves the player along the player swap animation.
     pub fn updateswap(&mut self, g: &mut Game) {
         if self.state != PlayerState::Ready {
             return;
@@ -2536,6 +2649,7 @@ impl CPlayer {
         }
     }
 
+    /// Carries the player with the platform they stand on and reports its velocity.
     pub fn mapcolldet_handle_platform_velocity(&mut self, g: &mut Game, fPlatformVelX: &mut f32, fPlatformVelY: &mut f32) {
         if !self.platform.is_none() {
             *fPlatformVelX = g.g_map.platform(self.platform).fVelX;
@@ -2552,6 +2666,8 @@ impl CPlayer {
         }
     }
 
+    /// Handles a player above the screen (falls freely) or below it (wraps to the top).
+    /// Returns true when the rest of map collision should be skipped.
     pub fn mapcolldet_handle_out_of_screen(&mut self, g: &mut Game) -> bool {
         if self.fPrecalculatedY + (PH as f32) < 0.0 {
             // on top outside of the screen
@@ -2586,13 +2702,13 @@ impl CPlayer {
         false
     }
 
+    /// Horizontal map collision; `direction` is 1 for moving left and 3 for moving right.
     pub fn mapcolldet_move_horizontally(&mut self, g: &mut Game, direction: i16) {
         let mut gp = g.ptr();
         debug_assert!(direction == 1 || direction == 3);
         let counter_direction: i16 = if direction == 1 { 3 } else { 1 };
         let this = self.this();
 
-        //Could be optimized with bit shift >> 5
         let ty = (self.fy as i16 as i32 / TILESIZE) as i16;
         let ty2 = ((self.fy as i16 as i32 + PH) / TILESIZE) as i16;
         let mut tx: i16;
@@ -2756,10 +2872,8 @@ impl CPlayer {
         //Player hit a solid, ice or death on top
         //or if the player is invincible and hits death or death on bottom
 
-        //There is a known issue where where if a death on bottom tile and a super death on bottom tile
-        //are next to each other and the player hits from below and aligns with the super death on bottom
-        //the player will then shift over and fully hit the super death on bottom and die even if shielded
-        //or invincible.
+        // Known issue: hit from below between a death-on-bottom and a super-death-on-bottom tile, the
+        // player can shift onto the super one and die even when shielded or invincible.
 
         let alignedTileType = g.g_map.map(alignedBlockX as i32, ty as i32);
         if b(alignedTileType & tile_flag_solid)
@@ -3020,6 +3134,7 @@ impl CPlayer {
         }
     }
 
+    /// Moves the player by its velocity and resolves collisions with tiles, blocks and platforms.
     pub fn collision_detection_map(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         let this = self.this();
@@ -3132,6 +3247,8 @@ impl CPlayer {
         }
     }
 
+    /// Kills the player by a hazard. The kill goes to `iPlayerIdCredit`, or the recent pusher,
+    /// as a push kill; otherwise it is a self-kill.
     pub fn kill_player_map_hazard(&mut self, g: &mut Game, fForce: bool, style: KillStyle, fKillCarriedItem: bool, iPlayerIdCredit: i16) -> PlayerKillType {
         let mut gp = g.ptr();
         let this = self.this();
@@ -3159,18 +3276,19 @@ impl CPlayer {
         }
     }
 
-    /// `collidesWith(CPlayer*)`
+    /// Resolves a collision with another player.
     pub fn collides_with_player(&mut self, g: &mut Game, other: PlayerId) {
         let this = self.this();
         self.collisions.handle_p2p(g, this, other);
     }
 
-    /// `collidesWith(CObject*)`
+    /// Lets `object` handle touching this player; returns the object's result.
     pub fn collides_with_object(&mut self, g: &mut Game, object: Ptr<dyn CObjectTrait>) -> bool {
         let this = self.this();
         self.collisions.handle_p2o(g, this, object)
     }
 
+    /// Wraps the x position across the 640 px screen edges.
     pub fn flipsidesifneeded(&mut self) {
         //Use ix here to avoid rounding issues (can crash if tile_x_right evals to over the right side of screen)
         if self.ix < 0 || self.fx < 0.0 {
@@ -3188,6 +3306,7 @@ impl CPlayer {
         self.invincibility.turn_on(g, g.player(this));
     }
 
+    /// Freezes the player for `iTime` ticks unless already frozen.
     pub fn makefrozen(&mut self, g: &mut Game, iTime: i16) {
         if !self.frozen {
             self.frozen = true;
@@ -3203,12 +3322,13 @@ impl CPlayer {
         }
     }
 
+    /// Slows every team except this player's.
     pub fn turnslowdownon(&mut self, g: &mut Game) {
         g.game_values.flags.slowdownon = self.teamID;
         g.game_values.flags.slowdowncounter = 0;
     }
 
-    //Returns true if player facing right, false if left
+    /// True if the player faces right, honoring reverse walk and the swap animation.
     pub fn is_facing_right(&self, g: &mut Game) -> bool {
         let fLeft = g.game_values.reversewalk;
         let fRight = !fLeft;
@@ -3244,6 +3364,7 @@ impl CPlayer {
         }
     }
 
+    /// Picks up `item` if the player is accepting one; the item must already have an object id.
     pub fn accept_item(&mut self, mut item: Ptr<dyn MO_CarriedObjectTrait>) -> bool {
         if self.fAcceptingItem && self.tanookisuit.not_statue() && (!self.kuriboshoe.is_on() || item.is_carried_by_kuribo_shoe()) {
             self.action = PlayerAction::None;
@@ -3261,6 +3382,8 @@ impl CPlayer {
         false
     }
 
+    /// Applies a collected powerup by pickup id: 0 bob-omb, 1-8 a held power (see `powerup`),
+    /// 9 tanooki, 10 and up stored items. Shy guys cannot collect.
     pub fn set_powerup(&mut self, g: &mut Game, iPowerup: i16) {
         let mut gp = g.ptr();
         if self.shyguy {
@@ -3386,6 +3509,7 @@ impl CPlayer {
         }
     }
 
+    /// Puts `iPowerup` into the item reserve unless it holds the poison mushroom.
     pub fn set_stored_powerup(&mut self, g: &mut Game, iPowerup: i16) {
         let mut gp = g.ptr();
         //If the player as the poison mushroom or the game is over, don't store the powerup
@@ -3399,6 +3523,7 @@ impl CPlayer {
         if_sound_on_play(g, &mut gp.rm.sfx_storepowerup);
     }
 
+    /// Ends tail, spin, wings and flight in progress.
     pub fn clear_powerup_states(&mut self) {
         self.tail.reset();
         self.spin.reset();
@@ -3408,6 +3533,7 @@ impl CPlayer {
         self.flyingtimer = 0;
     }
 
+    /// Uses one charge of the held power, losing it at zero.
     pub fn decrease_projectile_limit(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         self.projectilelimit -= 1;

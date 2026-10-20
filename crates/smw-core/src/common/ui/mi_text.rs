@@ -1,14 +1,16 @@
-//! Port of src/common/ui/MI_Text.cpp
+//! A text label menu item.
 
 use crate::game::Game;
 use crate::common::gfx::gfx_font::gfxFont;
 use crate::common::uicontrol::{TextAlign, UI_Control, UI_ControlTrait};
 use crate::globals::*;
 
+/// A line of text in the small or large menu font.
 pub struct MI_Text {
     pub ui_control: UI_Control,
 
     szText: String,
+    /// Width in pixels to chop left-aligned text at; 0 for no limit.
     iw: i16,
     m_align: TextAlign,
     font: Ptr<gfxFont>,
@@ -16,6 +18,7 @@ pub struct MI_Text {
 crate::impl_base!(MI_Text => ui_control: UI_Control);
 
 impl MI_Text {
+    /// `w` chops left-aligned text at that many pixels (0 for none); other alignments ignore it.
     pub fn new(g: &mut Game, text: impl Into<String>, x: i16, y: i16, w: i16, use_large_font: bool, align: TextAlign) -> Self {
         let font = if use_large_font { Ptr::from_mut(&mut g.rm.menu_font_large) } else { Ptr::from_mut(&mut g.rm.menu_font_small) };
         MI_Text { ui_control: UI_Control::new(x, y), szText: text.into(), iw: w, m_align: align, font }
@@ -47,7 +50,7 @@ impl UI_ControlTrait for MI_Text {
     }
 }
 
-/// `MI_HeaderText`: a centered large-font `MI_Text`.
+/// A centered large-font `MI_Text`.
 pub struct MI_HeaderText;
 
 impl MI_HeaderText {

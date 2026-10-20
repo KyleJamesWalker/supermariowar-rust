@@ -1,4 +1,4 @@
-//! Port of src/server/server.cpp
+//! The lobby server: player connections, rooms, and the hand-off of a starting room to netplay v2 signaling.
 
 use super::clock::time_now;
 use super::log::{log, log_close, log_init, log_silently};
@@ -13,9 +13,10 @@ use super::match_room;
 use smw::globals::Ptr;
 use super::unordered_map::UnorderedMap;
 
+/// The network layer every [`SMWServer`] listens on.
 static mut netLayer: Option<Box<dyn NetworkLayer>> = None;
 
-/// The C++ links one `NetworkLayer` in; each binary installs its own before `SMWServer::init`.
+/// Installs the network layer; call it before [`SMWServer::init`].
 pub fn set_net_layer(layer: Box<dyn NetworkLayer>) {
     unsafe { netLayer = Some(layer) };
 }
@@ -24,18 +25,23 @@ fn net_layer() -> &'static mut dyn NetworkLayer {
     unsafe { netLayer.as_deref_mut().expect("set_net_layer before SMWServer::init") }
 }
 
+/// The lobby: connected players, their rooms, and starting a room's match.
 pub struct SMWServer {
     serverName: String,
+    /// The `NET_RESPONSE_SERVERINFO` reply, kept in step with the config.
     serverInfo: ServerInfo,
 
     currentPlayerCount: u32,
     maxPlayerCount: u32,
+    /// Connected players, by `NetPeer::get_player_id`.
     players: UnorderedMap<u64, Player>,
 
-    roomCreateID: u32, // temporary
+    /// The ID the next new room gets; IDs start at 1, since a player's room ID 0 means no room.
+    roomCreateID: u32,
     currentRoomCount: u32,
     rooms: UnorderedMap<u32, Room>,
 
+    /// Where a starting room's players meet.
     pub v2: V2Settings,
     /// At most this many rooms at a time; a game hosting on its own network allows one.
     pub max_rooms: Option<usize>,
@@ -45,8 +51,11 @@ pub struct SMWServer {
 /// Without a signaling URL the lobby sends no `NET_L2P_MATCH_ROOM`.
 #[derive(Clone, Debug, Default)]
 pub struct V2Settings {
+    /// The signaling server; a match meets at `<signal_url>/<room ID>`. A leading `/` means the lobby's own server.
     pub signal_url: String,
+    /// The TURN server handed to clients.
     pub turn_url: String,
+    /// The TURN server's shared secret; without it or `turn_url` players get no TURN server.
     pub turn_secret: String,
 }
 
@@ -78,6 +87,7 @@ impl SMWServer {
         self.serverInfo.maxPlayerCount = max;
     }
 
+    /// Opens `serverlog.txt`, reads the config at `config_path` (or `<config_path>.txt`) and starts the network layer.
     pub fn init(&mut self, config_path: &str) -> bool {
         if !log_init() {
             return false;
@@ -114,7 +124,7 @@ impl SMWServer {
 
         log(&format!("[info] Found configuration file `{}`", final_path));
 
-        // `configFile >> keyword; std::getline(configFile, value);`
+        // Each line is `<keyword> <value>`; a keyword starting with `#` makes the line a comment.
         let mut pos = 0usize;
         let mut reading = true;
         while reading {
@@ -164,13 +174,12 @@ impl SMWServer {
                             self.serverInfo.maxPlayerCount = num as u32;
                         }
                     }
-
-                    // TODO: implement password
                 }
             }
         }
     }
 
+    /// Handles the network events that arrived since the last call.
     pub fn update(&mut self, _running: &mut bool) {
         net_layer().listen(self);
     }
@@ -216,7 +225,7 @@ impl SMWServer {
         log(&format!("{} : <{}> connected.", player.network_client.as_ref().unwrap().address_as_string(), cstr_field(&package.playerName)));
     }
 
-    /// The requested name, or the first free "<name> <n>" if another player has it.
+    /// The requested name, or the first free `<name> <n>` if another player has it.
     fn unique_name(&self, playerID: u64, requested: &[u8]) -> Vec<u8> {
         let base: &[u8] = if requested.is_empty() { b"Player" } else { requested };
         let taken = |name: &[u8]| self.players.iter().any(|(&id, p)| id != playerID && p.name.eq_ignore_ascii_case(name));
@@ -320,7 +329,7 @@ impl SMWServer {
     fn player_joins_room(&mut self, playerID: u64, data: &[u8]) {
         let Some(mut player) = self.player(playerID) else { return };
         if player.currentRoomID != 0 || player.isPlaying {
-            return; // TODO: warning
+            return;
         }
 
         if data.len() != std::mem::size_of::<JoinRoom>() {
@@ -508,8 +517,8 @@ impl SMWServer {
 
     fn start_room_if_everyone_ready(&mut self, _playerID: u64) {}
 
+    /// Drops every room and player and stops the network layer. `Drop` calls it too, so an explicit call runs it twice.
     pub fn cleanup(&mut self) {
-        // TODO: Make sure it runs only once.
         self.rooms.clear();
         self.players.clear();
 
@@ -539,7 +548,7 @@ impl NetworkEventHandler for SMWServer {
             let mut new_client = new_client;
             self.send_code(new_client.as_mut(), NET_RESPONSE_CONNECT_SERVERFULL);
             log("[warning] Server full...");
-            // TODO: disconnect
+            // The peer is neither kept nor disconnected.
             std::mem::forget(new_client);
         } else {
             let address = new_client.address_as_string();
@@ -620,11 +629,12 @@ impl NetworkEventHandler for SMWServer {
     }
 }
 
+/// The bytes before the first NUL.
 fn cstr_bytes(field: &[u8]) -> &[u8] {
     &field[..field.iter().position(|&c| c == 0).unwrap_or(field.len())]
 }
 
-/// `strtol(value.c_str(), NULL, 10)`
+/// The leading base-10 integer after optional whitespace and sign; 0 when there is none.
 fn strtol10(s: &[u8]) -> i64 {
     let mut i = 0;
     while i < s.len() && (s[i] == b' ' || (b'\t'..=b'\r').contains(&s[i])) {

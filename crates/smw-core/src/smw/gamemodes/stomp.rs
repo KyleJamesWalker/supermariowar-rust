@@ -1,4 +1,4 @@
-//! Port of src/smw/gamemodes/Stomp.cpp
+//! Stomp mode: kill randomly spawning enemies; first team to the kill goal wins.
 
 use crate::smw::players::PlayerId;
 use crate::game::Game;
@@ -17,20 +17,20 @@ use crate::smw::objects::walkingenemy::we_koopa::MO_Koopa;
 use crate::smw::objects::walkingenemy::we_spiny::MO_Spiny;
 use crate::smw::player::CPlayer;
 
-//Similar to coin mode but you have to smash the most goombas/cheeps/koopas
+/// Stomp mode. Player kills score nothing.
 #[derive(Clone)]
 pub struct CGM_Stomp {
     pub cgame_mode: CGameMode,
 
+    /// Ticks until the next enemy spawn.
     pub spawntimer: i16,
+    /// Index (0 to `NUMSTOMPENEMIES - 1`) of the most recently spawned enemy kind.
     pub iSelectedEnemy: i16,
+    /// Sum of the configured enemy weights; 0 means pick uniformly.
     pub iEnemyWeightCount: i16,
 }
 impl_base!(CGM_Stomp => cgame_mode: CGameMode);
 
-//Stomp mode:
-//Kill randomly appearing goomobas on map
-//First one to kill the limit wins
 impl CGM_Stomp {
     pub fn new() -> Self {
         let mut this = CGM_Stomp { cgame_mode: CGameMode::new(), spawntimer: 0, iSelectedEnemy: 0, iEnemyWeightCount: 0 };
@@ -89,6 +89,7 @@ impl CGM_Stomp {
         }
     }
 
+    /// Sets the spawn timer to a random value between `rate` and `2 * rate - 1` (scaled by `ticks`).
     fn reset_spawn_timer(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         let rate = g.game_values.gamemodesettings.stomp.rate;
@@ -108,8 +109,6 @@ impl CGameModeTrait for CGM_Stomp {
             self.iEnemyWeightCount += g.game_values.gamemodesettings.stomp.enemyweight[iEnemy];
         }
 
-        //if (iEnemyWeightCount == 0)
-        //  iEnemyWeightCount = 1;
     }
 
     fn think(&mut self, g: &mut Game) {

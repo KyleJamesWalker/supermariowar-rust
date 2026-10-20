@@ -1,4 +1,4 @@
-//! Port of src/smw/ui/MI_AnnouncerField.cpp
+//! A field that cycles through a file list (announcer packs) and shows the current entry's name.
 
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
@@ -12,6 +12,7 @@ use crate::common::ui::mi_image::MI_Image;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
 
+/// Steps `list` with left/right while modifying; the list's current entry is the setting.
 pub struct MI_AnnouncerField {
     pub ui_control: UI_Control,
 
@@ -19,18 +20,22 @@ pub struct MI_AnnouncerField {
 
     pub szName: String,
     pub iWidth: i16,
+    /// Pixels from the left edge to where the value is drawn.
     pub iIndent: i16,
 
+    /// Display name of the list's current entry.
     pub szFieldName: String,
 
     pub miModifyImageLeft: Box<MI_Image>,
     pub miModifyImageRight: Box<MI_Image>,
 
+    /// The list this field steps; owned by `Game`.
     pub list: Ptr<SimpleFileList>,
 }
 crate::impl_base!(MI_AnnouncerField => ui_control: UI_Control);
 
 impl MI_AnnouncerField {
+    /// `x`, `y`, `width` and `indent` are in pixels; `pList` is the list to step.
     #[allow(clippy::too_many_arguments)]
     pub fn new(nspr: SpriteId, x: i16, y: i16, name: impl Into<String>, width: i16, indent: i16, pList: Ptr<SimpleFileList>) -> Self {
         let ui_control = UI_Control::new(x, y);
@@ -53,6 +58,7 @@ impl MI_AnnouncerField {
         this
     }
 
+    /// Refreshes `szFieldName` from the list's current entry.
     pub fn update_name(&mut self) {
         self.szFieldName = get_name_from_file_name(&self.list.current_path().to_string_lossy(), false);
     }
@@ -65,6 +71,7 @@ impl MI_AnnouncerField {
         MENU_CODE_MODIFY_ACCEPTED
     }
 
+    /// Steps the list on a direction or Random; select or cancel stops modifying. Shared with `MI_PacksField`.
     pub fn send_input_impl(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         for iPlayer in 0..4usize {
             let out = &playerInput.outputControls[iPlayer];

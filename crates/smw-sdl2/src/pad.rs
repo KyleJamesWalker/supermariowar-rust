@@ -1,4 +1,4 @@
-//! Not in upstream: unless `SMW_PAD_TRANSLATE=0`, a game controller's raw joystick events renumbered through its mapping into `LAYOUT` (docs/guides/DEVIATIONS.md, Deliberate deviations).
+//! Unless `SMW_PAD_TRANSLATE=0`, a game controller's raw joystick events renumbered through its mapping into `LAYOUT` (docs/guides/DEVIATIONS.md, Deliberate deviations).
 
 use sdl2::sys::{SDL_Event, SDL_EventFilter, SDL_EventType, SDL_GameController, SDL_GameControllerAddMapping, SDL_GameControllerAxis, SDL_GameControllerBindType, SDL_GameControllerButton, SDL_GameControllerButtonBind, SDL_GameControllerClose, SDL_GameControllerGetBindForAxis, SDL_GameControllerGetBindForButton, SDL_GameControllerMappingForDeviceIndex, SDL_GameControllerOpen, SDL_GetError, SDL_InitSubSystem, SDL_IsGameController, SDL_Joystick, SDL_JoystickClose, SDL_JoystickFromInstanceID, SDL_JoystickGetAttached, SDL_JoystickGetDeviceInstanceID, SDL_JoystickGetGUID, SDL_JoystickGetGUIDString, SDL_JoystickInstanceID, SDL_JoystickNameForIndex, SDL_JoystickNumAxes, SDL_JoystickNumButtons, SDL_JoystickNumHats, SDL_NumJoysticks, SDL_bool, SDL_free, SDL_HAT_DOWN, SDL_HAT_LEFT, SDL_HAT_RIGHT, SDL_HAT_UP, SDL_INIT_GAMECONTROLLER};
 use smw_platform::{PadChange, PadInfo, PadSlot};
@@ -20,10 +20,14 @@ const LAYOUT: [i32; 11] = [
     6,  // Left shoulder
     7,  // Right shoulder
 ];
+/// The joystick buttons the left and right triggers become.
 const TRIGGER_BUTTONS: [u8; 2] = [8, 9];
+/// How far a trigger, or an axis bound to the D-pad, must travel to count as pressed.
 const TRIGGER_THRESHOLD: i16 = 16384;
+/// `SDL_GameControllerButton` indices of the Guide button and the first D-pad direction.
 const GUIDE: usize = 5;
 const DPAD_UP: usize = 11;
+/// The hat bit for D-pad up, down, left and right, in `SDL_GameControllerButton` order.
 const DPAD_BITS: [u8; 4] = [SDL_HAT_UP as u8, SDL_HAT_DOWN as u8, SDL_HAT_LEFT as u8, SDL_HAT_RIGHT as u8];
 
 /// (name, GUID prefix, mapping), applied to the first entry matching a joystick that has no mapping. Older muOS
@@ -38,6 +42,7 @@ const MUINPUT: &str =
 const H700_RAW: &str =
     "a:b3,b:b4,x:b6,y:b5,leftshoulder:b7,rightshoulder:b8,lefttrigger:b12,righttrigger:b13,guide:b11,start:b10,back:b9,dpup:h0.1,dpleft:h0.8,dpright:h0.2,dpdown:h0.4,leftx:a0,lefty:a1,";
 
+/// What a raw joystick button becomes: a renumbered button, a D-pad bit on hat 0, or a quit request.
 #[derive(Clone, Copy, Debug)]
 enum Target {
     Button(u8),
@@ -45,6 +50,7 @@ enum Target {
     Quit,
 }
 
+/// What a raw axis becomes: a renumbered stick axis, or the left (0) or right (1) trigger button.
 #[derive(Clone, Copy, Debug)]
 enum AxisTarget {
     Axis(u8),
@@ -60,26 +66,36 @@ enum Bind {
     Hat(u8, u8),
 }
 
+/// One open joystick and, for a translated controller, how its raw input maps.
 #[derive(Default)]
 struct Pad {
+    /// The game's device number for it.
     index: usize,
+    /// SDL's joystick instance ID, which events carry as `which`.
     instance: i32,
+    /// Translated; false for a plain joystick, whose events pass through.
     controller: bool,
     buttons: HashMap<u8, Target>,
+    /// (hat, hat mask, D-pad bit).
     hats: Vec<(u8, u8, u8)>,
     axes: HashMap<u8, AxisTarget>,
     /// (axis, D-pad bit, negative half): a D-pad bound to an axis that is not also a stick.
     dpad_axes: Vec<(u8, u8, bool)>,
+    /// The D-pad bits last sent as hat 0.
     dpad: u8,
+    /// Whether each trigger was last sent as pressed.
     triggers: [bool; 2],
 }
 
+/// The open pads and the event filter's settings; the filter holds a raw pointer to it.
 pub struct PadState {
     pads: Vec<Pad>,
     translate_on: bool,
     /// A live session: pads connected or removed while it runs open and close.
     hotplug_on: bool,
+    /// `SMW_DEBUG_INPUT` is set.
     debug_input: bool,
+    /// Events logged so far at each `log_event` stage.
     logged: [u32; 3],
 }
 
@@ -89,11 +105,13 @@ impl PadState {
     }
 }
 
+/// Set by the event filter on a joystick added or removed event; `hotplug` clears it.
 static HOTPLUG: AtomicBool = AtomicBool::new(false);
 
 /// Logs every open joystick (`joysticks[i]` is SDL device i, or null); with `translate`, reads the game controllers
 /// among them through their mapping. `st` must stay where it is: the event filter keeps a pointer to it.
 pub fn init(st: &mut PadState, live: bool, translate: bool, joysticks: &[*mut SDL_Joystick]) -> Vec<Option<PadInfo>> {
+    // SAFETY: joystick pointers are checked for null, and `st` outlives the filter as the caller guarantees.
     unsafe {
         st.translate_on = translate;
         st.hotplug_on = live;
@@ -125,6 +143,7 @@ pub fn init(st: &mut PadState, live: bool, translate: bool, joysticks: &[*mut SD
 }
 
 /// Reads and logs the joystick at `device` (an SDL device index), open as `js`, which the game knows as `index`.
+/// Safety: `js` must be the open joystick of `device`.
 unsafe fn open_pad(st: &mut PadState, device: i32, js: *mut SDL_Joystick, index: usize) -> PadInfo {
     let name = c_string(SDL_JoystickNameForIndex(device));
     let mut guid = [0 as std::ffi::c_char; 33];
@@ -175,6 +194,7 @@ unsafe fn open_pad(st: &mut PadState, device: i32, js: *mut SDL_Joystick, index:
 /// In a live session, closes the joysticks removed and lists the SDL devices connected since the last call.
 pub fn hotplug(st: &mut PadState) -> Vec<PadChange> {
     let mut changes = Vec::new();
+    // SAFETY: SDL returns null for an instance it no longer knows, which is checked.
     unsafe {
         if !st.hotplug_on || !HOTPLUG.swap(false, Ordering::Relaxed) {
             return changes;
@@ -200,12 +220,14 @@ pub fn hotplug(st: &mut PadState) -> Vec<PadChange> {
 
 /// Opens SDL device `device` as joystick `index`.
 pub fn open(st: &mut PadState, device: i32, index: usize) -> Option<PadInfo> {
+    // SAFETY: SDL returns null for a device index it cannot open, which is checked.
     unsafe {
         let js = sdl2::sys::SDL_JoystickOpen(device);
         (!js.is_null()).then(|| open_pad(st, device, js, index))
     }
 }
 
+/// Safety: `js` must be the open joystick of pad `index`.
 unsafe fn close(st: &mut PadState, index: usize, js: *mut SDL_Joystick) {
     println!("[pad] joystick {} removed", index);
     SDL_JoystickClose(js);
@@ -214,9 +236,11 @@ unsafe fn close(st: &mut PadState, index: usize, js: *mut SDL_Joystick) {
 
 /// The raw input behind each controller button and axis. SDL2 derives controller events from raw joystick events in
 /// an event watcher, which never sees the raw events a filter drops, so the binds are applied here instead.
+/// Safety: `gc` must be an open game controller.
 unsafe fn read_binds(gc: *mut SDL_GameController, pad: &mut Pad) {
     let mut buttons = [Bind::None; DPAD_UP + 4];
     for (b, bind) in buttons.iter_mut().enumerate() {
+        // `b` and `a` stay below the enums' counts, so each transmute names a declared variant.
         *bind = to_bind(SDL_GameControllerGetBindForButton(gc, std::mem::transmute::<i32, SDL_GameControllerButton>(b as i32)));
     }
     let mut axes = [Bind::None; 6];
@@ -226,6 +250,7 @@ unsafe fn read_binds(gc: *mut SDL_GameController, pad: &mut Pad) {
     apply_binds(pad, &buttons, &axes);
 }
 
+/// Safety: reads the union member `bindType` names, as SDL fills it.
 unsafe fn to_bind(bind: SDL_GameControllerButtonBind) -> Bind {
     use SDL_GameControllerBindType::*;
     match bind.bindType {
@@ -272,7 +297,9 @@ fn apply_binds(pad: &mut Pad, buttons: &[Bind; DPAD_UP + 4], axes: &[Bind; 6]) {
     }
 }
 
+/// Safety: `userdata` must be the `PadState` that `init` registered, still alive.
 unsafe extern "C" fn filter(userdata: *mut std::ffi::c_void, event: *mut SDL_Event) -> i32 {
+    // SAFETY: see above; SDL calls the filter on the pumping or pushing thread, which must be the one owning `st`.
     let st = unsafe { &mut *(userdata as *mut PadState) };
     translate(st, &mut *event) as i32
 }
@@ -280,6 +307,7 @@ unsafe extern "C" fn filter(userdata: *mut std::ffi::c_void, event: *mut SDL_Eve
 /// Rewrites a controller's raw joystick event in place as the joystick event the game reads. False: drop the event.
 fn translate(st: &mut PadState, event: &mut SDL_Event) -> bool {
     use SDL_EventType::*;
+    // SAFETY: each branch reads only the union member its event type names.
     unsafe {
         log_event(st, 0, event);
         let t = event.type_;
@@ -315,10 +343,12 @@ fn translate(st: &mut PadState, event: &mut SDL_Event) -> bool {
     }
 }
 
+/// The translated controller with this instance ID.
 fn pad(st: &mut PadState, instance: i32) -> Option<&mut Pad> {
     st.pads.iter_mut().find(|p| p.instance == instance && p.controller)
 }
 
+/// Safety: `event` must be a joystick button event. False drops it.
 unsafe fn translate_button(p: &mut Pad, event: &mut SDL_Event) -> bool {
     use SDL_EventType::*;
     let b = event.jbutton;
@@ -344,6 +374,7 @@ unsafe fn translate_button(p: &mut Pad, event: &mut SDL_Event) -> bool {
     }
 }
 
+/// Safety: `event` must be a joystick hat event. False drops it.
 unsafe fn translate_hat(p: &mut Pad, event: &mut SDL_Event) -> bool {
     let h = event.jhat;
     let mut dpad = p.dpad;
@@ -357,6 +388,7 @@ unsafe fn translate_hat(p: &mut Pad, event: &mut SDL_Event) -> bool {
     bound && set_dpad(p, event, h.timestamp, h.which, dpad)
 }
 
+/// Rewrites `event` as hat 0 showing `dpad`; false, to drop it, when the D-pad did not change.
 fn set_dpad(p: &mut Pad, event: &mut SDL_Event, timestamp: u32, which: i32, dpad: u8) -> bool {
     if dpad == p.dpad {
         return false;
@@ -370,6 +402,7 @@ fn set_dpad(p: &mut Pad, event: &mut SDL_Event, timestamp: u32, which: i32, dpad
     true
 }
 
+/// Safety: `event` must be a joystick axis event. False drops it.
 unsafe fn translate_axis(p: &mut Pad, event: &mut SDL_Event) -> bool {
     use SDL_EventType::*;
     let a = event.jaxis;
@@ -408,6 +441,7 @@ unsafe fn translate_axis(p: &mut Pad, event: &mut SDL_Event) -> bool {
 /// `SMW_DEBUG_INPUT=1`: the first 2000 input events at each stage: 0 as SDL queues them, 1 after translation, 2 as the game reads them.
 pub fn log_event(st: &mut PadState, stage: usize, event: &SDL_Event) {
     use SDL_EventType::*;
+    // SAFETY: each branch reads only the union member its event type names.
     unsafe {
         if !st.debug_input || st.logged[stage] >= 2000 {
             return;
@@ -437,6 +471,7 @@ pub fn log_event(st: &mut PadState, stage: usize, event: &SDL_Event) {
     }
 }
 
+/// Safety: `p` must be null or NUL-terminated.
 unsafe fn c_string(p: *const std::ffi::c_char) -> String {
     if p.is_null() {
         String::new()

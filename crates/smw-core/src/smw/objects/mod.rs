@@ -1,3 +1,5 @@
+//! Gameplay objects: blocks, powerups, enemies, projectiles, carriable items, mode objects and map hazards.
+
 pub mod io_bullet_bill_cannon;
 pub mod io_flame_cannon;
 pub mod mystery_mushroom_temp_player;

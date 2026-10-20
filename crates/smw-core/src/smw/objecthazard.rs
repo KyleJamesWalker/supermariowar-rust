@@ -1,4 +1,4 @@
-//! Port of src/smw/objecthazard.cpp
+//! Creates the objects for a map's hazards: fireball chains, roto discs, cannons and piranha plants.
 
 use crate::game::Game;
 use crate::common::global_constants::*;
@@ -10,10 +10,10 @@ use crate::smw::objects::io_flame_cannon::IO_FlameCannon;
 use crate::smw::objects::moving::mo_pirhana_plant::MO_PirhanaPlant;
 use crate::smw::objects::overmap::wo_orbit_hazard::OMO_OrbitHazard;
 
+/// Empties the object containers and adds one object per map hazard; `fPreview` uses the small preview sprites.
 pub fn load_map_hazards(g: &mut Game, fPreview: bool) {
         let mut gp = g.ptr();
         let mut rm = g.rm;
-    //Make sure we don't have any objects created before we create them from the map settings
     g.noncolcontainer.clean();
     g.objectcontainer[0].clean();
     g.objectcontainer[1].clean();
@@ -21,7 +21,7 @@ pub fn load_map_hazards(g: &mut Game, fPreview: bool) {
 
     let iPreview: usize = if fPreview { 1 } else { 0 };
 
-    //Create objects for all the map hazards
+    // Hazard positions are in half tiles of 16 px.
     for i in 0..g.g_map.maphazards.len() {
         let hazard = g.g_map.maphazards[i].clone();
         let pos = Vec2s::new((hazard.ix as i32 * 16) as i16, (hazard.iy as i32 * 16) as i16);

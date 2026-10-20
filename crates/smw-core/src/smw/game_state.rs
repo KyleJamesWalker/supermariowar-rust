@@ -1,8 +1,9 @@
-//! Port of src/smw/GameState.h
+//! The game's top-level states (splash, menu, gameplay) and the manager that switches between them.
 
 use crate::game::Game;
 use crate::globals::*;
 
+/// A top-level screen; the main loop calls its `update` once a frame.
 pub trait GameState {
     fn init(&mut self, _g: &mut Game) -> bool {
         true
@@ -23,6 +24,7 @@ pub enum StateId {
     Segment,
 }
 
+/// Which top-level state runs, plus the segment replay's state while that is the current one.
 pub struct GameStateManager {
     pub currentState: StateId,
     segment: Option<Box<dyn GameState>>,
@@ -47,6 +49,7 @@ impl GameStateManager {
         self.currentState = StateId::Segment;
     }
 
+    /// The current state; the splash, menu and gameplay states are singletons inside `Game`.
     pub fn current(&mut self, g: &mut Game) -> Ptr<dyn GameState> {
         match self.currentState {
             StateId::Splash => Ptr::from_mut(crate::smw::gs_splash_screen::SplashScreenState::instance(g) as &mut dyn GameState),
@@ -56,6 +59,7 @@ impl GameStateManager {
         }
     }
 
+    /// Runs the old state's `on_leave_state`, then the new one's `on_enter_state`.
     pub fn change_state_to(&mut self, g: &mut Game, newState: StateId) {
         self.current(g).get().on_leave_state(g);
         self.currentState = newState;

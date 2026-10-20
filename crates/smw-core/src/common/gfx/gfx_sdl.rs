@@ -1,4 +1,4 @@
-//! Port of src/common/gfx/gfxSDL.cpp
+//! The game's screen surface and the window operations it forwards to the video service.
 
 use crate::common::gfx::soft_surface::{alloc_surface, free_surface, Surface};
 use crate::game::Game;
@@ -10,6 +10,7 @@ use std::ffi::CString;
 use std::ptr::null_mut;
 
 pub const GFX_BPP: i32 = 16;
+/// Screen size in pixels.
 pub const GFX_SCREEN_W: i32 = 640;
 pub const GFX_SCREEN_H: i32 = 480;
 
@@ -43,6 +44,7 @@ impl GraphicsSDL {
         Self::default()
     }
 
+    /// Opens the window and allocates the screen surface, which also becomes `g.screen`. Always returns `true`.
     pub fn init(&mut self, g: &mut Game, fullscreen: bool) -> bool {
         let mut gp = g.ptr();
         unsafe {
@@ -71,6 +73,7 @@ impl GraphicsSDL {
         services(gp.get()).video.set_title(title);
     }
 
+    /// Presents the screen surface, with the touch controls overlay on platforms that have one.
     pub fn flip_screen(&self, g: &mut Game) {
         let mut gp = g.ptr();
         let screen = unsafe { &*self.sdl_screen_surface };
@@ -87,6 +90,7 @@ impl GraphicsSDL {
         services(gp.get()).video.set_fullscreen(fullscreen);
     }
 
+    /// Saves the screen as a timestamped PNG under `screenshots/`; failures are logged, not returned.
     pub fn take_screenshot(&self, g: &mut Game) {
         // NOTE: %F and %T don't work on Windows
         let path_format = "screenshots/%Y-%m-%d_%H%M%S.png";

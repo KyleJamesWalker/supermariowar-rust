@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/overmap/WO_PipeCoin.cpp
+//! Coin launched from the pipe in the coin pipe minigame.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -19,16 +19,22 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class pipe coin (for coin pipe minigame)
 //------------------------------------------------------------------------------
+/// Falling coin. A team coin scores only for its team; a neutral coin's color sets its value.
 #[derive(Clone)]
 pub struct OMO_PipeCoin {
     pub io_over_map_object: IO_OverMapObject,
 
+    /// Team the coin scores for, or -1 for a neutral coin.
     pub iTeamID: i16,
+    /// Neutral coin value by color: 0 costs a point, 1 gives 5, 2 gives 1.
     pub iColorID: i16,
 
+    /// Tick counter for the sparkle overlay; it steps a frame every 4 ticks.
     pub sparkleanimationtimer: i16,
+    /// X offset (pixels) of the current sparkle frame.
     pub sparkledrawframe: i16,
 
+    /// Ticks before it can be collected; it is clipped to the pipe mouth meanwhile.
     pub iUncollectableTime: i16,
 }
 impl_base!(OMO_PipeCoin => io_over_map_object: IO_OverMapObject);

@@ -1,4 +1,4 @@
-//! The game window: a 640x480 streaming texture scaled into a resizable window (from the C++ gfxSDL.cpp).
+//! The game window: a 640x480 streaming texture scaled into a resizable window.
 
 use sdl2::sys::*;
 use smw_platform::{Frame, Overlay, Video, SCREEN_H, SCREEN_W};
@@ -11,10 +11,12 @@ fn sdl_error() -> String {
     unsafe { CStr::from_ptr(SDL_GetError()).to_string_lossy().into_owned() }
 }
 
+/// How `Video::open` fails: a panic carrying SDL's message.
 fn throw_error(msg: String) -> ! {
     panic!("{}", msg)
 }
 
+/// Always fullscreen on Android.
 unsafe fn create_window(fullscreen: bool) -> *mut SDL_Window {
     let mut window_flags = SDL_WindowFlags::SDL_WINDOW_RESIZABLE as u32;
     if fullscreen || cfg!(target_os = "android") {
@@ -48,6 +50,7 @@ pub unsafe fn button_to_logical(b: &mut SDL_MouseButtonEvent) {
     b.y = y.floor() as i32;
 }
 
+/// -1: SDL picks the first driver that supports the flags.
 fn find_preferred_renderer_index() -> i32 {
     -1
 }
@@ -60,6 +63,7 @@ unsafe fn create_renderer(window: *mut SDL_Window) -> (*mut SDL_Renderer, bool) 
         rendering_flags |= SDL_RendererFlags::SDL_RENDERER_PRESENTVSYNC as u32;
     }
 
+    // Must be added before the renderer's own watch, which rescales and clamps finger events.
     static RAW_FINGER_WATCH: std::sync::Once = std::sync::Once::new();
     RAW_FINGER_WATCH.call_once(|| SDL_AddEventWatch(Some(crate::input::keep_raw_finger), std::ptr::null_mut()));
     let renderer = SDL_CreateRenderer(window, find_preferred_renderer_index(), rendering_flags);
@@ -99,11 +103,14 @@ unsafe fn create_screen_texture(renderer: *mut SDL_Renderer) -> *mut SDL_Texture
     texture
 }
 
+/// The SDL window, its renderer and the screen texture; all null until `open`.
 pub struct Sdl2Video {
     window: *mut SDL_Window,
     renderer: *mut SDL_Renderer,
     texture: *mut SDL_Texture,
+    /// The `Overlay::generation` that `overlay_textures` were made from.
     overlay_generation: Option<u64>,
+    /// One per overlay image, null where SDL could not create it.
     overlay_textures: Vec<*mut SDL_Texture>,
     vsync: bool,
 }
@@ -122,6 +129,7 @@ impl Default for Sdl2Video {
 
 impl Drop for Sdl2Video {
     fn drop(&mut self) {
+        // SAFETY: each pointer is destroyed once; SDL rejects the nulls left when `open` never ran.
         unsafe {
             for tex in self.overlay_textures.drain(..) {
                 SDL_DestroyTexture(tex);
@@ -134,7 +142,7 @@ impl Drop for Sdl2Video {
 }
 
 impl Sdl2Video {
-    /// Draws in window pixels, outside the 640x480 logical viewport.
+    /// Draws in window pixels, outside the 640x480 logical viewport. Safety: the renderer must be open.
     unsafe fn draw_overlay(&mut self, overlay: &Overlay) {
         if self.overlay_generation != Some(overlay.generation) {
             for tex in self.overlay_textures.drain(..) {
@@ -178,10 +186,12 @@ impl Video for Sdl2Video {
     }
 
     fn show_cursor(&mut self, on: bool) {
+        // SAFETY: takes no pointers.
         unsafe { SDL_ShowCursor(if on { SDL_ENABLE } else { SDL_DISABLE } as i32) };
     }
 
     fn open(&mut self, fullscreen: bool) {
+        // SAFETY: each create function panics on null, so the stored pointers are valid.
         unsafe {
             if SDL_Init(SDL_INIT_VIDEO) < 0 {
                 panic!("SDL error: {}", std::ffi::CStr::from_ptr(SDL_GetError()).to_string_lossy());
@@ -196,6 +206,7 @@ impl Video for Sdl2Video {
     }
 
     fn present(&mut self, frame: Frame<'_>, overlay: Option<&Overlay>) {
+        // SAFETY: `Frame` holds SCREEN_W * SCREEN_H pixels, the texture's size; SDL rejects the nulls before `open`.
         unsafe {
             SDL_UpdateTexture(self.texture, null(), frame.pixels.as_ptr() as *const _, (SCREEN_W * 4) as i32);
             SDL_RenderClear(self.renderer);
@@ -209,12 +220,14 @@ impl Video for Sdl2Video {
 
     fn output_size(&self) -> (i32, i32) {
         let (mut w, mut h) = (0, 0);
+        // SAFETY: the out-pointers are live locals; SDL rejects a null renderer.
         unsafe { SDL_GetRendererOutputSize(self.renderer, &mut w, &mut h) };
         (w, h)
     }
 
     fn display_dpi(&self) -> Option<f32> {
         let mut dpi = 0.0;
+        // SAFETY: SDL accepts null for the DPIs it should not write.
         (unsafe { SDL_GetDisplayDPI(0, &mut dpi, null_mut(), null_mut()) } == 0 && dpi > 0.0).then_some(dpi)
     }
 
@@ -223,6 +236,7 @@ impl Video for Sdl2Video {
         if cfg!(target_os = "android") {
             return;
         }
+        // SAFETY: SDL rejects a null window.
         unsafe {
             let mut flags = SDL_GetWindowFlags(self.window);
             if on {
@@ -239,11 +253,13 @@ impl Video for Sdl2Video {
 
     fn set_title(&mut self, title: &str) {
         let t = CString::new(title).unwrap_or_default();
+        // SAFETY: `t` is NUL-terminated and outlives the call; SDL rejects a null window.
         unsafe { SDL_SetWindowTitle(self.window, t.as_ptr()) };
     }
 
     fn show_error(&mut self, message: &str) {
         let msg = CString::new(message).unwrap_or_default();
+        // SAFETY: both strings are NUL-terminated; a null parent window is allowed.
         unsafe {
             SDL_ShowSimpleMessageBox(
                 SDL_MessageBoxFlags::SDL_MESSAGEBOX_ERROR as u32,

@@ -1,10 +1,8 @@
-//! Port of src/smw/menu/MenuTemplate.cpp
+//! Skeleton to copy when adding a new menu screen.
 
 use crate::common::uimenu::UI_Menu;
 
-/*
-    TODO: Description.
-*/
+/// Placeholder; describe the new menu here.
 #[derive(Default)]
 pub struct UI_XXX {
     pub ui_menu: UI_Menu,

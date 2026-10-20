@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/carriable/CO_Shell.cpp
+//! Koopa, spiny and buzzy shells: carried, kicked across the floor, and deadly while moving.
 
 use crate::smw::players::PlayerId;
 use crate::common::gfx::soft_surface::Rect;
@@ -23,6 +23,7 @@ use crate::smw::objects::moving::mo_carried_object::{MO_CarriedObject, MO_Carrie
 use crate::smw::objects::moving::moving_object::{io_moving_object_collision_detection_checksides, io_moving_object_update, IO_MovingObjectTrait};
 use crate::smw::player::{get_player_from_global_id, player_killed_player, CPlayer, PlayerDeathStyle};
 
+/// Shell kind; also selects the 32-pixel sprite row.
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum ShellType {
@@ -39,35 +40,54 @@ pub enum ShellType {
 // state 1: Shell is moving
 // state 2: Shell is waiting to be picked up
 // state 3: Shell is being held
+/// Shell that can be held, kicked, stomped to a stop, flipped or frozen.
 #[derive(Clone)]
 pub struct CO_Shell {
     pub mo_carried_object: MO_CarriedObject,
 
     pub iShellType: ShellType,
 
+    /// Ticks after a kick from a stomp during which another stomp does not stop the shell.
     pub iIgnoreBounceTimer: i16,
+    /// Y (pixels) where the rise out of the block ends.
     pub iDestY: i16,
 
+    /// Breaks after hitting a player while moving, and loses shell-on-shell hits.
     pub fDieOnMovingPlayerCollision: bool,
+    /// Breaks when its holder bumps a player with it; otherwise that has a 1 in 5 chance.
     pub fDieOnHoldingPlayerCollision: bool,
+    /// Fireballs, hammers and boomerangs break it.
     pub fDieOnFire: bool,
+    /// Kills players who stomp it unless it is flipped (spiny shells).
     pub fKillBouncePlayer: bool,
 
+    /// Ticks spent moving; the shell disappears at the shell lifetime setting.
     pub iDeathTime: i16,
+    /// Ticks after a kick during which the shell spares its kicker unless moving toward them.
     pub iNoOwnerKillTime: i16,
 
+    /// Sprite row offset (pixels) for the shell kind.
     pub iColorOffsetY: i16,
+    /// Ticks before another wall bounce shows the bounce effect.
     pub iBounceCounter: i16,
+    /// Players killed in a row by this moving shell, for kill-streak awards.
     pub iKillCounter: i16,
 
+    /// Turned upside down by a spin attack: safe to stomp, and breaks when its holder bumps a player.
     pub fFlipped: bool,
+    /// Sprite row offset (pixels) for the flipped shell: 128 when flipped.
     pub iFlippedOffset: i16,
 
+    /// Frozen in an ice block; touching it shatters it.
     pub frozen: bool,
+    /// Ticks left frozen.
     pub frozentimer: i16,
+    /// Horizontal speed restored when the ice thaws.
     pub frozenvelocity: f32,
+    /// Animation speed restored when the ice thaws.
     pub frozenanimationspeed: i16,
 
+    /// Spotlight that follows a moving shell while spotlights are on.
     pub sSpotlight: SpotlightId,
 }
 impl_base!(CO_Shell => mo_carried_object: MO_CarriedObject);
@@ -140,6 +160,7 @@ impl CO_Shell {
         o
     }
 
+    /// Screen-width offset that puts the shell on the same side of the wrap as `player`, for direction checks.
     fn flipx_for(&self, g: &Game, player: PlayerId) -> i16 {
         let mut flipx: i16 = 0;
 
@@ -152,6 +173,7 @@ impl CO_Shell {
         flipx
     }
 
+    /// A player landed on the shell: kick it, stop it, knock it out of a holder's hands, or die on a spiny.
     pub fn hit_top(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut player = player;
         if g.player(player).is_invincible() || g.player(player).kuriboshoe.is_on() || g.player(player).shyguy {
@@ -204,6 +226,7 @@ impl CO_Shell {
         false
     }
 
+    /// Side contact: pick up or kick a sitting shell; a moving or held shell kills the player.
     pub fn hit_other(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut player = player;
         if self.state == 2 {
@@ -247,6 +270,7 @@ impl CO_Shell {
         false
     }
 
+    /// Puts the shell in `player`'s hands, or kicks it if they cannot hold it.
     pub fn used_as_stored_powerup(&mut self, g: &mut Game, player: PlayerId) {
         let mut player = player;
         self.owner = player;
@@ -259,6 +283,7 @@ impl CO_Shell {
         }
     }
 
+    /// Kills an unprotected player and credits the shell's owner; returns true on a kill.
     pub fn kill_player(&mut self, g: &mut Game, player: PlayerId) -> bool {
         if g.player(player).is_shielded() || g.player(player).is_invincible() || g.player(player).shyguy {
             return false;
@@ -277,6 +302,7 @@ impl CO_Shell {
         true
     }
 
+    /// Counts a kill by a moving shell toward `killer`'s kill-streak award.
     pub fn add_moving_kill(&mut self, g: &mut Game, killer: PlayerId) {
         let mut killer = killer;
         if self.state == 1 && g.game_values.awardstyle != AwardStyle::None {
@@ -288,6 +314,7 @@ impl CO_Shell {
         }
     }
 
+    /// Breaks a frozen shell into ice fragments and frees its holder.
     pub fn shatter_die(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         self.dead = true;
@@ -308,10 +335,12 @@ impl CO_Shell {
         g.eyecandy[2].emplace(EC_FallingObject::new(&gp.rm, spr, (iBrokenIceX as i32 + 16) as i16, (iBrokenIceY as i32 + 16) as i16, vel(1.5), vel(-4.0), 4, 2, 0, 0, 16, 16));
     }
 
+    /// The shell is moving or held, so it can kill.
     pub fn is_threat(&self) -> bool {
         self.state == 1 || self.state == 3
     }
 
+    /// Turns the shell upside down and pops it up; a held shell breaks and a frozen one shatters.
     pub fn flip(&mut self, g: &mut Game) {
         if self.frozen {
             self.shatter_die(g);
@@ -332,6 +361,7 @@ impl CO_Shell {
         self.vely = (-VELJUMP as f64 / 2.0) as f32;
     }
 
+    /// Stops the shell where it is, sitting and free to pick up.
     fn stop(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         self.owner = PlayerId::NONE;
@@ -342,6 +372,7 @@ impl CO_Shell {
         self.iKillCounter = 0;
     }
 
+    /// Skips the rise out of a block: the shell sits at `y`, popping up if `fBounce`.
     pub fn nospawn(&mut self, y: i16, fBounce: bool) {
         self.state = 2;
         self.set_yi(y);
@@ -588,6 +619,7 @@ impl CObjectTrait for CO_Shell {
 }
 
 impl CO_Shell {
+    /// Breaks the shell with a 1 in 5 chance.
     fn maybe_die(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         if RANDOM_INT(gp.get(), 5) == 0 {
@@ -685,14 +717,6 @@ impl MO_CarriedObjectTrait for CO_Shell {
 
     fn kick(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        /*
-        if (superkick)
-        {
-            vel = 10.0f;
-            fSmoking = true;
-            ifSoundOnPlay(rm->sfx_cannon);
-        }
-        */
 
         let mut fVel: f32;
         let fPlayerBonusVel: f32 = g.player(self.owner).velx / 2.0;
@@ -701,17 +725,11 @@ impl MO_CarriedObjectTrait for CO_Shell {
             if fPlayerBonusVel > 0.0 {
                 fVel += fPlayerBonusVel;
             }
-
-            // if (fVel >= 7.5f)
-            //	fSmoking = true;
         } else {
             fVel = vel(-5.0);
             if fPlayerBonusVel < 0.0 {
                 fVel += fPlayerBonusVel;
             }
-
-            // if (fVel <= -7.5f)
-            //	fSmoking = true;
         }
 
         self.velx = fVel;

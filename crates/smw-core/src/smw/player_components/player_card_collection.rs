@@ -1,4 +1,4 @@
-//! Port of src/smw/player_components/PlayerCardCollection.cpp
+//! Card collection input: tapping turbo three times quickly drops a card.
 
 use crate::game::Game;
 use crate::common::game_mode::game_mode_collection;
@@ -9,7 +9,9 @@ use crate::common::global_constants::{ticks};
 
 #[derive(Clone, Default)]
 pub struct PlayerCardCollection {
+    /// Ticks since the first tap in the current sequence.
     pub timer: u16,
+    /// Turbo taps in the current sequence; any other key resets it.
     pub index: u16,
     pub _alias: Aliased,
 }
@@ -24,6 +26,8 @@ impl PlayerCardCollection {
         self.index = 0;
     }
 
+    /// Feeds this tick's pressed-key mask; in card collection mode, three turbo taps within
+    /// `ticks(32)` ticks release one of the team's cards.
     pub fn update(&mut self, g: &mut Game, player: &mut CPlayer, keymask: u8) {
         if g.mode().gamemode == game_mode_collection {
             if self.index > 0 {

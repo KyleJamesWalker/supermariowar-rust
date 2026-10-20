@@ -1,6 +1,4 @@
-//! Port of src/server/Log.cpp
-//!
-//! `log(fmt, ...)` / `log_silently(fmt, ...)` take the already formatted message.
+//! The lobby server's log, appended to `serverlog.txt` in the working directory once `log_init` opens it.
 
 use std::fs::{File, OpenOptions};
 use std::io::Write;
@@ -33,6 +31,7 @@ extern "C" {
 
 static mut logfile: Option<File> = None;
 
+/// Opens `serverlog.txt` for appending; false when it cannot.
 pub fn log_init() -> bool {
     unsafe {
         logfile = OpenOptions::new().append(true).create(true).open("serverlog.txt").ok();
@@ -74,10 +73,12 @@ fn write_log(show_output: bool, parsed_message: &str) {
     }
 }
 
+/// Prints `message` and appends it, timestamped, to the log file.
 pub fn log(message: &str) {
     write_log(true, message);
 }
 
+/// Appends `message`, timestamped, to the log file only.
 pub fn log_silently(message: &str) {
     write_log(false, message);
 }

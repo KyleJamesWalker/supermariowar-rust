@@ -1,7 +1,7 @@
-//! Port of src/common/uimenu.cpp
+//! A menu: its controls, which one has focus, and how player input and clicks move between them.
 //!
-//! `UI_Menu` has no virtuals besides its destructor, so menus embed it as their base (`impl_base!`) and
-//! `MenuState` names the current one with a `MenuId`. Its controls live in `Game::controls`.
+//! Menus embed `UI_Menu` as their base (`impl_base!`), and `MenuState` names the current one with a `MenuId`.
+//! Its controls live in `Game::controls`.
 
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
@@ -20,19 +20,26 @@ const fn nav_dir2menu_code(direction: MenuNavDirection) -> MenuCodeEnum {
     }
 }
 
+/// A screen of controls, with the focused one and the menu's own eyecandy.
 pub struct UI_Menu {
+    /// Every control in draw order, including ones the focus never reaches.
     pub controls: Vec<ControlId>,
 
     pub m_initialFocus: ControlId,
     pub m_currentFocus: ControlId,
+    /// The focus `remember_current` saved.
     pub m_savedCurrent: ControlId,
 
+    /// What `send_input` returns when cancel is pressed.
     pub cancelCode: MenuCodeEnum,
+    /// The focused control is taking input itself.
     pub fModifyingItem: bool,
 
     pub eyeCandy: CEyecandyContainer,
 
+    /// The only team whose human players may drive the menu, or -1 for player 1 (and keyboard fallback).
     pub iControllingTeam: i16,
+    /// While a team controls the menu, other players' cancel still reaches it.
     pub fAllowExitButton: bool,
 
     pub _alias: Aliased,
@@ -60,6 +67,7 @@ impl UI_Menu {
         }
     }
 
+    /// Adds a focusable control and its neighbors in each direction.
     pub fn add_control(&mut self, g: &mut Game, control: ControlId, up: ControlId, down: ControlId, left: ControlId, right: ControlId) {
         let c = g.control(control).ctl_mut();
         c.set_neighbor(MenuNavDirection::Up, up);
@@ -69,6 +77,7 @@ impl UI_Menu {
         self.controls.push(control);
     }
 
+    /// Adds a control the focus never moves to, such as a label.
     pub fn add_non_control(&mut self, control: ControlId) {
         self.controls.push(control);
     }
@@ -91,6 +100,7 @@ impl UI_Menu {
         self.cancelCode = code;
     }
 
+    /// Unselects the focused control and moves focus back to the initial one.
     pub fn reset_menu(&mut self, g: &mut Game) {
         if !self.m_currentFocus.is_none() {
             g.control(self.m_currentFocus).modify(g, false);
@@ -127,6 +137,7 @@ impl UI_Menu {
         }
     }
 
+    /// Feeds this frame's input to the focused control while it is modifying, else moves focus or selects.
     pub fn send_input(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         if self.fModifyingItem {
             let ret = g.control(self.m_currentFocus).send_input(g, playerInput);
@@ -155,7 +166,7 @@ impl UI_Menu {
                 }
             }
             // Only let player 1 on the keyboard control the menu unless there is another controlling team
-            // Not in upstream: the first keyboard player may too, when joysticks took the players before it.
+            // The first keyboard player may too, when joysticks took the players before it.
             else if iPlayer != 0
                 && !g.input_control(g.game_values.playerInput.inputControls[iPlayer as usize]).is_null()
                 && g.input_control(g.game_values.playerInput.inputControls[iPlayer as usize]).iDevice == DEVICE_KEYBOARD
@@ -209,6 +220,7 @@ impl UI_Menu {
         MENU_CODE_NONE
     }
 
+    /// Moves focus to the next visible neighbor in `iDirection`; returns its `MENU_CODE_NEIGHBOR_*`, or none if there is none.
     pub fn move_next_control(&mut self, g: &mut Game, iDirection: MenuNavDirection) -> MenuCodeEnum {
         let mut gp = g.ptr();
         if self.m_currentFocus.is_none() {
@@ -231,6 +243,7 @@ impl UI_Menu {
         MENU_CODE_NONE
     }
 
+    /// Saves the focus for `restore_current`.
     pub fn remember_current(&mut self) {
         self.m_savedCurrent = self.m_currentFocus;
     }
@@ -257,6 +270,7 @@ impl UI_Menu {
         self.fAllowExitButton = allowExit;
     }
 
+    /// Focuses and starts modifying the visible control under the click, or stops modifying if none is there.
     pub fn mouse_click(&mut self, g: &mut Game, iMouseX: i16, iMouseY: i16) -> MenuCodeEnum {
         // Loop through all controls to see if one was clicked on
         let mut pFound = ControlId::NONE;
@@ -313,7 +327,7 @@ impl UI_Menu {
         }
     }
 
-    /// Replay harness (cpp-harness.patch): index of the focused element in insertion order, or -1.
+    /// For the replay harness: the focused control's index in insertion order, or -1.
     pub fn current_focus_index(&self) -> i32 {
         for (i, c) in self.controls.iter().enumerate() {
             if *c == self.m_currentFocus {

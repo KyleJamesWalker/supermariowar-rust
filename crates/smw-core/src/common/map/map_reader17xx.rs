@@ -1,4 +1,4 @@
-//! Port of src/common/map/MapReader17xx.cpp
+//! Readers for 1.7 map files, plus the platform path section 1.8 shares.
 
 use crate::game::Game;
 use crate::common::file_io::BinaryFile;
@@ -63,6 +63,7 @@ impl MapReader {
         }
     }
 
+    /// Reads a background file name, adding the category prefix (`Land_` and so on) when it matches a legacy background.
     pub(super) fn read_background_1701(&mut self, map: &mut CMap, mapfile: &mut BinaryFile) {
         map.szBackgroundFile = mapfile.read_string_long(128);
 
@@ -80,6 +81,7 @@ impl MapReader {
         map.szBackgroundFile = mapfile.read_string_long(128);
     }
 
+    /// Turns all four switches and their switch blocks on.
     pub(super) fn set_preview_switches(&mut self, map: &mut CMap, _mapfile: &mut BinaryFile) {
         for iSwitch in 0..4 {
             map.iSwitches[iSwitch] = 1;
@@ -94,6 +96,7 @@ impl MapReader {
         }
     }
 
+    /// Reads the four switch states, stored inverted, and applies them to switch blocks (object types 11 to 14).
     pub(super) fn read_switches_1700(&mut self, map: &mut CMap, mapfile: &mut BinaryFile) {
         for iSwitch in 0..4 {
             map.iSwitches[iSwitch] = (1 - mapfile.read_i32() as i16 as i32) as i16;
@@ -121,6 +124,7 @@ impl MapReader {
                 map.warpdata[i][j].connection = mapfile.read_i32() as i16;
                 map.warpdata[i][j].id = mapfile.read_i32() as i16;
 
+                // The file holds no-spawn flags for types 0 and 5 only; types 1 to 4 copy type 0.
                 let mut sType = 0usize;
                 while sType < 6 {
                     map.nospawn[sType][i][j] = mapfile.read_i32() != 0;
@@ -231,6 +235,8 @@ impl MapReader {
         (tiles, types)
     }
 
+    /// Reads a platform path of `iPathType`: 0 straight, 1 straight continuous, 2 ellipse. Other types read
+    /// nothing and return `None`.
     pub(super) fn read_platform_path_details(
         &mut self,
         mapfile: &mut BinaryFile,

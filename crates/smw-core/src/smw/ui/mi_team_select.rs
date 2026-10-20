@@ -1,4 +1,4 @@
-//! Port of src/smw/ui/MI_TeamSelect.cpp
+//! Team and skin selection: each player picks a team and skin, then readies up.
 
 use crate::common::global_constants::ticks;
 use crate::common::resource_manager::SpriteId;
@@ -14,23 +14,30 @@ use crate::common::ui::mi_image::MI_Image;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
 
+/// Four team columns of player sprites, with per-player ready boxes along the bottom.
 pub struct MI_TeamSelect {
     pub ui_control: UI_Control,
 
     pub miImage: Box<MI_Image>,
     pub spr: SpriteId,
 
+    /// Player IDs on each team; only the first `iTeamCounts[team]` are valid.
     pub iTeamIDs: [[i16; 3]; 4],
+    /// Players on each team, 0 to 3.
     pub iTeamCounts: [i16; 4],
+    /// Non-empty teams, set by [`Self::organize_teams`].
     pub iNumTeams: i16,
 
     pub iAnimationTimer: i16,
     pub iAnimationFrame: i16,
+    /// X offset in pixels into the random skin animation, 0 to 96.
     pub iRandomAnimationFrame: i16,
 
+    /// Per player; players not in the game count as ready.
     pub fReady: [bool; 4],
     pub fAllReady: bool,
 
+    /// Per player, 1 once up or down was held long enough to auto-repeat.
     pub iFastScroll: [i16; 4],
     pub iFastScrollTimer: [i16; 4],
 }
@@ -74,6 +81,7 @@ impl MI_TeamSelect {
         this
     }
 
+    /// Moves `iPlayerID` to the next team in `iDirection` (-1 or 1), skipping a team that would hold everyone.
     fn find_new_team(&mut self, g: &mut Game, iPlayerID: i16, iDirection: i16) {
         let mut gp = g.ptr();
         for iTeam in 0..4i16 {
@@ -138,6 +146,7 @@ impl MI_TeamSelect {
         }
     }
 
+    /// Syncs teams with who is playing, splits a lone team, loads skins and clears human players' ready state.
     pub fn reset(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         for iPlayer in 0..4i16 {
@@ -274,6 +283,7 @@ impl MI_TeamSelect {
         self.fAllReady = self.fReady.iter().all(|&r| r);
     }
 
+    /// Packs the non-empty teams into `game_values.teamids`/`teamcounts` and returns how many there are.
     pub fn organize_teams(&mut self, g: &mut Game) -> i16 {
         self.iNumTeams = 0;
         for iTeam in 0..4usize {
@@ -292,6 +302,7 @@ impl MI_TeamSelect {
         self.iNumTeams
     }
 
+    /// Team index of `iPlayerID`, or -1 if it is on none.
     pub fn get_team(&self, iPlayerID: i16) -> i16 {
         for iTeam in 0..4i16 {
             for iSlot in 0..self.iTeamCounts[iTeam as usize] {
@@ -572,7 +583,7 @@ impl UI_ControlTrait for MI_TeamSelect {
         MENU_CODE_MODIFY_ACCEPTED
     }
 
-    /// Not in upstream: a tap on a player's box readies that player, and a tap on Continue starts setup.
+    /// A tap on a player's box readies that player, and a tap on Continue starts setup.
     /// Every tap counts as on this control, which fills the screen and only takes input while modifying.
     fn mouse_click(&mut self, g: &mut Game, iMouseX: i16, iMouseY: i16) -> MenuCodeEnum {
         if !self.m_visible {

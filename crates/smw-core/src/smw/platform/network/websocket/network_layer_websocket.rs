@@ -1,4 +1,4 @@
-//! The network layer of every build: the lobby connection is a virtual connection to `smw_relay` over one WebSocket
+//! The network layer of networked builds: the lobby connection is a virtual connection to `smw_relay` over one WebSocket
 //! (`socket`, docs/guides/RELAY.md).
 
 use crate::game::Game;
@@ -15,6 +15,7 @@ extern "C" {
     fn smw_relay_url_param(buf: *mut u8, cap: usize) -> i32;
 }
 
+/// The relay the build connects to unless told otherwise; `SMW_RELAY_URL` at build time overrides it.
 pub const DEFAULT_RELAY_URL: &str = match option_env!("SMW_RELAY_URL") {
     Some(url) => url,
     None => "wss://smw-relay.vps.pocketsquirrel.com",
@@ -41,6 +42,7 @@ fn url_for_server(hostname: &str) -> String {
     }
 }
 
+/// One virtual connection through the relay: the peer's address and whether the relay accepted it.
 #[derive(Clone, Copy)]
 pub struct Conn {
     host: [u8; 4],
@@ -48,16 +50,20 @@ pub struct Conn {
     open: bool,
 }
 
+/// What the relay reported on a connection, held until the next `client_listen`.
 pub enum Event {
     Connect(NetPeerWebSocket),
     Receive(NetPeerWebSocket, Vec<u8>),
     Disconnect(NetPeerWebSocket),
 }
 
+/// The relay connection's state: its URL, the virtual connections by id, and messages waiting for the socket.
 pub struct Relay {
     _alias: Aliased,
     url: String,
+    /// Frames sent while the socket is still connecting, flushed once it opens.
     outbox: Vec<Vec<u8>>,
+    /// Open and pending virtual connections by relay connection id (1 and up).
     conns: BTreeMap<u16, Conn>,
     events: VecDeque<Event>,
 }
@@ -210,6 +216,7 @@ fn listen(g: &mut Game, handler: &mut dyn NetworkEventHandler<Game>) {
     }
 }
 
+/// A virtual connection through the relay, as the netplay code sees a peer.
 pub struct NetPeerWebSocket {
     relay: Ptr<Relay>,
     conn: u16,
@@ -273,6 +280,7 @@ impl NetPeer for NetPeerWebSocket {
     }
 }
 
+/// The `NetworkLayer` over the relay; its state lives in `Game::relay`.
 #[derive(Default)]
 pub struct NetworkLayerWebSocket;
 

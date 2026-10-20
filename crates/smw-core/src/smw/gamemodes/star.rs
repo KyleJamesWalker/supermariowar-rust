@@ -1,4 +1,4 @@
-//! Port of src/smw/gamemodes/Star.cpp
+//! Star mode: a shared clock runs down and the star holders decide who loses a life.
 
 use crate::smw::object_container::ObjectId;
 use crate::smw::players::PlayerId;
@@ -20,16 +20,19 @@ use crate::smw::objects::carriable::co_star::CO_Star;
 use crate::smw::objects::moving::mo_carried_object::MO_CarriedObjectTrait;
 use crate::smw::player::CPlayer;
 
-//Star mode - shared timer ticks down and the players must pass around
-//a hot potato.  When the timer hits zero, the player with the star
-//loses a point.
+/// Star mode, built on the time limit clock. On time out: in ztar style the holder loses a life;
+/// in shine style every other team does; in multi style the one player without a star does.
 #[derive(Clone)]
 pub struct CGM_Star {
     pub cgm_time_limit: CGM_TimeLimit,
 
+    /// Star objects; only slot 0 is used outside multi style, which uses one per player but one.
     pub starItem: [ObjectId; 3],
+    /// Holder of each star slot, or `PlayerId::NONE` while it needs reassigning.
     pub starPlayer: [PlayerId; 3],
+    /// Style in play this round; never `Random`, which picks a new style each time out.
     pub iCurrentModeType: StarStyle,
+    /// False once the match is decided, hiding the clock.
     pub fDisplayTimer: bool,
 }
 impl_base!(CGM_Star => cgm_time_limit: CGM_TimeLimit);
@@ -58,6 +61,7 @@ impl CGM_Star {
         self.iCurrentModeType
     }
 
+    /// Removes all stars and spawns new ones for the current style, assigned by score.
     fn setup_mode(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         //Clean up old stars
@@ -98,6 +102,7 @@ impl CGM_Star {
         }
     }
 
+    /// Returns true if `player` holds any star.
     pub fn isplayerstar(&mut self, g: &mut Game, player: PlayerId) -> bool {
         let mut iPlayer: i16 = 0;
         while (iPlayer as usize) < g.players.len().wrapping_sub(1) {
@@ -110,6 +115,7 @@ impl CGM_Star {
         false
     }
 
+    /// Hands star `id` to `player`, shielding the previous holder; returns the previous holder.
     pub fn swapplayer(&mut self, g: &mut Game, id: i16, player: PlayerId) -> PlayerId {
         let mut gp = g.ptr();
         let mut oldstar: PlayerId = PlayerId::NONE;
@@ -163,6 +169,7 @@ impl CGM_Star {
         oldstar
     }
 
+    /// Reassigns multi-style stars to the top-ranked players and re-places them.
     fn rebalance_multi_stars(&mut self, g: &mut Game) {
         let mut rankedPlayers: [PlayerId; 4] = [PlayerId::NONE; 4];
         let fReverseScoring = self.fReverseScoring;
@@ -210,6 +217,7 @@ impl CGameModeTrait for CGM_Star {
     }
 }
 
+/// Round length in seconds, 30 when unset.
 fn star_time(g: &mut Game) -> i16 {
     if g.game_values.gamemodesettings.star.time < 1 {
         30
@@ -218,6 +226,7 @@ fn star_time(g: &mut Game) -> i16 {
     }
 }
 
+/// Starts the round clock, picks the style and sets every team to the life count (0 if unlimited).
 pub fn cgm_star_init(g: &mut Game, this: &mut CGM_Star) {
         let mut gp = g.ptr();
     cgm_timelimit_init(g, &mut this.cgm_time_limit);
@@ -277,6 +286,7 @@ fn reassign(g: &mut Game, this: &mut CGM_Star) {
     }
 }
 
+/// Applies the end-of-round penalty for the current style and restarts the clock.
 fn time_out(g: &mut Game, this: &mut CGM_Star) {
         let mut gp = g.ptr();
     this.gameClock.set_time(star_time(g));
@@ -308,7 +318,7 @@ fn time_out(g: &mut Game, this: &mut CGM_Star) {
                 continue;
             }
 
-            //Let the cleanup function remove the player on the last kill
+            // On the last life, `remove_team` removes the player instead of a kill.
             if g.score[g.player(player).get_team_id() as usize].score > 1 || this.fReverseScoring {
                 g.player(player).kill_player_map_hazard(g, true, KillStyle::Environment, false, -1);
             }

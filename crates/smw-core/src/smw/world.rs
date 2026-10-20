@@ -1,4 +1,4 @@
-//! Port of src/smw/world.cpp
+//! The World mode's map: its tiles, the player's marker, vehicles and warps, loading, saving and drawing.
 
 use crate::common::gfx::soft_surface::Surface;
 use crate::common::gfx::soft_surface::Rect;
@@ -17,9 +17,13 @@ use crate::globals::*;
 use crate::common::util::grid::Grid;
 use std::collections::{BTreeMap, VecDeque};
 
+/// Background sprites per style; a tile's sprite divided by it is the style.
 pub const WORLD_BACKGROUND_SPRITE_SET_SIZE: i16 = 60;
+/// Path sprites per style.
 pub const WORLD_PATH_SPRITE_SET_SIZE: i16 = 20;
 
+/// Where each foreground sprite range starts: stage numbers (four colours of 100), winning team flags,
+/// bridges, start tiles, then plain and animated foreground sprites.
 pub const WORLD_FOREGROUND_STAGE_OFFSET: i16 = 200;
 pub const WORLD_WINNING_TEAM_SPRITE_OFFSET: i16 = 600;
 pub const WORLD_BRIDGE_SPRITE_OFFSET: i16 = 604;
@@ -27,7 +31,7 @@ pub const WORLD_START_SPRITE_OFFSET: i16 = 608;
 pub const WORLD_FOREGROUND_SPRITE_OFFSET: i16 = 700;
 pub const WORLD_FOREGROUND_SPRITE_ANIMATED_OFFSET: i16 = 900;
 
-/// Static-storage constructor of `WorldMap g_worldmap(0, 0);` (needs `game_values` constructed first).
+/// Creates the empty `g_worldmap`; `game_values` must exist first.
 pub fn init_globals(g: &mut Game) {
         let mut gp = g.ptr();
     gp.g_worldmap.init(WorldMap::new(g, 0, 0));
@@ -37,7 +41,7 @@ fn pop_next<'a>(list: &mut VecDeque<&'a str>) -> &'a str {
     list.pop_front().unwrap_or("")
 }
 
-/// `std::from_chars` into an `int`: no leading whitespace or '+'; on failure the default is kept.
+/// Leading digits with an optional `-`, ignoring the rest; 0 when none parse or the value is out of `i32` range.
 fn to_int(text: &str) -> i32 {
     let defval = 0;
     let b = text.as_bytes();
@@ -69,7 +73,7 @@ fn pop_next_int(list: &mut VecDeque<&str>) -> i32 {
     to_int(pop_next(list))
 }
 
-/// `std::stoi`: leading whitespace, optional sign, digits; throws when nothing converts or out of range.
+/// Leading whitespace, an optional sign and digits, ignoring the rest; panics when none parse or out of `i32` range.
 fn stoi(text: &str) -> i32 {
     let b = text.as_bytes();
     let mut i = 0;
@@ -100,7 +104,7 @@ fn stoi(text: &str) -> i32 {
     v as i32
 }
 
-/// `static_cast<WorldMusicCategory>(int)`; values past the enum (corrupt files) become `Grass`.
+/// A world file's music category; values past `COUNT` (corrupt files) become `Grass`.
 fn world_music_category_from_int(v: i32) -> WorldMusicCategory {
     let v = v as u8;
     if v <= WorldMusicCategory::COUNT as u8 {
@@ -110,27 +114,35 @@ fn world_music_category_from_int(v: i32) -> WorldMusicCategory {
     }
 }
 
+/// One tile of the world map.
 #[derive(Clone, Copy, Default, Debug)]
 pub struct WorldMapTile {
-    //Id is used for searching for AI
+    /// `row * width + col`, which the CPU's path search keys on.
     pub iID: i16,
 
+    /// 0 path, 1 start, 2 to 5 a door by colour, 6 and up stage `iType - 6`.
     pub iType: i16,
     pub iBackgroundWater: i16,
     pub iBackgroundSprite: i16,
     pub iForegroundSprite: i16,
 
+    /// Path shape, 1 to 15, as listed where the file's connections are read.
     pub iConnectionType: i16,
+    /// Whether the path leads up, down, left and right.
     pub fConnection: [bool; 4],
 
+    /// Index into `WorldMap::warps`, or -1 for none.
     pub iWarp: i16,
 
+    /// For a stage, -2 until a team wins it, then the winner's colour; -1 for any other tile.
     pub iCompleted: i16,
+    /// Redrawn on every animation frame.
     pub fAnimated: bool,
 
     pub iCol: i16,
     pub iRow: i16,
 
+    /// Vehicles whose boundary matches this id cannot enter; 0 for none.
     pub iVehicleBoundary: i16,
 }
 
@@ -138,23 +150,29 @@ pub struct WorldMapTile {
 * WorldMovingObject
 **********************************/
 
+/// Something that moves from tile to tile on the world map: the player's marker or a vehicle.
 #[derive(Clone, Default)]
 pub struct WorldMovingObject {
+    /// Position on the map in pixels.
     pub pos: Vec2s,
     pub currentTile: Vec2s,
     pub destTile: Vec2s,
 
+    /// 0 standing, 1 to 4 moving up, down, left or right.
     pub iState: i16,
     pub iDrawSprite: i16,
+    /// 0 facing right, 1 facing left.
     pub iDrawDirection: i16,
     pub iAnimationFrame: i16,
     pub iAnimationTimer: i16,
 
-    /// 16 ms steps of the original game owed to `step`, so walking keeps its wall-time speed.
+    /// `step`s owed to the next update: each tick earns `vel(1.0)`, so walking keeps its wall-time speed.
     pub fStepRemainder: f32,
     pub iStepsThisTick: i16,
 
+    /// Pixels per tile.
     pub iTileSize: i16,
+    /// 0 for full-size tiles, 1 for the small sheet.
     pub iTileSheet: i16,
 
     pub _alias: Aliased,
@@ -176,6 +194,7 @@ impl WorldMovingObject {
         self.iDrawDirection = iInitialDirection;
     }
 
+    /// Starts moving one tile: `iDirection` 0 up, 1 down, 2 left, 3 right.
     pub fn r#move(&mut self, iDirection: i16) {
         if iDirection == 0 {
             self.destTile.y -= 1;
@@ -194,6 +213,7 @@ impl WorldMovingObject {
         }
     }
 
+    /// Takes this tick's steps of 2 px; true when the object reached its destination tile.
     pub fn update(&mut self) -> bool {
         self.fStepRemainder += vel(1.0);
         self.iStepsThisTick = 0;
@@ -281,6 +301,7 @@ impl WorldMovingObject {
 * WorldPlayer
 **********************************/
 
+/// The players' marker on the world map.
 #[derive(Clone, Default)]
 pub struct WorldPlayer {
     pub world_moving_object: WorldMovingObject,
@@ -308,6 +329,7 @@ impl WorldPlayer {
         );
     }
 
+    /// Draws the marker as player `iPlayer`, moving its skin on to the next one that loads.
     pub fn set_sprite(&mut self, g: &mut Game, iPlayer: i16) {
         let mut gp = g.ptr();
         let p = iPlayer as usize;
@@ -326,24 +348,31 @@ impl WorldPlayer {
 * WorldVehicle
 **********************************/
 
+/// A vehicle that roams the paths after each turn and starts its stage when it meets the player.
 #[derive(Clone)]
 pub struct WorldVehicle {
     pub world_moving_object: WorldMovingObject,
 
+    /// Sprite frames: four of walking by direction, then the sleeping frame.
     pub srcRects: [Rect; 5],
 
+    /// The tiles it moves per turn, a random count in `iMinMoves..=iMaxMoves`.
     pub iMinMoves: i16,
     pub iMaxMoves: i16,
+    /// Moves left this turn; it goes negative while the vehicle looks for a tile to stop on.
     pub iNumMoves: i16,
 
+    /// The stage it starts on reaching the player.
     pub iActionId: i16,
 
     pub fEnabled: bool,
 
+    /// It paces back and forth while it waits.
     pub fSpritePaces: bool,
     pub iPaceOffset: i16,
     pub iPaceTimer: i16,
 
+    /// The vehicle boundary id it cannot enter; 0 for none.
     pub iBoundary: i16,
 }
 crate::impl_base!(WorldVehicle => world_moving_object: WorldMovingObject);
@@ -402,6 +431,7 @@ impl WorldVehicle {
         self.iBoundary = boundary;
     }
 
+    /// Starts a turn: picks how many tiles to move and the first step.
     pub fn r#move(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         self.iNumMoves = (RANDOM_INT(gp.get(), self.iMaxMoves as i32 - self.iMinMoves as i32 + 1) + self.iMinMoves as i32) as i16;
@@ -432,7 +462,7 @@ impl WorldVehicle {
             }
         }
 
-        //Don't allow vehicle to move forever, cap it at 10 moves over the number attempted
+        // A vehicle that cannot find a tile to stop on gives up 10 moves past its count.
         if self.iNumMoves <= -10 {
             return;
         }
@@ -467,6 +497,7 @@ impl WorldVehicle {
         }
     }
 
+    /// True when it moved onto the player's tile.
     pub fn update(&mut self, g: &mut Game) -> bool {
         let fMoveDone = self.world_moving_object.update();
 
@@ -520,6 +551,7 @@ impl WorldVehicle {
 * WorldWarp
 **********************************/
 
+/// A pair of tiles the player warps between.
 #[derive(Clone, Copy, Debug)]
 pub struct WorldWarp {
     pub id: i16,
@@ -532,6 +564,7 @@ impl WorldWarp {
         WorldWarp { id, posA, posB }
     }
 
+    /// The warp's other end from `target`, or `target` when it is neither end.
     pub fn get_other_side(&self, target: Vec2s) -> Vec2s {
         if target == self.posA {
             return self.posB;
@@ -549,31 +582,39 @@ impl WorldWarp {
 
 #[derive(Clone)]
 
+/// The loaded world map and everything on it.
 pub struct WorldMap {
     pub iWidth: i16,
     pub iHeight: i16,
+    /// The start tile.
     pub iStartX: i16,
     pub iStartY: i16,
 
+    /// Stages listed in the world file; they live in `game_values.tourstops`.
     pub iNumStages: i16,
 
+    /// Tiles by (column, row).
     pub tiles: Grid<WorldMapTile>,
     pub player: WorldPlayer,
     pub vehicles: Vec<WorldVehicle>,
     pub warps: Vec<WorldWarp>,
 
+    /// The items every team starts with: powerup codes, then world items from `NUM_POWERUPS` on.
     pub iNumInitialBonuses: i16,
     pub iInitialBonuses: [i16; 32],
 
     pub iMusicCategory: WorldMusicCategory,
 
+    /// Pixels per tile: `TILESIZE`, `PREVIEWTILESIZE` or `THUMBTILESIZE`, with its log2 and sprite sheet.
     pub iTileSize: i16,
     pub iTileSizeShift: i16,
     pub iTileSheet: i16,
 
+    /// Where the next `draw_map_to_surface` call resumes.
     pub iLastDrawRow: i16,
     pub iLastDrawCol: i16,
 
+    /// Tiles one `draw_map_to_surface` call draws: an eighth of the visible map.
     pub iTilesPerCycle: i16,
 
     pub worldName: String,
@@ -582,7 +623,6 @@ pub struct WorldMap {
 }
 
 impl WorldMap {
-    /// Members without a C++ initializer start at zero.
     fn blank() -> Self {
         WorldMap {
             iWidth: 0,
@@ -614,10 +654,11 @@ impl WorldMap {
         this.iHeight = h;
         this.tiles = Grid::new(w as usize, h as usize);
 
-        reset_tour_stops(g); // FIXME
+        reset_tour_stops(g);
         this
     }
 
+    /// Loads the world file at `path` for drawing at `tilesize`; its stages replace `game_values.tourstops`.
     pub fn new_path(g: &mut Game, path: &str, tilesize: i16) -> Self {
         let mut this = Self::blank();
         this.reset_draw_cycle();
@@ -677,7 +718,7 @@ impl WorldMap {
                 iReadType = 1;
             } else if iReadType == 1 {
                 //music category
-                this.iMusicCategory = world_music_category_from_int(stoi(line)); // FIXME
+                this.iMusicCategory = world_music_category_from_int(stoi(line));
                 iReadType = 2;
             } else if iReadType == 2 {
                 //world width
@@ -789,10 +830,8 @@ impl WorldMap {
                     iReadType = 8;
                     iMapTileReadRow = 0;
 
-                    //1 == |  2 == -  3 == -!  4 == L  5 == ,-  6 == -,
-                    //7 == -|  8 == -`-  9 == |-  10 == -,-  11 == +
-                    //12 == horizontal bridge starts open,  13 == horizontal bridge closed
-                    //14 == vertical bridge starts open,  15 == vertical bridge closed
+                    //1 == |  2 == -  3 == -!  4 == L  5 == ,-  6 == -,  7 == -|  8 == -`-  9 == |-  10 == -,-  11 == +
+                    //12, 13 == horizontal bridge open, closed;  14, 15 == vertical bridge open, closed
                     for iRow in 0..this.iHeight {
                         for iCol in 0..this.iWidth {
                             this.set_tile_connections(iCol, iRow);
@@ -1000,6 +1039,7 @@ impl WorldMap {
         this
     }
 
+    /// Recomputes which neighbours the tile's path joins; a link needs matching shapes on both tiles.
     fn set_tile_connections(&mut self, iCol: i16, iRow: i16) {
         if iCol < 0 || iRow < 0 || iCol >= self.iWidth || iRow >= self.iHeight {
             return;
@@ -1042,7 +1082,7 @@ impl WorldMap {
         }
     }
 
-    //Saves world to file
+    /// Writes the world file; false when it cannot be written.
     pub fn save(&self, g: &mut Game, szPath: &str) -> bool {
         use std::fmt::Write as _;
 
@@ -1222,6 +1262,7 @@ impl WorldMap {
         self.tiles = newTiles;
     }
 
+    /// Moves the marker and the vehicles one tick; true when the marker reached its tile.
     pub fn update(&mut self, g: &mut Game, fPlayerVehicleCollision: &mut bool) -> bool {
         let mut gp = g.ptr();
         let mut fPlayMovingVehicleSound = false;
@@ -1281,6 +1322,7 @@ impl WorldMap {
         self.iLastDrawCol = 0;
     }
 
+    /// Draws part of the map, resuming where the last call stopped; `iCycleIndex` -1 draws everything at once.
     pub fn draw_map_to_surface(&mut self, g: &mut Game, iCycleIndex: i16, fFullRefresh: bool, surface: *mut Surface, iMapDrawOffsetCol: i16, iMapDrawOffsetRow: i16, iAnimationFrame: i16) {
         let iRowEnd: i16 = if 19 + (iMapDrawOffsetRow as i32) < self.iHeight as i32 { 19 } else { self.iHeight - iMapDrawOffsetRow };
         let iColEnd: i16 = if 24 + (iMapDrawOffsetCol as i32) < self.iWidth as i32 { 24 } else { self.iWidth - iMapDrawOffsetCol };
@@ -1473,6 +1515,7 @@ impl WorldMap {
         self.vehicles.iter().any(|vehicle| vehicle.fEnabled && vehicle.iState > 0)
     }
 
+    /// The stage of the first vehicle on the player's tile and its index in `vehicleIndex`, or -1 for both.
     pub fn get_vehicle_in_player_tile(&self, vehicleIndex: &mut i16) -> i16 {
         for i in 0..self.vehicles.len() {
             let vehicle = &self.vehicles[i];
@@ -1524,6 +1567,7 @@ impl WorldMap {
         true
     }
 
+    /// Opens the closed bridges and closes the open ones.
     pub fn move_bridges(&mut self) {
         for iRow in 0..self.iHeight {
             for iCol in 0..self.iWidth {
@@ -1565,6 +1609,7 @@ impl WorldMap {
         }
     }
 
+    /// Sets `doors[colour]` for each door next to the tile, unless the tile is a stage no team has won.
     pub fn is_touching_door(&self, iCol: i16, iRow: i16, doors: &mut [bool; 4]) {
         let (c, r) = (iCol as usize, iRow as usize);
         let tile = self.tiles.at(c, r);
@@ -1593,7 +1638,7 @@ impl WorldMap {
             }
         }
 
-        // The C++ compares the column against the height here.
+        // Compares the column, not the row, against the height.
         if iCol < self.iHeight - 1 && tile.iCompleted >= -1 {
             let iType = self.tiles.at(c, r + 1).iType - 2;
 
@@ -1614,6 +1659,8 @@ impl WorldMap {
         false
     }
 
+    /// Opens the doors of colour `iKeyType` next to a won or non-stage tile (any tile with `fCloud`); returns bits
+    /// 1, 2, 4, 8 for left, right, up, down.
     pub fn use_key(&mut self, iKeyType: i16, iCol: i16, iRow: i16, fCloud: bool) -> i16 {
         let mut iDoorsOpened: i16 = 0;
 
@@ -1651,7 +1698,8 @@ impl WorldMap {
         0
     }
 
-    //Implements breadth first search to find a stage or vehicle of interest
+    /// The CPU's next step towards the nearest open stage or vehicle: 0 to 3 for up, down, left or right, 4 to press
+    /// select (on a target, or to take a warp), -1 when none is reachable.
     pub fn get_next_interesting_move(&self, iCol: i16, iRow: i16) -> i16 {
         let currentTile = self.tiles.at(iCol as usize, iRow as usize);
 
@@ -1777,6 +1825,7 @@ impl WorldMap {
         -1
     }
 
+    /// Gives every team the world's starting items.
     pub fn set_initial_powerups(&self, g: &mut Game) {
         for iTeam in 0..4usize {
             g.game_values.worldpowerupcount[iTeam] = self.iNumInitialBonuses;

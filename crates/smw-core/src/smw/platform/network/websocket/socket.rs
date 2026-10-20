@@ -1,5 +1,6 @@
 //! The relay layer's one WebSocket: web/relay_socket.js in the browser, a background thread natively. Both are polled.
 
+/// `state()` values; it is -1 when no socket was opened.
 pub const CONNECTING: i32 = 0;
 pub const OPEN: i32 = 1;
 pub const CLOSED: i32 = 2;
@@ -17,6 +18,7 @@ mod imp {
         fn smw_ws_close();
     }
 
+    /// Closes any open socket and starts connecting to `url`; `state()` reports the outcome.
     pub fn open(url: &str) {
         let url = CString::new(url).unwrap_or_default();
         unsafe { smw_ws_open(url.as_ptr()) }
@@ -26,6 +28,7 @@ mod imp {
         unsafe { smw_ws_state() }
     }
 
+    /// Sends one binary message; dropped unless the socket is open.
     pub fn send(data: &[u8]) {
         unsafe { smw_ws_send(data.as_ptr(), data.len()) };
     }
@@ -67,6 +70,7 @@ mod imp {
         };
     }
 
+    /// Closes any open socket and starts a thread that connects to `url`, then pumps it every 4 ms.
     pub fn open(url: &str) {
         close();
         let state = Arc::new(AtomicI32::new(CONNECTING));
@@ -125,6 +129,7 @@ mod imp {
         SOCKET.lock().unwrap().as_ref().map_or(-1, |s| s.state.load(Ordering::Acquire))
     }
 
+    /// Queues one binary message for the socket thread; dropped when no socket is open.
     pub fn send(data: &[u8]) {
         if let Some(s) = SOCKET.lock().unwrap().as_ref() {
             let _ = s.outbox.send(data.to_vec());
@@ -143,6 +148,7 @@ mod imp {
         message.len() as i32
     }
 
+    /// Drops the socket; its thread sends a close frame and exits.
     pub fn close() {
         SOCKET.lock().unwrap().take();
     }

@@ -1,4 +1,4 @@
-//! Port of src/smw/ui/MI_BonusWheel.cpp
+//! The bonus wheel: powerups appear around a ring, a selector spins, and the winners get where it stops.
 
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
@@ -13,13 +13,17 @@ use crate::common::ui::mi_image::MI_Image;
 use crate::common::uicontrol::{TextAlign, UI_Control, UI_ControlTrait};
 use crate::globals::*;
 
+/// Powerup slots around the wheel.
 pub const NUMBONUSITEMSONWHEEL: i32 = 10;
 const NB: usize = NUMBONUSITEMSONWHEEL as usize;
 
+/// Ten powerups around a ring with a spinning selector; Continue appears once it stops.
 pub struct MI_BonusWheel {
     pub ui_control: UI_Control,
 
+    /// 0 while the powerups appear one by one, 1 once the wheel spins.
     iState: i16,
+    /// Slots revealed so far.
     iDisplayPowerupIndex: i16,
     iDisplayPowerupTimer: i16,
 
@@ -28,29 +32,42 @@ pub struct MI_BonusWheel {
 
     miContinueButton: Box<MI_Button>,
 
+    /// Powerup in each slot.
     iChosenPowerups: [i16; NB],
 
+    /// Frames spun without a press; the wheel stops itself after 10 seconds.
     iPressSelectTimer: i16,
+    /// The stop was pressed and the selector is winding down.
     fPressedSelect: bool,
+    /// The wheel stopped and the winners got the powerup.
     fPowerupSelectionDone: bool,
 
     iSelectorAnimation: i16,
     iSelectorAnimationCounter: i16,
 
+    /// Selector speed in radians per frame.
     dSelectionSpeed: f32,
+    /// Selector angle in radians, 0 to `TWO_PI`.
     dSelectionAngle: f32,
+    /// Powerup the selector will stop on, set when the stop is pressed.
     iSelectedPowerup: i16,
+    /// Index into `dSelectionSector` of the next boundary that plays a tick.
     iNextSelectionSoundIndex: i16,
+    /// Start angle of each slot in radians, then `TWO_PI` closing the last.
     dSelectionSector: [f32; NB + 1],
 
+    /// Per-frame slowdown that lands the selector on `iSelectedPowerup`.
     dSelectionWinddownSpeed: f32,
 
+    /// Speed the free spin drifts toward; rerolled when `iSelectionSpeedTimer` runs out.
     dSelectionSpeedGoal: f32,
     iSelectionSpeedTimer: i16,
 
     iNumPlayers: i16,
+    /// Team that spins and receives the powerup.
     iWinningTeam: i16,
 
+    /// The winning team has no humans, so the wheel stops at once.
     fCpuControlled: bool,
 }
 crate::impl_base!(MI_BonusWheel => ui_control: UI_Control);
@@ -113,10 +130,12 @@ impl MI_BonusWheel {
         }
     }
 
+    /// True once the wheel stopped and the winners got the powerup.
     pub fn get_powerup_selection_done(&self) -> bool {
         self.fPowerupSelectionDone
     }
 
+    /// Fills the wheel from the item weights, one slot a poison mushroom, for the match winner or with `fTournament` the tournament winner.
     pub fn reset(&mut self, g: &mut Game, fTournament: bool) {
         let mut gp = g.ptr();
         //Setup the state so that we make powerups appear one by one before the wheel starts spinning
@@ -263,7 +282,7 @@ impl UI_ControlTrait for MI_BonusWheel {
                 let iPoofY = (self.m_pos.y as i32 + 200 + (110.0f32 * sinf(sector)) as i16 as i32) as i16;
 
                 let _ = (iPoofX, iPoofY);
-                // TODO(eyecandy): m_parentMenu->AddEyeCandy<EC_SingleAnimation>(&rm->spr_poof, iPoofX, iPoofY, 4, 5);
+                // TODO(eyecandy): draw a poof at iPoofX, iPoofY as each powerup appears.
 
                 if_sound_on_play(g, &mut gp.rm.sfx_cannon);
 

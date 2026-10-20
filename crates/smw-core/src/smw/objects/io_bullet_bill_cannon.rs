@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/IO_BulletBillCannon.cpp
+//! Map Bullet Bill cannon that fires on a random interval.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -14,15 +14,19 @@ use crate::smw::objects::moving::mo_bullet_bill::MO_BulletBill;
 use crate::smw::player::CPlayer;
 
 //------------------------------------------------------------------------------
-// class IO_BulletBillCannon - gets update calls and shoots bullet bills based on timer
+// Invisible map object that fires Bullet Bills on a timer.
 //------------------------------------------------------------------------------
 #[derive(Clone)]
 pub struct IO_BulletBillCannon {
     pub cobject: CObject,
 
+    /// Base interval between shots in 62.5 Hz ticks; each wait is one to two times this.
     pub m_freq: i16,
+    /// Ticks left before the next shot.
     pub m_timer: i16,
+    /// Bullet speed (pixels per tick); its sign sets the firing direction.
     pub m_vel: f32,
+    /// Cannon in the map preview; fires preview-size bullets.
     pub m_preview: bool,
 }
 impl_base!(IO_BulletBillCannon => cobject: CObject);
@@ -60,6 +64,7 @@ impl CObjectTrait for IO_BulletBillCannon {
 }
 
 impl IO_BulletBillCannon {
+    /// Fires a Bullet Bill from beside the cannon and rolls the next wait.
     pub fn fire(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         self.set_new_timer(g);

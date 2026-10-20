@@ -6,6 +6,7 @@ use std::collections::VecDeque;
 
 #[derive(Clone)]
 
+/// Input waiting for the game beside the backend's own queue.
 pub struct InputQueue {
     /// Keys and taps from the touch controls: live input that skips the touch filter.
     touch: VecDeque<Input>,

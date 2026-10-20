@@ -1,4 +1,4 @@
-//! Port of src/common/MapList.cpp
+//! The list of map files, the current selection, map filters, and the map summary cache.
 
 use crate::game::Game;
 use crate::common::file_list::SimpleDirectoryList;
@@ -14,14 +14,20 @@ use crate::common::version::GAME_VERSION;
 use crate::globals::Aliased;
 use std::io::{BufRead, Write};
 
+/// One map file in the list.
 pub struct MapListNode {
+    /// Per filter (the `NUM_AUTO_FILTERS` automatic ones, then the user filter files), whether the map is in it.
     pub pfFilters: Vec<bool>,
+    /// The map file's full path.
     pub filename: String,
 
+    /// Position in the whole list, and in the filtered list.
     pub iIndex: i16,
     pub iFilteredIndex: i16,
 
+    /// Passes the filters last applied.
     pub fInCurrentFilterSet: bool,
+    /// Its automatic filters came from mapsummary.txt rather than from loading the map.
     pub fReadFromCache: bool,
     pub fValid: bool,
 }
@@ -41,21 +47,22 @@ impl MapListNode {
     }
 }
 
-/// `std::multimap<std::string, MapListNode>`: sorted by key, equal keys in insertion order.
-/// Iterators are indices; `len()` plays the role of `end()`.
+/// Map entries sorted by key (bytewise), equal keys in insertion order.
+/// Positions are indices; `len()` is the past-the-end position.
 #[derive(Default)]
 pub struct MapMultimap {
     entries: Vec<(String, MapListNode)>,
 }
 
 impl MapMultimap {
+    /// Inserts after any entries with an equal key; returns the new entry's position.
     pub fn emplace(&mut self, key: String, node: MapListNode) -> usize {
         let pos = self.entries.partition_point(|(k, _)| k.as_bytes() <= key.as_bytes());
         self.entries.insert(pos, (key, node));
         pos
     }
 
-    /// `find`: the first element with this key, or `end()`.
+    /// The first entry with this key, or `len()`.
     pub fn find(&self, key: &str) -> usize {
         let pos = self.entries.partition_point(|(k, _)| k.as_bytes() < key.as_bytes());
         if pos < self.entries.len() && self.entries[pos].0 == key {
@@ -88,6 +95,7 @@ fn add_maps_from(g: &mut Game, dirpath: &str, container: &mut MapMultimap) {
     });
 }
 
+/// Adds every .map file in `dirpath`, keyed by its display name.
 fn add_maps_from_with(g: &mut Game, dirpath: &str, mut emplace: impl FnMut(String, MapListNode)) {
     let mut dir = FilesIterator::new(g, dirpath.to_string(), vec![".map".to_string()]);
     while let Some(path) = dir.next() {
@@ -104,14 +112,18 @@ pub enum OuterIter {
     WorldMaps(usize),
 }
 
+/// The maps the menus pick from, a current position in them, and the world-only maps.
 pub struct MapList {
+    /// The maps in maps/, plus tour, world and special maps for the world editor.
     pub maps: MapMultimap,
+    /// Tour, world and special maps, which tour and world stages look up by name.
     pub worldmaps: MapMultimap,
 
     current: usize,
     savedcurrent: usize,
     outercurrent: OuterIter,
 
+    /// Positions in `maps` by filtered index and by index, filled by `apply_filters`.
     mlnFilteredMaps: Vec<usize>,
     mlnMaps: Vec<usize>,
 
@@ -121,6 +133,7 @@ pub struct MapList {
 }
 
 impl MapList {
+    /// Lists the maps from the data directory; panics if there are none.
     pub fn new(g: &mut Game, fWorldEditor: bool) -> Self {
         let mut gp = g.ptr();
         let mut maps = MapMultimap::default();
@@ -179,6 +192,7 @@ impl MapList {
         }
     }
 
+    /// Adds every world's maps to `maps`.
     pub fn add_world_maps(&mut self, g: &mut Game) {
         let worlds = convert_path(g, "worlds/");
         let mut worldmapdirs = SimpleDirectoryList::new(g, worlds);
@@ -189,14 +203,15 @@ impl MapList {
         }
     }
 
+    /// Adds a map just saved to maps/ under `name`.
     pub fn add(&mut self, g: &mut Game, name: &str) {
         let fullName = convert_path(g, "maps/") + name;
         let node = MapListNode::new(g, fullName);
         self.emplace_map(strip_creator_and_ext(name), node);
     }
 
-    /// `maps.emplace` after construction: C++ multimap iterators stay on their element (and `end()`
-    /// stays `end()`), so every stored position is moved past the insertion point.
+    /// Inserting into `maps` after construction moves every stored position at or after the insertion point,
+    /// so each keeps naming the same map.
     fn emplace_map(&mut self, key: String, node: MapListNode) {
         let pos = self.maps.emplace(key, node);
         let reseat = |it: &mut usize| {
@@ -213,6 +228,7 @@ impl MapList {
         self.mlnMaps.iter_mut().for_each(reseat);
     }
 
+    /// Moves to the next map whose path contains `name`, searching from the one after the current; false if none.
     pub fn find(&mut self, name: &str) -> bool {
         let mut fFound = false;
 
@@ -231,6 +247,7 @@ impl MapList {
         fFound
     }
 
+    /// Selects the map whose name is `name` (ignoring ASCII case); with `fWorld`, the world-only maps come first.
     pub fn findexact(&mut self, name: &str, fWorld: bool) -> bool {
         let szLookForName = lowercase(name.to_string());
 
@@ -275,6 +292,7 @@ impl MapList {
         fFound
     }
 
+    /// Moves to the next filtered map if the current one is filtered out; true when it moved.
     pub fn find_filtered_map(&mut self) -> bool {
         if self.maps.node(self.current).fInCurrentFilterSet {
             return false;
@@ -284,7 +302,7 @@ impl MapList {
         true
     }
 
-    /// `startswith(char letter)`
+    /// Moves to the next filtered map whose name starts with ASCII letter `letter`, any case.
     pub fn startswith_char(&mut self, mut letter: u8) -> bool {
         if letter.is_ascii_lowercase() {
             letter -= 32;
@@ -305,7 +323,7 @@ impl MapList {
         false
     }
 
-    /// `startswith(const std::string& match)`
+    /// Moves to the next filtered map whose name starts with `match`, ignoring ASCII case.
     pub fn startswith(&mut self, r#match: &str) -> bool {
         let oldCurrent = self.current;
         loop {
@@ -334,14 +352,17 @@ impl MapList {
         }
     }
 
+    /// The selected map's full path.
     pub fn current_filename(&self) -> &str {
         &self.outer_node().1.filename
     }
 
+    /// The selected map's display name.
     pub fn current_shortmapname(&self) -> &str {
         self.outer_node().0
     }
 
+    /// Steps to the previous map, wrapping; with `fUseFilters`, the previous one in the filtered set.
     pub fn prev(&mut self, fUseFilters: bool) {
         if fUseFilters {
             let oldCurrent = self.current;
@@ -366,6 +387,7 @@ impl MapList {
         }
     }
 
+    /// Steps to the next map, wrapping; with `fUseFilters`, the next one in the filtered set.
     pub fn next(&mut self, fUseFilters: bool) {
         if fUseFilters {
             let oldCurrent = self.current;
@@ -391,6 +413,7 @@ impl MapList {
         }
     }
 
+    /// Steps forward a random number of maps; with filters, does nothing if fewer than two pass.
     pub fn random(&mut self, g: &mut Game, fUseFilters: bool) {
         let mut gp = g.ptr();
         let iShuffle: i32;
@@ -409,6 +432,7 @@ impl MapList {
         }
     }
 
+    /// A random map's full path from the whole list; leaves the selection alone.
     pub fn random_filename(&self, g: &mut Game) -> String {
         let mut gp = g.ptr();
         let iRand: i16 = RANDOM_INT(gp.get(), self.maps.len() as i32) as i16;
@@ -447,7 +471,7 @@ impl MapList {
         self.outercurrent = OuterIter::Maps(itr);
     }
 
-    /// `(*itr).second` for an iterator from `GetCurrent` / `GetIteratorAt`.
+    /// The map node at a position from `get_current` or `get_iterator_at`.
     pub fn node_at(&self, itr: usize) -> &MapListNode {
         self.maps.node(itr)
     }
@@ -456,15 +480,17 @@ impl MapList {
         self.maps.node_mut(itr)
     }
 
-    /// `(*itr).first` for an iterator from `GetCurrent` / `GetIteratorAt`.
+    /// The display name at a position from `get_current` or `get_iterator_at`.
     pub fn key_at(&self, itr: usize) -> &str {
         self.maps.key(itr)
     }
 
+    /// The past-the-end position.
     pub fn end(&self) -> usize {
         self.maps.len()
     }
 
+    /// Writes each user filter file, if any filter changed.
     pub fn write_filters(&mut self, g: &mut Game) {
         if g.game_values.fNeedWriteFilters {
             g.game_values.fNeedWriteFilters = false;
@@ -502,6 +528,7 @@ impl MapList {
         }
     }
 
+    /// Loads each map's automatic filters (from the cache, else from the map) and the user filter files.
     pub fn read_filters(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         self.current = 0;
@@ -585,6 +612,7 @@ impl MapList {
         self.outercurrent = OuterIter::Maps(self.current);
     }
 
+    /// Recomputes every map's automatic filters by loading it.
     pub fn reload_map_auto_filters(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         for itr in 0..self.maps.len() {
@@ -595,6 +623,7 @@ impl MapList {
         }
     }
 
+    /// Writes every map's automatic filters to maps/cache/mapsummary.txt.
     pub fn write_map_summary_cache(&mut self, g: &mut Game) {
         let path = convert_path(g, "maps/cache/mapsummary.txt");
         let Ok(mut fp) = std::fs::File::create(&path) else {
@@ -621,6 +650,7 @@ impl MapList {
         }
     }
 
+    /// Marks the maps that are in every filter turned on in `pfFilters`, and moves off a map that is not.
     pub fn apply_filters(&mut self, g: &mut Game, pfFilters: &[bool]) {
         self.iFilteredMapCount = 0;
         let mut iTotalCount: i16 = 0;
@@ -653,6 +683,7 @@ impl MapList {
         self.maps.node(self.current).fInCurrentFilterSet
     }
 
+    /// The position of map `iIndex` in the filtered or whole list, or `end()`.
     pub fn get_iterator_at(&self, iIndex: u16, fUseFilters: bool) -> usize {
         if fUseFilters {
             if iIndex as usize >= self.iFilteredMapCount {
@@ -678,6 +709,7 @@ impl MapList {
         *f = !*f;
     }
 
+    /// Remembers the current position for `resume_current`.
     pub fn save_current(&mut self) {
         self.savedcurrent = self.current;
     }
@@ -687,7 +719,7 @@ impl MapList {
     }
 }
 
-/// Splits a file the way repeated `fgets(buffer, 256, fp)` does: chunks end after `'\n'` or 255 bytes.
+/// Splits a file the way repeated reads of a 256-byte line buffer do: chunks end after `'\n'` or 255 bytes.
 pub fn fgets_lines(f: std::fs::File) -> Vec<String> {
     let mut reader = std::io::BufReader::new(f);
     let mut bytes = Vec::new();
@@ -710,12 +742,12 @@ pub fn fgets_lines(f: std::fs::File) -> Vec<String> {
     out
 }
 
-/// `strtok` over one buffer: yields non-empty tokens separated by any of `delims`.
+/// Non-empty tokens of `s` separated by any of `delims`.
 pub fn strtok<'a>(s: &'a str, delims: &'a [u8]) -> impl Iterator<Item = String> + 'a {
     s.split(move |c: char| c.is_ascii() && delims.contains(&(c as u8))).filter(|t| !t.is_empty()).map(|t| t.to_string())
 }
 
-/// C `atoi`: optional whitespace and sign, then digits; 0 when there are none.
+/// C `atoi`: optional whitespace and sign, then digits; 0 when there are none. Overflow wraps.
 pub fn atoi(s: &str) -> i32 {
     let b = s.as_bytes();
     let mut i = 0;

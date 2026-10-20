@@ -1,5 +1,6 @@
-//! Port of src/common/Version.h
+//! The game's version number, which options files and netplay compare.
 
+/// A four-part version that compares as one big-endian `u32`.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Version {
     pub major: u8,
@@ -9,6 +10,7 @@ pub struct Version {
 }
 
 impl Version {
+    /// The parts packed as `major.minor.patch.build`, one byte each, `major` highest.
     pub const fn as_u32(&self) -> u32 {
         ((self.major as u32) << 24) | ((self.minor as u32) << 16) | ((self.patch as u32) << 8) | self.build as u32
     }

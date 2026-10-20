@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/moving/MO_BonusHouseChest.cpp
+//! Bonus house chest: opening it awards a world item or tournament points and ends the bonus stage.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -19,12 +19,16 @@ use crate::smw::player::CPlayer;
 //------------------------------------------------------------------------------
 // class treasure chest powerup
 //------------------------------------------------------------------------------
+/// Chest opened with turbo; `state` 1 closed, 2 item rising, 3 done.
 #[derive(Clone)]
 pub struct MO_BonusHouseChest {
     pub io_moving_object: IO_MovingObject,
 
+    /// Prize: a powerup index, then world items from `NUM_POWERUPS`, then score bonuses from `NUM_POWERUPS + NUM_WORLD_POWERUPS`.
     pub bonusitem: i16,
+    /// Y (pixels) of the prize rising out of the open chest.
     pub drawbonusitemy: i16,
+    /// Ticks left in the prize's rise.
     pub drawbonusitemtimer: i16,
 }
 impl_base!(MO_BonusHouseChest => io_moving_object: IO_MovingObject);

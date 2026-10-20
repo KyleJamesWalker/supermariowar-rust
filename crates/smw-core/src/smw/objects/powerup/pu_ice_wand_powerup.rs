@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/powerup/PU_IceWandPowerup.cpp
+//! Ice wand powerup: gives the player the ice blast power.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -21,7 +21,9 @@ use crate::smw::player::CPlayer;
 pub struct PU_IceWandPowerup {
     pub mo_powerup: MO_Powerup,
 
+    /// Tick counter for the sparkle overlay; it steps a frame every 4 ticks.
     pub sparkleanimationtimer: i16,
+    /// X offset (pixels) of the current sparkle frame.
     pub sparkledrawframe: i16,
 }
 impl_base!(PU_IceWandPowerup => mo_powerup: MO_Powerup);

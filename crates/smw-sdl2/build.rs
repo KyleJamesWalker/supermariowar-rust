@@ -1,3 +1,5 @@
+//! Points the linker at Homebrew's SDL2 on native targets.
+
 fn main() {
     if matches!(std::env::var("CARGO_CFG_TARGET_OS").as_deref(), Ok("emscripten" | "android")) {
         return;

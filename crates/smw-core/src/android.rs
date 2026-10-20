@@ -1,4 +1,4 @@
-//! Not in upstream: the entry point SDLActivity calls in libmain.so, and the Android storage and log plumbing.
+//! The entry point SDLActivity calls in libmain.so, and the Android storage and log plumbing.
 
 use std::ffi::{c_char, c_int, CStr};
 use std::io::{BufRead, BufReader, Write};
@@ -77,6 +77,7 @@ pub extern "C" fn Java_com_kylejameswalker_supermariowar_MainActivity_nativeSetC
     crate::smw::touch::set_cutouts(&[[l1, t1, r1, b1], [l2, t2, r2, b2]]);
 }
 
+/// The entry point SDLActivity calls: sets the SDL2 backend, redirects output to the log, and runs the game.
 #[no_mangle]
 pub unsafe extern "C" fn SDL_main(argc: c_int, argv: *const *const c_char) -> c_int {
     crate::services::set_backend(smw_sdl2::services);

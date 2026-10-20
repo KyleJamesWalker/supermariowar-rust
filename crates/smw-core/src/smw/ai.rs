@@ -1,4 +1,4 @@
-//! Port of src/smw/ai.cpp
+//! The CPU players' AI: what each CPU goes for, runs from and presses on each think.
 
 use crate::smw::object_container::ObjectId;
 use crate::common::map::{WARP_DOWN, WARP_LEFT, WARP_RIGHT};
@@ -48,12 +48,18 @@ use std::collections::BTreeMap;
 
 #[derive(Clone)]
 
+/// What one think found nearest the player: squared distances in px², and whether the short way wraps the screen.
 pub struct NearestObjects {
+    /// The opponent to chase.
     pub player: PlayerId,
+    /// A jailed teammate to free.
     pub teammate: PlayerId,
 
+    /// The object to go for.
     pub goal: ObjectId,
+    /// An enemy to stomp.
     pub stomp: ObjectId,
+    /// The danger to get away from.
     pub threat: ObjectId,
 
     pub playerdistance: i32,
@@ -92,6 +98,7 @@ impl NearestObjects {
         n
     }
 
+    /// Clears every target; distances start far beyond any on screen.
     pub fn reset(&mut self) {
         self.player = PlayerId::NONE;
         self.goal = ObjectId::NONE;
@@ -119,14 +126,15 @@ impl Default for NearestObjects {
     }
 }
 
+/// An object the AI treats specially for a while: `iType` 1 ignores it.
 #[derive(Clone, Copy, Default, Debug)]
 pub struct AttentionObject {
     pub iID: i32,    //Global ID of this object
     pub iType: i16,  //Ignore it, high priority, etc.
-    pub iTimer: i16, //When it the attention expires, 0 for never
+    pub iTimer: i16, //Thinks until the attention expires, 0 for never
 }
 
-/// Virtual interface of `CPlayerAI` (`Init`, `Think`).
+/// Clones a boxed AI.
 pub trait ClonePlayerAI {
     fn clone_box(&self) -> Box<dyn CPlayerAITrait>;
 }
@@ -143,6 +151,7 @@ impl Clone for Box<dyn CPlayerAITrait> {
     }
 }
 
+/// A CPU player's AI; `think` sets the player's keys.
 pub trait CPlayerAITrait: ClonePlayerAI {
     fn ai(&mut self) -> &mut CPlayerAI;
 
@@ -162,17 +171,23 @@ pub trait CPlayerAITrait: ClonePlayerAI {
 #[derive(Clone)]
 
 pub struct CPlayerAI {
+    /// The player this AI drives.
     pub pPlayer: PlayerId,
 
+    /// A deadly tile below the player: -1 escapes to the right, 1 to the left, 0 none.
     pub iFallDanger: i16,
+    /// Refreshed on every think.
     pub nearestObjects: NearestObjects,
 
+    /// Objects under special attention, by network id.
     pub attentionObjects: BTreeMap<i32, Box<AttentionObject>>,
+    /// The goal the AI is going for and how many thinks it has spent on it.
     pub currentAttentionObject: AttentionObject,
-    /// Frames in a row the AI has jumped at a wall it is walking into.
+    /// Thinks in a row the AI has jumped at a wall it is walking into.
     pub wall_frames: i16,
-    /// An opponent the AI gave up on behind a wall, and for how many more frames.
+    /// An opponent the AI gave up on behind a wall, and for how many more thinks.
     pub ignored_player: (PlayerId, i16),
+    /// The navigation graph, built on first use.
     pub nav: Option<NavGraph>,
     /// The tile column and move the AI left the ground for, followed while in the air.
     pub nav_step: Option<(i32, Move)>,
@@ -228,7 +243,7 @@ impl CPlayerAITrait for CPlayerAI {
 
 // --- cast helpers -------------------------------------------------------------
 
-/// `dynamic_cast<T*>(obj)`
+/// `obj` as a `T`, or null when it is not one.
 fn dynamic_cast<T: Any>(obj: Ptr<dyn CObjectTrait>) -> Ptr<T> {
     if obj.is_null() {
         return Ptr::null();
@@ -239,7 +254,7 @@ fn dynamic_cast<T: Any>(obj: Ptr<dyn CObjectTrait>) -> Ptr<T> {
     }
 }
 
-/// `(T*)obj` where C++ already knows the type from `getObjectType()` / `getMovingObjectType()`.
+/// `obj` as a `T` when its type tag already says it is one; panics otherwise.
 fn static_cast<T: Any>(obj: Ptr<dyn CObjectTrait>) -> Ptr<T> {
     let p = dynamic_cast::<T>(obj);
     if p.is_null() {
@@ -248,7 +263,7 @@ fn static_cast<T: Any>(obj: Ptr<dyn CObjectTrait>) -> Ptr<T> {
     p
 }
 
-/// `dynamic_cast<T*>(game_values.gamemode)`
+/// The game mode as a `T`, or null when it is another mode.
 fn dynamic_cast_gamemode<T: Any>(g: &mut Game) -> Ptr<T> {
     let gm = g.mode();
     if gm.is_null() {
@@ -260,7 +275,7 @@ fn dynamic_cast_gamemode<T: Any>(g: &mut Game) -> Ptr<T> {
     }
 }
 
-/// `(T*)game_values.gamemode`
+/// The game mode as a `T`; panics when it is another mode.
 fn static_cast_gamemode<T: Any>(g: &mut Game) -> Ptr<T> {
     let p = dynamic_cast_gamemode::<T>(g);
     if p.is_null() {
@@ -269,8 +284,8 @@ fn static_cast_gamemode<T: Any>(g: &mut Game) -> Ptr<T> {
     p
 }
 
-// After a wrap pushback ix can be ~-632 or ~650, so the C++ indexes g_map with x ~-19 or 20 and reads
-// neighbouring CMap members. These offsets are the clang arm64 CMap layout (offsetof); padding reads as 0.
+// After a wrap pushback ix can be ~-632 or ~650, so the AI reads map columns ~-19 or 20. Those reads land in the
+// map fields next to the grid, at these byte offsets of a packed map layout; padding reads as 0.
 const CMAP_OFF_MAPDATA: i32 = 38;
 const CMAP_OFF_MAPDATATOP: i32 = 7238;
 const CMAP_OFF_OBJECTDATA: i32 = 7538;
@@ -293,7 +308,7 @@ fn in_map(x: i32, y: i32) -> bool {
     (0..MAPWIDTH).contains(&x) && (0..MAPHEIGHT).contains(&y)
 }
 
-/// One byte of the C++ CMap object at `off`, for the members between mapdata and blockdata.
+/// The byte at `off` of the packed map layout (`CMAP_OFF_*`), for the fields between mapdata and blockdata.
 fn cmap_byte(g: &mut Game, off: i32) -> u8 {
     let cells = MAPWIDTH * MAPHEIGHT;
     if (CMAP_OFF_MAPDATA..CMAP_OFF_MAPDATA + cells * MAPLAYERS * 6).contains(&off) {
@@ -384,7 +399,7 @@ unsafe fn cmap_i32(g: &mut Game, off: i32) -> i32 {
     i32::from_le_bytes([cmap_byte(g, off), cmap_byte(g, off + 1), cmap_byte(g, off + 2), cmap_byte(g, off + 3)])
 }
 
-/// `g_map->map(x, y)`, including the C++ out-of-bounds reads.
+/// The tile flags at (`x`, `y`); off the map, the neighbouring field's bytes (`cmap_byte`).
 unsafe fn ai_map(g: &mut Game, x: i32, y: i32) -> i32 {
     if in_map(x, y) {
         return g.g_map.map(x, y);
@@ -392,7 +407,7 @@ unsafe fn ai_map(g: &mut Game, x: i32, y: i32) -> i32 {
     tile_to_flags(TileType(cmap_byte(g, CMAP_OFF_MAPDATATOP + x * MAPHEIGHT + y))) as i32
 }
 
-/// `g_map->block(x, y) != NULL`, including the C++ out-of-bounds reads.
+/// Whether a block is at (`x`, `y`); off the map, whether the neighbouring field's bytes are nonzero.
 unsafe fn ai_block_nonnull(g: &mut Game, x: i16, y: i16) -> bool {
     if in_map(x as i32, y as i32) {
         return !g.map_block(x, y).is_null();
@@ -401,7 +416,7 @@ unsafe fn ai_block_nonnull(g: &mut Game, x: i16, y: i16) -> bool {
     (0..8).any(|i| cmap_byte(g, off + i) != 0)
 }
 
-/// `&warpdata[x][y]` as (direction, connection, id), including the C++ out-of-bounds reads.
+/// The warp at (`x`, `y`) as (direction, connection, id); off the map, the neighbouring field's bytes.
 unsafe fn ai_warp(g: &mut Game, x: i16, y: i16) -> (i32, i16, i16) {
     if in_map(x as i32, y as i32) {
         let w = &g.g_map.warpdata[x as usize][y as usize];
@@ -411,7 +426,7 @@ unsafe fn ai_warp(g: &mut Game, x: i16, y: i16) -> (i32, i16, i16) {
     (cmap_i32(g, off), cmap_i16(g, off + 4), cmap_i16(g, off + 6))
 }
 
-/// `g_map->checkforwarp(x1, x2, y, 2)`, including the C++ out-of-bounds reads.
+/// Whether an open upward warp spans columns `x1` and `x2` of row `y`; off the map, read from the neighbouring fields.
 unsafe fn ai_checkforwarp_up(g: &mut Game, x1: i16, x2: i16, y: i16) -> bool {
     if in_map(x1 as i32, y as i32) && in_map(x2 as i32, y as i32) {
         return g.g_map.checkforwarp(x1, x2, y, 2);
@@ -433,7 +448,7 @@ unsafe fn ai_checkforwarp_up(g: &mut Game, x1: i16, x2: i16, y: i16) -> bool {
     locktimer <= 0
 }
 
-/// `carriedItem` seen as a `CObject*`.
+/// The carried item as an object, or null.
 fn carried_as_object(carriedItem: Ptr<dyn MO_CarriedObjectTrait>) -> Ptr<dyn CObjectTrait> {
     if carriedItem.is_null() {
         return Ptr::null();
@@ -441,11 +456,12 @@ fn carried_as_object(carriedItem: Ptr<dyn MO_CarriedObjectTrait>) -> Ptr<dyn COb
     carriedItem.get().as_object_ptr()
 }
 
-/// `movingobject->getMovingObjectType()` for an object whose `getObjectType()` is `object_moving`.
+/// The moving-object type of an `object_moving`; panics on any other object.
 fn moving_object_type(mut obj: Ptr<dyn CObjectTrait>) -> MovingObjectType {
     obj.as_io_moving_object().expect("ai: object_moving is not an IO_MovingObject").get_moving_object_type()
 }
 
+/// Every `PowerupType`, indexed by its code.
 const POWERUP_TYPES: [PowerupType; 27] = [
     PowerupType::PoisonMushroom,
     PowerupType::ExtraLife1,
@@ -476,7 +492,7 @@ const POWERUP_TYPES: [PowerupType; 27] = [
     PowerupType::JailKey,
 ];
 
-/// `DistanceToObject(obj, &nearestObjects.<kind>, &nearestObjects.<kind>distance, &nearestObjects.<kind>wrap)`
+/// Calls a distance method on the `nearestObjects` target, distance and wrap fields of one kind.
 macro_rules! nearest {
     ($self:ident . $method:ident ($obj:expr, $target:ident, $dist:ident, $wrap:ident)) => {{
         let no: *mut NearestObjects = &mut $self.nearestObjects;
@@ -492,7 +508,6 @@ impl CPlayerAI {
     pub fn new() -> Self {
         CPlayerAI {
             pPlayer: PlayerId::NONE,
-            // Uninitialized in the C++ constructor; heap memory from `new` reads as 0 in practice.
             iFallDanger: 0,
             nearestObjects: NearestObjects::new(),
             attentionObjects: BTreeMap::new(),
@@ -511,6 +526,7 @@ impl CPlayerAI {
         self.pPlayer = player;
     }
 
+    /// Fills `nearestObjects` from the object containers and the other players.
     pub fn get_nearest_objects(&mut self, g: &mut Game) {
         self.nearestObjects.reset();
 
@@ -524,7 +540,6 @@ impl CPlayerAI {
         for i in 0..n {
             let mut obj = g.objectcontainer[1].list()[i];
             if self.attentionObjects.contains_key(&obj.network_id()) {
-                //DistanceToObject(object, &nearestObjects.threat, &nearestObjects.threatdistance, &nearestObjects.threatwrap);
                 continue;
             }
 
@@ -622,7 +637,6 @@ impl CPlayerAI {
                         let iNumHeldCards: i32 = g.player(pPlayer).score(g).subscore[0] as i32;
                         let iHeldCards: i32 = g.player(pPlayer).score(g).subscore[1] as i32;
 
-                        // C++ `break` out of the switch ends this object's iteration: `continue` here.
                         if iNumHeldCards == 3 {
                             let iThreeHeldCards = iHeldCards & 63;
 
@@ -728,7 +742,6 @@ impl CPlayerAI {
         for i in 0..n {
             let mut obj = g.objectcontainer[0].list()[i];
             if self.attentionObjects.contains_key(&obj.network_id()) {
-                //DistanceToObject(object, &nearestObjects.threat, &nearestObjects.threatdistance, &nearestObjects.threatwrap);
                 continue;
             }
 
@@ -796,7 +809,6 @@ impl CPlayerAI {
         for i in 0..n {
             let mut obj = g.objectcontainer[2].list()[i];
             if self.attentionObjects.contains_key(&obj.network_id()) {
-                //DistanceToObject(object, &nearestObjects.threat, &nearestObjects.threatdistance, &nearestObjects.threatwrap);
                 continue;
             }
 
@@ -960,6 +972,7 @@ impl CPlayerAI {
         }
     }
 
+    /// Makes `object` the `target` when its squared distance in px² between top lefts beats `nearest`.
     pub fn distance_to_object(&self, g: &Game, object: Ptr<dyn CObjectTrait>, target: &mut ObjectId, nearest: &mut i32, wrap: &mut bool) {
         let pPlayer = self.pPlayer;
 
@@ -979,7 +992,7 @@ impl CPlayerAI {
             }
         }
 
-        let distance_player_pow2: i32 = tx as i32 * tx as i32 + ty as i32 * ty as i32; // a^2 = b^2 + c^2 :)
+        let distance_player_pow2: i32 = tx as i32 * tx as i32 + ty as i32 * ty as i32;
 
         if distance_player_pow2 < *nearest {
             *target = object.id;
@@ -988,6 +1001,7 @@ impl CPlayerAI {
         }
     }
 
+    /// `distance_to_object` measured between centres.
     pub fn distance_to_object_center(&self, g: &Game, object: Ptr<dyn CObjectTrait>, target: &mut ObjectId, nearest: &mut i32, wrap: &mut bool) {
         let pPlayer = self.pPlayer;
 
@@ -1031,6 +1045,7 @@ impl CPlayerAI {
         }
     }
 
+    /// `distance_to_object` for a player, between top lefts.
     pub fn distance_to_player(&self, g: &Game, player: PlayerId, target: &mut PlayerId, nearest: &mut i32, wrap: &mut bool) {
         let pPlayer = self.pPlayer;
 
@@ -1256,9 +1271,9 @@ fn follow_path(g: &mut Game, this: &mut CPlayerAI, actionType: i16, mut keys: Pt
     }
 }
 
-/// How long the AI ignores a goal or an opponent behind a wall it cannot jump.
+/// How many thinks the AI ignores a goal or an opponent behind a wall it cannot jump.
 const UNREACHABLE_FRAMES: i16 = ticks(90) as i16;
-/// Jumping at a wall this long without getting past it means the wall cannot be jumped.
+/// Jumping at a wall for this many thinks without getting past it means the wall cannot be jumped.
 const WALL_GIVE_UP_FRAMES: i16 = ticks(45) as i16;
 
 /// Whether jumping now brings `me` down onto `target`'s head: `me` stands on the ground, `target` can be stomped and
@@ -1285,7 +1300,7 @@ fn stomp_lead_jump(g: &mut Game, me: PlayerId, target: PlayerId, wrap: bool) -> 
     }
     let airtime = (jump + discriminant.sqrt()) / GRAVITATION;
     let lead = closing * airtime;
-    // The AI thinks every fourth tick, so the window spans what it closes in that time.
+    // The AI thinks every fourth tick (second on Very Hard), so the window spans what it closes in that time.
     let window = closing * 4.0;
     (dx.abs() as f32 - lead).abs() <= window.max(PW as f32 / 2.0)
 }
@@ -1314,6 +1329,7 @@ fn dodge_stomp(g: &mut Game, me: PlayerId) -> Option<bool> {
     None
 }
 
+/// The type of the carried star: 0 the one to pass on, 1 the one to keep.
 fn star_type(carried: Ptr<dyn MO_CarriedObjectTrait>) -> i16 {
     static_cast::<CO_Star>(carried_as_object(carried)).get_type()
 }
@@ -1352,6 +1368,7 @@ fn weapon_lined_up(g: &mut Game, me: PlayerId) -> bool {
     })
 }
 
+/// Whether tile (`tx`, `ty`) is solid or holds a block.
 fn solid_at(g: &mut Game, tx: i32, ty: i32) -> bool {
     g.g_map.map(tx, ty) & tile_flag_solid as i32 != 0 || !g.map_block(tx as i16, ty as i16).is_null()
 }
@@ -1380,7 +1397,7 @@ fn wall_too_tall(g: &mut Game, tx: i32, y: i32) -> bool {
     top <= 0 || ((top - 4).max(0)..top).all(|ty| solid_at(g, tx, ty))
 }
 
-//Setup AI so that it can ignore or pay attention to some objects
+/// Draws the AI's play style and, in Eggs, ignores the eggs that have no Yoshi of their colour.
 pub fn cplayer_ai_init(g: &mut Game, this: &mut CPlayerAI) {
     this.style = match RANDOM_INT(g, 4) {
         1 => Style::Aggressive,
@@ -1422,6 +1439,7 @@ pub fn cplayer_ai_init(g: &mut Game, this: &mut CPlayerAI) {
     }
 }
 
+/// One think, every fourth tick or second on Very Hard: picks an action and sets `playerKeys` for it.
 pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COutputControl>) {
     let mut gp = g.ptr();
     let mut playerKeys = playerKeys;
@@ -1464,6 +1482,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
          ***************************************************/
         this.get_nearest_objects(g);
 
+        // Thinks a goal may hold the AI before it ignores the goal for as long; more at higher difficulties.
         let iTenSeconds: i16 = ticks(15 * iDecisionPercentage[g.game_values.cpudifficulty as usize] as i32 / 10) as i16;
 
         //If there is a goal, then make sure we aren't paying attention to it for too long
@@ -1962,7 +1981,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
         }
 
         /***************************************************
-         * 4. Deal with falling onto spikes (this needs to be improved)
+         * 4. Deal with falling onto spikes
          ***************************************************/
 
         //Make sure we don't jump over something that could kill us
@@ -1980,8 +1999,6 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
             iDeathY = 0;
         }
 
-        //short depth = -1;
-        // `break 'ExitDeathCheck` is the C++ `goto ExitDeathCheck`.
         'ExitDeathCheck: while (iDeathY as i32) < MAPHEIGHT {
             let ttLeftTile: i32 = ai_map(g, iDeathX1 as i32, iDeathY as i32);
             let ttRightTile: i32 = ai_map(g, iDeathX2 as i32, iDeathY as i32);
@@ -2039,8 +2056,6 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
             iDeathY += 1;
         }
 
-        //If we are done checking for death under the player, come here
-        //ExitDeathCheck:
 
         //There is a death tile below us so move to the side that is safest
         if this.iFallDanger < 0 {
@@ -2138,7 +2153,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
                 }
                 false
             };
-            // `static_cast<PowerupType>(iStoredPowerup)`: values past the last enumerator match no case.
+            // Codes past the last powerup are never used.
             if (iStoredPowerup as usize) < POWERUP_TYPES.len() && canUse(POWERUP_TYPES[iStoredPowerup as usize]) {
                 playerKeys.game_powerup_mut().fDown = true;
             }
@@ -2149,6 +2164,7 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
 /**************************************************
  * CSimpleAI class
  ***************************************************/
+/// An AI that only jumps now and then, as high as it can.
 #[derive(Clone)]
 pub struct CSimpleAI {
     pub cplayer_ai: CPlayerAI,

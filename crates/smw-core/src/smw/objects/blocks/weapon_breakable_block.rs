@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/blocks/WeaponBreakableBlock.cpp
+//! Blocks that break only to one kind of weapon or power.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -25,6 +25,7 @@ use crate::smw::objects::moving::mo_spin_attack::MO_SpinAttack;
 use crate::smw::objects::moving::moving_object::IO_MovingObjectTrait;
 use crate::smw::player::{player_killed_player, CPlayer, PlayerDeathStyle};
 
+/// The weapon or power that breaks the block; also its sprite frame.
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum WeaponDamageType {
@@ -43,12 +44,14 @@ pub enum WeaponDamageType {
 
 crate::enum_from_u8!(WeaponDamageType, 10);
 
+/// Block broken by one weapon type; `state` runs 0 intact, 1 just broken, 2 removed.
 #[derive(Clone)]
 
 pub struct B_WeaponBreakableBlock {
     pub io_block: IO_Block,
 
     pub iType: WeaponDamageType,
+    /// Sprite x offset (pixels) for the type.
     pub iDrawOffsetX: i16,
 }
 impl_base!(B_WeaponBreakableBlock => io_block: IO_Block);
@@ -65,6 +68,7 @@ impl B_WeaponBreakableBlock {
         self.iType
     }
 
+    /// Breaks the block, crediting `iPlayerID` and `iTeamID` for anything it bumps.
     pub fn trigger_behavior_player(&mut self, g: &mut Game, iPlayerID: i16, iTeamID: i16) {
         let mut gp = g.ptr();
         if self.state == 0 {
@@ -83,6 +87,7 @@ impl B_WeaponBreakableBlock {
         }
     }
 
+    /// Breaks the block if a side hit came from its weapon type.
     fn objecthitside(&mut self, g: &mut Game, mut object: Ptr<dyn IO_MovingObjectTrait>) -> bool {
         let r#type = object.get_moving_object_type();
 
@@ -177,7 +182,7 @@ impl IO_BlockTrait for B_WeaponBreakableBlock {
         } else if useBehavior {
             g.player(player).vely = GRAVITATION;
 
-            //Save this for when we create a super stomp destroyable block
+            // Kuribo's shoe blocks break under a super stomp, star blocks under an invincible player.
             if self.iType == WeaponDamageType::KuriboShoe && g.player(player).is_super_stomping() && self.state == 0 {
                 self.trigger_behavior_player(g, g.player(player).globalID, g.player(player).teamID);
                 return false;

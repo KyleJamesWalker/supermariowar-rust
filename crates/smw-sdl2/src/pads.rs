@@ -4,7 +4,9 @@ use sdl2::sys::{SDL_GameControllerType as T, SDL_GameControllerTypeForIndex, SDL
 use smw_platform::{Input, PadChange, PadFamily, PadInfo, PadSlot, Pads};
 use std::ffi::CStr;
 
+/// SDL2 joysticks; on native targets, with game controller translation (`pad.rs`). Translation is not built for the web.
 pub struct Sdl2Pads {
+    /// Boxed so the event filter's pointer to it stays valid when `Sdl2Pads` moves.
     #[cfg(not(target_os = "emscripten"))]
     state: Box<crate::pad::PadState>,
 }
@@ -26,6 +28,7 @@ impl Default for Sdl2Pads {
 
 impl Pads for Sdl2Pads {
     fn open_all(&mut self, open: bool, translate: bool) -> Vec<Option<PadInfo>> {
+        // SAFETY: every joystick pointer is checked for null before use.
         unsafe {
             SDL_InitSubSystem(SDL_INIT_JOYSTICK);
             let joysticks: Vec<*mut SDL_Joystick> = if open { (0..SDL_NumJoysticks().max(0)).map(|i| SDL_JoystickOpen(i)).collect() } else { Vec::new() };
@@ -53,12 +56,15 @@ impl Pads for Sdl2Pads {
         #[cfg(target_os = "emscripten")]
         {
             let _ = index;
+            // SAFETY: SDL rejects an out-of-range device index with null.
             let js = unsafe { SDL_JoystickOpen(device) };
+            // SAFETY: `js` is an open joystick.
             (!js.is_null()).then(|| unsafe { info(device, js) })
         }
     }
 
     fn name(&self, index: usize, pad: Option<PadSlot>) -> Option<String> {
+        // SAFETY: SDL tolerates a null joystick and returns null names, which are checked.
         unsafe {
             let p = match pad {
                 Some(pad) => SDL_JoystickName(SDL_JoystickFromInstanceID(pad.0)),
@@ -69,6 +75,7 @@ impl Pads for Sdl2Pads {
     }
 
     fn family(&self, index: usize) -> PadFamily {
+        // SAFETY: an out-of-range index gives `SDL_CONTROLLER_TYPE_UNKNOWN`.
         match unsafe { SDL_GameControllerTypeForIndex(index as i32) } {
             T::SDL_CONTROLLER_TYPE_XBOX360 | T::SDL_CONTROLLER_TYPE_XBOXONE => PadFamily::Xbox,
             T::SDL_CONTROLLER_TYPE_PS3 | T::SDL_CONTROLLER_TYPE_PS4 | T::SDL_CONTROLLER_TYPE_PS5 => PadFamily::PlayStation,
@@ -81,6 +88,7 @@ impl Pads for Sdl2Pads {
     }
 
     fn set_led(&mut self, player: i32, rgb: [u8; 3]) {
+        // SAFETY: SDL tolerates the null joystick an unknown player index gives.
         unsafe {
             SDL_JoystickSetLED(SDL_JoystickFromPlayerIndex(player), rgb[0], rgb[1], rgb[2]);
         }
@@ -94,6 +102,7 @@ impl Pads for Sdl2Pads {
     }
 }
 
+/// Safety: `js` must be the open joystick of SDL device `device`.
 #[cfg(target_os = "emscripten")]
 unsafe fn info(device: i32, js: *mut SDL_Joystick) -> PadInfo {
     let name = SDL_JoystickNameForIndex(device);

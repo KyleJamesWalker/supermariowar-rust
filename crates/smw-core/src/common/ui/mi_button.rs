@@ -1,4 +1,4 @@
-//! Port of src/common/ui/MI_Button.cpp
+//! A push button menu item with a label and an optional icon.
 
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
@@ -9,29 +9,35 @@ use crate::common::ui::menu_code::*;
 use crate::common::uicontrol::{TextAlign, UI_Control, UI_ControlTrait};
 use crate::globals::*;
 
+/// A button that returns `menuCode` and runs `onPressFn` when pressed or clicked.
 pub struct MI_Button {
     pub ui_control: UI_Control,
 
     pub spr: SpriteId,
     pub szName: String,
 
+    /// Width in pixels; the button art is 32 pixels tall.
     pub iWidth: i16,
     pub iIndent: i16,
     pub m_text_align: TextAlign,
 
     pub menuCode: MenuCodeEnum,
 
+    /// An optional icon drawn beside the label, and its source region.
     pub sprImage: SpriteId,
     pub iImageSrcX: i16,
     pub iImageSrcY: i16,
     pub iImageW: i16,
     pub iImageH: i16,
 
+    /// The label's width in pixels in the large menu font.
     pub iTextW: i16,
 
+    /// The row offset in the button sprite: 128 picks the narrow art for widths up to 256.
     pub iAdjustmentY: i16,
     pub iHalfWidth: i16,
 
+    /// Runs before the button returns `menuCode`.
     pub onPressFn: Box<dyn FnMut(&mut Game)>,
 }
 crate::impl_base!(MI_Button => ui_control: UI_Control);
@@ -60,7 +66,7 @@ impl MI_Button {
         }
     }
 
-    /// `new MI_Button(spr, x, y, name, width)` with the default `TextAlign::LEFT`.
+    /// `new` with `TextAlign::LEFT`.
     pub fn new_left(g: &mut Game, nspr: SpriteId, x: i16, y: i16, name: impl Into<String>, width: i16) -> Self {
         Self::new(g, nspr, x, y, name, width, TextAlign::LEFT)
     }

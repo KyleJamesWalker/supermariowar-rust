@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/powerup/PU_ExtraTimePowerup.cpp
+//! Clock pickup for time limit and star modes: adds a fifth of the mode's goal time.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;

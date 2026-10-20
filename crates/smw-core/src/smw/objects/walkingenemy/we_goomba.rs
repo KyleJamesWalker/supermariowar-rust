@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/walkingenemy/WE_Goomba.cpp
+//! Goomba and winged paragoomba: the paragoomba loses its wings on the first stomp.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -61,7 +61,7 @@ impl CObjectTrait for MO_Goomba {
 
     fn draw(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
-        // if frozen, just draw shell, not entire koopa
+        // If frozen, draw one standing frame inside the ice block.
         if self.frozen {
             let x = self.ix as i32 - self.collisionOffsetX as i32 + self.iw as i32 - 32;
             let y = self.iy as i32 - self.collisionOffsetY as i32 + self.ih as i32 - 32;

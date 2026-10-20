@@ -1,4 +1,4 @@
-//! Port of src/common/map/MapReader16xx.cpp
+//! Readers for 1.6 map files, plus the warp exit and draw area sections later versions share.
 
 use crate::game::Game;
 use crate::common::file_io::BinaryFile;
@@ -8,6 +8,7 @@ use crate::common::map::map_reader::MapReader;
 use crate::common::map::{read_type_summary, CMap, ReadType, WarpEnterDirection, WarpExitDirection};
 use crate::common::tile_types::TileType;
 
+/// Classic tileset index for each 1.6 tile ID; ID 300 is an empty tile.
 const g_iTileConversion: [i16; 300] = [
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 575, 670, 702, 703, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46,
     47, 332, 331, 330, 637, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 365, 299, 366, 853, 537, 595, 505, 658, 659,
@@ -85,6 +86,7 @@ impl MapReader {
         map.eyecandy[2] = mapfile.read_i32() as i16;
     }
 
+    /// Reads the warp exit list; entries past `MAXWARPS` are skipped and the count is capped.
     pub(super) fn read_warp_exits(&mut self, map: &mut CMap, mapfile: &mut BinaryFile) {
         map.maxConnection = 0;
 
@@ -173,6 +175,7 @@ impl MapReader {
         true
     }
 
+    /// Reads the screen rectangles the map redraws each frame; `false` when there are more than `MAXDRAWAREAS`.
     pub(super) fn read_draw_areas(&mut self, map: &mut CMap, mapfile: &mut BinaryFile) -> bool {
         map.numdrawareas = mapfile.read_i32() as i16;
 

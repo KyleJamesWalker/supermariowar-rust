@@ -16,23 +16,28 @@ pub use audio::Sdl2Audio;
 pub use pads::Sdl2Pads;
 pub use video::{button_to_logical, Sdl2Video};
 
+/// SDL's millisecond ticks and performance counter.
 pub struct Sdl2Clock;
 
 impl Clock for Sdl2Clock {
     /// `SDL_GetTicks`, which wraps at 2^32 ms; the game's frame timing relies on that wraparound.
     fn now_ms(&self) -> u64 {
+        // SAFETY: SDL's timer functions take no pointers and work before `SDL_Init`.
         unsafe { sdl2::sys::SDL_GetTicks() as u64 }
     }
 
     fn now_us(&self) -> u64 {
+        // SAFETY: as above.
         unsafe { (sdl2::sys::SDL_GetPerformanceCounter() as u128 * 1_000_000 / sdl2::sys::SDL_GetPerformanceFrequency().max(1) as u128) as u64 }
     }
 
     fn sleep_ms(&self, ms: u32) {
+        // SAFETY: as above.
         unsafe { sdl2::sys::SDL_Delay(ms) }
     }
 }
 
+/// Settings in the user's profile directory, data next to the executable.
 pub struct Sdl2Storage;
 
 impl Storage for Sdl2Storage {
@@ -40,6 +45,7 @@ impl Storage for Sdl2Storage {
         PathBuf::from(home_directory())
     }
 
+    /// SDL's base path; the working directory on Windows or when SDL cannot tell.
     fn root_dir(&self) -> PathBuf {
         #[cfg(not(windows))]
         if let Ok(p) = sdl2::filesystem::base_path() {
@@ -63,7 +69,7 @@ fn home_directory() -> String {
     result
 }
 
-/// `SHGetFolderPathA(CSIDL_PROFILE)` is the profile directory that `USERPROFILE` names.
+/// `%USERPROFILE%/.smw/`.
 #[cfg(windows)]
 fn home_directory() -> String {
     let mut result = String::from(".smw/");
@@ -73,8 +79,8 @@ fn home_directory() -> String {
     result
 }
 
-/// The app's external files directory, as upstream's `$EXTERNAL_STORAGE/supermariowar`; internal storage when it
-/// is unavailable. MainActivity extracts the APK's data/ there.
+/// The app's external files directory, or internal storage when it is unavailable. MainActivity extracts the
+/// APK's data/ there.
 #[cfg(target_os = "android")]
 pub fn android_storage_path() -> String {
     use std::ffi::{c_char, CStr};
@@ -82,6 +88,7 @@ pub fn android_storage_path() -> String {
         fn SDL_AndroidGetExternalStoragePath() -> *const c_char;
         fn SDL_AndroidGetInternalStoragePath() -> *const c_char;
     }
+    // SAFETY: SDL returns null or a NUL-terminated path it owns until it quits.
     unsafe {
         let mut path = SDL_AndroidGetExternalStoragePath();
         if path.is_null() {
@@ -94,6 +101,7 @@ pub fn android_storage_path() -> String {
     }
 }
 
+/// The SDL2 backend, for `smw::services::set_backend`.
 pub fn services() -> Services {
     Services {
         clock: Box::new(Sdl2Clock),
