@@ -3,7 +3,7 @@
 use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::os::raw::{c_char, c_int, c_long};
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
 
 #[repr(C)]
 struct tm {
@@ -30,24 +30,22 @@ extern "C" {
     fn strftime(s: *mut c_char, max: usize, format: *const c_char, tm: *const tm) -> usize;
 }
 
-static mut logfile: Option<File> = None;
+static LOGFILE: Mutex<Option<File>> = Mutex::new(None);
+
+fn logfile() -> std::sync::MutexGuard<'static, Option<File>> {
+    LOGFILE.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+}
 
 /// Opens `serverlog.txt` for appending; false when it cannot.
 pub fn log_init() -> bool {
-    unsafe {
-        logfile = OpenOptions::new().append(true).create(true).open("serverlog.txt").ok();
-        if logfile.is_none() {
-            return false;
-        }
-
-        true
-    }
+    let file = OpenOptions::new().append(true).create(true).open("serverlog.txt").ok();
+    let opened = file.is_some();
+    *logfile() = file;
+    opened
 }
 
 pub fn log_close() {
-    unsafe {
-        logfile = None;
-    }
+    *logfile() = None;
 }
 
 fn write_log(show_output: bool, parsed_message: &str) {
@@ -67,7 +65,7 @@ fn write_log(show_output: bool, parsed_message: &str) {
             println!("{}", parsed_message);
         }
 
-        if let Some(f) = logfile.as_mut() {
+        if let Some(f) = logfile().as_mut() {
             let _ = writeln!(f, "[{}] {}", timeStr, parsed_message);
             let _ = f.flush();
         }
