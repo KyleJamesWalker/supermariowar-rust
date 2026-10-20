@@ -1,4 +1,4 @@
-//! Port of src/smw/GSSplashScreen.cpp
+//! The start-up splash screen: loads game data behind a Loading screen, then waits for a press.
 
 use crate::common::resource_manager::SpriteId;
 use crate::common::keys::*;
@@ -18,13 +18,17 @@ use crate::smw::gs_menu::MenuState;
 //-----------------------------------------------------------------------------
 // THE LOAD UP SEQUENCE + SPLASH SCREEN
 //-----------------------------------------------------------------------------
-//that's a bunch of ugly code, maybe i'll throw it out again
 
+/// The start-up game state; any press after loading opens the main menu.
 pub struct SplashScreenState {
     menu_credits: SpriteId,
+    /// Alpha of the backdrop, logo and credits, 0 to 255.
     alpha: i32,
+    /// 7 while loading, 8 waiting for a press.
     state: i32,
+    /// Unused.
     timer: i32,
+    /// Loading waits a frame so Loading... is on screen first.
     firstFrame: bool,
     pub _alias: Aliased,
 }
@@ -40,6 +44,7 @@ impl SplashScreenState {
         }
     }
 
+    /// The singleton, created on first use.
     pub fn instance(g: &mut Game) -> &'static mut SplashScreenState {
         g.ptr().get().ss.get_or_insert_with(SplashScreenState::new)
     }
@@ -69,7 +74,6 @@ impl GameState for SplashScreenState {
         unsafe {
             g.game_values.playerInput.clear_pressed_keys(1);
 
-            // TODO: move this out of this method maybe
 
             let mut tapped = false;
             while let Some(input) = crate::smw::input::poll(gp.get()) {
@@ -98,7 +102,7 @@ impl GameState for SplashScreenState {
                 gp.game_values.playerInput.update_input(g, &input, 1);
             }
 
-            // Not in upstream: a press before load_game_data() would open the menus without their graphics.
+            // Presses count only after load_game_data(), or the menus would open without their graphics.
             if self.state == 8 {
                 for iPlayer in 0..4usize {
                     let out = &g.game_values.playerInput.outputControls[iPlayer];
@@ -131,7 +135,7 @@ impl GameState for SplashScreenState {
                 gp.rm.sprite(gp.rm.menu_smw).draw(g, App::screenWidth / 2 - ((gp.rm.sprite(gp.rm.menu_smw).get_width() as i16 >> 1) as i32), 30); //smw logo
 
                 g.rm.sprite(g.rm.menu_version).setalpha(self.alpha as u8);
-                gp.rm.sprite(gp.rm.menu_version).draw(g, 628 - gp.rm.sprite(gp.rm.menu_version).get_width(), 10); //smw logo
+                gp.rm.sprite(gp.rm.menu_version).draw(g, 628 - gp.rm.sprite(gp.rm.menu_version).get_width(), 10); //version
 
                 g.rm.menu_font_large.set_alpha(self.alpha as u8);
 
@@ -166,10 +170,10 @@ impl GameState for SplashScreenState {
     }
 }
 
-/// The splash screen's second-frame load; a segment replay (smw/checkpoint.rs) runs it before restoring a match.
+/// Loads graphics, sounds, menu music and map filters; a segment replay (see `smw::checkpoint`) runs it before restoring a match.
 pub fn load_game_data(g: &mut Game) {
         let mut gp = g.ptr();
-    // load initial coin sound
+    // menu music
     g.backgroundmusic[2] = sfxMusic::from_file(g, gp.musiclist.music(1)).unwrap_or_else(|e| std::panic::panic_any(e));
 
     gp.rm.load_all_graphics(g);

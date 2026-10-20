@@ -1,4 +1,4 @@
-//! Port of src/smw/menu/ModeOptionsMenu.cpp
+//! The per-mode settings menus opened from game setup's Settings button.
 
 use crate::common::uicontrol::{ControlId, Ctl};
 use crate::game::Game;
@@ -19,10 +19,12 @@ use crate::smw::ui::mi_frenzy_mode_options::MI_FrenzyModeOptions;
 use crate::smw::ui::mi_powerup_slider::MI_PowerupSlider;
 
 #[derive(Default)]
+/// One settings menu per game mode plus the boss minigame; fields write `game_values.gamemodemenusettings`.
 pub struct UI_ModeOptionsMenu {
     pub ui_menu: UI_Menu,
 
     // Game Mode Settings Menu
+    /// Settings menu of each game mode, indexed by mode.
     pub mModeSettingsMenu: [UI_Menu; 22],
     pub mBossSettingsMenu: UI_Menu,
     // Classic
@@ -1583,13 +1585,14 @@ impl UI_ModeOptionsMenu {
         this
     }
 
+    /// Sets every mode menu's controlling team (-1 lets anyone control it).
     pub fn set_controlling_team(&mut self, iControlTeam: i16) {
         for iMode in 0..GAMEMODE_LAST as i16 {
             self.mModeSettingsMenu[iMode as usize].set_controlling_team(iControlTeam);
         }
     }
 
-    /// Not in the C++: a net match's mode options as the menu names them, for the preview before it starts.
+    /// A net match's main mode options as the menu labels them, for the preview before it starts.
     pub fn describe_game_mode_settings(&self, g: &mut Game, iMode: i16) -> Vec<String> {
         let gm = &g.game_values.gamemodesettings;
         let lines = match iMode as GameModeType {
@@ -1607,6 +1610,7 @@ impl UI_ModeOptionsMenu {
         lines.into_iter().flatten().collect()
     }
 
+    /// Rolls random values for mode `iMode` into `gamemodesettings`; sliders copy their current value instead.
     pub fn set_random_game_mode_settings(&mut self, g: &mut Game, iMode: i16) {
         let iMode = iMode as GameModeType;
         if iMode == game_mode_classic {
@@ -1728,7 +1732,7 @@ impl UI_ModeOptionsMenu {
             // shyguy tag
             g.game_values.gamemodesettings.shyguytag.tagonsuicide = g.ctl(self.miShyGuyTagModeTagOnSuicideField).random_value(g);
             g.game_values.gamemodesettings.shyguytag.tagtransfer = g.ctl(self.miShyGuyTagModeTagOnStompField).random_value(g);
-            // freetime reads the tag transfer field, as in C++.
+            // freetime reads the tag transfer field, not miShyGuyTagModeFreeTimeField.
             g.game_values.gamemodesettings.shyguytag.freetime = g.ctl(self.miShyGuyTagModeTagOnStompField).random_value(g);
         } else if iMode == game_mode_boss_minigame {
             // boss
@@ -1738,6 +1742,7 @@ impl UI_ModeOptionsMenu {
         }
     }
 
+    /// The settings menu of mode `iMode`.
     pub fn get_options_menu(&mut self, iMode: i16) -> Ptr<UI_Menu> {
         Ptr::from_mut(&mut self.mModeSettingsMenu[iMode as usize])
     }
@@ -1745,6 +1750,7 @@ impl UI_ModeOptionsMenu {
         Ptr::from_mut(&mut self.mBossSettingsMenu)
     }
 
+    /// Keeps start life at or below max life.
     pub fn health_mode_start_life_changed(&mut self, g: &mut Game) {
         let iMaxLife: i16 = g.ctl(self.miHealthModeMaxLife).current_value();
         if g.ctl(self.miHealthModeStartLife).current_value() > iMaxLife {
@@ -1752,6 +1758,7 @@ impl UI_ModeOptionsMenu {
         }
     }
 
+    /// Keeps max life at or above start life.
     pub fn health_mode_max_life_changed(&mut self, g: &mut Game) {
         let iStartLife: i16 = g.ctl(self.miHealthModeStartLife).current_value();
         if g.ctl(self.miHealthModeMaxLife).current_value() < iStartLife {
@@ -1759,6 +1766,7 @@ impl UI_ModeOptionsMenu {
         }
     }
 
+    /// Refreshes every mode menu's fields from the values they write.
     pub fn refresh(&mut self, g: &mut Game) {
         for iMode in 0..GAMEMODE_LAST as i16 {
             self.mModeSettingsMenu[iMode as usize].refresh(g);
