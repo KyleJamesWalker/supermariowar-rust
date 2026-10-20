@@ -85,6 +85,10 @@ impl CGM_Boss_MiniGame {
 }
 
 impl CGameModeTrait for CGM_Boss_MiniGame {
+    fn harness_hash(&self, h: &mut crate::smw::rollback::Fnv) {
+        self.gm().harness_hash(h);
+        h.i16s(&[self.enemytimer, self.poweruptimer, self.iBossType as i16]);
+    }
     fn gm(&self) -> &CGameMode {
         &self.cgame_mode
     }

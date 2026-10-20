@@ -85,6 +85,10 @@ fn spawn_card(g: &mut Game) {
 }
 
 impl CGameModeTrait for CGM_Collection {
+    fn harness_hash(&self, h: &mut crate::smw::rollback::Fnv) {
+        self.gm().harness_hash(h);
+        h.i16s(&[self.timer]);
+    }
     fn gm(&self) -> &CGameMode {
         &self.cgame_mode
     }

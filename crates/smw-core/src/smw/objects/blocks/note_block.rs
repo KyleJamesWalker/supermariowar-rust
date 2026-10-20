@@ -137,6 +137,11 @@ impl CObjectTrait for B_NoteBlock {
 impl IO_BlockTrait for B_NoteBlock {
     crate::impl_io_block_plumbing!();
 
+    fn harness_hash(&self, h: &mut crate::smw::rollback::Fnv) {
+        self.block().harness_hash(h);
+        h.i16s(&[self.drawFrame, self.animationTimer, self.iType as i16]);
+    }
+
     fn reset(&mut self) {
         self.velx = 0.0f32;
         self.vely = 0.0f32;

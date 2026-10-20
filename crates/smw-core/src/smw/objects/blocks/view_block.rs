@@ -116,6 +116,13 @@ impl CObjectTrait for B_ViewBlock {
 
 impl IO_BlockTrait for B_ViewBlock {
     crate::impl_io_block_plumbing!();
+
+    fn harness_hash(&self, h: &mut crate::smw::rollback::Fnv) {
+        self.block().harness_hash(h);
+        self.b_powerup_block.hash_powerup_fields(h);
+        h.i16s(&[self.poweruptimer, self.powerupindex, self.iCountWeight]);
+        h.bools(&[self.fNoPowerupsSelected]);
+    }
     crate::impl_powerup_block_io_block_overrides!();
 }
 

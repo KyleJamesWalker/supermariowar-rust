@@ -13,8 +13,8 @@ use crate::game::Game;
 use crate::smw::gamemodes::{bonus_house::CGM_Bonus, mini_boss::CGM_Boss_MiniGame, mini_boxes::CGM_Boxes_MiniGame, mini_pipe::CGM_Pipe_MiniGame};
 use crate::smw::gs_gameplay::GameplayState;
 use crate::smw::harness;
-use crate::smw::object_container::CObjectContainer;
-use crate::smw::players::Players;
+use crate::smw::object_container::{CObjectContainer, ObjectId};
+use crate::smw::players::{PlayerId, Players};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -222,8 +222,8 @@ fn shared_pause(g: &mut Game, keys: &[(KeySlot, Keys)], silent: bool) -> bool {
 }
 
 /// FNV-1a over the match's harness dump (game mode, players, object counts) and the simulated state the dump leaves
-/// out: every object, every platform, the switches and the RNG. Floats go in as their bits, so every platform hashes
-/// the same state alike. What a desync check compares.
+/// out: the mode's own state, scores, every object and block, every platform, the switches and the RNG. Floats go in
+/// as their bits, so every platform hashes the same state alike. What a desync check compares.
 pub fn checksum(g: &mut Game) -> u128 {
     let mut gp = g.ptr();
     let mut dump = Vec::new();
@@ -233,6 +233,11 @@ pub fn checksum(g: &mut Game) -> u128 {
     let mut h = Fnv::new();
     h.bytes(&dump);
     h.bytes(&harness::frame(g).to_le_bytes());
+    g.mode().get().harness_hash(&mut h);
+    for score in &g.score[..g.score_cnt.max(0) as usize] {
+        h.i16s(&[score.score]);
+        h.i16s(&score.subscore);
+    }
     for container in [&g.noncolcontainer, &g.objectcontainer[0], &g.objectcontainer[1], &g.objectcontainer[2]] {
         h.u32(container.list().len() as u32);
         for object in container.list() {
@@ -243,6 +248,12 @@ pub fn checksum(g: &mut Game) -> u128 {
             h.u32(o.ix as u32);
             h.u32(o.iy as u32);
             h.f32s(&[o.fx, o.fy, o.velx, o.vely]);
+        }
+    }
+    for object in g.noncolcontainer.list() {
+        let mut object = *object;
+        if let Some(block) = object.as_io_block() {
+            block.harness_hash(&mut h);
         }
     }
     let map = &g.g_map;
@@ -264,27 +275,51 @@ pub fn checksum(g: &mut Game) -> u128 {
 }
 
 /// 64-bit FNV-1a.
-struct Fnv(u64);
+pub struct Fnv(u64);
 
 impl Fnv {
     fn new() -> Fnv {
         Fnv(0xcbf2_9ce4_8422_2325)
     }
 
-    fn bytes(&mut self, bytes: &[u8]) {
+    pub fn bytes(&mut self, bytes: &[u8]) {
         for byte in bytes {
             self.0 = (self.0 ^ *byte as u64).wrapping_mul(0x0000_0100_0000_01b3);
         }
     }
 
-    fn u32(&mut self, value: u32) {
+    pub fn u32(&mut self, value: u32) {
         self.bytes(&value.to_le_bytes());
     }
 
-    fn f32s(&mut self, values: &[f32]) {
+    pub fn i16s(&mut self, values: &[i16]) {
+        for value in values {
+            self.bytes(&value.to_le_bytes());
+        }
+    }
+
+    pub fn bools(&mut self, values: &[bool]) {
+        for value in values {
+            self.bytes(&[*value as u8]);
+        }
+    }
+
+    pub fn f32s(&mut self, values: &[f32]) {
         for value in values {
             self.u32(value.to_bits());
         }
+    }
+
+    pub fn player(&mut self, id: PlayerId) {
+        let (slot, generation) = id.raw();
+        self.bytes(&[slot, generation]);
+    }
+
+    pub fn object(&mut self, id: ObjectId) {
+        let (container, slot, generation) = id.raw();
+        self.bytes(&[container]);
+        self.bytes(&slot.to_le_bytes());
+        self.u32(generation);
     }
 }
 
@@ -436,5 +471,23 @@ mod tests {
         assert_eq!(tokens.iter().map(|t| Req::parse(t)).collect::<Option<Vec<_>>>().as_deref(), Some(&requests[..]));
         assert_eq!(Req::parse("w"), None);
         assert_eq!(Req::parse("ax"), None);
+    }
+
+    #[test]
+    fn mode_state_changes_the_mode_hash() {
+        use crate::smw::gamemodes::survival::CGM_Survival;
+        let hash = |mode: &CGM_Survival| {
+            let mut h = Fnv::new();
+            mode.harness_hash(&mut h);
+            h.0
+        };
+        let mut mode = CGM_Survival::new();
+        let before = hash(&mode);
+        assert_eq!(hash(&mode.clone()), before);
+        mode.timer += 1;
+        assert_ne!(hash(&mode), before);
+        mode.timer -= 1;
+        mode.gameover = true;
+        assert_ne!(hash(&mode), before);
     }
 }

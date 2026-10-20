@@ -110,6 +110,11 @@ impl CGM_Race {
 }
 
 impl CGameModeTrait for CGM_Race {
+    fn harness_hash(&self, h: &mut crate::smw::rollback::Fnv) {
+        self.gm().harness_hash(h);
+        h.i16s(&self.nextGoal);
+        h.i16s(&[self.quantity, self.penalty]);
+    }
     fn gm(&self) -> &CGameMode {
         &self.cgame_mode
     }

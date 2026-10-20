@@ -104,6 +104,12 @@ impl CGM_ShyGuyTag {
 }
 
 impl CGameModeTrait for CGM_ShyGuyTag {
+    fn harness_hash(&self, h: &mut crate::smw::rollback::Fnv) {
+        self.gm().harness_hash(h);
+        self.gameClock.harness_hash(h);
+        h.bools(&[self.fRunClock]);
+        h.i16s(&[self.scorecounter]);
+    }
     fn gm(&self) -> &CGameMode {
         &self.cgame_mode
     }

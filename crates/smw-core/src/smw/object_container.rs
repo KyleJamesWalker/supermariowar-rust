@@ -31,6 +31,11 @@ impl ObjectId {
     pub fn container(self) -> u8 {
         self.container
     }
+
+    /// Container, slot and generation, for state hashing.
+    pub fn raw(self) -> (u8, u16, u32) {
+        (self.container, self.slot, self.generation)
+    }
 }
 
 impl Default for ObjectId {

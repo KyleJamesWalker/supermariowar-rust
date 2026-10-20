@@ -33,6 +33,12 @@ pub struct GameTimerDisplay {
 }
 
 impl GameTimerDisplay {
+    /// The clock's simulated state for `CGameModeTrait::harness_hash`; the digit fields only draw it.
+    pub fn harness_hash(&self, h: &mut crate::smw::rollback::Fnv) {
+        h.i16s(&[self.timeleft, self.framesleft_persecond, self.iFramesPerSecond]);
+        h.bools(&[self.countdown]);
+    }
+
     pub fn new() -> Self {
         GameTimerDisplay { iFramesPerSecond: TICKS_PER_SECOND as i16, ..Default::default() }
     }

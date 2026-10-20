@@ -58,6 +58,11 @@ impl CGM_Chicken {
 }
 
 impl CGameModeTrait for CGM_Chicken {
+    fn harness_hash(&self, h: &mut crate::smw::rollback::Fnv) {
+        self.gm().harness_hash(h);
+        h.player(self.m_chicken);
+        h.i16s(&[self.counter]);
+    }
     crate::impl_cgamemode_plumbing!();
 
     fn init(&mut self, g: &mut Game) {

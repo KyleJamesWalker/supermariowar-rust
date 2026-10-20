@@ -26,6 +26,11 @@ impl PlayerId {
     pub fn is_none(self) -> bool {
         self == Self::NONE
     }
+
+    /// Slot and generation, for state hashing.
+    pub fn raw(self) -> (u8, u8) {
+        (self.slot, self.generation)
+    }
 }
 
 /// Derefs to the play order; the slots own the players.
