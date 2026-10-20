@@ -1,6 +1,6 @@
-//! Port of src/smw/objects/ThrowBlockType.h
+//! Kinds of throwable brick block.
 
-/// NOTE: The elements are ordered!
+/// Throw block kind; the discriminant selects the sprite row, so the order is fixed.
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum ThrowBlockType {

@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/IO_FlameCannon.cpp
+//! Map flame cannon that periodically shoots a jet of fire.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -24,15 +24,21 @@ use crate::smw::player::CPlayer;
 pub struct IO_FlameCannon {
     pub cobject: CObject,
 
+    /// Base interval between flames in 62.5 Hz ticks; each wait is one to two times this.
     pub iFreq: i16,
+    /// Ticks left waiting while idle, or ticks into the current flame phase.
     pub iTimer: i16,
+    /// Unused; reset at each flame start.
     pub iCycle: i16,
+    /// Index into the flame frame rectangles for `iDirection`.
     pub iFrame: i16,
+    /// Flame direction: 0 right, 1 left, 2 up, 3 down; indexes `g_rFlameRects`.
     pub iDirection: i16,
 }
 impl_base!(IO_FlameCannon => cobject: CObject);
 
 impl IO_FlameCannon {
+    /// `state` cycles 0 idle, 1 igniting, 2 full flame (deadly), 3 dying down.
     pub fn new(g: &mut Game, pos: Vec2s, freq: i16, direction: i16) -> Self {
         let mut this = IO_FlameCannon { cobject: CObject::new(g, SpriteId::NONE, pos), iFreq: freq, iTimer: 0, iCycle: 0, iFrame: 0, iDirection: direction };
         this.objectType = object_flamecannon;
@@ -55,7 +61,7 @@ impl IO_FlameCannon {
         this
     }
 
-    // For preview
+    /// Draws at half scale for the map preview, offset by `iOffsetX`, `iOffsetY` (pixels).
     pub fn draw_offset(&mut self, g: &mut Game, iOffsetX: i16, iOffsetY: i16) {
         let mut gp = g.ptr();
         if self.state > 0 {
@@ -76,6 +82,7 @@ impl IO_FlameCannon {
         }
     }
 
+    /// Rolls the next idle wait.
     pub fn set_new_timer(&mut self, g: &mut Game) {
         let mut gp = g.ptr();
         self.iTimer = ticks(self.iFreq as i32 + RANDOM_INT(gp.get(), self.iFreq as i32)) as i16;
