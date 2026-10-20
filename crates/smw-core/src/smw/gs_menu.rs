@@ -139,6 +139,14 @@ fn rect(x: i32, y: i32, w: i32, h: i32) -> Rect {
     Rect { x, y, w, h }
 }
 
+/// The menu's error bar, near the bottom of the screen, with `text` in it.
+pub fn draw_message_bar(g: &mut Game, text: &str) {
+    let mut gp = g.ptr();
+    gp.rm.sprite(gp.rm.spr_selectfield).draw_src(g, 70, 400, &rect(0, 0, 484, 32));
+    gp.rm.sprite(gp.rm.spr_selectfield).draw_src(g, 554, 400, &rect(496, 0, 16, 32));
+    gp.rm.menu_font_large.draw_chop_centered(g, 320, 405, 470, text);
+}
+
 /// The menu game state; one instance, built by `init` once game data is loaded.
 pub struct MenuState {
     mCurrentMenu: MenuId,
@@ -184,7 +192,7 @@ pub struct MenuState {
     iDisplayError: DisplayError,
     iDisplayErrorTimer: i16,
     /// Message shown with `DISPLAY_ERROR_NET`.
-    net_error: &'static str,
+    net_error: String,
     /// Frames on the servers menu; LAN servers merge into the list once a second.
     nearby_timer: u32,
     /// The new-room settings menu is open from a room, to pick the next match's map and mode.
@@ -244,7 +252,7 @@ impl MenuState {
             mNetRoomMenu: Slot::empty(),
             iDisplayError: DISPLAY_ERROR_NONE,
             iDisplayErrorTimer: 0,
-            net_error: "",
+            net_error: String::new(),
             nearby_timer: 0,
             room_settings: false,
             fNeedMenuMusicReset: false,
@@ -517,7 +525,7 @@ impl MenuState {
 
                 //If it is not "[none]", then add this announcer sound
                 if szBuffer != "[none]" {
-                    let sound = sfxSound::from_file(gp.get(), Path::new(&convert_path(g, &szBuffer))).unwrap_or_else(|e| std::panic::panic_any(e));
+                    let sound = sfxSound::from_file_or_silence(gp.get(), Path::new(&convert_path(g, &szBuffer)));
                     g.rm.sfx_announcer[announcerIndex as usize] = sound;
                 }
 
@@ -528,9 +536,9 @@ impl MenuState {
         //Load soundtrack music if changed
         if g.game_values.loadedmusic as i64 != g.musiclist.current_index() as i64 {
             g.game_values.loadedmusic = g.musiclist.current_index() as i16;
-            g.backgroundmusic[1] = sfxMusic::from_file(g, gp.musiclist.music(0)).unwrap_or_else(|e| std::panic::panic_any(e)); //Stage Clear
-            g.backgroundmusic[3] = sfxMusic::from_file(g, gp.musiclist.music(2)).unwrap_or_else(|e| std::panic::panic_any(e)); //Tournament Menu
-            g.backgroundmusic[4] = sfxMusic::from_file(g, gp.musiclist.music(3)).unwrap_or_else(|e| std::panic::panic_any(e)); //Tournament Over
+            g.backgroundmusic[1] = sfxMusic::from_file_or_silence(g, gp.musiclist.music(0)); //Stage Clear
+            g.backgroundmusic[3] = sfxMusic::from_file_or_silence(g, gp.musiclist.music(2)); //Tournament Menu
+            g.backgroundmusic[4] = sfxMusic::from_file_or_silence(g, gp.musiclist.music(3)); //Tournament Over
         }
 
         gp.backgroundmusic[2].stop(g);
@@ -951,7 +959,7 @@ impl MenuState {
             crate::common::global::load_current_map_background(g);
 
             if g.game_values.music {
-                g.backgroundmusic[0] = sfxMusic::from_file(g, gp.worldmusiclist.current_music(WorldMusicCategory::Bonus, "")).unwrap_or_else(|e| std::panic::panic_any(e));
+                g.backgroundmusic[0] = sfxMusic::from_file_or_silence(g, gp.worldmusiclist.current_music(WorldMusicCategory::Bonus, ""));
                 gp.backgroundmusic[0].play(g, false, false);
             }
         } else {
@@ -1022,7 +1030,7 @@ impl MenuState {
                 let category = MusicCategory::ALL[g.g_map.musicCategoryID as usize];
                 let background = g.g_map.szBackgroundFile.clone();
                 gp.musiclist.set_random_music(g, category, &sShortMapName, &background);
-                g.backgroundmusic[0] = sfxMusic::from_file(g, gp.musiclist.current_music()).unwrap_or_else(|e| std::panic::panic_any(e));
+                g.backgroundmusic[0] = sfxMusic::from_file_or_silence(g, gp.musiclist.current_music());
                 gp.backgroundmusic[0].play(g, g.game_values.playnextmusic, false);
             }
         }
@@ -1510,7 +1518,7 @@ impl MenuState {
                 if crate::smw::net::host_on_this_device(g) {
                     self.mNetServersMenu.refresh_scroll(g);
                 } else {
-                    self.net_error = "Hosting needs a desktop or handheld build";
+                    self.net_error = "Hosting needs a desktop or handheld build".to_string();
                     self.iDisplayError = DISPLAY_ERROR_NET;
                     self.iDisplayErrorTimer = (4 * TICKS_PER_SECOND) as i16;
                 }
@@ -1646,9 +1654,16 @@ impl MenuState {
             }
 
             if let Some(error) = lobby_error.filter(|_| self.in_net_menu()) {
-                self.net_error = error.message();
+                self.net_error = error.message().to_string();
                 self.iDisplayError = DISPLAY_ERROR_NET;
                 self.iDisplayErrorTimer = (4 * TICKS_PER_SECOND) as i16;
+            }
+            if self.in_net_menu() {
+                if let Some(notice) = g.netplay.match_notice.take() {
+                    self.net_error = notice;
+                    self.iDisplayError = DISPLAY_ERROR_NET;
+                    self.iDisplayErrorTimer = (4 * TICKS_PER_SECOND) as i16;
+                }
             }
         }
 
@@ -2003,7 +2018,7 @@ impl GameState for MenuState {
                 } else if self.iDisplayError == DISPLAY_ERROR_MAP_FILTER {
                     gp.rm.menu_font_large.draw_centered(g, 320, 405, "No Maps Meet All Filter Conditions!");
                 } else if self.iDisplayError == DISPLAY_ERROR_NET {
-                    gp.rm.menu_font_large.draw_chop_centered(g, 320, 405, 470, self.net_error);
+                    gp.rm.menu_font_large.draw_chop_centered(g, 320, 405, 470, &self.net_error);
                 }
 
                 self.iDisplayErrorTimer -= 1;
@@ -2042,7 +2057,7 @@ impl GameState for MenuState {
 
                     gp.backgroundmusic[2].stop(g);
                     let worldMusic = g.worldmusiclist.current_music(g.g_worldmap.get_music_category(), g.g_worldmap.get_world_name()).clone();
-                    g.backgroundmusic[5] = sfxMusic::from_file(g, &worldMusic).unwrap_or_else(|e| std::panic::panic_any(e));
+                    g.backgroundmusic[5] = sfxMusic::from_file_or_silence(g, &worldMusic);
                     gp.backgroundmusic[5].play(g, false, false);
                     self.fNeedMenuMusicReset = true;
 

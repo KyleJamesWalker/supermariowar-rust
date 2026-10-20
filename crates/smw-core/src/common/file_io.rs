@@ -8,6 +8,22 @@ pub fn throw_runtime_error(what: &str) -> ! {
     std::panic::panic_any(what.to_string())
 }
 
+/// Runs `f`, printing the message of a `throw_runtime_error` panic in it to stderr; `None` when it panicked.
+pub fn catch_runtime_error<R>(f: impl FnOnce() -> R) -> Option<R> {
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)) {
+        Ok(r) => Some(r),
+        Err(e) => {
+            let what = e
+                .downcast_ref::<String>()
+                .cloned()
+                .or_else(|| e.downcast_ref::<&str>().map(|s| s.to_string()))
+                .unwrap_or_default();
+            eprintln!("{what}");
+            None
+        }
+    }
+}
+
 enum Handle {
     R(BufReader<File>),
     W(BufWriter<File>),
