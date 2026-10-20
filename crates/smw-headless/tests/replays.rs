@@ -287,14 +287,41 @@ fn clone_frenzy() {
 }
 
 /// Netplay v2 rollback (docs/design/NETPLAY_V2.md): from frame `at`, the match runs under GGRS's sync test, which
-/// loads the state from `check` ticks back and re-runs them every tick and fails on any checksum difference.
+/// loads the state from `check` ticks back and re-runs them every tick and fails on any checksum difference. The
+/// checksum at the end must match the golden, so a platform whose simulation differs fails too.
 fn rollback_mid_match(name: &str, at: Option<u32>, ticks: u32, check: usize) -> u32 {
-    stats_after(name, at, ticks, Some(check)).0
+    let (ran, _, sum) = stats_after(name, at, ticks, Some(check));
+    if ran > 0 {
+        let at = at.map_or("-".to_string(), |at| at.to_string());
+        assert_rollback_checksum(&format!("{name} {at} {ticks}"), sum);
+    }
+    ran
+}
+
+/// The rollback checksums each run must end on, one `<replay> <frame or -> <ticks> <checksum>` line per run.
+const ROLLBACK_CHECKSUMS: &str = "tools/golden/rollback_checksums.txt";
+static CHECKSUM_FILE: Mutex<()> = Mutex::new(());
+
+/// Checks `sum` against the golden for `key`, or records it with SMW_WRITE_ROLLBACK_CHECKSUMS=1.
+fn assert_rollback_checksum(key: &str, sum: u128) {
+    let _file = CHECKSUM_FILE.lock().unwrap_or_else(|e| e.into_inner());
+    let path = repo().join(ROLLBACK_CHECKSUMS);
+    let text = std::fs::read_to_string(&path).unwrap_or_default();
+    let golden = text.lines().find_map(|l| l.rsplit_once(' ').filter(|(k, _)| *k == key).map(|(_, v)| v.to_string()));
+    let actual = format!("{sum:016x}");
+    if std::env::var_os("SMW_WRITE_ROLLBACK_CHECKSUMS").is_some() {
+        let mut lines: Vec<String> = text.lines().filter(|l| l.rsplit_once(' ').is_none_or(|(k, _)| k != key)).map(String::from).collect();
+        lines.push(format!("{key} {actual}"));
+        lines.sort();
+        std::fs::write(&path, lines.join("\n") + "\n").unwrap();
+    } else {
+        assert_eq!(golden.as_deref(), Some(actual.as_str()), "{key}: rollback checksum; SMW_WRITE_ROLLBACK_CHECKSUMS=1 records it in {ROLLBACK_CHECKSUMS}");
+    }
 }
 
 /// Runs `ticks` ticks of the match from frame `at`, under the sync test with `check`, or plainly without it, and
-/// returns how many ran and the match stats at the end.
-fn stats_after(name: &str, at: Option<u32>, ticks: u32, check: Option<usize>) -> (u32, smw::smw::stats::MatchStats) {
+/// returns how many ran and the match stats and checksum at the end.
+fn stats_after(name: &str, at: Option<u32>, ticks: u32, check: Option<usize>) -> (u32, smw::smw::stats::MatchStats, u128) {
     use smw::common::game_values::AppState;
     use smw::smw::game_state::StateId;
     use smw::smw::rollback::{handle_requests, GgrsConfig, KeySlot, Keys};
@@ -305,6 +332,7 @@ fn stats_after(name: &str, at: Option<u32>, ticks: u32, check: Option<usize>) ->
     let mut failure = None;
     let mut in_match = 0;
     let mut stats = smw::smw::stats::MatchStats::new();
+    let mut sum = 0;
     let mut plain = false;
     sandboxed(&tools.join("replays").join(format!("{}.txt", name)), &out, None, |argv, services| {
         let g = smw::game::Game::create();
@@ -361,6 +389,7 @@ fn stats_after(name: &str, at: Option<u32>, ticks: u32, check: Option<usize>) ->
             ran += 1;
         }
         stats = g.game_values.stats;
+        sum = smw::smw::rollback::checksum(g);
         smw::smw::main::shutdown(g);
     });
     let _ = std::fs::remove_dir_all(&out);
@@ -368,14 +397,14 @@ fn stats_after(name: &str, at: Option<u32>, ticks: u32, check: Option<usize>) ->
         panic!("{}", failure);
     }
     assert!(ran == 0 || ran >= ticks.min(300), "{}: only {} ticks under rollback", name, ran);
-    (ran, stats)
+    (ran, stats, sum)
 }
 
 /// Rolled-back ticks must not count twice: the sync test's re-runs leave the same stats as a plain run.
 #[test]
 fn rollback_keeps_match_stats() {
-    let (ran, rolled) = stats_after("cpu_ctf", Some(1500), 400, Some(7));
-    let (plain_ran, plain) = stats_after("cpu_ctf", Some(1500), 400, None);
+    let (ran, rolled, _) = stats_after("cpu_ctf", Some(1500), 400, Some(7));
+    let (plain_ran, plain, _) = stats_after("cpu_ctf", Some(1500), 400, None);
     assert_eq!((ran, plain_ran), (400, 400));
     assert!(plain.players.iter().any(|p| p.jumps > 0 && p.alive_ticks > 0), "no stats counted");
     assert_eq!(rolled, plain);
