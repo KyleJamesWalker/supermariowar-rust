@@ -1,7 +1,7 @@
-//! Port of src/common/ui/MI_SelectField.cpp
+//! A menu field that picks one of a list of named values and writes the choice through an output pointer.
 //!
-//! The C++ class template becomes a generic struct. Its virtual bodies are inherent `*_impl` methods so
-//! subclasses (MI_ImageSelectField, MI_SliderField, ...) can call `MI_SelectField<T>::Draw()` and friends.
+//! Its behavior lives in inherent `*_impl` methods so fields built on it (MI_ImageSelectField, MI_SliderField, ...)
+//! can reuse them.
 
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
@@ -14,11 +14,14 @@ use crate::common::ui::mi_image::MI_Image;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
 
+/// One choice in a select field.
 #[derive(Clone, Debug)]
 pub struct SF_ListItem<T: Copy> {
     pub name: String, // Display name
     pub value: T,
+    /// Skipped when moving through the list.
     pub hidden: bool,
+    /// The icon index an image select field draws instead of `value`, or -1.
     pub iconOverride: i16,
 }
 
@@ -28,28 +31,39 @@ impl<T: Copy> SF_ListItem<T> {
     }
 }
 
+/// A labeled field that cycles through `m_items`; while modifying, left and right arrows show.
 pub struct MI_SelectField<T: Copy + PartialEq + 'static> {
     pub ui_control: UI_Control,
 
     pub m_spr: SpriteId,
     pub m_name: String,
 
+    /// The arrows shown while modifying.
     pub miModifyImageLeft: Box<MI_Image>,
     pub miModifyImageRight: Box<MI_Image>,
 
+    /// Returned when the selection changes.
     pub mcItemChangedCode: MenuCodeEnum,
+    /// When set, selecting the field returns this instead of starting to modify it.
     pub mcControlSelectedCode: MenuCodeEnum,
 
+    /// Selecting the field steps to the next item instead of modifying it.
     pub m_autoAdvance: bool,
+    /// Moving past either end wraps around.
     pub m_wraps: bool,
+    /// Holding scroll-fast moves ten items at a time.
     pub m_fastScroll: bool,
+    /// The row offset in the field sprite: 128 picks the narrow art for widths up to 256.
     pub m_adjustmentY: i16,
+    /// Width in pixels, and where the value starts; with no indent the label is not drawn.
     pub m_width: i16,
     pub m_indent: i16,
 
     pub m_items: Vec<SF_ListItem<T>>,
+    /// Indices of the items `random_value` may pick.
     pub m_goodRandomIndices: Vec<usize>,
     pub m_index: usize,
+    /// Where the selection is written whenever it changes; null for none.
     pub m_outputPtr: *mut T,
 }
 
@@ -75,7 +89,7 @@ fn modify_images(spr: SpriteId, x: i16, y: i16, width: i16, indent: i16) -> (Box
 }
 
 impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
-    /// Not in the C++: the label and the item name for `value`, without selecting it.
+    /// The label and the item name for `value`, without selecting it.
     pub fn describe(&self, value: T) -> Option<String> {
         let item = self.m_items.iter().find(|i| i.value == value)?;
         Some(format!("{}: {}", self.m_name, item.name))
@@ -104,7 +118,7 @@ impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
         }
     }
 
-    /// Copy constructor.
+    /// A copy that keeps the items and selection but no menu neighbors.
     pub fn copy_from(other: &MI_SelectField<T>) -> Self {
         let ui_control = UI_Control::copy_from(&other.ui_control);
         let (left, right) = modify_images(other.m_spr, ui_control.m_pos.x, ui_control.m_pos.y, other.m_width, other.m_indent);
@@ -159,13 +173,14 @@ impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
     pub fn current_value(&self) -> T {
         self.current_item().value
     }
-    /// Does not change the current item.
+    /// A random item from the good-random ones; does not change the current item.
     pub fn random_value(&self, g: &mut Game) -> T {
         let mut gp = g.ptr();
         let idx = self.m_goodRandomIndices[RANDOM_INT(gp.get(), self.m_goodRandomIndices.len() as i32) as usize];
         self.m_items[idx].value
     }
 
+    /// Selects the first item with `value`; false, and no change, if there is none.
     pub fn set_current_value(&mut self, value: T) -> bool {
         let prev_idx = self.m_index;
 
@@ -182,6 +197,7 @@ impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
         false
     }
 
+    /// Selects item `index`; false if it is out of range.
     pub fn set_current_index(&mut self, index: usize) -> bool {
         if index < self.m_items.len() {
             self.m_index = index;
@@ -191,10 +207,12 @@ impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
         false
     }
 
+    /// Adds an item that random picks may choose, and selects the first item.
     pub fn add(&mut self, name: impl Into<String>, value: T) -> &mut SF_ListItem<T> {
         self.add_random(name, value, true)
     }
 
+    /// Adds an item, choosable by random picks when `goodRandom`, and selects the first item.
     pub fn add_random(&mut self, name: impl Into<String>, value: T, goodRandom: bool) -> &mut SF_ListItem<T> {
         let new_idx = self.m_items.len();
         self.m_items.push(SF_ListItem::new(name.into(), value));
@@ -212,6 +230,7 @@ impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
         self.m_goodRandomIndices.clear();
     }
 
+    /// Hides or shows the items with `value`, moving off the current item if it is now hidden.
     pub fn hide_item(&mut self, value: T, hide: bool) {
         for item in self.m_items.iter_mut() {
             if item.value == value {
@@ -229,12 +248,14 @@ impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
         }
     }
 
+    /// Writes the current value through `m_outputPtr`.
     pub fn update_output(&self) {
         if !self.m_outputPtr.is_null() {
             unsafe { *self.m_outputPtr = self.current_value() };
         }
     }
 
+    /// Selects the next visible item; false if there is none to move to.
     pub fn move_next(&mut self) -> bool {
         if self.m_items.is_empty() {
             return false;
@@ -257,6 +278,7 @@ impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
         false
     }
 
+    /// Selects the previous visible item; false if there is none to move to.
     pub fn move_prev(&mut self) -> bool {
         if self.m_items.is_empty() {
             return false;
@@ -279,6 +301,7 @@ impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
         false
     }
 
+    /// Selects a random visible item other than the current one; false unless there are at least two to pick from.
     pub fn move_random(&mut self, g: &mut Game) -> bool {
         let mut gp = g.ptr();
         let mut valid_indices: Vec<usize> = Vec::with_capacity(self.m_items.len());
@@ -364,6 +387,7 @@ impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
         MENU_CODE_MODIFY_ACCEPTED
     }
 
+    /// Moves on direction presses, randomizes on the random key, and stops modifying on select or cancel.
     pub fn send_input_impl(&mut self, g: &mut Game, playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         for iPlayer in 0..4usize {
             let out = playerInput.outputControls[iPlayer];
@@ -415,6 +439,7 @@ impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
         MENU_CODE_NONE
     }
 
+    /// While modifying, a click on an arrow steps the value; a click anywhere on the field returns `MENU_CODE_CLICKED`.
     pub fn mouse_click_impl(&mut self, iMouseX: i16, iMouseY: i16) -> MenuCodeEnum {
         if self.fDisable {
             return MENU_CODE_NONE;
@@ -447,6 +472,7 @@ impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
         MENU_CODE_NONE
     }
 
+    /// Selects the item matching the value behind `m_outputPtr`.
     pub fn refresh_impl(&mut self) {
         if !self.m_outputPtr.is_null() {
             let v = unsafe { *self.m_outputPtr };

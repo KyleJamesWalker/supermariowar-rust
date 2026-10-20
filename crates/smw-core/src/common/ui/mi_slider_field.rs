@@ -1,4 +1,4 @@
-//! Port of src/common/ui/MI_SliderField.cpp
+//! A select field drawn as a slider, with a knob per item.
 
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
@@ -10,10 +10,12 @@ use crate::common::ui::mi_select_field::MI_SelectField;
 use crate::common::uicontrol::UI_ControlTrait;
 use crate::globals::*;
 
+/// A select field over `i16` values drawn as a slider track; scroll-fast jumps to either end.
 pub struct MI_SliderField {
     pub mi_select_field: MI_SelectField<i16>,
 
     pub m_sprSlider: SpriteId,
+    /// Where the item name starts, in pixels from the left edge; the track runs from `m_indent` to here.
     pub m_indent2: i16,
 }
 crate::impl_base!(MI_SliderField => mi_select_field: MI_SelectField<i16>);
@@ -83,7 +85,6 @@ impl UI_ControlTrait for MI_SliderField {
             iSpot = iSpot.wrapping_add(iSpacing);
         }
 
-        // size_t arithmetic in C++, truncated to int at the call
         let knobX = (x + indent).wrapping_add((self.m_index as i32).wrapping_mul(iSpacing as i32)).wrapping_add(14);
         g.rm.sprite(self.m_sprSlider).draw_src(g, knobX, y + 8, &Rect { x: 168, y: 0, w: 8, h: 16 });
 

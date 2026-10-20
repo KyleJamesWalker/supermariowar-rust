@@ -1,4 +1,4 @@
-//! Port of src/common/ui/MI_Image.cpp
+//! An image menu item, optionally animated, pulsing, swirling or blinking.
 
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
@@ -8,33 +8,41 @@ use crate::common::math::trig::{cosf, sinf};
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
 
+/// A sprite region drawn at the control's position.
 pub struct MI_Image {
     pub ui_control: UI_Control,
 
     spr: SpriteId,
 
+    /// Animation frames across and down the sprite, from `isrcx`, `isrcy`.
     iNumXFrames: i16,
     iNumYFrames: i16,
     isrcx: i16,
     isrcy: i16,
+    /// Frame size in pixels.
     iw: i16,
     ih: i16,
+    /// Ticks per animation frame; 0 for none.
     iSpeed: i16,
     iTimer: i16,
+    /// The current frame's source position in pixels.
     iXFrame: i16,
     iYFrame: i16,
 
+    /// Grows and shrinks the image by up to 10 pixels each side.
     fPulse: bool,
     iPulseValue: i16,
     iPulseDelay: i16,
     fPulseOut: bool,
 
+    /// Spirals in to the position: the offset's radius shrinks and its angle turns each tick until the radius reaches 0.
     fSwirl: bool,
     dSwirlRadius: f32,
     dSwirlAngle: f32,
     dSwirlRadiusSpeed: f32,
     dSwirlAngleSpeed: f32,
 
+    /// Toggles visibility every `iBlinkInterval + 1` ticks.
     fBlink: bool,
     iBlinkInterval: i16,
     iBlinkCounter: i16,
@@ -44,6 +52,7 @@ crate::impl_base!(MI_Image => ui_control: UI_Control);
 
 impl MI_Image {
     #[allow(clippy::too_many_arguments)]
+    /// `w`, `h` is one frame; `speed` is ticks per frame, 0 for a still image.
     pub fn new(nspr: SpriteId, x: i16, y: i16, srcx: i16, srcy: i16, w: i16, h: i16, numxframes: i16, numyframes: i16, speed: i16) -> Self {
         MI_Image {
             ui_control: UI_Control::new(x, y),
@@ -77,6 +86,7 @@ impl MI_Image {
     pub fn set_animation_speed(&mut self, speed: i16) {
         self.iSpeed = speed;
     }
+    /// Shows a new region of the sprite, from its first frame.
     pub fn set_image(&mut self, srcx: i16, srcy: i16, w: i16, h: i16) {
         self.isrcx = srcx;
         self.isrcy = srcy;
@@ -92,6 +102,7 @@ impl MI_Image {
     pub fn set_pulse(&mut self, pulse: bool) {
         self.fPulse = pulse;
     }
+    /// Starts or stops a swirl from `radius` pixels at `angle` radians, shrinking and turning by the speeds each tick.
     pub fn set_swirl(&mut self, swirl: bool, radius: f32, angle: f32, radiusSpeed: f32, angleSpeed: f32) {
         self.fSwirl = swirl;
         self.dSwirlRadius = radius;

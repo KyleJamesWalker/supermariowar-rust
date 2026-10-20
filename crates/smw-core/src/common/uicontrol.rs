@@ -1,6 +1,6 @@
-//! Port of src/common/uicontrol.cpp
+//! Menu controls: the shared control data, their virtual interface, and the store that owns them.
 //!
-//! `UI_Control` is the data of the C++ base class; `UI_ControlTrait` holds its virtuals. Every menu item
+//! `UI_Control` is the data every menu item shares; `UI_ControlTrait` holds its overridable behavior. Every menu item
 //! embeds its base as the first field (`impl_base!`) and implements the trait, returning the embedded
 //! `UI_Control` from `ctl()`/`ctl_mut()`. `Game::controls` owns every control; menus hold `ControlId`s.
 
@@ -12,6 +12,7 @@ use std::cell::UnsafeCell;
 use std::marker::PhantomData;
 use crate::globals::*;
 
+/// Horizontal text alignment within a control.
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum TextAlign {
@@ -29,7 +30,7 @@ pub struct ControlId {
 }
 
 impl ControlId {
-    /// No control: what a null `UI_Control*` was in the C++.
+    /// No control.
     pub const NONE: ControlId = ControlId { slot: u16::MAX, generation: 0 };
 
     pub fn is_none(self) -> bool {
@@ -105,6 +106,7 @@ impl Controls {
         Controls { slots: Vec::new(), generations: Vec::new() }
     }
 
+    /// Stores `control` in a free slot and returns a typed handle to it.
     pub fn insert<T: UI_ControlTrait + 'static>(&mut self, control: T) -> Ctl<T> {
         let slot = match self.slots.iter().position(Option::is_none) {
             Some(slot) => slot,
@@ -118,6 +120,7 @@ impl Controls {
         Ctl { id: ControlId { slot: slot as u16, generation: self.generations[slot] }, _type: PhantomData }
     }
 
+    /// Frees the control; handles to it find nothing from now on.
     pub fn remove(&mut self, id: ControlId) {
         if self.get(id).is_some() {
             self.slots[id.slot as usize] = None;
@@ -126,6 +129,7 @@ impl Controls {
     }
 
     #[allow(clippy::mut_from_ref)]
+    /// The control `id` names, or `None` if it was removed.
     pub fn get(&self, id: ControlId) -> Option<&'static mut dyn UI_ControlTrait> {
         let slot = id.slot as usize;
         if slot >= self.slots.len() || self.generations[slot] != id.generation {
@@ -135,7 +139,7 @@ impl Controls {
         Some(unsafe { &mut *control })
     }
 
-    /// Panics on a removed control, where the C++ read freed memory.
+    /// The control `ctl` names, as its type; panics on a removed control.
     #[allow(clippy::mut_from_ref)]
     pub fn typed<T: 'static>(&self, ctl: Ctl<T>) -> &'static mut T {
         let control = self.get(ctl.id).unwrap_or_else(|| panic!("no control {:?}", ctl.id));
@@ -143,15 +147,21 @@ impl Controls {
     }
 }
 
+/// What every menu control has: position, selection state and neighbors for menu navigation.
 pub struct UI_Control {
+    /// Position in pixels on the 640x480 screen.
     pub m_pos: Vec2s,
 
+    /// Highlighted as the menu's current control.
     pub fSelected: bool,
+    /// Taking input itself, such as an open select field.
     pub fModifying: bool,
+    /// Starts modifying as soon as it is selected.
     pub fAutoModify: bool,
     pub fDisable: bool,
     pub m_visible: bool,
 
+    /// The controls the menu moves to, by `MenuNavDirection`.
     pub m_neighbors: [ControlId; 4],
 
     pub iControllingTeam: i16,
@@ -174,7 +184,7 @@ impl UI_Control {
         }
     }
 
-    /// `UI_Control::operator=` / copy constructor: parent and neighbors are not copied.
+    /// A copy that keeps the state but no neighbors.
     pub fn copy_from(other: &UI_Control) -> Self {
         UI_Control {
             m_pos: other.m_pos,
@@ -224,7 +234,7 @@ impl UI_Control {
     }
 }
 
-/// `UI_Control::Modify` (the base-class body), for overrides that call `UI_Control::Modify(modify)`.
+/// The default `modify`: refuses while disabled, else sets `fModifying`; for overrides that also want it.
 pub fn ui_control_modify<T: UI_ControlTrait + ?Sized>(this: &mut T, modify: bool) -> MenuCodeEnum {
     let c = this.ctl_mut();
     if c.fDisable {
@@ -235,40 +245,43 @@ pub fn ui_control_modify<T: UI_ControlTrait + ?Sized>(this: &mut T, modify: bool
     MENU_CODE_MODIFY_ACCEPTED
 }
 
+/// The overridable behavior of a menu control.
 pub trait UI_ControlTrait {
     fn ctl(&self) -> &UI_Control;
     fn ctl_mut(&mut self) -> &mut UI_Control;
 
-    /// Updates animations or other events every frame
+    /// Updates animations or other events every frame.
     fn update(&mut self, g: &mut Game) {}
 
-    /// Draws every frame
+    /// Draws every frame.
     fn draw(&mut self, g: &mut Game) {}
 
-    /// Not in upstream: drawn after the whole menu while this control is being modified.
+    /// Drawn after the whole menu while this control is being modified.
     fn draw_overlay(&mut self, g: &mut Game) {}
 
-    /// Sends player input to control on every frame
+    /// Takes this frame's player input while the control is being modified.
     fn send_input(&mut self, g: &mut Game, _playerInput: Ptr<CPlayerInput>) -> MenuCodeEnum {
         MENU_CODE_NONE
     }
 
-    /// Called when user selects this control to change it's value
+    /// Called when the user selects this control to change its value, or ends modifying it.
     fn modify(&mut self, g: &mut Game, modify: bool) -> MenuCodeEnum {
         ui_control_modify(self, modify)
     }
 
+    /// A mouse click or tap at `_iMouseX`, `_iMouseY` in screen pixels.
     fn mouse_click(&mut self, g: &mut Game, _iMouseX: i16, _iMouseY: i16) -> MenuCodeEnum {
         MENU_CODE_NONE
     }
 
+    /// Reloads the shown value from what it controls.
     fn refresh(&mut self, g: &mut Game) {}
 
     fn disable(&mut self, disable: bool) {
         self.ctl_mut().fDisable = disable;
     }
 
-    /// Non-virtual in C++.
+    /// Sets the selection; starts modifying if the control auto-modifies. Returns whether it is modifying.
     fn select(&mut self, g: &mut Game, select: bool) -> bool {
         self.ctl_mut().fSelected = select;
 

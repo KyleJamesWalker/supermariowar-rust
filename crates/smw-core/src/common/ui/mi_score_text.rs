@@ -1,13 +1,15 @@
-//! Port of src/common/ui/MI_ScoreText.cpp
+//! A menu item that draws a score in the scoreboard digit sprite.
 
 use crate::common::gfx::soft_surface::Rect;
 use crate::game::Game;
 use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
 
+/// A score of up to three digits, centered on its position, without leading zeros.
 pub struct MI_ScoreText {
     pub ui_control: UI_Control,
 
+    /// Each digit's x in the digit sprite (16 pixels per digit) and on screen.
     iDigitLeftSrcX: i16,
     iDigitMiddleSrcX: i16,
     iDigitRightSrcX: i16,
@@ -31,6 +33,7 @@ impl MI_ScoreText {
         }
     }
 
+    /// Shows the last three digits of `sScore`.
     pub fn set_score(&mut self, sScore: i16) {
         let mut iDigits: i16 = sScore;
         while iDigits > 999 {

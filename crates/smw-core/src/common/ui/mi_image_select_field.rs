@@ -1,4 +1,4 @@
-//! Port of src/common/ui/MI_ImageSelectField.cpp
+//! A select field that shows an icon for the current item.
 
 use crate::common::resource_manager::SpriteId;
 use crate::common::gfx::soft_surface::Rect;
@@ -10,6 +10,7 @@ use crate::common::ui::mi_select_field::MI_SelectField;
 use crate::common::uicontrol::UI_ControlTrait;
 use crate::globals::*;
 
+/// A select field over `i16` values that draws the current item's icon from a strip of equal-width images.
 pub struct MI_ImageSelectField {
     pub mi_select_field: MI_SelectField<i16>,
 
@@ -21,6 +22,7 @@ crate::impl_base!(MI_ImageSelectField => mi_select_field: MI_SelectField<i16>);
 
 impl MI_ImageSelectField {
     #[allow(clippy::too_many_arguments)]
+    /// Takes `imageHeight` before `imageWidth`.
     pub fn new(
         nspr: SpriteId,
         nspr_image: SpriteId,
@@ -40,7 +42,7 @@ impl MI_ImageSelectField {
         }
     }
 
-    /// Implicit copy constructor.
+    /// A copy that keeps the items and selection but no menu neighbors.
     pub fn copy_from(other: &MI_ImageSelectField) -> Self {
         MI_ImageSelectField {
             mi_select_field: MI_SelectField::copy_from(&other.mi_select_field),
