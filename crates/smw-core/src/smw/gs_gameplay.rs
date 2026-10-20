@@ -714,7 +714,6 @@ impl GameplayState {
             None => Ptr::null(),
         };
 
-        // The index still advances after a removal, so the player shifted into slot i is skipped this frame.
         let mut i: usize = 0;
         while i < g.players.len() {
             if g.player(g.players[i]).state == PlayerState::Dead {
@@ -756,6 +755,7 @@ impl GameplayState {
                 }
 
                 g.players.pop();
+                continue;
             }
             i += 1;
         }
