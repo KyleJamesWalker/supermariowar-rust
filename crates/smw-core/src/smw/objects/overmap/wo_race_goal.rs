@@ -149,6 +149,12 @@ impl OMO_RaceGoal {
 }
 
 impl CObjectTrait for OMO_RaceGoal {
+    fn harness_hash_object(&mut self, h: &mut crate::smw::rollback::Fnv) {
+        h.i16s(&[self.goalID, self.anglechangetimer, self.quantity]);
+        h.i16s(&self.tagged);
+        h.f32s(&[self.angle, self.anglechange, self.speed]);
+        h.bools(&[self.isfinishline]);
+    }
     crate::impl_cobject_plumbing!();
 
     fn draw(&mut self, g: &mut Game) {

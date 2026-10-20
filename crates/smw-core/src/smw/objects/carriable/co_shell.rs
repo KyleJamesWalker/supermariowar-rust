@@ -628,6 +628,12 @@ impl CO_Shell {
 }
 
 impl IO_MovingObjectTrait for CO_Shell {
+    fn harness_hash(&mut self, h: &mut crate::smw::rollback::Fnv) {
+        crate::smw::objects::moving::moving_object::mo_harness_hash(self, h);
+        h.i16s(&[self.iShellType as i16, self.iIgnoreBounceTimer, self.iDestY, self.iDeathTime, self.iNoOwnerKillTime, self.iBounceCounter, self.iKillCounter, self.iFlippedOffset, self.frozentimer, self.frozenanimationspeed]);
+        h.bools(&[self.fDieOnMovingPlayerCollision, self.fDieOnHoldingPlayerCollision, self.fDieOnFire, self.fKillBouncePlayer, self.fFlipped, self.frozen]);
+        h.f32s(&[self.frozenvelocity]);
+    }
     crate::impl_io_moving_object_plumbing!();
     fn as_carried_object(&mut self) -> Option<&mut dyn MO_CarriedObjectTrait> {
         Some(self)

@@ -91,6 +91,11 @@ impl RngState {
     pub const fn new() -> Self {
         RngState { grng: None, idle: RngCounters { g_callCount: 0, g_lastValue: 0, g_tape: Tape::Off } }
     }
+
+    /// The generator's state words and index, which decide every later draw; `None` before it exists.
+    pub fn generator_state(&self) -> Option<([u32; 16], u32)> {
+        self.grng.as_ref().map(|r| (r.state, r.index))
+    }
 }
 
 fn rng(g: &mut Game) -> &mut RngCounters {

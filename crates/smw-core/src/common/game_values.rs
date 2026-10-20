@@ -54,6 +54,8 @@ pub struct TournamentScores {
 pub struct GameplayFlags {
     /// The pause menu is open.
     pub pausegame: bool,
+    /// The netplay v2 player handle that paused the match, the only one that can resume it, or -1.
+    pub pauseowner: i16,
     /// The exit prompt is open.
     pub exitinggame: bool,
     pub exityes: bool,
@@ -105,6 +107,7 @@ impl Default for GameplayFlags {
     fn default() -> Self {
         GameplayFlags {
             pausegame: false,
+            pauseowner: -1,
             exitinggame: false,
             exityes: false,
             noexit: false,

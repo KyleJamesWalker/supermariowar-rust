@@ -35,6 +35,7 @@ use std::cell::UnsafeCell;
 use std::ffi::{CStr, CString};
 use std::io::Write;
 use std::ptr::{null, null_mut};
+use std::rc::Rc;
 
 /// Frames in an animated tile's cycle.
 pub const NUM_FRAMES_IN_TILE_ANIMATION: i16 = 4;
@@ -724,8 +725,8 @@ pub struct CMap {
     pub iAnimatedBackgroundLayers: i16,
     /// The front and back map buffers animated tiles are redrawn into this tick.
     pub animatedFrontmapSurface: *mut Surface,
-    /// 1024x1024 sheet of every animated tile's prerendered frames.
-    pub animatedTilesSurface: gfxSprite,
+    /// 1024x1024 sheet of every animated tile's prerendered frames. Only drawing reads it, so clones share it.
+    pub animatedTilesSurface: Rc<gfxSprite>,
 
     pub iAnimatedTileCount: i16,
     /// `animatedtiles` index ranges redrawn on each tick of the animation cycle.
@@ -798,7 +799,7 @@ impl CMap {
             iTileAnimationFrame: 0,
             iAnimatedBackgroundLayers: 0,
             animatedFrontmapSurface: null_mut(),
-            animatedTilesSurface: gfxSprite::new(),
+            animatedTilesSurface: Rc::new(gfxSprite::new()),
             iAnimatedTileCount: 0,
             iAnimatedVectorIndices: [0; NUM_FRAMES_BETWEEN_TILE_ANIMATION as usize + 1],
             animatedBackmapSurface: null_mut(),
@@ -2379,12 +2380,12 @@ impl CMap {
 
             self.iAnimatedTileCount = self.animatedtiles.len() as i16;
 
-            self.animatedTilesSurface = gfxSprite::new();
+            self.animatedTilesSurface = Rc::new(gfxSprite::new());
 
             if self.iAnimatedTileCount > 0 {
                 self.animatedFrontmapSurface = g.rm.sprite(g.rm.spr_frontmap[g.g_iCurrentDrawIndex as usize]).get_surface();
                 self.animatedBackmapSurface = g.rm.sprite(g.rm.spr_backmap[g.g_iCurrentDrawIndex as usize]).get_surface();
-                self.animatedTilesSurface = gfxSprite::blank(g, 1024, 1024);
+                self.animatedTilesSurface = Rc::new(gfxSprite::blank(g, 1024, 1024));
                 let ats = self.animatedTilesSurface.get_surface();
 
                 let iTransparentColor = (*ats).map_rgb(255, 0, 255);
@@ -2836,6 +2837,15 @@ impl CMap {
         if self.try_platform(id).is_some() {
             self.platform_slots[id.slot as usize] = None;
             self.platform_generations[id.slot as usize] = self.platform_generations[id.slot as usize].wrapping_add(1);
+        }
+    }
+
+    /// Gives this map its own copy of the animation sheet and platform draw buffers it shares with the map it was
+    /// cloned from.
+    pub fn unshare_surfaces(&mut self) {
+        self.animatedTilesSurface = Rc::new((*self.animatedTilesSurface).clone());
+        for cell in self.platform_slots.iter_mut().flatten() {
+            cell.0.get_mut().unshare_sprites();
         }
     }
 

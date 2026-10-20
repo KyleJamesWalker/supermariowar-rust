@@ -93,6 +93,9 @@ impl OMO_OrbitHazard {
 }
 
 impl CObjectTrait for OMO_OrbitHazard {
+    fn harness_hash_object(&mut self, h: &mut crate::smw::rollback::Fnv) {
+        h.f32s(&[self.dAngle, self.dVel, self.dRadius, self.dCenter.x, self.dCenter.y]);
+    }
     crate::impl_cobject_plumbing!();
 
     fn draw(&mut self, g: &mut Game) {

@@ -726,6 +726,13 @@ impl CObjectTrait for MO_SledgeBrother {
 }
 
 impl IO_MovingObjectTrait for MO_SledgeBrother {
+    fn harness_hash(&mut self, h: &mut crate::smw::rollback::Fnv) {
+        crate::smw::objects::moving::moving_object::mo_harness_hash(self, h);
+        h.i16s(&[self.iType, self.iActionState, self.location, self.throwing_timer, self.hit_timer, self.hit_movement_timer, self.hit_offset_y, self.leg_offset_x, self.leg_movement_timer, self.arm_offset_x, self.arm_movement_timer, self.taunt_timer, self.wait_timer, self.hit_points, self.iDestX, self.iPlatformY, self.last_action, self.last_action_count]);
+        h.i16s(&self.iDestLocationX);
+        h.i16s(&self.need_action);
+        h.bools(&[self.face_right]);
+    }
     crate::impl_io_moving_object_plumbing!();
 
     fn die(&mut self, g: &mut Game) {

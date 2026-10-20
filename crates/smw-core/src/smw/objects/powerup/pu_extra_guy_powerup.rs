@@ -79,6 +79,10 @@ impl CObjectTrait for PU_ExtraGuyPowerup {
 }
 
 impl IO_MovingObjectTrait for PU_ExtraGuyPowerup {
+    fn harness_hash(&mut self, h: &mut crate::smw::rollback::Fnv) {
+        crate::smw::objects::moving::moving_object::mo_harness_hash(self, h);
+        h.i16s(&[self.iType]);
+    }
     crate::impl_io_moving_object_plumbing!();
     fn as_powerup(&mut self) -> Option<&mut dyn MO_PowerupTrait> {
         Some(self)

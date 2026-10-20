@@ -104,6 +104,10 @@ impl CGM_Survival {
 }
 
 impl CGameModeTrait for CGM_Survival {
+    fn harness_hash(&self, h: &mut crate::smw::rollback::Fnv) {
+        self.gm().harness_hash(h);
+        h.i16s(&[self.timer, self.ratetimer, self.rate, self.iSelectedEnemy, self.iEnemyWeightCount]);
+    }
     crate::impl_cgamemode_plumbing!();
 
     fn init(&mut self, g: &mut Game) {

@@ -114,6 +114,11 @@ impl CObjectTrait for B_ThrowBlock {
 impl IO_BlockTrait for B_ThrowBlock {
     crate::impl_io_block_plumbing!();
 
+    fn harness_hash(&self, h: &mut crate::smw::rollback::Fnv) {
+        self.block().harness_hash(h);
+        h.i16s(&[self.drawFrame, self.animationTimer, self.iType as i16]);
+    }
+
     fn hittop_player(&mut self, g: &mut Game, mut player: PlayerId, useBehavior: bool) -> bool {
         if useBehavior {
             g.player(player).set_yf((self.iposy as i32 - PH) as f32 - 0.2f32);

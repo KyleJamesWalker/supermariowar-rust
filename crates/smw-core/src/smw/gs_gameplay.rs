@@ -169,6 +169,15 @@ impl GameplayState {
     }
 
     /// Replay-harness `G`/`P`/`T`/`O` records (docs/guides/REPLAY.md).
+    /// Feeds the simulated fields the harness dump leaves out into a desync checksum; the score text offsets only draw.
+    pub fn harness_hash(&self, h: &mut crate::smw::rollback::Fnv) {
+        h.i16s(&[self.iCountDownState, self.iCountDownTimer, self.iWindTimer, self.spindirection, self.spintimer]);
+        h.i16s(&self.respawnCount);
+        h.i16s(&self.respawnanimationtimer);
+        h.i16s(&self.respawnanimationframe);
+        h.f32s(&[self.dNextWind, self.spinangle, self.spinspeed]);
+    }
+
     pub fn harness_dump(&mut self, g: &mut Game, out: &mut impl Write) -> std::io::Result<()> {
         let gm = g.mode();
         writeln!(out, "G mode={} gameover={} winner={}", gm.gamemode as i32, gm.gameover as i32, gm.winningteam)?;

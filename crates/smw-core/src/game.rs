@@ -358,7 +358,7 @@ impl Game {
         sfx.sfx_audible = false;
         let mut networkHandler: Global<NetworkHandler> = Global::uninit();
         networkHandler.init(NetworkHandler::default());
-        Box::new(Game {
+        let mut copy = Box::new(Game {
             _alias: Aliased::new(),
             game_values: self.game_values.clone(),
             filterslist: self.filterslist,
@@ -442,7 +442,9 @@ impl Game {
             relay: crate::smw::platform::network::websocket::network_layer_websocket::Relay::new(),
             recv_buffer: [0; smw_netplay::common_netplay::relay_frame::MAX_MESSAGE_LEN],
             match_copy: Some(MatchCopy { _screen: screen, _musiclist: musiclist }),
-        })
+        });
+        copy.g_map.unshare_surfaces();
+        copy
     }
 }
 

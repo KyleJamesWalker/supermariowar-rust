@@ -44,6 +44,13 @@ impl IO_Block {
     pub fn new(g: &mut Game, nspr: SpriteId, pos: Vec2s) -> Self {
         crate::smw::objects::blocks::io_block::io_block_new(g, nspr, pos)
     }
+
+    /// The base fields of `IO_BlockTrait::harness_hash`.
+    pub fn harness_hash(&self, h: &mut crate::smw::rollback::Fnv) {
+        h.i16s(&[self.iBumpPlayerID, self.iBumpTeamID, self.iposx, self.iposy, self.iHiddenTimer, self.col, self.row]);
+        h.f32s(&[self.fposx, self.fposy]);
+        h.bools(&[self.hidden, self.ishiddentype]);
+    }
 }
 
 /// Virtual interface of `IO_Block`. Overloads: `collide(CPlayer*, short, bool)` is `collide_player_dir`,
@@ -54,6 +61,11 @@ pub trait IO_BlockTrait: CObjectTrait {
     fn block(&self) -> &IO_Block;
     fn block_mut(&mut self) -> &mut IO_Block;
     fn as_block_ptr(&mut self) -> Ptr<dyn IO_BlockTrait>;
+
+    /// Feeds the block's simulated state beyond `CObject` into a desync checksum; overrides add their own fields.
+    fn harness_hash(&self, h: &mut crate::smw::rollback::Fnv) {
+        self.block().harness_hash(h);
+    }
 
     fn reset(&mut self) {
         crate::smw::objects::blocks::io_block::io_block_reset(self)

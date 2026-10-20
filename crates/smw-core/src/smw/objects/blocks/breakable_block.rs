@@ -108,6 +108,11 @@ impl CObjectTrait for B_BreakableBlock {
 impl IO_BlockTrait for B_BreakableBlock {
     crate::impl_io_block_plumbing!();
 
+    fn harness_hash(&self, h: &mut crate::smw::rollback::Fnv) {
+        self.block().harness_hash(h);
+        h.i16s(&[self.drawFrame, self.animationTimer]);
+    }
+
     fn hittop_player(&mut self, g: &mut Game, mut player: PlayerId, useBehavior: bool) -> bool {
         io_block_hittop_player(g, self, player, useBehavior);
 

@@ -256,5 +256,11 @@ impl CObjectTrait for MO_FlagBase {
 }
 
 impl IO_MovingObjectTrait for MO_FlagBase {
+    fn harness_hash(&mut self, h: &mut crate::smw::rollback::Fnv) {
+        crate::smw::objects::moving::moving_object::mo_harness_hash(self, h);
+        h.i16s(&[self.teamID, self.anglechangetimer, self.timer]);
+        h.f32s(&[self.angle, self.anglechange, self.speed]);
+        h.object(self.homeflag);
+    }
     crate::impl_io_moving_object_plumbing!();
 }

@@ -79,6 +79,9 @@ impl OMO_StraightPathHazard {
 }
 
 impl CObjectTrait for OMO_StraightPathHazard {
+    fn harness_hash_object(&mut self, h: &mut crate::smw::rollback::Fnv) {
+        h.f32s(&[self.dAngle, self.dVel]);
+    }
     crate::impl_cobject_plumbing!();
 
     fn draw(&mut self, g: &mut Game) {

@@ -204,6 +204,10 @@ impl CObjectTrait for CO_Star {
 }
 
 impl IO_MovingObjectTrait for CO_Star {
+    fn harness_hash(&mut self, h: &mut crate::smw::rollback::Fnv) {
+        crate::smw::objects::moving::moving_object::mo_harness_hash(self, h);
+        h.i16s(&[self.timer, self.iType, self.iID]);
+    }
     crate::impl_io_moving_object_plumbing!();
     fn as_carried_object(&mut self) -> Option<&mut dyn MO_CarriedObjectTrait> {
         Some(self)
