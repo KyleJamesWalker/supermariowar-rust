@@ -262,6 +262,7 @@ impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
         }
 
         // stop when detecting a restart or a loop
+        let start_idx = self.m_index;
         let stop_idx = if self.m_wraps { self.m_index } else { 0 };
 
         loop {
@@ -275,6 +276,7 @@ impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
             }
         }
 
+        self.m_index = start_idx;
         false
     }
 
@@ -285,6 +287,7 @@ impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
         }
 
         // stop when detecting a restart or a loop
+        let start_idx = self.m_index;
         let stop_idx = if self.m_wraps { self.m_index } else { self.m_items.len() - 1 };
 
         loop {
@@ -298,6 +301,7 @@ impl<T: Copy + PartialEq + 'static> MI_SelectField<T> {
             }
         }
 
+        self.m_index = start_idx;
         false
     }
 
@@ -501,5 +505,38 @@ impl<T: Copy + PartialEq + 'static> UI_ControlTrait for MI_SelectField<T> {
     }
     fn mouse_click(&mut self, g: &mut Game, iMouseX: i16, iMouseY: i16) -> MenuCodeEnum {
         self.mouse_click_impl(iMouseX, iMouseY)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn field(wraps: bool) -> MI_SelectField<i16> {
+        let mut f = MI_SelectField::<i16>::new(SpriteId::NONE, 0, 0, "f", 400, 100);
+        f.m_wraps = wraps;
+        for v in 0..3 {
+            f.add(v.to_string(), v);
+        }
+        f
+    }
+
+    #[test]
+    fn move_without_wrapping_keeps_index_at_the_ends() {
+        let mut f = field(false);
+        assert!(!f.move_prev());
+        assert_eq!(f.current_value(), 0);
+        f.set_current_index(2);
+        assert!(!f.move_next());
+        assert_eq!(f.current_value(), 2);
+    }
+
+    #[test]
+    fn move_with_wrapping_wraps() {
+        let mut f = field(true);
+        assert!(f.move_prev());
+        assert_eq!(f.current_value(), 2);
+        assert!(f.move_next());
+        assert_eq!(f.current_value(), 0);
     }
 }
