@@ -285,7 +285,7 @@ impl MapReader {
 
         if self.patch_version >= 1 {
             self.read_switches(map, mapfile);
-        } else if readtype != read_type_preview {
+        } else {
             self.set_preview_switches(map, mapfile);
         }
 
