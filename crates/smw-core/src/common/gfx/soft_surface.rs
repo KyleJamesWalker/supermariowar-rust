@@ -594,9 +594,19 @@ pub fn convert_indexed(w: i32, h: i32, pitch: usize, indices: &[u8], palette: &[
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use sdl2::sys::*;
+
+    /// Runs SDL calls from parallel tests one at a time, after SDL's lazy CPU feature detection, which races.
+    pub(crate) fn sdl_lock() -> std::sync::MutexGuard<'static, ()> {
+        static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+        static INIT: std::sync::Once = std::sync::Once::new();
+        INIT.call_once(|| unsafe {
+            SDL_SIMDGetAlignment();
+        });
+        LOCK.lock().unwrap_or_else(|e| e.into_inner())
+    }
 
     /// xorshift32, so the cases are the same on every run.
     struct Rng(u32, bool);
@@ -689,6 +699,7 @@ mod tests {
 
     /// Blits random surfaces in one source state through both blitters and compares pixels and the written rect.
     fn check_blits(blend: BlendMode, keyed: bool, alpha_mod: Option<u8>, seed: u32) {
+        let _sdl = sdl_lock();
         let mut rng = Rng::new(seed);
         // Real SDL2 matches sdl2-compat only on opaque and transparent pixels for this path.
         rng.1 = !(blend == BlendMode::Blend && !keyed && alpha_mod.is_none()) || linked_sdl_is_sdl2_compat();
@@ -772,6 +783,7 @@ mod tests {
 
     #[test]
     fn scaled_blend_matches_sdl() {
+        let _sdl = sdl_lock();
         if !linked_sdl_is_sdl2_compat() {
             eprintln!("scaled blits follow sdl2-compat; skipping on real SDL2");
             return;
@@ -817,6 +829,7 @@ mod tests {
     /// ARGB8888 and XRGB8888 pairs in the states `blit_supported` accepts, against SDL.
     #[test]
     fn xrgb_layouts_match_sdl() {
+        let _sdl = sdl_lock();
         let mut rng = Rng::new(8);
         rng.1 = linked_sdl_is_sdl2_compat();
         let states = [
@@ -892,6 +905,7 @@ mod tests {
 
     #[test]
     fn fill_rect_matches_sdl() {
+        let _sdl = sdl_lock();
         let mut rng = Rng::new(5);
         for case in 0..300 {
             let (w, h) = (rng.range(1, 24), rng.range(1, 24));
@@ -916,6 +930,7 @@ mod tests {
 
     #[test]
     fn indexed_conversion_matches_sdl() {
+        let _sdl = sdl_lock();
         let mut rng = Rng::new(6);
         for case in 0..50 {
             let (w, h) = (rng.range(1, 20), rng.range(1, 20));
