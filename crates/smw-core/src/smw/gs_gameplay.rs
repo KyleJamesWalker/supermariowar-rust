@@ -2617,6 +2617,7 @@ impl GameplayState {
     /// `simulate` for rollback: a `paused` tick only draws (a v2 match's shared pause), and an `unseen` one draws
     /// nothing anyone sees (`draw_tick`).
     pub fn simulate_tick(&mut self, g: &mut Game, paused: bool, unseen: bool) -> bool {
+        let _tick = crate::smw::rollback::TickGuard::enter();
         if paused {
             self.draw_tick(g, unseen);
             return false;
