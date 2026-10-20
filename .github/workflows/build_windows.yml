@@ -36,7 +36,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Build
-        run: cargo build --release --locked --bins
+        run: cargo build --release --locked --bins --features smw/shaders
 
       - id: name
         env:
@@ -54,6 +54,7 @@ jobs:
           cp "$SDL"/lib/*.dll "$app/"
           cp -R "$SDL/licenses" "$app/"
           cp -R data "$app/data"
+          python tools/shader_bundle.py "$app/shaders"
           rm -f "$app/data/.git" "$app/data/maps/cache/mapsummary.txt"
           cp README.md CREDITS "$app/"
           ls -l "$app"

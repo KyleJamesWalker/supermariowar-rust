@@ -1082,7 +1082,7 @@ This allows you to select custom graphics packs if you have any installed on you
 
 #### Shader
 
-On desktop builds with shader support, this shows the game through a RetroArch shader preset, such as a CRT effect. Off draws the game without one. The list holds the bundled presets, then any `.slangp` presets you add under `shaders/` in the settings folder (`~/Library/Preferences/.smw/shaders/` on macOS and Linux, `%USERPROFILE%\.smw\shaders\` on Windows). A preset that fails to load switches the setting back to Off.
+On desktop builds with shader support, this shows the game through a RetroArch shader preset, such as a CRT effect. Off draws the game without one. The bundled presets are BVM Monitor, CRT Easymode, CRT Guest, CRT Lottes, CRT Royale (3x and up) and CRT Trinitron 240p. CRT Royale needs the game at three times its size or more, such as fullscreen on a 1440p screen. The list holds the bundled presets, then any `.slangp` presets you add under `shaders/` in the settings folder (`~/Library/Preferences/.smw/shaders/` on macOS and Linux, `%USERPROFILE%\.smw\shaders\` on Windows). A preset that fails to load switches the setting back to Off.
 
 #### Integer Scaling
 

@@ -1,0 +1,5 @@
+#reference "../slang-shaders/crt/crt-guest-advanced.slangp"
+inter = "800.0"
+intres = "2.0"
+shadowMask = "6.0"
+maskstr = "0.5"

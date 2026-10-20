@@ -1,0 +1,2 @@
+#reference "../slang-shaders/crt/crt-royale.slangp"
+interlace_detect_toggle = "0.0"
