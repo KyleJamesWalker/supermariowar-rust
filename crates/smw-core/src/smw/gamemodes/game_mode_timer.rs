@@ -6,8 +6,8 @@ use crate::common::eyecandy_styles::ScoreboardStyle;
 use crate::common::global_constants::TICKS_PER_SECOND;
 use crate::globals::*;
 
-#[derive(Clone, Default)]
 /// Match clock in whole seconds, with the HUD digit layout for drawing it.
+#[derive(Clone, Default)]
 pub struct GameTimerDisplay {
     /// Seconds shown on the clock; remaining time when counting down, elapsed time otherwise.
     pub timeleft: i16,

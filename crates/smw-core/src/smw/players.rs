@@ -81,8 +81,8 @@ impl Players {
         }
     }
 
-    #[allow(clippy::mut_from_ref)]
     /// Returns the player behind `id`, or `None` for `NONE` or a removed player.
+    #[allow(clippy::mut_from_ref)]
     pub fn get(&self, id: PlayerId) -> Option<&'static mut CPlayer> {
         let slot = id.slot as usize;
         if slot >= self.slots.len() || self.generations[slot] != id.generation {

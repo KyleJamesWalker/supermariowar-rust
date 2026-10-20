@@ -276,8 +276,8 @@ const iCountDownRectSize: [i16; 28] = [3, 2, 1, 0, 1, 2, 3, 3, 2, 1, 0, 1, 2, 3,
 const iCountDownRectGroup: [i16; 28] = [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3];
 const iCountDownAnnounce: [i16; 28] = [-1, -1, -1, 12, -1, -1, -1, -1, -1, -1, 13, -1, -1, -1, -1, -1, -1, 14, -1, -1, -1, -1, -1, -1, 15, -1, -1, -1];
 
-#[rustfmt::skip]
 /// Moving object types that collide: when `[a][b]` is set, the `b` object handles touching the `a` object.
+#[rustfmt::skip]
 const g_iCollisionMap: [[i16; MOVINGOBJECT_LAST as usize]; MOVINGOBJECT_LAST as usize] = [
 //   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], //movingobject_none = 0

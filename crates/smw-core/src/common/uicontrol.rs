@@ -128,8 +128,8 @@ impl Controls {
         }
     }
 
-    #[allow(clippy::mut_from_ref)]
     /// The control `id` names, or `None` if it was removed.
+    #[allow(clippy::mut_from_ref)]
     pub fn get(&self, id: ControlId) -> Option<&'static mut dyn UI_ControlTrait> {
         let slot = id.slot as usize;
         if slot >= self.slots.len() || self.generations[slot] != id.generation {

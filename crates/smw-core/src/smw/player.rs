@@ -66,10 +66,10 @@ use crate::smw::player_components::player_tanooki_suit::PlayerTanookiSuit;
 use crate::smw::player_components::player_warp_status::PlayerWarpStatus;
 use crate::smw::player_components::player_wings::PlayerWings;
 
-#[repr(u8)]
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 /// Life cycle state. Every variant after `Ready` is a warp state, and `state as i16 % 4` gives
 /// the warp's clip edge.
+#[repr(u8)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum PlayerState {
     #[default]
     Waiting,
@@ -87,9 +87,9 @@ pub enum PlayerState {
 }
 crate::enum_from_u8!(PlayerState, 12);
 
+/// Powerup action queued by input this tick and carried out by [`CPlayer::commit_action`].
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-/// Powerup action queued by input this tick and carried out by [`CPlayer::commit_action`].
 pub enum PlayerAction {
     #[default]
     None,
@@ -103,9 +103,9 @@ pub enum PlayerAction {
     SpinTail,
 }
 
+/// How a death looks: a corpse flying off screen, a squished corpse, or ice shards.
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-/// How a death looks: a corpse flying off screen, a squished corpse, or ice shards.
 pub enum PlayerDeathStyle {
     #[default]
     Jump,

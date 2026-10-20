@@ -51,8 +51,8 @@ pub struct MI_Image {
 crate::impl_base!(MI_Image => ui_control: UI_Control);
 
 impl MI_Image {
-    #[allow(clippy::too_many_arguments)]
     /// `w`, `h` is one frame; `speed` is ticks per frame, 0 for a still image.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(nspr: SpriteId, x: i16, y: i16, srcx: i16, srcy: i16, w: i16, h: i16, numxframes: i16, numyframes: i16, speed: i16) -> Self {
         MI_Image {
             ui_control: UI_Control::new(x, y),

@@ -4,8 +4,8 @@
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum TeamCollisionStyle {
-    #[default]
     /// Teammates pass through each other.
+    #[default]
     Off,
     /// Teammates bounce off each other, pass tags and swap stored powerups, but cannot kill each other.
     Assist,
@@ -32,8 +32,8 @@ pub enum TournamentControlStyle {
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum DeathStyle {
-    #[default]
     /// The victim dies and respawns.
+    #[default]
     Respawn,
     /// The kill only resets the victim's shield, and they keep playing.
     Shield,

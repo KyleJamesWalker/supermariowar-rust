@@ -21,8 +21,8 @@ pub struct MI_ImageSelectField {
 crate::impl_base!(MI_ImageSelectField => mi_select_field: MI_SelectField<i16>);
 
 impl MI_ImageSelectField {
-    #[allow(clippy::too_many_arguments)]
     /// Takes `imageHeight` before `imageWidth`.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         nspr: SpriteId,
         nspr_image: SpriteId,

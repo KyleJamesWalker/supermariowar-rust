@@ -4,8 +4,8 @@
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum PlayerKillType {
-    #[default]
     /// Nothing happened.
+    #[default]
     None,
     /// The player died and respawns.
     Normal,

@@ -14,8 +14,8 @@ const FILE: &str = "stats.txt";
 /// First line of the lifetime stats file; a file with any other header loads as empty.
 const FORMAT: &str = "smw-stats 1";
 
-#[derive(Clone, Copy, PartialEq, Debug)]
 /// One player's counters for the current match.
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct PlayerStats {
     pub kills: u16,
     pub deaths: u16,
@@ -98,8 +98,8 @@ impl PlayerStats {
     };
 }
 
-#[derive(Clone, Copy, PartialEq, Debug)]
 /// Stats for the four player slots, indexed by global player id.
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct MatchStats {
     pub players: [PlayerStats; 4],
 }

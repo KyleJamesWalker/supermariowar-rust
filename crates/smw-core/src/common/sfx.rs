@@ -365,8 +365,8 @@ impl sfxSound {
     }
 }
 
-#[derive(Clone)]
 /// A loaded music track.
+#[derive(Clone)]
 pub struct sfxMusic {
     m_music: MixMusicPtr,
     /// `Mix_MusicDuration`: seconds, negative when unknown.

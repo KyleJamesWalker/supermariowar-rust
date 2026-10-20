@@ -8,8 +8,8 @@ use crate::common::player_kill_styles::KillStyle;
 use crate::globals::*;
 use crate::smw::player::CPlayer;
 
-#[derive(Clone, Default)]
 /// Kills an unprotected player who falls at `MAXVELY` for `ticks(20) + ticks(80)` ticks.
+#[derive(Clone, Default)]
 pub struct PlayerBurnupTimer {
     /// Ticks spent burning, after the `starttimer` delay.
     pub timer: i16,

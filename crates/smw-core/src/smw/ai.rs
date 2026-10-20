@@ -126,8 +126,8 @@ impl Default for NearestObjects {
     }
 }
 
-#[derive(Clone, Copy, Default, Debug)]
 /// An object the AI treats specially for a while: `iType` 1 ignores it.
+#[derive(Clone, Copy, Default, Debug)]
 pub struct AttentionObject {
     pub iID: i32,    //Global ID of this object
     pub iType: i16,  //Ignore it, high priority, etc.
@@ -2164,8 +2164,8 @@ pub fn cplayer_ai_think(g: &mut Game, this: &mut CPlayerAI, playerKeys: Ptr<COut
 /**************************************************
  * CSimpleAI class
  ***************************************************/
-#[derive(Clone)]
 /// An AI that only jumps now and then, as high as it can.
+#[derive(Clone)]
 pub struct CSimpleAI {
     pub cplayer_ai: CPlayerAI,
 }

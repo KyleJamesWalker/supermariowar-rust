@@ -48,8 +48,8 @@ pub const JOY_BUTTON_START: i32 = 12;
 /// An unbound slot.
 pub const KEY_NONE: i32 = -1;
 
-#[derive(Clone, Copy, Default, PartialEq, Eq, Debug)]
 /// One key's state this tick.
+#[derive(Clone, Copy, Default, PartialEq, Eq, Debug)]
 pub struct CKeyState {
     /// Held down.
     pub fDown: bool,
@@ -93,15 +93,15 @@ macro_rules! all_key_aliases {
     };
 }
 
-#[derive(Clone, Copy, Default, PartialEq, Eq, Debug)]
 /// One control set's bindings: a keycode, mouse code or joystick code per slot.
+#[derive(Clone, Copy, Default, PartialEq, Eq, Debug)]
 pub struct CInputControl {
     pub keys: [Keycode; NUM_KEYS],
 }
 all_key_aliases!(CInputControl, Keycode);
 
-#[derive(Clone, Copy, Default, Debug)]
 /// A player's key states this tick.
+#[derive(Clone, Copy, Default, Debug)]
 pub struct COutputControl {
     pub keys: [CKeyState; NUM_KEYS],
 }
@@ -126,8 +126,8 @@ impl PartialEq for COutputControl {
     }
 }
 
-#[derive(Clone, Copy, Default, Debug)]
 /// A device and its bindings.
+#[derive(Clone, Copy, Default, Debug)]
 pub struct CInputPlayerControl {
     /// `DEVICE_KEYBOARD`, or the joystick's device number.
     pub iDevice: i16,

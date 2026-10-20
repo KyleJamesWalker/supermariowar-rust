@@ -1,8 +1,8 @@
 //! Option enums for cosmetic effects: kill-streak awards, scoreboard placement and player spawning.
 
+/// Effect shown when a player gets a kill streak.
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-/// Effect shown when a player gets a kill streak.
 pub enum AwardStyle {
     #[default]
     None,
@@ -13,9 +13,9 @@ pub enum AwardStyle {
     Text,
 }
 
+/// Where the in-game scoreboard is drawn.
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-/// Where the in-game scoreboard is drawn.
 pub enum ScoreboardStyle {
     #[default]
     Top,
@@ -23,9 +23,9 @@ pub enum ScoreboardStyle {
     Corners,
 }
 
+/// Animation played when a player spawns.
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-/// Animation played when a player spawns.
 pub enum SpawnStyle {
     #[default]
     Instant,

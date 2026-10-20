@@ -150,8 +150,8 @@ pub struct WorldMapTile {
 * WorldMovingObject
 **********************************/
 
-#[derive(Clone, Default)]
 /// Something that moves from tile to tile on the world map: the player's marker or a vehicle.
+#[derive(Clone, Default)]
 pub struct WorldMovingObject {
     /// Position on the map in pixels.
     pub pos: Vec2s,
@@ -301,8 +301,8 @@ impl WorldMovingObject {
 * WorldPlayer
 **********************************/
 
-#[derive(Clone, Default)]
 /// The players' marker on the world map.
+#[derive(Clone, Default)]
 pub struct WorldPlayer {
     pub world_moving_object: WorldMovingObject,
 }
@@ -348,8 +348,8 @@ impl WorldPlayer {
 * WorldVehicle
 **********************************/
 
-#[derive(Clone)]
 /// A vehicle that roams the paths after each turn and starts its stage when it meets the player.
+#[derive(Clone)]
 pub struct WorldVehicle {
     pub world_moving_object: WorldMovingObject,
 
@@ -551,8 +551,8 @@ impl WorldVehicle {
 * WorldWarp
 **********************************/
 
-#[derive(Clone, Copy, Debug)]
 /// A pair of tiles the player warps between.
+#[derive(Clone, Copy, Debug)]
 pub struct WorldWarp {
     pub id: i16,
     pub posA: Vec2s,

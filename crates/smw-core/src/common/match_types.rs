@@ -4,8 +4,8 @@
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum MatchType {
-    #[default]
     /// One game, then back to the menu.
+    #[default]
     SingleGame,
     /// A series of games until a team wins enough of them.
     Tournament,
