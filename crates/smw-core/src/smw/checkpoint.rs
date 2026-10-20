@@ -240,6 +240,21 @@ fn data_path(g: &mut Game, name: &str) -> String {
     }
 }
 
+/// Loads a sound or track a checkpoint names; one this machine lacks plays as silence.
+fn load_audio<T>(g: &mut Game, name: &str, load: fn(&mut Game, &Path) -> Result<T, String>) -> Option<T> {
+    if name.is_empty() {
+        return None;
+    }
+    let path = data_path(g, name);
+    match load(g, Path::new(&path)) {
+        Ok(audio) => Some(audio),
+        Err(e) => {
+            println!("[checkpoint] {e}; playing silence instead");
+            None
+        }
+    }
+}
+
 /// Matches a checkpoint cannot start: a World's bonus house, which no replay covers yet.
 pub fn unsupported_reason(g: &mut Game) -> Option<&'static str> {
     let mut gp = g.ptr();
@@ -490,7 +505,7 @@ fn walk(g: &mut Game, s: &mut Snap) {
             s.io(&mut paused);
             if s.load {
                 if (*t).name() != name {
-                    *t = if name.is_empty() { sfxMusic::new() } else { sfxMusic::from_file(gp.get(), Path::new(&data_path(g, &name))).unwrap_or_else(|e| std::panic::panic_any(e)) };
+                    *t = load_audio(gp.get(), &name, sfxMusic::from_file).unwrap_or_default();
                 }
                 (*t).set_paused(paused);
             }
@@ -504,7 +519,7 @@ fn walk(g: &mut Game, s: &mut Snap) {
             s.io(&mut last_start);
             if s.load {
                 if (*snd).name() != name {
-                    *snd = if name.is_empty() { sfxSound::new() } else { sfxSound::from_file(gp.get(), Path::new(&data_path(g, &name))).unwrap_or_else(|e| std::panic::panic_any(e)) };
+                    *snd = load_audio(gp.get(), &name, sfxSound::from_file).unwrap_or_default();
                 }
                 (*snd).set_state(gp.get(), channels, last_start);
             }
