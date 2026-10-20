@@ -108,13 +108,7 @@ impl CGameModeTrait for CGM_Boss_MiniGame {
             gp.score[iScore].set_score(g, self.goal);
         }
 
-        let platformY: i16 = if self.iBossType == Boss::Hammer {
-            256
-        } else if self.iBossType == Boss::Bomb {
-            256
-        } else {
-            (App::screenWidth / 2) as i16
-        };
+        let platformY: i16 = if self.iBossType == Boss::Fire { 320 } else { 256 };
         let obj = Ptr::new_box(MO_SledgeBrother::new(g, gp.get().rm.spr_sledgebrothers, platformY, self.iBossType));
         gp.get().objectcontainer[0].add(g, obj);
     }
