@@ -391,6 +391,137 @@ fn rollback_frenzy() {
     assert_eq!(rollback_mid_match("frenzy_cpu", Some(1200), 400, 7), 400);
 }
 
+/// Damaged copies of shipped maps that still load must also start a match and play a few ticks: the values a map
+/// load accepts are the ones match setup and play index with. Half the cases overwrite random bytes; the other half
+/// set random map fields (hazards, items, blocks, tile types, warps, switches, platform paths) to small or extreme
+/// values and save the map, so the damage reaches the sections after the tiles.
+#[test]
+fn damaged_maps_that_load_play() {
+    use smw::common::map::{read_type_full, CMap, MapHazard, MapItem, Warp};
+    use smw::common::math::vec2::Vec2f;
+    use smw::common::moving_platform_paths::{EllipsePath, MovingPlatformPathTrait, StraightPath, StraightPathContinuous};
+    use smw::common::tile_types::TileType;
+    use smw::smw::rollback::{advance, KeySlot, Keys};
+
+    let maps = [
+        "worlds/Sky World/smb3 5-9.map",
+        "maps/4matsy_Cloud Props.map",
+        "maps/4matsy_Splitting Headache.map",
+        "maps/MrMister_MrIslandBattle.map",
+        "maps/special/two52_special_fireboss_minigame.map",
+    ];
+    let out = std::env::temp_dir().join(format!("smw-headless-{}-map-fuzz", std::process::id()));
+    let mut failures = Vec::new();
+    let mut played = 0;
+    sandboxed(&repo().join("tools").join("replays").join("frenzy_cpu.txt"), &out, None, |argv, services| {
+        let g = smw::game::Game::create();
+        g.services = Some(services);
+        smw::globals::init_globals(g);
+        g.RootDataDirectory = argv[2].clone();
+        smw::smw::main::startup(g);
+        smw::smw::main::gameloop_start(g);
+        while smw::smw::harness::frame(g) < 1200 {
+            smw::smw::main::frame(g);
+        }
+        let path = out.join("fuzz.map");
+        let path = path.to_str().unwrap();
+        let slots = [KeySlot::Local(0), KeySlot::Local(1), KeySlot::Local(2), KeySlot::Local(3)];
+        let mut seed: u32 = 1;
+        let mut next = move || {
+            seed = seed.wrapping_mul(1_103_515_245).wrapping_add(12_345);
+            (seed >> 8) as i32
+        };
+        // Mostly small values, sometimes the extremes of the field's type.
+        let value = |next: &mut dyn FnMut() -> i32| match next() % 8 {
+            0 => i16::MIN as i32,
+            1 => i16::MAX as i32,
+            _ => next() % 48 - 2,
+        };
+        for name in maps {
+            let original = repo().join("data").join(name);
+            let original = original.to_str().unwrap();
+            for case in 0..48 {
+                let mut gp = g.ptr();
+                smw::smw::gs_gameplay::clean_up(g);
+                if case % 2 == 0 {
+                    let mut bytes = std::fs::read(original).unwrap();
+                    for _ in 0..1 + case % 8 {
+                        let at = 16 + next() as usize % (bytes.len() - 16);
+                        bytes[at] = next() as u8;
+                    }
+                    std::fs::write(path, &bytes).unwrap();
+                } else {
+                    assert!(gp.g_map.load_map(g, original, read_type_full));
+                    let m: &mut CMap = &mut gp.g_map;
+                    for _ in 0..1 + case % 4 {
+                        let (x, y) = ((next() % 20) as usize, (next() % 15) as usize);
+                        match next() % 8 {
+                            0 => {
+                                let mut h = MapHazard { itype: (next() % 8) as i16, ix: (next() % 40) as i16, iy: (next() % 30) as i16, ..MapHazard::default() };
+                                for p in h.iparam.iter_mut() {
+                                    *p = value(&mut next) as i16;
+                                }
+                                for p in h.dparam.iter_mut() {
+                                    *p = value(&mut next) as f32 / 7.0;
+                                }
+                                m.maphazards.truncate(29);
+                                m.maphazards.push(h);
+                            }
+                            1 => {
+                                m.mapitems.truncate(31);
+                                m.mapitems.push(MapItem { itype: (next() % 6) as u8, ix: x as i16, iy: y as i16 });
+                            }
+                            2 => {
+                                m.objectdata[x][y].iType = (next() % 31 - 1) as i16;
+                                m.objectdata[x][y].fHidden = next() % 2 == 0;
+                                for s in m.objectdata[x][y].iSettings.iter_mut() {
+                                    *s = (value(&mut next) as i8) as i16;
+                                }
+                            }
+                            3 => m.mapdatatop[x][y] = TileType::from_i32(next() % 24),
+                            4 => m.warpdata[x][y] = Warp { direction: next() % 5 - 1, connection: (next() % 10) as i16, id: 0 },
+                            5 => m.iSwitches[(next() % 4) as usize] = value(&mut next) as i16,
+                            6 if !m.platforms.is_empty() => {
+                                let mut f = || value(&mut next) as f32 * 7.0;
+                                let (a, b, c, d, e) = (f(), f(), f(), f(), f() / 49.0);
+                                let path: Box<dyn MovingPlatformPathTrait> = match next() % 3 {
+                                    0 => Box::new(StraightPath::new(e, Vec2f::new(a, b), Vec2f::new(c, d), false)),
+                                    1 => Box::new(StraightPathContinuous::new(e, Vec2f::new(a, b), c / 49.0, false)),
+                                    _ => Box::new(EllipsePath::new(e / 7.0, c / 49.0, Vec2f::new(a, b), Vec2f::new(c, d), false)),
+                                };
+                                let platform = m.platforms[next() as usize % m.platforms.len()];
+                                m.platform(platform).pPath = path;
+                                m.platform(platform).iDrawLayer = (next() % 5) as i16;
+                            }
+                            _ => m.nospawn[(next() % 6) as usize][x][y] = next() % 2 == 0,
+                        }
+                    }
+                    gp.g_map.save_map(g, path);
+                }
+                if !gp.g_map.load_map(g, path, read_type_full) {
+                    continue;
+                }
+                let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    smw::smw::gs_menu::enter_gameplay_tail(g);
+                    for tick in 0..30u16 {
+                        let keys: Vec<(KeySlot, Keys)> = slots.iter().map(|&s| (s, Keys(tick.wrapping_mul(0x9e37)))).collect();
+                        advance(g, &keys, true);
+                    }
+                }));
+                played += 1;
+                if let Err(e) = result {
+                    let msg = e.downcast_ref::<String>().cloned().or_else(|| e.downcast_ref::<&str>().map(|s| s.to_string())).unwrap_or_default();
+                    failures.push(format!("{name} case {case}: {msg}"));
+                }
+            }
+        }
+        smw::smw::main::shutdown(g);
+    });
+    let _ = std::fs::remove_dir_all(&out);
+    assert!(played > 100, "only {played} damaged maps loaded");
+    assert!(failures.is_empty(), "{} of {played} damaged maps failed to play:\n{}", failures.len(), failures.join("\n"));
+}
+
 /// Every replay's first match under rollback; `SMW_ROLLBACK_SWEEP=<substring>` picks replays. Run with --ignored.
 #[test]
 #[ignore]
