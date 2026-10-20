@@ -24,7 +24,9 @@ pub unsafe fn upper_blit(src: *mut Surface, src_rect: *const Rect, dst: *mut Sur
     }
     let sr = src_rect.as_ref().copied();
     let mut dr = dst_rect.as_ref().copied();
-    crate::common::gfx::display_list::before_write(dst);
+    let (w, h) = sr.map_or(((*src).w, (*src).h), |r| (r.w, r.h));
+    let area = dr.map_or(Rect::new(0, 0, w, h), |r| Rect::new(r.x, r.y, w, h));
+    crate::common::gfx::display_list::before_write(dst, area);
     crate::common::gfx::display_list::record_blit(src, sr, dst, dr, false);
     if crate::common::gfx::display_list::record_only(dst) {
         soft_surface::clip_blit(&(*src).view(), sr.as_ref(), &mut (*dst).view_mut(), dr.as_mut());
@@ -53,7 +55,7 @@ pub unsafe fn fill_rect(dst: *mut Surface, rect: *const Rect, color: u32) -> i32
     if dst.is_null() {
         return -1;
     }
-    crate::common::gfx::display_list::before_write(dst);
+    crate::common::gfx::display_list::before_write(dst, rect.as_ref().copied().unwrap_or((*dst).clip));
     crate::common::gfx::display_list::record_fill(dst, rect.as_ref().copied(), color);
     if !crate::common::gfx::display_list::record_only(dst) {
         (*dst).fill_rect(rect.as_ref(), color);
@@ -74,7 +76,7 @@ pub unsafe fn upper_blit_scaled(src: *mut Surface, src_rect: *const Rect, dst: *
     }
     let sr = src_rect.as_ref().copied();
     let mut dr = dst_rect.as_ref().copied();
-    crate::common::gfx::display_list::before_write(dst);
+    crate::common::gfx::display_list::before_write(dst, dr.unwrap_or(Rect::new(0, 0, (*dst).w, (*dst).h)));
     crate::common::gfx::display_list::record_blit(src, sr, dst, dr, true);
     if crate::common::gfx::display_list::record_only(dst) {
         return 0;
