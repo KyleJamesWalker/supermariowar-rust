@@ -109,7 +109,7 @@ impl UI_MainMenu {
         this.set_initial_focus(g, start);
         // A browser tab cannot be closed from the page, so Escape on the web main menu does nothing.
         #[cfg(not(target_os = "emscripten"))]
-        this.set_cancel_code(MENU_CODE_EXIT_APPLICATION);
+        this.set_cancel_code(MENU_CODE_ASK_QUIT);
 
         let (title, version, build) = (this.miSMWTitle.id(), this.miSMWVersion.id(), this.miBuildVersion.id());
         this.add_non_control(title);
