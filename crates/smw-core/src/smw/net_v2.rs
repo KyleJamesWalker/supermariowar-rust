@@ -9,7 +9,7 @@ use crate::smw::player::PlayerKeys;
 use crate::smw::network::net_record;
 use crate::smw::rollback::{self, GgrsConfig, KeySlot, Keys, MatchState, Req};
 use ggrs::{GgrsError, GgrsEvent, P2PSession, PlayerType, SessionBuilder, SessionState};
-use smw_peer::{PeerId, PeerSocket, RELIABLE};
+use smw_peer::{PeerId, PeerSocket, PeerState, RELIABLE};
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
 
@@ -617,7 +617,18 @@ impl V2Match {
     /// The handshake: slots from everyone, the match start to the joiners, READY back to the host, then the host's GO.
     /// Every message repeats until GO, since a peer may still be connecting or not yet reading. False ends it.
     fn start_step(&mut self, g: &mut Game) -> bool {
-        self.socket.update_peers();
+        let dropped = self.socket.update_peers().into_iter().find(|&(_, state)| state == PeerState::Disconnected);
+        if let Some((peer, _)) = dropped {
+            println!("[net] v2: peer {:08x} disconnected during the start", peer.0 >> 96);
+            let missing = self.missing_players();
+            let name = match self.slots.get(&peer) {
+                Some(&slot) => player_name(&self.names, slot),
+                None if !missing.is_empty() => missing.join(", "),
+                None => "A player".to_string(),
+            };
+            notify(&mut self.rec, &mut self.notice, format!("{name} could not connect"));
+            return false;
+        }
         if let Err(e) = self.receive_reliable(g) {
             notify(&mut self.rec, &mut self.notice, e);
             return false;
