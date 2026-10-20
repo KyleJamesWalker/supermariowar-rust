@@ -49,7 +49,11 @@ unsafe fn open_exact() {
     }
     eprintln!("[sfx] no usable audio device ({}); continuing silently", mix_error());
     sdl2::sys::SDL_QuitSubSystem(sdl2::sys::SDL_INIT_AUDIO);
-    std::env::set_var("SDL_AUDIODRIVER", "dummy");
+    sdl2::sys::SDL_SetHintWithPriority(
+        sdl2::sys::SDL_HINT_AUDIODRIVER.as_ptr().cast(),
+        c"dummy".as_ptr(),
+        sdl2::sys::SDL_HintPriority::SDL_HINT_OVERRIDE,
+    );
     sdl2::sys::SDL_InitSubSystem(sdl2::sys::SDL_INIT_AUDIO);
     Mix_OpenAudio(44100, AUDIO_S16 as u16, 2, 2048);
 }
