@@ -112,7 +112,7 @@ impl CGameModeTrait for CGM_Collection {
         if self.timer >= g.game_values.gamemodesettings.collection.rate {
             self.timer = 0;
 
-            let mut iPowerupQuantity: i16 = g.game_values.gamemodemenusettings.collection.quantity;
+            let mut iPowerupQuantity: i16 = g.game_values.gamemodesettings.collection.quantity;
 
             if 5 < iPowerupQuantity {
                 iPowerupQuantity = g.players.len().wrapping_add(iPowerupQuantity as usize).wrapping_sub(7) as i16;
@@ -132,7 +132,7 @@ impl CGameModeTrait for CGM_Collection {
         for iScore in 0..g.score_cnt as usize {
             if g.score[iScore].subscore[0] >= 3 {
                 g.score[iScore].subscore[2] += 1;
-                if g.score[iScore].subscore[2] >= g.game_values.gamemodemenusettings.collection.banktime {
+                if g.score[iScore].subscore[2] >= g.game_values.gamemodesettings.collection.banktime {
                     let mut iPoints: i16 = 1;
 
                     if (g.score[iScore].subscore[1] & 63) == 0 {
