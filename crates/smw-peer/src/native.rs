@@ -5,7 +5,7 @@ use bytes::Bytes;
 use futures_util::{SinkExt, StreamExt};
 use serde_json::{json, Value};
 use std::collections::{HashMap, VecDeque};
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
@@ -214,7 +214,15 @@ enum Signal {
     IceCandidate(String),
 }
 
+/// A peer to drop: any connection to it, or only the connection with this serial, which a late callback from an
+/// earlier connection to the same peer must not close.
+type Gone = (PeerId, Option<u64>);
+
+/// Numbers every connection made.
+static NEXT_SERIAL: AtomicU64 = AtomicU64::new(0);
+
 struct Peer {
+    serial: u64,
     connection: Arc<RTCPeerConnection>,
     channels: Vec<Arc<RTCDataChannel>>,
     signals: UnboundedSender<Signal>,
@@ -228,7 +236,7 @@ struct Context {
     ice: RTCConfiguration,
     shared: SharedRef,
     outgoing: UnboundedSender<String>,
-    gone: UnboundedSender<PeerId>,
+    gone: UnboundedSender<Gone>,
 }
 
 impl Context {
@@ -278,7 +286,7 @@ async fn run(
     };
     let (mut ws_tx, mut ws_rx) = stream.split();
     let (outgoing, mut outgoing_rx) = unbounded_channel::<String>();
-    let (gone, mut gone_rx) = unbounded_channel::<PeerId>();
+    let (gone, mut gone_rx) = unbounded_channel::<Gone>();
     let context = Context {
         ice: rtc_configuration(&ice),
         shared: shared.clone(),
@@ -314,7 +322,7 @@ async fn run(
             _ = keep_alive.tick(), if signaling_open => {
                 let _ = ws_tx.send(Message::Text("\"KeepAlive\"".into())).await;
             }
-            Some(peer) = gone_rx.recv() => drop_peer(&shared, &mut peers, peer).await,
+            Some((peer, serial)) = gone_rx.recv() => drop_peer(&shared, &mut peers, peer, serial).await,
             command = commands.recv() => match command {
                 Some(Command::Send(channel, peer, data)) => {
                     let open = peers.get(&peer).filter(|p| p.connected.load(Ordering::Acquire));
@@ -337,7 +345,7 @@ async fn run(
                 }
                 Some(Command::Close) | None => {
                     for peer in peers.keys().copied().collect::<Vec<_>>() {
-                        drop_peer(&shared, &mut peers, peer).await;
+                        drop_peer(&shared, &mut peers, peer, None).await;
                     }
                     let _ = ws_tx.close().await;
                     return;
@@ -364,7 +372,7 @@ async fn on_event(
             None => lock(&context.shared).changes.push((id, PeerState::Disconnected)),
         }
     } else if let Some(id) = event.get("PeerLeft").and_then(parse_uuid) {
-        let _ = context.gone.send(id);
+        let _ = context.gone.send((id, None));
     } else if let Some(signal) = event.get("Signal") {
         let (Some(sender), Some(data)) = (
             signal.get("sender").and_then(parse_uuid),
@@ -398,6 +406,7 @@ async fn on_event(
 /// A connection to `id` with negotiated channels 0 and 1. The peer already in the room is the `offerer`.
 async fn new_peer(api: &API, context: &Context, id: PeerId, offerer: bool) -> Option<Peer> {
     let connection = Arc::new(api.new_peer_connection(context.ice.clone()).await.ok()?);
+    let serial = NEXT_SERIAL.fetch_add(1, Ordering::Relaxed);
     let connected = Arc::new(AtomicBool::new(false));
     let opened = Arc::new(AtomicUsize::new(0));
     let mut channels = Vec::new();
@@ -426,13 +435,13 @@ async fn new_peer(api: &API, context: &Context, id: PeerId, offerer: bool) -> Op
         channel.on_message(Box::new(move |message| {
             if !lock(&shared).deliver(index, id, message.data.to_vec()) {
                 eprintln!("[net] peer {:032x} overflowed the reliable inbox; dropping it", id.0);
-                let _ = gone.send(id);
+                let _ = gone.send((id, Some(serial)));
             }
             Box::pin(async {})
         }));
         let gone = context.gone.clone();
         channel.on_close(Box::new(move || {
-            let _ = gone.send(id);
+            let _ = gone.send((id, Some(serial)));
             Box::pin(async {})
         }));
         channels.push(channel);
@@ -443,7 +452,7 @@ async fn new_peer(api: &API, context: &Context, id: PeerId, offerer: bool) -> Op
             state,
             RTCPeerConnectionState::Failed | RTCPeerConnectionState::Closed
         ) {
-            let _ = gone.send(id);
+            let _ = gone.send((id, Some(serial)));
         }
         Box::pin(async {})
     }));
@@ -472,12 +481,14 @@ async fn new_peer(api: &API, context: &Context, id: PeerId, offerer: bool) -> Op
         connection: connection.clone(),
         context: context.clone(),
         id,
+        serial,
         offerer,
         remote_set,
         pending,
     };
     tokio::spawn(handshake.run(signals_rx));
     Some(Peer {
+        serial,
         connection,
         channels,
         signals,
@@ -490,6 +501,7 @@ struct Handshake {
     connection: Arc<RTCPeerConnection>,
     context: Context,
     id: PeerId,
+    serial: u64,
     offerer: bool,
     remote_set: Arc<AtomicBool>,
     pending: Arc<Mutex<Vec<String>>>,
@@ -499,7 +511,7 @@ impl Handshake {
     async fn run(self, mut signals: UnboundedReceiver<Signal>) {
         if let Err(e) = self.exchange(&mut signals).await {
             eprintln!("[net] handshake with {:032x}: {e}", self.id.0);
-            let _ = self.context.gone.send(self.id);
+            let _ = self.context.gone.send((self.id, Some(self.serial)));
         }
     }
 
@@ -547,8 +559,12 @@ impl Handshake {
     }
 }
 
-/// Closes the connection to `id` and reports `Disconnected`, also for a handshake that never connected.
-async fn drop_peer(shared: &SharedRef, peers: &mut HashMap<PeerId, Peer>, id: PeerId) {
+/// Closes the connection to `id`, or only connection `serial` when given, and reports `Disconnected`, also for a
+/// handshake that never connected.
+async fn drop_peer(shared: &SharedRef, peers: &mut HashMap<PeerId, Peer>, id: PeerId, serial: Option<u64>) {
+    if serial.is_some_and(|s| peers.get(&id).is_some_and(|p| p.serial != s)) {
+        return;
+    }
     let Some(peer) = peers.remove(&id) else {
         return;
     };
@@ -559,6 +575,29 @@ async fn drop_peer(shared: &SharedRef, peers: &mut HashMap<PeerId, Peer>, id: Pe
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_late_report_from_an_earlier_connection_keeps_the_current_one() {
+        let runtime = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+        runtime.block_on(async {
+            let shared = SharedRef::default();
+            let (outgoing, _outgoing_rx) = unbounded_channel();
+            let (gone, _gone_rx) = unbounded_channel();
+            let ice = rtc_configuration(&IceConfig { servers: Vec::new(), relay_only: false });
+            let context = Context { ice, shared: shared.clone(), outgoing, gone };
+            let api = APIBuilder::new().build();
+            let id = PeerId(9);
+            let earlier = new_peer(&api, &context, id, false).await.unwrap();
+            let current = new_peer(&api, &context, id, false).await.unwrap();
+            let (earlier, current_serial) = (earlier.serial, current.serial);
+            let mut peers = HashMap::from([(id, current)]);
+
+            drop_peer(&shared, &mut peers, id, Some(earlier)).await;
+            assert!(peers.contains_key(&id));
+            drop_peer(&shared, &mut peers, id, Some(current_serial)).await;
+            assert!(peers.is_empty());
+        });
+    }
 
     #[test]
     fn a_poisoned_lock_still_serves_the_game_thread() {
@@ -619,12 +658,13 @@ mod tests {
             let api = APIBuilder::new().build();
             let id = PeerId(9);
             let peer = new_peer(&api, &context, id, true).await.unwrap();
+            let serial = peer.serial;
             peer.signals.send(Signal::Answer("not an SDP answer".into())).unwrap();
             let mut peers = HashMap::from([(id, peer)]);
 
             let failed = tokio::time::timeout(Duration::from_secs(10), gone_rx.recv()).await;
-            assert_eq!(failed.unwrap(), Some(id));
-            drop_peer(&shared, &mut peers, id).await;
+            assert_eq!(failed.unwrap(), Some((id, Some(serial))));
+            drop_peer(&shared, &mut peers, id, None).await;
             assert_eq!(std::mem::take(&mut lock(&shared).changes), vec![(id, PeerState::Disconnected)]);
         });
     }

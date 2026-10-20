@@ -12,8 +12,10 @@ fn headless_keys_match_sdl() {
         assert!(TABLE.lines().any(|l| l == line), "regenerate crates/smw-headless/src/sdl2_keys.txt: {:?}", line);
     }
 
-    std::env::set_var("SDL_VIDEODRIVER", "dummy");
+    // SAFETY: the hint name and value are static C strings.
+    unsafe { sdl2::sys::SDL_SetHintWithPriority(sdl2::sys::SDL_HINT_VIDEODRIVER.as_ptr().cast(), c"dummy".as_ptr(), sdl2::sys::SDL_HintPriority::SDL_HINT_OVERRIDE) };
     assert_eq!(unsafe { sdl2::sys::SDL_InitSubSystem(sdl2::sys::SDL_INIT_VIDEO) }, 0);
+    assert_eq!(unsafe { std::ffi::CStr::from_ptr(sdl2::sys::SDL_GetCurrentVideoDriver()) }, c"dummy");
     let (sdl, headless) = (smw_sdl2::events::Sdl2Keyboard, smw_headless::HeadlessKeyboard::new());
 
     let mut names: Vec<String> = vec![String::new(), "Nonsense".into(), "é".into(), "éa".into()];

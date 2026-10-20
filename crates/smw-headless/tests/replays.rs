@@ -187,6 +187,11 @@ fn start_classic() {
 }
 
 #[test]
+fn display_list_patches() {
+    check("display_list_patches");
+}
+
+#[test]
 fn joy_menu() {
     check("joy_menu");
 }
