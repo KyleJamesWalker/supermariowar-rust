@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/powerup/PU_FeatherPowerup.cpp
+//! Feather powerup: rises from the block, then drifts down swinging side to side; gives the cape power.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
@@ -20,14 +20,19 @@ use std::ops::{Deref, DerefMut};
 //------------------------------------------------------------------------------
 // class feather powerup
 //------------------------------------------------------------------------------
+/// Feather that ignores the map: `state` 0 rises out of the block, 1 rises 128 pixels more, 2 floats down.
 #[derive(Clone)]
 pub struct PU_FeatherPowerup {
     pub io_moving_object: IO_MovingObject,
 
+    /// Swing direction while floating; also picks the sprite frame.
     pub fFloatDirectionRight: bool,
+    /// Angle (radians) on the swing arc, kept between a quarter and three quarters of pi.
     pub dFloatAngle: f32,
+    /// Pivot of the swing arc (pixels); the feather hangs 64 pixels from it.
     pub dFloatCenterX: f32,
     pub dFloatCenterY: f32,
+    /// Y (pixels) where the rise out of the block ends.
     pub desty: f32,
 }
 impl_base!(PU_FeatherPowerup => io_moving_object: IO_MovingObject);
@@ -54,6 +59,7 @@ impl PU_FeatherPowerup {
         o
     }
 
+    /// Skips the block rise and starts the second rise from tile row top `y` (pixels).
     pub fn nospawn(&mut self, y: i16) {
         self.state = 1;
         self.desty = y as f32;
@@ -75,6 +81,7 @@ pub fn pu_feather_powerup_draw<T: PU_FeatherPowerupTrait + ?Sized>(g: &mut Game,
     }
 }
 
+/// Advances the rise or the swinging fall; removes the feather once it falls off the bottom of the screen.
 pub fn pu_feather_powerup_update<T: PU_FeatherPowerupTrait + ?Sized>(this: &mut T) {
     let o = this.fp_mut();
     // Have the powerup grow out of the powerup block
@@ -127,6 +134,7 @@ pub fn pu_feather_powerup_update<T: PU_FeatherPowerupTrait + ?Sized>(this: &mut 
     }
 }
 
+/// Gives the cape power once the feather is out of the block.
 pub fn pu_feather_powerup_collide_player<T: PU_FeatherPowerupTrait + ?Sized>(g: &mut Game, this: &mut T, player: PlayerId) -> bool {
     let mut player = player;
     let o = this.fp_mut();

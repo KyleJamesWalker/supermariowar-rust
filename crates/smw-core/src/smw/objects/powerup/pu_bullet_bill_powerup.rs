@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/powerup/PU_BulletBillPowerup.cpp
+//! Bullet Bill powerup: goes into the player's stored-powerup slot.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;

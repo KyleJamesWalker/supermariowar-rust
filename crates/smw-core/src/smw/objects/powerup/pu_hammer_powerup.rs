@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/powerup/PU_HammerPowerup.cpp
+//! Hammer powerup: gives the player the hammer-throwing power.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;

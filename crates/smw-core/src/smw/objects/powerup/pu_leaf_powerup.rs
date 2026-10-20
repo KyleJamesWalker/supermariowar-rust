@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/powerup/PU_LeafPowerup.cpp
+//! Super leaf: floats like a feather and gives the leaf power.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;

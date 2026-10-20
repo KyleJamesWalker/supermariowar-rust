@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/powerup/PU_MysteryMushroomPowerup.cpp
+//! Mystery mushroom: swaps the collector's position with another player.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;

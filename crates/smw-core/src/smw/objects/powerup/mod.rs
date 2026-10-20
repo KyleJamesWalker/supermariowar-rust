@@ -1,3 +1,5 @@
+//! Item objects a player collects by touching them, most spawned from powerup blocks.
+
 pub mod powerup;
 pub mod pu_bobomb_powerup;
 pub mod pu_bomb_powerup;

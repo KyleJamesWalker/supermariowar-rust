@@ -1,4 +1,4 @@
-//! Port of src/smw/objects/powerup/PU_PoisonPowerup.cpp
+//! Poison mushroom: kills the player who touches it unless invincible or shielded.
 
 use crate::smw::players::PlayerId;
 use crate::common::resource_manager::SpriteId;
