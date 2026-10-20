@@ -900,10 +900,15 @@ impl WorldMusicPack {
             }
         }
 
+        if !this.m_category_song.contains_key(&WorldMusicCategory::Grass) {
+            println!("Error: No Grass song in: {}", file_path.display());
+            return None;
+        }
+
         Some(this)
     }
 
-    /// The world's override song, else the category's, else Grass's; panics if the pack has no Grass song.
+    /// The world's override song, else the category's, else Grass's; `load` rejects a pack without Grass.
     pub fn music(&self, category: WorldMusicCategory, worldName: &str) -> &PathBuf {
         if let Some(p) = self.m_world_overrides.get(worldName) {
             return p;
