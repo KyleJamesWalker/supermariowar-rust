@@ -276,7 +276,9 @@ impl LeaveRoom {
     }
 }
 
-/// `NET_NOTICE_ROOM_CHANGE`: the room as the receiving player, in slot `remotePlayerNumber`, sees it.
+/// `NET_NOTICE_ROOM_CHANGE`: the room as the receiving client sees it. Its first local player is in slot
+/// `remotePlayerNumber`; `localPlayer` gives each slot's local player index on this client, 0xFF for another client's.
+/// `team` gives each taken slot's team, 0 to 3.
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct CurrentRoom {
@@ -290,6 +292,8 @@ pub struct CurrentRoom {
     pub gamemodeID: u8,
     pub _pad1: u8,
     pub gamemodeGoal: u16,
+    pub localPlayer: [u8; 4],
+    pub team: [u8; 4],
     pub _pad2: u16,
 }
 
@@ -306,8 +310,45 @@ impl CurrentRoom {
             gamemodeID: 0,
             _pad1: 0,
             gamemodeGoal: 10,
+            localPlayer: [0xFF; 4],
+            team: [0, 1, 2, 3],
             _pad2: 0,
         }
+    }
+}
+
+/// `NET_REQUEST_LOCAL_PLAYERS`: the client's player count and the names of its players after the first, who plays
+/// under the client's lobby name. An empty name gets the lobby name with the player's number.
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct LocalPlayers {
+    pub header: MessageHeader,
+    pub count: u8,
+    pub names: [[u8; NET_MAX_PLAYER_NAME_LENGTH]; NET_MAX_LOCAL_PLAYERS],
+}
+
+impl LocalPlayers {
+    pub fn with(count: u8, names: &[String]) -> Self {
+        let mut s = LocalPlayers { header: MessageHeader::new(NET_REQUEST_LOCAL_PLAYERS), count, names: [[0; NET_MAX_PLAYER_NAME_LENGTH]; NET_MAX_LOCAL_PLAYERS] };
+        for (field, name) in s.names.iter_mut().zip(names) {
+            strncpy_terminated(field, name, NET_MAX_PLAYER_NAME_LENGTH - 1);
+        }
+        s
+    }
+}
+
+/// `NET_REQUEST_TEAM`: puts this client's local player `local` on `team`, 0 to 3.
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct TeamChange {
+    pub header: MessageHeader,
+    pub local: u8,
+    pub team: u8,
+}
+
+impl TeamChange {
+    pub fn with(local: u8, team: u8) -> Self {
+        TeamChange { header: MessageHeader::new(NET_REQUEST_TEAM), local, team }
     }
 }
 
@@ -402,6 +443,8 @@ crate::net_package!(
     JoinRoom,
     LeaveRoom,
     CurrentRoom,
+    LocalPlayers,
+    TeamChange,
     RoomChatMsg,
     StartRoom
 );
@@ -448,10 +491,14 @@ mod tests {
                 offset_of!(CurrentRoom, hostPlayerNumber),
                 offset_of!(CurrentRoom, remotePlayerNumber),
                 offset_of!(CurrentRoom, gamemodeID),
-                offset_of!(CurrentRoom, gamemodeGoal)
+                offset_of!(CurrentRoom, gamemodeGoal),
+                offset_of!(CurrentRoom, localPlayer),
+                offset_of!(CurrentRoom, team)
             ),
-            (112, 4, 8, 40, 104, 105, 106, 108)
+            (120, 4, 8, 40, 104, 105, 106, 108, 110, 114)
         );
+        assert_eq!((size_of::<TeamChange>(), offset_of!(TeamChange, local), offset_of!(TeamChange, team)), (5, 3, 4));
+        assert_eq!((size_of::<LocalPlayers>(), offset_of!(LocalPlayers, count), offset_of!(LocalPlayers, names)), (52, 3, 4));
         assert_eq!((size_of::<RoomChatMsg>(), offset_of!(RoomChatMsg, senderNum), offset_of!(RoomChatMsg, message)), (104, 3, 4));
         assert_eq!(size_of::<StartRoom>(), 3);
     }
