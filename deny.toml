@@ -8,6 +8,7 @@ ignore = [
     { id = "RUSTSEC-2024-0384", reason = "instant: ggrs 0.13 depends on it" },
     { id = "RUSTSEC-2025-0141", reason = "bincode 1: ggrs 0.13 depends on it" },
     { id = "RUSTSEC-2026-0249", reason = "smartstring: librashader 0.12 depends on it" },
+    { id = "RUSTSEC-2026-0381", reason = "webpki-roots 0.26.11: tokio-tungstenite 0.30 depends on it, and it re-exports webpki-roots 1.x, fixed in 1.0.10" },
 ]
 
 [licenses]

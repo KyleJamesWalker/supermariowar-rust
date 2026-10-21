@@ -69,6 +69,8 @@ pub struct Room {
     pub name: String,
     /// By slot; `(empty)` marks a free slot.
     pub playerNames: [String; 4],
+    /// Each taken slot's team, 0 to 3.
+    pub teams: [u8; 4],
     pub hostPlayerNumber: u8,
     pub gamemodeID: u8,
     pub gamemodeGoal: u16,
@@ -80,6 +82,7 @@ impl Room {
             roomID: 0,
             name: String::new(),
             playerNames: std::array::from_fn(|_| "(empty)".to_string()),
+            teams: [0, 1, 2, 3],
             hostPlayerNumber: 0,
             gamemodeID: 0,
             gamemodeGoal: 0,
@@ -88,6 +91,24 @@ impl Room {
 
     pub fn player_count(&self) -> u8 {
         self.playerNames.iter().filter(|n| *n != "(empty)").count() as u8
+    }
+
+    pub fn taken(&self, slot: usize) -> bool {
+        self.playerNames[slot] != "(empty)"
+    }
+
+    /// The next team from `slot`'s in direction `step`, skipping a team that would then hold every player, as the main
+    /// menu's team select does.
+    pub fn next_team(&self, slot: usize, step: i16) -> u8 {
+        let players = self.player_count() as usize;
+        let mut team = self.teams[slot] as i16;
+        loop {
+            team = (team + step).rem_euclid(4);
+            let others = (0..4).filter(|&p| p != slot && self.taken(p) && self.teams[p] as i16 == team).count();
+            if players <= 1 || others + 1 < players {
+                return team as u8;
+            }
+        }
     }
 }
 
@@ -762,6 +783,9 @@ impl NetClient {
         g.netplay.currentRoom.playerNames[1] = "(empty)".to_string();
         g.netplay.currentRoom.playerNames[2] = "(empty)".to_string();
         g.netplay.currentRoom.playerNames[3] = "(empty)".to_string();
+        g.netplay.currentRoom.teams = [0, 1, 2, 3];
+        g.netplay.localSlots = vec![0];
+        g.netplay.localPlayers = 1;
 
         g.netplay.currentMenuChanged = true;
         g.netplay.joinSuccessful = true;
@@ -813,13 +837,29 @@ impl NetClient {
         );
 
         let msg = pkgs::JoinRoom::with(entry.roomID, password);
+        g.netplay.localSlots = vec![0];
         self.send_message_to_lobby_server(g, msg.as_bytes());
         g.netplay.operationInProgress = true;
         self.start_deadline(REQUEST_DEADLINE_FRAMES, LobbyError::RequestTimeout);
     }
 
+    /// Asks the lobby for `localPlayers` local players; the room update that answers sets the count the room allows.
+    pub fn send_local_players(&mut self, g: &mut Game) {
+        let pkg = pkgs::LocalPlayers::with(g.netplay.localPlayers as u8, &[]);
+        self.send_message_to_lobby_server(g, pkg.as_bytes());
+    }
+
+    /// Asks the lobby to move local player `local` one team in direction `step`.
+    pub fn send_team_step(&mut self, g: &mut Game, local: usize, step: i16) {
+        let Some(&slot) = g.netplay.localSlots.get(local) else { return };
+        let team = g.netplay.currentRoom.next_team(slot as usize, step);
+        let pkg = pkgs::TeamChange::with(local as u8, team);
+        self.send_message_to_lobby_server(g, pkg.as_bytes());
+    }
+
     pub fn send_leave_room_message(&mut self, g: &mut Game) {
         g.netplay.chat.clear();
+        g.netplay.localSlots.truncate(1);
 
         let msg = pkgs::LeaveRoom::new();
         self.send_message_to_lobby_server(g, msg.as_bytes());
@@ -834,17 +874,19 @@ impl NetClient {
 
         g.netplay.currentRoom.roomID = pkg.roomID;
         g.netplay.currentRoom.name = cstr_field(&pkg.name);
+        g.netplay.currentRoom.teams = pkg.team;
 
         println!("Room {} ({}) changed:", pkg.roomID, cstr_field(&pkg.name));
         for p in 0..4u8 {
             g.netplay.currentRoom.playerNames[p as usize] = cstr_field(&pkg.playerName[p as usize]);
             print!("  player {}: {}", p + 1, g.netplay.currentRoom.playerNames[p as usize]);
-            if p == pkg.remotePlayerNumber {
-                print!(" (me)");
+            if pkg.localPlayer[p as usize] != 0xFF {
+                print!(" (local {})", pkg.localPlayer[p as usize] + 1);
             }
             if p == pkg.hostPlayerNumber {
                 print!(" (HOST)");
             }
+            print!(" team {}", pkg.team[p as usize] + 1);
             println!();
 
             if g.netplay.currentRoom.playerNames[p as usize] == "(empty)" {
@@ -869,6 +911,15 @@ impl NetClient {
         g.netplay.remotePlayerNumber = pkg.remotePlayerNumber;
         g.netplay.hostPlayerNumber = pkg.hostPlayerNumber;
         g.netplay.theHostIsMe = g.netplay.remotePlayerNumber == pkg.hostPlayerNumber;
+
+        let slots = local_slots(&pkg);
+        let seated: Vec<usize> = (0..slots.len()).filter(|&local| g.netplay.localSlots.get(local) != Some(&slots[local])).collect();
+        g.netplay.localSlots = slots;
+        g.netplay.localPlayers = g.netplay.localSlots.len() as i16;
+        // A local player in a new slot sends that slot's skin, which the room shows and the match plays.
+        for local in seated {
+            self.send_skin_change(g, local);
+        }
 
         g.netplay.currentMenuChanged = true;
     }
@@ -946,9 +997,11 @@ impl NetClient {
         }
     }
 
-    /// Sends this player's skin, compressed; the lobby fills in the slot byte (0xFF here) before relaying it.
-    pub fn send_skin_change(&mut self, g: &mut Game) {
-        let skinpath = g.skinlist.at(g.game_values.skinids[g.netplay.remotePlayerNumber as usize] as usize).path.to_string_lossy().into_owned();
+    /// Sends the skin of local player `local`, compressed; byte 3 carries `local`, which the lobby replaces with the
+    /// player's slot before relaying it.
+    pub fn send_skin_change(&mut self, g: &mut Game, local: usize) {
+        let Some(&slot) = g.netplay.localSlots.get(local) else { return };
+        let skinpath = g.skinlist.at(g.game_values.skinids[slot as usize] as usize).path.to_string_lossy().into_owned();
         println!("[net] Sending skin: {}", skinpath);
 
         let mut compressed = FileCompressor::compress(&skinpath, std::mem::size_of::<MessageHeader>() + 1);
@@ -961,7 +1014,7 @@ impl NetClient {
 
         let header = MessageHeader::new(NET_NOTICE_SKIN_CHANGE);
         compressed.data[..3].copy_from_slice(header.as_bytes());
-        compressed.data[3] = 0xFF;
+        compressed.data[3] = local as u8;
 
         self.send_message_to_lobby_server(g, &compressed.data);
     }
@@ -974,7 +1027,7 @@ impl NetClient {
         }
 
         let playerID = data[3] as i32;
-        if playerID > 3 {
+        if playerID > 3 || g.netplay.is_local_slot(playerID as usize) {
             println!("[error] Corrupt skin arrived: bad player id");
             return;
         }
@@ -990,9 +1043,10 @@ impl NetClient {
         }
 
         gp.rm.forget_menu_skin(playerID as i16);
-        if !gp.rm.load_menu_skin_path(g, playerID as i16, Path::new(&path), playerID as i16, false) {
+        let color = room_skin_color(g, playerID as usize);
+        if !gp.rm.load_menu_skin_path(g, playerID as i16, Path::new(&path), color, false) {
             println!("[warning] Could not load netplay skin of player {}, using default", playerID);
-            gp.get().rm.load_menu_skin(g, playerID as i16, gp.get().game_values.skinids[playerID as usize], playerID as i16, false);
+            gp.get().rm.load_menu_skin(g, playerID as i16, gp.get().game_values.skinids[playerID as usize], color, false);
         }
     }
 
@@ -1141,7 +1195,7 @@ impl NetworkEventHandler<Game> for NetClient {
                 // The reply is noted before the skin goes out, and not again below, so the Servers menu sees the skin sent.
                 self.set_as_last_received_message(g, packageType);
                 g.netplay.connectSuccessful = true;
-                self.send_skin_change(g);
+                self.send_skin_change(g, 0);
                 return;
             }
 
@@ -1285,8 +1339,12 @@ pub struct Networking {
     pub mapfilepath: String,
 
     pub theHostIsMe: bool,
-    /// This player's slot in the room.
+    /// This client's first player's slot in the room.
     pub remotePlayerNumber: u8,
+    /// The slot of each of this client's players, by local index; the first is `remotePlayerNumber`.
+    pub localSlots: Vec<u8>,
+    /// The room menu's Players field: how many local players this client asks the room for.
+    pub localPlayers: i16,
     pub hostPlayerNumber: u8,
     /// The keys of the room's players by slot, as the v2 match applies them.
     pub netPlayerInput: CPlayerInput,
@@ -1327,6 +1385,8 @@ impl Networking {
             mapfilepath: String::new(),
             theHostIsMe: false,
             remotePlayerNumber: 0,
+            localSlots: vec![0],
+            localPlayers: 1,
             hostPlayerNumber: 0,
             netPlayerInput: CPlayerInput::new(),
             common_random_seed: 0,
@@ -1338,16 +1398,73 @@ impl Networking {
 
 /// The skin a net game's remote player plays with, as `MenuState::start_game` loaded it.
 pub fn net_skin_path(g: &mut Game, player: usize) -> Option<String> {
-    if !g.netplay.active || player == g.netplay.remotePlayerNumber as usize {
+    if !g.netplay.active || g.netplay.is_local_slot(player) {
         return None;
     }
     let path = format!("{}net_skin{}.bmp", get_home_directory(g), player);
     Path::new(&path).exists().then_some(path)
 }
 
-/// Whether a `NET_NOTICE_ROOM_CHANGE`'s slots and mode are in range, since they index the room's arrays.
+impl Networking {
+    /// The local index of the player in room `slot`, if this client's.
+    pub fn local_index(&self, slot: usize) -> Option<usize> {
+        self.localSlots.iter().position(|&s| s as usize == slot)
+    }
+
+    pub fn is_local_slot(&self, slot: usize) -> bool {
+        self.local_index(slot).is_some()
+    }
+}
+
+/// The receiving client's slots by local index, from a valid `NET_NOTICE_ROOM_CHANGE`.
+fn local_slots(pkg: &pkgs::CurrentRoom) -> Vec<u8> {
+    (0..NET_MAX_LOCAL_PLAYERS as u8).map_while(|local| (0..4u8).find(|&slot| pkg.localPlayer[slot as usize] == local)).collect()
+}
+
+/// Whether a `NET_NOTICE_ROOM_CHANGE`'s slots and mode are in range, since they index the room's arrays, and its local
+/// players number this client's from 0 with the first in `remotePlayerNumber`.
 fn room_change_is_valid(pkg: &pkgs::CurrentRoom) -> bool {
-    pkg.remotePlayerNumber < 4 && pkg.hostPlayerNumber < 4 && (pkg.gamemodeID as GameModeType) < GAMEMODE_LAST
+    let marked = pkg.localPlayer.iter().filter(|&&l| l != 0xFF).count();
+    pkg.remotePlayerNumber < 4
+        && pkg.hostPlayerNumber < 4
+        && (pkg.gamemodeID as GameModeType) < GAMEMODE_LAST
+        && pkg.localPlayer[pkg.remotePlayerNumber as usize] == 0
+        && local_slots(pkg).len() == marked
+        && pkg.team.iter().all(|&t| t < 4)
+        && !one_team(pkg)
+}
+
+/// Whether two or more players are all on one team, which a match cannot play.
+fn one_team(pkg: &pkgs::CurrentRoom) -> bool {
+    let taken: Vec<u8> = (0..4).filter(|&p| cstr_field(&pkg.playerName[p]) != "(empty)").map(|p| pkg.team[p]).collect();
+    taken.len() > 1 && taken.iter().all(|&t| t == taken[0])
+}
+
+/// The color a room slot's player shows in the room: its team's with team colors on, else its slot's.
+pub fn room_skin_color(g: &Game, slot: usize) -> i16 {
+    if g.game_values.teamcolors { g.netplay.currentRoom.teams[slot] as i16 } else { slot as i16 }
+}
+
+/// Puts the room's teams into `game_values` as a match plays them, packed in team order and colored by team when team
+/// colors are on, and returns how many teams there are.
+pub fn apply_room_teams(g: &mut Game) -> i16 {
+    let room = &g.netplay.currentRoom;
+    let mut teams: Vec<Vec<i16>> = vec![Vec::new(); 4];
+    for slot in (0..4).filter(|&p| room.taken(p)) {
+        teams[room.teams[slot] as usize].push(slot as i16);
+    }
+    let gv = &mut g.game_values;
+    gv.teamcounts = [0; 4];
+    let mut count = 0;
+    for (team, members) in teams.iter().enumerate().filter(|(_, m)| !m.is_empty()) {
+        for (i, &slot) in members.iter().enumerate() {
+            gv.teamids[count][i] = slot;
+            gv.colorids[slot as usize] = if gv.teamcolors { team as i16 } else { slot };
+        }
+        gv.teamcounts[count] = members.len() as i16;
+        count += 1;
+    }
+    count as i16
 }
 
 #[cfg(test)]
@@ -1360,13 +1477,33 @@ mod tests {
         pkg.remotePlayerNumber = 3;
         pkg.hostPlayerNumber = 3;
         pkg.gamemodeID = (GAMEMODE_LAST - 1) as u8;
+        pkg.localPlayer = [0xFF, 1, 0xFF, 0];
         assert!(room_change_is_valid(&pkg));
+        assert_eq!(local_slots(&pkg), [3, 1]);
         for bad in [
             pkgs::CurrentRoom { remotePlayerNumber: 4, ..pkg },
             pkgs::CurrentRoom { hostPlayerNumber: 0xFF, ..pkg },
             pkgs::CurrentRoom { gamemodeID: GAMEMODE_LAST as u8, ..pkg },
+            pkgs::CurrentRoom { localPlayer: [0xFF, 0, 0xFF, 1], ..pkg },
+            pkgs::CurrentRoom { localPlayer: [0xFF, 2, 0xFF, 0], ..pkg },
+            pkgs::CurrentRoom { localPlayer: [0, 1, 0xFF, 0], ..pkg },
+            pkgs::CurrentRoom { team: [0, 1, 4, 3], ..pkg },
+            pkgs::CurrentRoom { team: [2, 2, 2, 2], ..pkg },
         ] {
             assert!(!room_change_is_valid(&bad));
         }
+    }
+
+    #[test]
+    fn team_steps_skip_the_team_that_would_hold_everyone() {
+        let mut room = Room::new();
+        room.playerNames = ["A", "B", "C", "(empty)"].map(String::from);
+        room.teams = [0, 1, 1, 3];
+        assert_eq!(room.next_team(0, 1), 2, "team 1 would hold all three");
+        assert_eq!(room.next_team(0, -1), 3);
+        assert_eq!(room.next_team(1, 1), 2);
+        room.playerNames[1] = "(empty)".into();
+        room.playerNames[2] = "(empty)".into();
+        assert_eq!(room.next_team(0, 1), 1, "a lone player may pick any team");
     }
 }

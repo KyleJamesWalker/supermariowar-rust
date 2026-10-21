@@ -9,7 +9,7 @@ use super::room::Room;
 use super::util::cstr_field;
 use smw::common_netplay::network_interface::{NetPeer, NetworkEventHandler};
 use smw::common_netplay::protocol_definitions::*;
-use smw::common_netplay::protocol_packages::{ClientConnection, JoinRoom, MatchRoom, MessageHeader, NewRoom, NewRoomCreated, RoomChatMsg, RoomInfo, ServerInfo};
+use smw::common_netplay::protocol_packages::{ClientConnection, JoinRoom, LocalPlayers, MatchRoom, MessageHeader, TeamChange, NewRoom, NewRoomCreated, RoomChatMsg, RoomInfo, ServerInfo};
 use super::match_room;
 use smw::globals::Ptr;
 use super::unordered_map::UnorderedMap;
@@ -443,7 +443,7 @@ impl SMWServer {
 
     fn player_changes_skin(&mut self, playerID: u64, data: &[u8]) {
         let Some(mut player) = self.player(playerID) else { return };
-        player.set_skin(data);
+        let Some(local) = player.set_skin(data) else { return };
         verbose!("Player {} changed skin", String::from_utf8_lossy(&player.name));
 
         let roomID = player.currentRoomID;
@@ -452,7 +452,41 @@ impl SMWServer {
         }
         let Some(room) = self.rooms.get_mut(&roomID) else { return };
 
-        room.share_skin_of(player);
+        room.share_skin_of(player, local);
+    }
+
+    /// Sets how many local players a client brings to its room. The room's update answers either way, so a client whose
+    /// request the room refused sees its old count.
+    fn player_sets_local_players(&mut self, playerID: u64, data: &[u8]) {
+        let Some(mut player) = self.player(playerID) else { return };
+        if data.len() != std::mem::size_of::<LocalPlayers>() {
+            println!("[error] Corrupt package arrived from {}", playerID);
+            return;
+        }
+        let pkg = LocalPlayers::from_bytes(data);
+        let Some(room) = self.rooms.get_mut(&player.currentRoomID) else { return };
+        let names = pkg.names.map(|name| cstr_bytes(&name).to_vec());
+        if !room.set_local_players(player, pkg.count as usize, names) {
+            verbose!("Room {} refused {} local players from {}", room.roomID, pkg.count, player.to_string());
+            room.send_room_update();
+        }
+        player.lastActivityTime = time_now();
+    }
+
+    /// Moves one of a client's players to another team. The room's update answers either way, so a client whose request
+    /// the room refused sees its old team.
+    fn player_changes_team(&mut self, playerID: u64, data: &[u8]) {
+        let Some(mut player) = self.player(playerID) else { return };
+        if data.len() != std::mem::size_of::<TeamChange>() {
+            println!("[error] Corrupt package arrived from {}", playerID);
+            return;
+        }
+        let pkg = TeamChange::from_bytes(data);
+        let Some(room) = self.rooms.get_mut(&player.currentRoomID) else { return };
+        if !room.set_team(player, pkg.local as usize, pkg.team) {
+            room.send_room_update();
+        }
+        player.lastActivityTime = time_now();
     }
 
     /// The room's host is back from a match: the room shows in the room list again, for the next one.
@@ -499,13 +533,13 @@ impl SMWServer {
         log(&format!("[info] Room #{} starting.", roomID as i32));
     }
 
-    /// Gives every player of a starting room the same new signaling room and their own TURN credentials.
+    /// Gives every client of a starting room the same new signaling room and their own TURN credentials.
     fn send_match_room(v2: &V2Settings, room: &mut Room) -> bool {
         if v2.signal_url.is_empty() {
             return false;
         }
         let id = match_room::new_room_id();
-        let slots: Vec<usize> = (0..4).filter(|&p| !room.players[p].is_null()).collect();
+        let slots: Vec<usize> = (0..4).filter(|&p| !room.players[p].is_null() && room.local[p] == 0).collect();
         let now = unix_now();
         for (index, &slot) in slots.iter().enumerate() {
             let Some(pkg) = v2.package(&id, now, index, slots.len() as u8) else {
@@ -613,6 +647,10 @@ impl NetworkEventHandler for SMWServer {
             NET_NOTICE_GAMEMODESETTINGS => self.host_changes_game_mode_settings(playerID, data),
 
             NET_NOTICE_SKIN_CHANGE => self.player_changes_skin(playerID, data),
+            NET_REQUEST_LOCAL_PLAYERS => self.player_sets_local_players(playerID, data),
+
+            NET_REQUEST_TEAM => self.player_changes_team(playerID, data),
+
             NET_G2L_GAME_RESULTS => self.host_reopens_room(playerID),
 
             NET_NOTICE_ROOM_CHAT_MSG => self.player_sends_chat_msg(playerID, data),
@@ -660,7 +698,7 @@ fn strtol10(s: &[u8]) -> i64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use smw::common_netplay::protocol_packages::{ConnectOk, MatchRoom, RoomList, StartRoom};
+    use smw::common_netplay::protocol_packages::{ConnectOk, CurrentRoom, LeaveRoom, MatchRoom, RoomList, StartRoom};
     use std::any::Any;
     use std::cell::RefCell;
     use std::rc::Rc;
@@ -865,9 +903,9 @@ mod tests {
         assert!(match_rooms(&host).is_empty() && match_rooms(&guest).is_empty());
     }
 
-    fn skin(slot_hint: u8) -> Vec<u8> {
+    fn skin(local: u8) -> Vec<u8> {
         let mut data = MessageHeader::new(NET_NOTICE_SKIN_CHANGE).as_bytes().to_vec();
-        data.extend_from_slice(&[slot_hint, 10, 0, 2, 0, 1, 2]);
+        data.extend_from_slice(&[local, 10, 0, 2, 0, 1, 2]);
         data
     }
 
@@ -879,14 +917,14 @@ mod tests {
     fn a_joining_player_and_the_room_swap_skins() {
         let mut server = server();
         let host = connect(&mut server, 1, "Host");
-        send(&mut server, 1, &host, &skin(0xFF));
+        send(&mut server, 1, &host, &skin(0));
         send(&mut server, 1, &host, NewRoom::with("Room", "").as_bytes());
         let created = host.borrow().iter().find(|m| m[2] == NET_RESPONSE_CREATE_OK).cloned().unwrap();
         let room = NewRoomCreated::from_bytes(&created).roomID;
         host.borrow_mut().clear();
 
         let guest = connect(&mut server, 2, "Guest");
-        send(&mut server, 2, &guest, &skin(0xFF));
+        send(&mut server, 2, &guest, &skin(0));
         send(&mut server, 2, &guest, JoinRoom::with(room, "").as_bytes());
         assert_eq!(skins_from(&guest), [0], "the guest gets the host's skin, from slot 0");
         assert_eq!(skins_from(&host), [1], "the host gets the guest's skin, from slot 1");
@@ -959,6 +997,130 @@ mod tests {
         send(&mut server, 1, &host, MessageHeader::new(NET_G2L_GAME_RESULTS).as_bytes());
         send(&mut server, 3, &late, JoinRoom::with(room, "").as_bytes());
         assert!(codes(&late).contains(&NET_RESPONSE_JOIN_OK));
+    }
+
+    fn local_players(count: u8, names: &[&str]) -> Vec<u8> {
+        LocalPlayers::with(count, &names.iter().map(|n| n.to_string()).collect::<Vec<_>>()).as_bytes().to_vec()
+    }
+
+    /// The last room update the client got: its slot names and its own slots' local indices.
+    fn last_room(outbox: &Outbox) -> (Vec<String>, [u8; 4]) {
+        let msg = outbox.borrow().iter().rev().find(|m| m[2] == NET_NOTICE_ROOM_CHANGE).cloned().unwrap();
+        let room = CurrentRoom::from_bytes(&msg);
+        (room.playerName.iter().map(|n| cstr_field(n)).collect(), room.localPlayer)
+    }
+
+    #[test]
+    fn a_client_brings_local_players_into_free_slots() {
+        let mut server = server();
+        let (_, host, guest) = host_and_guest(&mut server);
+        send(&mut server, 2, &guest, &local_players(3, &["", "", "Sam"]));
+        let (names, mine) = last_room(&guest);
+        assert_eq!(names, ["Host", "Guest", "Guest 2", "Sam"]);
+        assert_eq!(mine, [0xFF, 0, 1, 2]);
+        assert_eq!(last_room(&host).1, [0, 0xFF, 0xFF, 0xFF]);
+        assert_eq!(codes(&host).iter().filter(|&&c| c == NET_NOTICE_ROOM_CHANGE).count(), 1, "one update per client");
+
+        send(&mut server, 2, &guest, &local_players(2, &["", "(EMPTY)"]));
+        assert_eq!(last_room(&guest).0[2], "Guest 2", "a name that reads as a free slot is replaced");
+
+        send(&mut server, 2, &guest, &local_players(1, &[]));
+        assert_eq!(last_room(&guest), (vec!["Host".into(), "Guest".into(), "(empty)".into(), "(empty)".into()], [0xFF, 0, 0xFF, 0xFF]));
+    }
+
+    #[test]
+    fn a_room_refuses_more_local_players_than_free_slots() {
+        let mut server = server();
+        let (room, host, guest) = host_and_guest(&mut server);
+        let third = connect(&mut server, 3, "Third");
+        send(&mut server, 3, &third, JoinRoom::with(room, "").as_bytes());
+        send(&mut server, 1, &host, &local_players(3, &[]));
+        assert_eq!(last_room(&host).1, [0, 0xFF, 0xFF, 0xFF], "two new players need two free slots");
+        send(&mut server, 1, &host, &local_players(2, &[]));
+        assert_eq!(last_room(&host).1, [0, 0xFF, 0xFF, 1]);
+
+        let late = connect(&mut server, 4, "Late");
+        codes(&late);
+        send(&mut server, 4, &late, JoinRoom::with(room, "").as_bytes());
+        assert_eq!(codes(&late), [NET_RESPONSE_ROOM_FULL]);
+        send(&mut server, 2, &guest, &local_players(2, &[]));
+        assert_eq!(last_room(&guest).1, [0xFF, 0, 0xFF, 0xFF]);
+    }
+
+    #[test]
+    fn local_players_send_their_own_skins() {
+        let mut server = server();
+        let (_, host, guest) = host_and_guest(&mut server);
+        send(&mut server, 2, &guest, &local_players(2, &[]));
+        send(&mut server, 2, &guest, &skin(1));
+        assert_eq!(skins_from(&host), [2], "local player 1 of the guest sits in slot 2");
+        assert!(skins_from(&guest).is_empty());
+        send(&mut server, 2, &guest, &skin(5));
+        assert_eq!(skins_from(&host), [2], "a local index past the limit is dropped");
+    }
+
+    #[test]
+    fn a_couch_host_leaving_hands_the_room_to_the_next_client() {
+        let mut server = server();
+        let (_, host, guest) = host_and_guest(&mut server);
+        send(&mut server, 1, &host, &local_players(2, &[]));
+        send(&mut server, 1, &host, LeaveRoom::new().as_bytes());
+        let msg = guest.borrow().iter().rev().find(|m| m[2] == NET_NOTICE_ROOM_CHANGE).cloned().unwrap();
+        assert_eq!(CurrentRoom::from_bytes(&msg).hostPlayerNumber, 1);
+    }
+
+    #[test]
+    fn a_couch_client_gets_one_match_room() {
+        let mut server = server();
+        server.v2 = V2Settings { signal_url: "/signal".into(), ..Default::default() };
+        let (_, host, guest) = host_and_guest(&mut server);
+        send(&mut server, 2, &guest, &local_players(3, &[]));
+        codes(&guest);
+        send(&mut server, 1, &host, StartRoom::new().as_bytes());
+        assert_eq!(codes(&guest), [NET_L2P_MATCH_ROOM, NET_L2P_MATCH_START]);
+        assert_eq!(match_rooms(&host)[0].playerCount, 2, "the signaling room counts clients");
+    }
+
+    fn teams(outbox: &Outbox) -> [u8; 4] {
+        let msg = outbox.borrow().iter().rev().find(|m| m[2] == NET_NOTICE_ROOM_CHANGE).cloned().unwrap();
+        CurrentRoom::from_bytes(&msg).team
+    }
+
+    #[test]
+    fn players_change_their_own_teams_but_never_all_onto_one() {
+        let mut server = server();
+        let (_, host, guest) = host_and_guest(&mut server);
+        send(&mut server, 2, &guest, &local_players(2, &[]));
+        assert_eq!(teams(&host), [0, 1, 2, 3], "each new player starts on a team of its own");
+        send(&mut server, 2, &guest, TeamChange::with(1, 1).as_bytes());
+        assert_eq!(teams(&host)[..3], [0, 1, 1], "the guest's second player joins the guest's team");
+        send(&mut server, 1, &host, TeamChange::with(0, 1).as_bytes());
+        assert_eq!(teams(&host)[..3], [0, 1, 1], "everyone on one team is refused");
+        send(&mut server, 2, &guest, TeamChange::with(2, 0).as_bytes());
+        send(&mut server, 2, &guest, TeamChange::with(0, 9).as_bytes());
+        assert_eq!(teams(&host)[..3], [0, 1, 1], "another client's player and a team out of range are refused");
+    }
+
+    #[test]
+    fn a_new_player_gets_an_empty_team() {
+        let mut server = server();
+        let (room, host, guest) = host_and_guest(&mut server);
+        send(&mut server, 1, &host, TeamChange::with(0, 2).as_bytes());
+        let third = connect(&mut server, 3, "Third");
+        send(&mut server, 3, &third, JoinRoom::with(room, "").as_bytes());
+        assert_eq!(teams(&guest)[..3], [2, 1, 0], "slot 2's own team is taken, so the first empty one");
+    }
+
+    #[test]
+    fn a_leaver_never_leaves_one_team() {
+        let mut server = server();
+        let (room, host, guest) = host_and_guest(&mut server);
+        let third = connect(&mut server, 3, "Third");
+        send(&mut server, 3, &third, JoinRoom::with(room, "").as_bytes());
+        send(&mut server, 2, &guest, TeamChange::with(0, 0).as_bytes());
+        assert_eq!(teams(&host)[..3], [0, 0, 2]);
+        send(&mut server, 3, &third, LeaveRoom::new().as_bytes());
+        assert_eq!(teams(&host)[..2], [0, 1], "the two left split up again");
     }
 
     #[test]

@@ -483,8 +483,8 @@ impl CPlayer {
         }
 
         if g.netplay.active {
-            if this.globalID == g.netplay.remotePlayerNumber as i16 {
-                this.playerKeys = PlayerKeys::Local(0);
+            if let Some(local) = g.netplay.local_index(this.globalID as usize) {
+                this.playerKeys = PlayerKeys::Local(local as u8);
                 println!("[net] Player {} reads local input.", this.globalID);
             } else {
                 this.playerKeys = PlayerKeys::Net(this.globalID as u8);

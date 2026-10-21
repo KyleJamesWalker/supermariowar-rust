@@ -63,11 +63,8 @@ A full-codebase review on 2026-10-19, at the head of the GPU shader stack, confi
 ### Later
 
 - `smw-core` silences every clippy lint. Turn `clippy::all` on for the port's newer modules (rollback, netplay v2, checkpoint, harness, video settings, stats) and gate on it (S).
-- Only one local player per client can play online, because `net_v2.rs` hard-codes `KeySlot::Local(0)`. Let each client set 1 to 3 local players in the room menu, as the main menu's Players row does. A couch group can then join one room (`net_v2.rs`, room menu, lobby protocol, L):
-  - Each client sets its own count. A client can raise it only while a room slot is free, so a room never asks for more than 4 players. The lobby refuses a change that would.
-  - Extra slots are humans on that machine's controllers only. Bots stay the host's choice for empty slots.
-  - Each local player picks a skin, name and team in the room, as in the main menu.
-  - The lobby's room messages and the v2 `MSG_SLOT` handshake carry one slot per player, not per client, so this needs a lobby protocol bump.
+- A room has no CPU slots, so an online match plays only its humans. Let the host fill empty slots with bots (`net_room_menu.rs`, lobby protocol, M).
+- A couch player's room name is the client's lobby name with a number (`Kyle 2`). `NET_REQUEST_LOCAL_PLAYERS` already carries names; the room menu needs a field to type them (`net_room_menu.rs`, S).
 - Fuzz the `bincode` decode of GGRS packets from peers (`smw-peer`, S).
 - The SDL3 audio thread still allocates each packet `lewton` decodes (`smw-sdl3/audio.rs`, S).
 - The rollback snapshot carries the full mixer state. Trim it with the snapshot work above (`rollback.rs`, S).

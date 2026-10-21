@@ -3,11 +3,12 @@
 use super::blob::Blob;
 use super::clock::{time_now, TimePoint};
 use smw::common_netplay::network_interface::NetPeer;
+use smw::common_netplay::protocol_definitions::{NET_MAX_LOCAL_PLAYERS, NET_MAX_PLAYER_NAME_LENGTH};
 use smw::common_netplay::protocol_packages::{ConnectOk, MessageHeader};
 
 const SKINPKG_SIZE_LIMIT: usize = 20000; /* bytes in worst case */
 
-/// A player's last `NET_NOTICE_SKIN_CHANGE` message; byte 3 carries the sender's room slot.
+/// A player's last `NET_NOTICE_SKIN_CHANGE` message; byte 3 carries its room slot.
 #[derive(Default)]
 pub struct PlayerSkin {
     pub blob: Blob,
@@ -37,7 +38,7 @@ impl PlayerSkin {
     }
 }
 
-/// A connected player, owned by `SMWServer::players`.
+/// A connected client, owned by `SMWServer::players`, with its one to `NET_MAX_LOCAL_PLAYERS` players.
 pub struct Player {
     /// The name the lobby gave this player, unique ignoring ASCII case.
     pub name: Vec<u8>,
@@ -48,7 +49,10 @@ pub struct Player {
     /// The player's room, 0 for none.
     pub currentRoomID: u32,
 
-    pub skinPackage: PlayerSkin,
+    /// Each local player's skin, by local index.
+    pub skins: [PlayerSkin; NET_MAX_LOCAL_PLAYERS],
+    /// The names the client asked for its local players after the first; empty for the numbered lobby name.
+    pub localNames: [Vec<u8>; NET_MAX_LOCAL_PLAYERS],
 
     pub joinTime: TimePoint,
     pub lastActivityTime: TimePoint,
@@ -64,7 +68,8 @@ impl Player {
             connected: false,
             network_client: None,
 
-            skinPackage: PlayerSkin::default(),
+            skins: Default::default(),
+            localNames: Default::default(),
 
             joinTime,
             lastActivityTime: joinTime,
@@ -84,17 +89,35 @@ impl Player {
         self.lastActivityTime = time_now();
     }
 
-    pub fn set_skin(&mut self, data: &[u8]) {
+    /// Keeps the skin of the local player byte 3 names; the local index of a valid one, else None.
+    pub fn set_skin(&mut self, data: &[u8]) -> Option<usize> {
         // Some basic package validation
         if data.len() <= std::mem::size_of::<MessageHeader>() + 5 /* id 1B + un-/compressed size 2*2B */
             || data.len() > SKINPKG_SIZE_LIMIT
+            || data[3] as usize >= NET_MAX_LOCAL_PLAYERS
         {
             println!("[error] Corrupt skin arrived from {}", self.to_string());
-            return;
+            return None;
         }
 
-        self.skinPackage.replace_with(data);
+        let local = data[3] as usize;
+        self.skins[local].replace_with(data);
         self.lastActivityTime = time_now();
+        Some(local)
+    }
+
+    /// The room name of local player `local`: the lobby name for the first, else its requested name or the lobby
+    /// name numbered from 2.
+    pub fn local_name(&self, local: usize) -> Vec<u8> {
+        if local == 0 {
+            return self.name.clone();
+        }
+        if !self.localNames[local].is_empty() {
+            return self.localNames[local].clone();
+        }
+        let suffix = format!(" {}", local + 1);
+        let keep = self.name.len().min(NET_MAX_PLAYER_NAME_LENGTH - 1 - suffix.len());
+        [&self.name[..keep], suffix.as_bytes()].concat()
     }
 
     // Printing stuff

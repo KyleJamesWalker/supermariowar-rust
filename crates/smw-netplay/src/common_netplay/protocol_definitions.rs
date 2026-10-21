@@ -2,7 +2,7 @@
 
 /// Client and lobby must match in both parts; the lobby answers any other version with `NET_RESPONSE_BADPROTOCOL`.
 pub const NET_PROTOCOL_VERSION_MAJOR: u8 = 0;
-pub const NET_PROTOCOL_VERSION_MINOR: u8 = 9;
+pub const NET_PROTOCOL_VERSION_MINOR: u8 = 10;
 /// The port a lobby connection targets; the relay's switch refuses connections to any other.
 pub const NET_LOBBYSERVER_PORT: u16 = 12521;
 /// Field sizes in bytes, the terminating NUL included.
@@ -10,6 +10,8 @@ pub const NET_MAX_PLAYER_NAME_LENGTH: usize = 16;
 pub const NET_MAX_ROOM_NAME_LENGTH: usize = 32;
 pub const NET_MAX_ROOM_PASSWORD_LENGTH: usize = 16;
 pub const NET_MAX_CHAT_MSG_LENGTH: usize = 100;
+/// Players one client brings to a room, each on its own controller.
+pub const NET_MAX_LOCAL_PLAYERS: usize = 3;
 pub const NET_REQUEST_SERVERINFO: u8 = 1;
 pub const NET_RESPONSE_BADPROTOCOL: u8 = 2;
 pub const NET_RESPONSE_SERVERINFO: u8 = 3;
@@ -37,6 +39,10 @@ pub const NET_REQUEST_CREATE_ROOM: u8 = 40;
 pub const NET_RESPONSE_CREATE_OK: u8 = 41;
 pub const NET_RESPONSE_CREATE_ERROR: u8 = 42;
 pub const NET_RESPONSE_WRONG_PASSWORD: u8 = 43;
+/// `LocalPlayers`: how many players this client brings to its room; the lobby answers with `NET_NOTICE_ROOM_CHANGE`.
+pub const NET_REQUEST_LOCAL_PLAYERS: u8 = 44;
+/// `TeamChange`: moves one of this client's players to another team; the lobby answers with `NET_NOTICE_ROOM_CHANGE`.
+pub const NET_REQUEST_TEAM: u8 = 45;
 // L: lobby server
 // G: game host player
 // P: regular players

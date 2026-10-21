@@ -120,6 +120,8 @@ pub const MENU_CODE_NET_HOST_LAN: MenuCodeEnum = 119;
 /// The Graphics menu changed the shader preset or integer scaling.
 pub const MENU_CODE_SHADER_CHANGED: MenuCodeEnum = 126;
 pub const MENU_CODE_INTEGER_SCALE_CHANGED: MenuCodeEnum = 127;
+/// The room menu's Players field changed this client's local player count.
+pub const MENU_CODE_NET_ROOM_LOCAL_PLAYERS: MenuCodeEnum = 128;
 pub const MENU_CODE_NET_ADDREMOVE_SERVER_ON_ADD_BTN: MenuCodeEnum = 102;
 pub const MENU_CODE_NET_ADDREMOVE_SERVER_ON_EDIT_BTN: MenuCodeEnum = 103;
 pub const MENU_CODE_NET_ADDREMOVE_SERVER_ON_DELETE_BTN: MenuCodeEnum = 104;

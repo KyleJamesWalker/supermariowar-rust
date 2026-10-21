@@ -2,7 +2,7 @@
 //! the room's WebRTC connections. Recordings keep each frame as a `#@ v2` line, which a replay plays without the network.
 
 use crate::common::global_constants::MAX_PLAYERS;
-use crate::common::input::COutputControl;
+use crate::common::input::{COutputControl, DEVICE_KEYBOARD};
 use crate::game::Game;
 use crate::smw::harness;
 use crate::smw::player::PlayerKeys;
@@ -13,10 +13,12 @@ use smw_peer::{PeerId, PeerSocket, PeerState, RELIABLE};
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
 
-/// `[MSG_SLOT, HANDSHAKE_VERSION, slot]`: the sender's room slot. Reliable-channel messages start with one of these kinds.
+/// `[MSG_SLOT, HANDSHAKE_VERSION, (slot, pad)...]`: the room slot of each of the sender's local players, in local order,
+/// and whether that player plays on a gamepad (1) or the keyboard (0). Reliable-channel messages start with one of these
+/// kinds.
 const MSG_SLOT: u8 = 1;
 /// The handshake's format; a peer announcing another one cannot play this build.
-const HANDSHAKE_VERSION: u8 = 1;
+const HANDSHAKE_VERSION: u8 = 2;
 /// `[MSG_START_PART, index u16 LE, count u16 LE, bytes]`: one part of the host's match start.
 const MSG_START_PART: u8 = 2;
 /// A joiner to the host: the match start is restored.
@@ -56,12 +58,15 @@ enum Phase {
 pub struct V2Match {
     socket: PeerSocket,
     host: bool,
-    /// This player's room slot (`remotePlayerNumber`).
-    my_slot: u8,
-    /// How many other players the match waits for.
+    /// The room slots of this client's players, by local index (`localSlots`).
+    my_slots: Vec<u8>,
+    /// Each slot's player is on a gamepad, as its client announced; `playerDevice` changes how a player drops through
+    /// platforms, so every peer sets it from these, not from its own controls.
+    pads: [Option<bool>; 4],
+    /// How many other peers the match waits for.
     others: usize,
-    /// Each other peer's room slot, from its `MSG_SLOT`.
-    slots: BTreeMap<PeerId, u8>,
+    /// Each other peer's room slots, from its `MSG_SLOT`.
+    slots: BTreeMap<PeerId, Vec<u8>>,
     /// The host's room slot (`hostPlayerNumber`).
     host_slot: u8,
     /// The peer whose `MSG_SLOT` claimed the host's slot; a joiner takes the match start, GO and LEAVE only from it.
@@ -85,8 +90,9 @@ pub struct V2Match {
     phase: Phase,
     /// Where each GGRS player handle's keys go.
     targets: Vec<KeySlot>,
-    /// This player's device keys, carried from frame to frame because rollback ticks overwrite input slot 0.
-    local_device: COutputControl,
+    /// The local players' device keys by local index, carried from frame to frame because rollback ticks overwrite
+    /// their input slots.
+    local_devices: Vec<COutputControl>,
     opened: Instant,
     /// Handshake frames while starting, then frames of the running session.
     ticks: u64,
@@ -138,7 +144,11 @@ pub fn match_starting(g: &mut Game) -> bool {
         return true;
     };
     let host = g.netplay.theHostIsMe;
-    let my_slot = g.netplay.remotePlayerNumber as u8;
+    let my_slots = g.netplay.localSlots.clone();
+    let mut pads = [None; 4];
+    for (local, &slot) in my_slots.iter().enumerate() {
+        pads[slot as usize] = Some(g.input_control(g.game_values.playerInput.inputControls[local]).iDevice != DEVICE_KEYBOARD);
+    }
     let start = if host {
         let start = crate::smw::checkpoint::capture_shared(g);
         let too_large = start.as_ref().is_ok_and(|s| s.len() > MAX_START_BYTES);
@@ -152,7 +162,7 @@ pub fn match_starting(g: &mut Game) -> bool {
                 let notice = if too_large { "This match is too large to send" } else { "Cannot read the map for this match" };
                 g.netplay.match_notice = Some(notice.to_string());
                 for peer in socket.connected_peers().to_vec() {
-                    socket.send(RELIABLE, peer, &slot_message(my_slot));
+                    socket.send(RELIABLE, peer, &slot_message(&my_slots, &pads));
                     socket.send(RELIABLE, peer, &[MSG_LEAVE]);
                 }
                 gp.netplay.client.linger(socket);
@@ -167,7 +177,9 @@ pub fn match_starting(g: &mut Game) -> bool {
     let mut m = V2Match {
         socket,
         host,
-        my_slot,
+        local_devices: devices_of(g, my_slots.len()),
+        my_slots,
+        pads,
         others,
         slots: BTreeMap::new(),
         host_slot: g.netplay.hostPlayerNumber,
@@ -182,7 +194,6 @@ pub fn match_starting(g: &mut Game) -> bool {
         own_config: None,
         phase: Phase::Starting,
         targets: Vec::new(),
-        local_device: g.game_values.playerInput.outputControls[0],
         opened: Instant::now(),
         ticks: 0,
         rollback_ticks: 0,
@@ -232,11 +243,10 @@ pub fn tick(g: &mut Game) {
 }
 
 /// Restores the host's match start on a joiner and returns the joiner's own settings, which the match replaces.
-fn restore_start(g: &mut Game, my_slot: u8, bytes: Vec<u8>) -> Result<(Vec<u8>, Vec<u8>), String> {
+fn restore_start(g: &mut Game, my_slots: &[u8], bytes: Vec<u8>) -> Result<(Vec<u8>, Vec<u8>), String> {
     let mut gp = g.ptr();
     let own_config = gp.game_values.config_bytes(g);
-    let slot = my_slot as usize;
-    let own_skin = g.game_values.skinids[slot];
+    let own_skins: Vec<(usize, i16)> = my_slots.iter().map(|&slot| (slot as usize, g.game_values.skinids[slot as usize])).collect();
     let gv = &g.game_values;
     let own_presentation = (gv.framelimiter, gv.sound, gv.music, gv.musicvolume, gv.soundvolume, gv.fullscreen);
     crate::smw::checkpoint::restore_shared(g, bytes)?;
@@ -245,10 +255,12 @@ fn restore_start(g: &mut Game, my_slot: u8, bytes: Vec<u8>) -> Result<(Vec<u8>, 
     (gv.framelimiter, gv.sound, gv.music, gv.musicvolume, gv.soundvolume, gv.fullscreen) = own_presentation;
     crate::common::sfx::sfx_setmusicvolume(g, own_presentation.3 as i32);
     crate::common::sfx::sfx_setsoundvolume(g, own_presentation.4 as i32);
-    // The host's start holds the host's skin choices; this player's own skin is its choice here.
-    g.game_values.skinids[slot] = own_skin;
-    let strip = gp.rm.load_full_skin(g, own_skin, g.game_values.colorids[slot]);
-    gp.rm.set_strip(gp.rm.spr_player[slot], strip);
+    // The host's start holds the host's skin choices; this client's players' own skins are their choice here.
+    for (slot, own_skin) in own_skins {
+        g.game_values.skinids[slot] = own_skin;
+        let strip = gp.rm.load_full_skin(g, own_skin, g.game_values.colorids[slot]);
+        gp.rm.set_strip(gp.rm.spr_player[slot], strip);
+    }
     // The host's start also holds its key bindings and devices; this player keeps reading its own.
     gp.game_values.read_controls_bytes(g, own_config.1.clone());
     // The host captured mid-tick; this finishes that tick as its frame_end did there.
@@ -257,14 +269,19 @@ fn restore_start(g: &mut Game, my_slot: u8, bytes: Vec<u8>) -> Result<(Vec<u8>, 
     Ok(own_config)
 }
 
-/// The player's input for a running match's frame, and its exit and pause dialog. True when the player left.
-fn local_input(g: &mut Game, local_device: &mut COutputControl) -> bool {
+/// The device keys of the first `count` input slots, which a match's local players read.
+fn devices_of(g: &Game, count: usize) -> Vec<COutputControl> {
+    g.game_values.playerInput.outputControls[..count].to_vec()
+}
+
+/// The local players' input for a running match's frame, and the exit and pause dialog. True when the player left.
+fn local_input(g: &mut Game, local_devices: &mut [COutputControl]) -> bool {
     let mut gp = g.ptr();
     harness::frame_start_input(g);
-    g.game_values.playerInput.outputControls[0] = *local_device;
+    g.game_values.playerInput.outputControls[..local_devices.len()].copy_from_slice(local_devices);
     let gameplay = gp.gps.as_mut().expect("a v2 match outside gameplay");
     gameplay.gather_input(g);
-    *local_device = g.game_values.playerInput.outputControls[0];
+    local_devices.copy_from_slice(&g.game_values.playerInput.outputControls[..local_devices.len()]);
     crate::smw::gs_gameplay::update_exit_pause_dialog(g, gameplay.countdown_state())
 }
 
@@ -301,18 +318,21 @@ fn player_name(names: &[String], slot: u8) -> String {
     }
 }
 
-/// The room's name for the player on `peer`.
-fn peer_name(names: &[String], slots: &BTreeMap<PeerId, u8>, peer: PeerId) -> String {
-    slots.get(&peer).map_or_else(|| "A player".to_string(), |&slot| player_name(names, slot))
+/// The room's name for the players on `peer`, joined with "and" when a couch plays there.
+fn peer_name(names: &[String], slots: &BTreeMap<PeerId, Vec<u8>>, peer: PeerId) -> String {
+    match slots.get(&peer) {
+        Some(held) if !held.is_empty() => held.iter().map(|&slot| player_name(names, slot)).collect::<Vec<_>>().join(" and "),
+        _ => "A player".to_string(),
+    }
 }
 
-/// The room's occupied slots, other than `my_slot`, that are not in `heard`.
-fn missing_slots(names: &[String], my_slot: u8, heard: &[u8]) -> Vec<u8> {
-    (0..names.len() as u8).filter(|&slot| slot != my_slot && names[slot as usize] != "(empty)" && !heard.contains(&slot)).collect()
+/// The room's occupied slots, other than `my_slots`, that are not in `heard`.
+fn missing_slots(names: &[String], my_slots: &[u8], heard: &[u8]) -> Vec<u8> {
+    (0..names.len() as u8).filter(|slot| !my_slots.contains(slot) && names[*slot as usize] != "(empty)" && !heard.contains(slot)).collect()
 }
 
 /// The notice while `peer` is silent, which `NetworkResumed` takes down again.
-fn lag_text(names: &[String], slots: &BTreeMap<PeerId, u8>, peer: PeerId) -> String {
+fn lag_text(names: &[String], slots: &BTreeMap<PeerId, Vec<u8>>, peer: PeerId) -> String {
     format!("{} is lagging", peer_name(names, slots, peer))
 }
 
@@ -353,7 +373,7 @@ fn to_menu(g: &mut Game, abandoned: bool) {
 pub struct V2Replay {
     own_config: Option<(Vec<u8>, Vec<u8>)>,
     targets: Vec<KeySlot>,
-    local_device: COutputControl,
+    local_devices: Vec<COutputControl>,
     saves: BTreeMap<i32, MatchState>,
     notice: Notice,
 }
@@ -364,7 +384,7 @@ fn start_replay(g: &mut Game) {
     gp.netplay.client.v2_replay = Some(Box::new(V2Replay {
         own_config: None,
         targets: Vec::new(),
-        local_device: g.game_values.playerInput.outputControls[0],
+        local_devices: devices_of(g, g.netplay.localSlots.len()),
         saves: BTreeMap::new(),
         notice: Notice::default(),
     }));
@@ -399,38 +419,55 @@ fn replay_tick(g: &mut Game, frame: u32) {
         match token.split_at(1) {
             ("w", _) => {}
             ("r", data) => {
-                let start = data.split_once('.').and_then(|(slot, data)| {
+                let start = data.split_once('.').and_then(|(slots, data)| {
                     let bytes = harness::base64_decode(data).and_then(|z| crate::smw::network::file_compressor::inflate(&z))?;
-                    Some((slot.parse::<u8>().ok()?, bytes))
+                    Some((parse_slots(slots)?, bytes))
                 });
-                let Some((slot, bytes)) = start else {
+                let Some((slots, bytes)) = start else {
                     harness::fail(format!("the replay's v2 match start at frame {frame} is damaged"));
                 };
                 if !g.netplay.active {
                     // A segment replay set up the joiner's own match, which the live joiner skipped for the host's.
                     crate::smw::gs_gameplay::clean_up(g);
                 }
-                match restore_start(g, slot, bytes) {
+                match restore_start(g, &slots, bytes) {
                     Ok(own) => r.own_config = Some(own),
                     Err(e) => harness::fail(format!("the replay's v2 match start: {e}")),
                 }
-                r.local_device = g.game_values.playerInput.outputControls[0];
+                r.local_devices = devices_of(g, slots.len());
             }
             ("t", data) => {
-                let Some((my_slot, slots)) = data.split_once(':').and_then(|(m, s)| Some((m.parse::<i16>().ok()?, s))) else {
+                let Some((my_slots, slots)) = data.split_once(':').and_then(|(m, s)| Some((parse_slots(m)?, s))) else {
                     harness::fail(format!("the replay's v2 session at frame {frame} is damaged"));
                 };
+                // Recordings from before the devices were announced have no pads part.
+                let (slots, pads) = match slots.split_once(':') {
+                    Some((slots, pads)) => match parse_pads(pads) {
+                        Some(pads) => (slots, Some(pads)),
+                        None => harness::fail(format!("the replay's v2 session at frame {frame} is damaged")),
+                    },
+                    None => (slots, None),
+                };
                 r.targets = slots.split(',').filter_map(parse_slot).collect();
+                if r.local_devices.len() != my_slots.len() {
+                    r.local_devices = devices_of(g, my_slots.len());
+                }
                 if !g.netplay.active {
                     // A segment replay made its players as a local match's; they read their keys as the net game's did.
                     for i in 0..g.players.len() {
                         let player = g.player(g.players[i]);
-                        player.playerKeys = if player.globalID == my_slot { PlayerKeys::Local(0) } else { PlayerKeys::Net(player.globalID as u8) };
+                        player.playerKeys = match my_slots.iter().position(|&slot| slot as i16 == player.globalID) {
+                            Some(local) => PlayerKeys::Local(local as u8),
+                            None => PlayerKeys::Net(player.globalID as u8),
+                        };
                     }
+                }
+                if let Some(pads) = pads {
+                    apply_pads(g, &pads);
                 }
             }
             ("i", _) => {
-                local_input(g, &mut r.local_device);
+                local_input(g, &mut r.local_devices);
             }
             ("d", _) => draw_dialogs(g, &mut r.notice),
             ("n", data) => {
@@ -482,6 +519,16 @@ fn slot_token(slot: &KeySlot) -> String {
     }
 }
 
+/// `0+2`: room slots by local index, as `#@ v2` lines write this client's players.
+fn slots_token(slots: &[u8]) -> String {
+    slots.iter().map(u8::to_string).collect::<Vec<_>>().join("+")
+}
+
+/// Reads a [`slots_token`].
+fn parse_slots(token: &str) -> Option<Vec<u8>> {
+    token.split('+').map(|slot| slot.parse().ok()).collect()
+}
+
 /// Reads a [`slot_token`].
 fn parse_slot(token: &str) -> Option<KeySlot> {
     let (kind, n) = token.split_at_checked(1)?;
@@ -520,34 +567,80 @@ impl StartParts {
     }
 }
 
-/// This player's `MSG_SLOT`.
-fn slot_message(slot: u8) -> [u8; 3] {
-    [MSG_SLOT, HANDSHAKE_VERSION, slot]
+/// This client's `MSG_SLOT` for `slots`, with each one's entry in `pads` (keyboard when unknown).
+fn slot_message(slots: &[u8], pads: &[Option<bool>; 4]) -> Vec<u8> {
+    let mut msg = vec![MSG_SLOT, HANDSHAKE_VERSION];
+    for &slot in slots {
+        msg.extend([slot, pads.get(slot as usize).copied().flatten().unwrap_or(false) as u8]);
+    }
+    msg
 }
 
-/// Records `peer`'s claim on room `slot`. Refuses a slot out of range, this player's own, one another peer holds, and
-/// a peer that changes its slot, so two GGRS handles never play one player.
-fn claim_slot(slots: &mut BTreeMap<PeerId, u8>, my_slot: u8, peer: PeerId, slot: u8) -> Result<(), String> {
-    if slot as i32 >= MAX_PLAYERS || slot == my_slot {
-        return Err(format!("slot {slot} is not another player's"));
-    }
-    if let Some((_, held)) = slots.iter().find(|&(&p, &s)| p != peer && s == slot) {
-        return Err(format!("slot {held} is already taken"));
-    }
-    match slots.insert(peer, slot) {
-        Some(old) if old != slot => {
-            slots.insert(peer, old);
-            Err(format!("slot {slot} after claiming slot {old}"))
+/// Sets every player's `playerDevice` from the slots' announced devices, alike on every peer.
+fn apply_pads(g: &mut Game, pads: &[Option<bool>; 4]) {
+    for i in 0..g.players.len() {
+        let player = g.player(g.players[i]);
+        if let Some(Some(pad)) = pads.get(player.globalID as usize) {
+            player.playerDevice = if *pad { 0 } else { DEVICE_KEYBOARD };
         }
-        _ => Ok(()),
     }
 }
 
-/// The slot in a peer's `MSG_SLOT`, or why this build cannot play with that peer.
-fn read_slot_message(msg: &[u8]) -> Result<u8, String> {
+/// `kp--`: each room slot's player on the keyboard (`k`) or a gamepad (`p`), `-` for none, as `#@ v2` lines write them.
+fn pads_token(pads: &[Option<bool>; 4]) -> String {
+    pads.iter().map(|pad| match pad {
+        Some(false) => 'k',
+        Some(true) => 'p',
+        None => '-',
+    }).collect()
+}
+
+/// Reads a [`pads_token`].
+fn parse_pads(token: &str) -> Option<[Option<bool>; 4]> {
+    let mut pads = [None; 4];
+    if token.len() != 4 {
+        return None;
+    }
+    for (pad, c) in pads.iter_mut().zip(token.chars()) {
+        *pad = match c {
+            'k' => Some(false),
+            'p' => Some(true),
+            '-' => None,
+            _ => return None,
+        };
+    }
+    Some(pads)
+}
+
+/// Records `peer`'s claim on room `claimed`. Refuses a slot out of range or repeated, one of this client's, one another
+/// peer holds, and a peer that changes its slots, so two GGRS handles never play one player.
+fn claim_slots(slots: &mut BTreeMap<PeerId, Vec<u8>>, my_slots: &[u8], peer: PeerId, claimed: &[u8]) -> Result<(), String> {
+    for (i, &slot) in claimed.iter().enumerate() {
+        if slot as i32 >= MAX_PLAYERS || my_slots.contains(&slot) || claimed[..i].contains(&slot) {
+            return Err(format!("slot {slot} is not another player's"));
+        }
+        if slots.iter().any(|(&p, held)| p != peer && held.contains(&slot)) {
+            return Err(format!("slot {slot} is already taken"));
+        }
+    }
+    match slots.get(&peer) {
+        Some(old) if old != claimed => Err(format!("slots {claimed:?} after claiming slots {old:?}")),
+        _ => {
+            slots.insert(peer, claimed.to_vec());
+            Ok(())
+        }
+    }
+}
+
+/// The slots in a peer's `MSG_SLOT`, each with whether its player is on a gamepad, or why this build cannot play with
+/// that peer.
+fn read_slot_message(msg: &[u8]) -> Result<Vec<(u8, bool)>, String> {
     match msg {
-        [MSG_SLOT, HANDSHAKE_VERSION, slot] => Ok(*slot),
-        [MSG_SLOT, version, _] => Err(format!("handshake version {version}, this build speaks {HANDSHAKE_VERSION}")),
+        [MSG_SLOT, HANDSHAKE_VERSION, pairs @ ..] if pairs.len() % 2 == 0 && (1..=MAX_PLAYERS as usize).contains(&(pairs.len() / 2)) => {
+            pairs.chunks(2).map(|p| if p[1] <= 1 { Ok((p[0], p[1] == 1)) } else { Err(format!("a handshake with device {}", p[1])) }).collect()
+        }
+        [MSG_SLOT, HANDSHAKE_VERSION, ..] => Err(format!("a handshake with {} bytes of slots", msg.len() - 2)),
+        [MSG_SLOT, version, _, ..] => Err(format!("handshake version {version}, this build speaks {HANDSHAKE_VERSION}")),
         _ => Err(format!("a handshake without a version, this build speaks {HANDSHAKE_VERSION}")),
     }
 }
@@ -579,7 +672,7 @@ impl V2Match {
 
     /// Sends this player's slot and, on the host, the match start in parts.
     fn announce(&mut self) {
-        self.send_all(&slot_message(self.my_slot));
+        self.send_all(&slot_message(&self.my_slots.clone(), &self.pads));
         if self.host {
             let parts: Vec<Vec<u8>> = self.start.chunks(PART_BYTES).map(|c| c.to_vec()).collect();
             let count = parts.len() as u16;
@@ -591,7 +684,7 @@ impl V2Match {
                 self.send_all(&msg);
             }
         } else if self.rogue {
-            self.send_all(&slot_message(self.host_slot));
+            self.send_all(&slot_message(&[self.host_slot], &self.pads));
             self.send_all(&[MSG_START_PART, 0, 0, 0, 0]);
             self.send_all(&[MSG_START_PART, 0, 0, 1, 0, b'x']);
             self.send_all(&[MSG_GO]);
@@ -604,13 +697,20 @@ impl V2Match {
             let from_host = self.host_peer == Some(peer);
             match msg.first() {
                 Some(&MSG_SLOT) => {
-                    let slot = read_slot_message(&msg).map_err(|e| {
+                    let announced = read_slot_message(&msg).map_err(|e| {
                         println!("[net] v2: peer {:08x}: {e}", peer.0 >> 96);
                         let name = msg.get(2).map_or_else(|| "A player".to_string(), |&slot| player_name(&self.names, slot));
                         format!("{name} runs another game version")
                     })?;
-                    match claim_slot(&mut self.slots, self.my_slot, peer, slot) {
-                        Ok(()) if !self.host && slot == self.host_slot => self.host_peer = Some(peer),
+                    let claimed: Vec<u8> = announced.iter().map(|&(slot, _)| slot).collect();
+                    let claim = claim_slots(&mut self.slots, &self.my_slots, peer, &claimed);
+                    if claim.is_ok() {
+                        for &(slot, pad) in &announced {
+                            self.pads[slot as usize] = Some(pad);
+                        }
+                    }
+                    match claim {
+                        Ok(()) if !self.host && claimed.contains(&self.host_slot) => self.host_peer = Some(peer),
                         Ok(()) => {}
                         Err(e) if !self.refused.contains(&peer) => {
                             self.refused.push(peer);
@@ -625,11 +725,11 @@ impl V2Match {
                     if let Some(bytes) = self.parts.add(index, count, &msg[5..])? {
                         if self.rec.is_some() {
                             let data = harness::base64_encode(&crate::smw::network::file_compressor::deflate(&bytes));
-                            note(&mut self.rec, format!("r{}.{data}", self.my_slot));
+                            note(&mut self.rec, format!("r{}.{data}", slots_token(&self.my_slots)));
                         }
-                        self.own_config = Some(restore_start(g, self.my_slot, bytes)?);
+                        self.own_config = Some(restore_start(g, &self.my_slots, bytes)?);
                         self.restored = true;
-                        self.local_device = g.game_values.playerInput.outputControls[0];
+                        self.local_devices = devices_of(g, self.my_slots.len());
                         let ready = [MSG_READY];
                         self.send_all(&ready);
                     }
@@ -657,7 +757,7 @@ impl V2Match {
             println!("[net] v2: peer {:08x} disconnected during the start", peer.0 >> 96);
             let missing = self.missing_players();
             let name = match self.slots.get(&peer) {
-                Some(&slot) => player_name(&self.names, slot),
+                Some(_) => peer_name(&self.names, &self.slots, peer),
                 None if !missing.is_empty() => missing.join(", "),
                 None => "A player".to_string(),
             };
@@ -697,8 +797,9 @@ impl V2Match {
         match self.start_session() {
             Ok(session) => {
                 println!("[net] v2: GGRS session started in {} ms", self.opened.elapsed().as_millis());
+                apply_pads(g, &self.pads);
                 let slots = self.targets.iter().map(slot_token).collect::<Vec<_>>().join(",");
-                note(&mut self.rec, format!("t{}:{slots}", self.my_slot));
+                note(&mut self.rec, format!("t{}:{slots}:{}", slots_token(&self.my_slots), pads_token(&self.pads)));
                 self.ticks = 0;
                 self.phase = Phase::Running(Box::new(session));
                 true
@@ -714,16 +815,16 @@ impl V2Match {
     /// The room's other players this peer has not heard from: no slot, or on the host, no READY.
     fn missing_players(&self) -> Vec<String> {
         let heard: Vec<u8> = match self.host {
-            true => self.ready.iter().filter_map(|peer| self.slots.get(peer).copied()).collect(),
-            false => self.slots.values().copied().collect(),
+            true => self.ready.iter().filter_map(|peer| self.slots.get(peer)).flatten().copied().collect(),
+            false => self.slots.values().flatten().copied().collect(),
         };
-        missing_slots(&self.names, self.my_slot, &heard).into_iter().map(|slot| player_name(&self.names, slot)).collect()
+        missing_slots(&self.names, &self.my_slots, &heard).into_iter().map(|slot| player_name(&self.names, slot)).collect()
     }
 
     /// Builds the GGRS session; handles follow room slot order, so every peer numbers the players alike.
     fn start_session(&mut self) -> Result<P2PSession<GgrsConfig<PeerId>>, GgrsError> {
-        let mut players: Vec<(u8, Option<PeerId>)> = self.slots.iter().map(|(&peer, &slot)| (slot, Some(peer))).collect();
-        players.push((self.my_slot, None));
+        let mut players: Vec<(u8, Option<PeerId>)> = self.slots.iter().flat_map(|(&peer, held)| held.iter().map(move |&slot| (slot, Some(peer)))).collect();
+        players.extend(self.my_slots.iter().map(|&slot| (slot, None)));
         players.sort();
         let mut builder = SessionBuilder::<GgrsConfig<PeerId>>::new()
             .with_num_players(players.len())?
@@ -740,7 +841,10 @@ impl V2Match {
                 Some(peer) => PlayerType::Remote(*peer),
             };
             builder = builder.add_player(player, handle)?;
-            self.targets.push(if peer.is_none() { KeySlot::Local(0) } else { KeySlot::Net(*slot as usize) });
+            self.targets.push(match self.my_slots.iter().position(|s| s == slot) {
+                Some(local) if peer.is_none() => KeySlot::Local(local),
+                _ => KeySlot::Net(*slot as usize),
+            });
         }
         builder.start_p2p_session(self.socket.take_ggrs_socket())
     }
@@ -817,7 +921,7 @@ impl V2Match {
         }
 
         note(&mut self.rec, "i".to_string());
-        if local_input(g, &mut self.local_device) {
+        if local_input(g, &mut self.local_devices) {
             self.leave(g);
             return false;
         }
@@ -831,7 +935,8 @@ impl V2Match {
             return true;
         }
         for handle in session.local_player_handles() {
-            if session.add_local_input(handle, Keys::of(&self.local_device)).is_err() {
+            let KeySlot::Local(local) = self.targets[handle] else { continue };
+            if session.add_local_input(handle, Keys::of(&self.local_devices[local])).is_err() {
                 return true;
             }
         }
@@ -887,9 +992,40 @@ mod tests {
 
     #[test]
     fn slot_messages_carry_the_handshake_version() {
-        assert_eq!(read_slot_message(&slot_message(2)), Ok(2));
-        assert!(read_slot_message(&[MSG_SLOT, HANDSHAKE_VERSION + 1, 2]).is_err());
+        let pads = [Some(false), Some(true), None, Some(true)];
+        assert_eq!(read_slot_message(&slot_message(&[2], &pads)), Ok(vec![(2, false)]));
+        assert_eq!(read_slot_message(&slot_message(&[3, 0, 1], &pads)), Ok(vec![(3, true), (0, false), (1, true)]));
+        assert!(read_slot_message(&[MSG_SLOT, HANDSHAKE_VERSION + 1, 2, 0]).is_err());
         assert!(read_slot_message(&[MSG_SLOT, 2]).is_err());
+        assert!(read_slot_message(&[MSG_SLOT, HANDSHAKE_VERSION]).is_err(), "no slots");
+        assert!(read_slot_message(&[MSG_SLOT, HANDSHAKE_VERSION, 1]).is_err(), "a slot without its device");
+        assert!(read_slot_message(&[MSG_SLOT, HANDSHAKE_VERSION, 1, 2]).is_err(), "an unknown device");
+        assert!(read_slot_message(&slot_message(&[0, 1, 2, 3, 0], &pads)).is_err(), "more slots than players");
+    }
+
+    #[test]
+    fn pads_tokens_round_trip() {
+        let pads = [Some(false), Some(true), None, Some(true)];
+        assert_eq!(pads_token(&pads), "kp-p");
+        assert_eq!(parse_pads("kp-p"), Some(pads));
+        assert_eq!(parse_pads("kp"), None);
+        assert_eq!(parse_pads("kpxp"), None);
+    }
+
+    #[test]
+    fn slots_tokens_round_trip() {
+        assert_eq!(slots_token(&[0, 2]), "0+2");
+        assert_eq!(parse_slots("0+2"), Some(vec![0, 2]));
+        assert_eq!(parse_slots("1"), Some(vec![1]), "a recording from before couch play");
+        assert_eq!(parse_slots("1+x"), None);
+    }
+
+    #[test]
+    fn peer_names_join_a_couch() {
+        let names = ["Ann", "Bo", "Bo 2", "(empty)"].map(String::from);
+        let slots = BTreeMap::from([(PeerId(1), vec![1, 2])]);
+        assert_eq!(peer_name(&names, &slots, PeerId(1)), "Bo and Bo 2");
+        assert_eq!(peer_name(&names, &slots, PeerId(2)), "A player");
     }
 
     #[test]
@@ -920,9 +1056,10 @@ mod tests {
     #[test]
     fn missing_slots_skip_empty_and_own() {
         let names = ["Ann", "(empty)", "Bo", "Cy"].map(String::from);
-        assert_eq!(missing_slots(&names, 0, &[]), vec![2, 3]);
-        assert_eq!(missing_slots(&names, 0, &[3]), vec![2]);
-        assert!(missing_slots(&names, 2, &[0, 3]).is_empty());
+        assert_eq!(missing_slots(&names, &[0], &[]), vec![2, 3]);
+        assert_eq!(missing_slots(&names, &[0], &[3]), vec![2]);
+        assert!(missing_slots(&names, &[2], &[0, 3]).is_empty());
+        assert_eq!(missing_slots(&names, &[0, 3], &[]), vec![2]);
     }
 
     #[test]
@@ -940,13 +1077,14 @@ mod tests {
     fn slot_claims_are_unique() {
         let (a, b) = (PeerId(1), PeerId(2));
         let mut slots = BTreeMap::new();
-        assert!(claim_slot(&mut slots, 0, a, 1).is_ok());
-        assert!(claim_slot(&mut slots, 0, a, 1).is_ok(), "a repeated claim");
-        assert!(claim_slot(&mut slots, 0, b, 1).is_err(), "another peer's slot");
-        assert!(claim_slot(&mut slots, 0, b, 0).is_err(), "this player's slot");
-        assert!(claim_slot(&mut slots, 0, b, MAX_PLAYERS as u8).is_err(), "out of range");
-        assert!(claim_slot(&mut slots, 0, a, 2).is_err(), "a changed slot");
-        assert!(claim_slot(&mut slots, 0, b, 2).is_ok());
-        assert_eq!(slots, BTreeMap::from([(a, 1), (b, 2)]));
+        assert!(claim_slots(&mut slots, &[0], a, &[1, 3]).is_ok());
+        assert!(claim_slots(&mut slots, &[0], a, &[1, 3]).is_ok(), "a repeated claim");
+        assert!(claim_slots(&mut slots, &[0], b, &[2, 3]).is_err(), "another peer's slot");
+        assert!(claim_slots(&mut slots, &[0], b, &[0]).is_err(), "this client's slot");
+        assert!(claim_slots(&mut slots, &[0], b, &[2, 2]).is_err(), "a slot twice");
+        assert!(claim_slots(&mut slots, &[0], b, &[MAX_PLAYERS as u8]).is_err(), "out of range");
+        assert!(claim_slots(&mut slots, &[0], a, &[1]).is_err(), "changed slots");
+        assert!(claim_slots(&mut slots, &[0], b, &[2]).is_ok());
+        assert_eq!(slots, BTreeMap::from([(a, vec![1, 3]), (b, vec![2])]));
     }
 }
