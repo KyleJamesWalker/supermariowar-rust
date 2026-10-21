@@ -59,7 +59,7 @@ Menus, the world map and the screens between games stay on reliable messages. Ro
 - **Hidden browser tabs.** Browsers pause `requestAnimationFrame` in a hidden tab, so that peer stops sending and the others stall at the prediction window. A peer reports `visibilitychange`, and the others drop it after a timeout.
 - **Connecting at match start.** Every pair of players must connect before the match starts. Set a deadline, fall back to TURN, and name the player who could not connect.
 - **Pause and exit.** `pausegame` and `exitinggame` live in `game_values`, which `clone_match` copies. Keep them out of the rollback state, and send neutral input while the dialog is open.
-- **Local players.** v1 sends one player per client. GGRS accepts several local players per peer, which allows couch players in an online match.
+- **Local players (done).** A client brings one to three players on its own controllers: the room menu's Players field sends `NET_REQUEST_LOCAL_PLAYERS` (protocol 0.10), and the lobby seats them in free slots or refuses. `MSG_SLOT` carries all of a peer's slots, and local player i reads input slot i as GGRS local handle `L<i>`. Each room slot has a team: a new player takes an empty one, Left and Right on a player's skin send `NET_REQUEST_TEAM`, and the lobby refuses a room on one team. The match plays the room's teams.
 - **Recordings.** v1 net recordings log every received packet. v2 records the confirmed inputs of each tick, which also makes a net match an ordinary replay.
 - **Rooms between matches.** v1 hides a started room and breaks it up after the match. v2 returns everyone to the room for the next match.
 
