@@ -42,6 +42,14 @@ fn touch_session(g: &mut Game) -> bool {
     false
 }
 
+fn prev_char(s: &str, i: usize) -> usize {
+    s.floor_char_boundary(i.saturating_sub(1))
+}
+
+fn next_char(s: &str, i: usize) -> usize {
+    s.ceil_char_boundary(i + 1)
+}
+
 fn is_text_key(key: Keycode) -> bool {
     (key >= SDLK_a && key <= SDLK_z)
         || key == SDLK_SPACE
@@ -175,10 +183,10 @@ impl MI_TextField {
             return;
         }
 
-        let mut bytes = unsafe { (*self.szOutValue).as_bytes().to_vec() };
-        bytes.resize(self.iCursorIndex as usize, 0);
-        // May cut a multi-byte character; the font reads only bytes.
-        self.szTempValue = unsafe { String::from_utf8_unchecked(bytes) };
+        let value = unsafe { &*self.szOutValue };
+        self.iCursorIndex = value.floor_char_boundary(self.iCursorIndex.max(0) as usize) as i16;
+        self.szTempValue.clear();
+        self.szTempValue.push_str(&value[..self.iCursorIndex as usize]);
 
         self.iStringWidth = g.rm.menu_font_large.get_width(&self.szTempValue) as i16;
         let (px, py) = (self.m_pos.x, self.m_pos.y);
@@ -193,10 +201,10 @@ impl MI_TextField {
     }
 
     fn insert_char(&mut self, g: &mut Game, c: u8) -> MenuCodeEnum {
-        if self.iNumChars >= self.iMaxChars - 1 || self.szDisallowedChars.as_bytes().contains(&c) {
+        if !c.is_ascii() || self.iNumChars >= self.iMaxChars - 1 || self.szDisallowedChars.as_bytes().contains(&c) {
             return MENU_CODE_NONE;
         }
-        unsafe { (*self.szOutValue).as_mut_vec().insert(self.iCursorIndex as usize, c) };
+        unsafe { (*self.szOutValue).insert(self.iCursorIndex as usize, c as char) };
         self.iCursorIndex += 1;
         self.iNumChars += 1;
 
@@ -206,9 +214,9 @@ impl MI_TextField {
 
     fn backspace(&mut self, g: &mut Game) -> MenuCodeEnum {
         if self.iCursorIndex > 0 {
-            self.iCursorIndex -= 1;
-            self.iNumChars -= 1;
-            unsafe { (*self.szOutValue).as_mut_vec().remove(self.iCursorIndex as usize) };
+            let value = unsafe { &mut *self.szOutValue };
+            self.iCursorIndex = prev_char(value, self.iCursorIndex as usize) as i16;
+            self.iNumChars -= value.remove(self.iCursorIndex as usize).len_utf8() as i16;
 
             self.update_cursor(g);
             return self.mcItemChangedCode;
@@ -457,20 +465,19 @@ impl UI_ControlTrait for MI_TextField {
             return self.backspace(g);
         } else if key == SDLK_DELETE {
             if self.iCursorIndex < self.iNumChars {
-                unsafe { (*self.szOutValue).as_mut_vec().remove(self.iCursorIndex as usize) };
-                self.iNumChars -= 1;
+                self.iNumChars -= unsafe { (*self.szOutValue).remove(self.iCursorIndex as usize) }.len_utf8() as i16;
 
                 self.update_cursor(g);
                 return self.mcItemChangedCode;
             }
         } else if key == SDLK_LEFT {
             if self.iCursorIndex > 0 {
-                self.iCursorIndex -= 1;
+                self.iCursorIndex = prev_char(unsafe { &*self.szOutValue }, self.iCursorIndex as usize) as i16;
                 self.update_cursor(g);
             }
         } else if key == SDLK_RIGHT {
             if self.iCursorIndex < self.iNumChars {
-                self.iCursorIndex += 1;
+                self.iCursorIndex = next_char(unsafe { &*self.szOutValue }, self.iCursorIndex as usize) as i16;
                 self.update_cursor(g);
             }
         }
@@ -528,13 +535,12 @@ impl UI_ControlTrait for MI_TextField {
         if self.fModifying {
             //Move cursor to index in string where clicked
             let mut iPixelCount: i16 = 0;
-            for iChar in 0..self.iNumChars {
-                let szChar = [unsafe { (*self.szOutValue).as_bytes()[iChar as usize] }];
-                let szChar = unsafe { std::str::from_utf8_unchecked(&szChar) };
-                iPixelCount = (iPixelCount as i32 + g.rm.menu_font_large.get_width(szChar)) as i16;
+            let value = unsafe { &*self.szOutValue };
+            for (iChar, c) in value.char_indices() {
+                iPixelCount = (iPixelCount as i32 + g.rm.menu_font_large.get_width(c.encode_utf8(&mut [0; 4]))) as i16;
 
                 if iPixelCount as i32 >= iMouseX as i32 - (self.m_pos.x as i32 + self.iIndent as i32 + 8) {
-                    self.iCursorIndex = iChar;
+                    self.iCursorIndex = iChar as i16;
                     self.update_cursor(g);
                     return MENU_CODE_NONE;
                 }
@@ -561,5 +567,23 @@ impl UI_ControlTrait for MI_TextField {
 
         let p = self.szOutValue;
         self.set_data(g, unsafe { &mut *p }, self.iMaxChars);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cursor_steps_over_whole_characters() {
+        let s = "aé€b";
+        assert_eq!(next_char(s, 0), 1);
+        assert_eq!(next_char(s, 1), 3);
+        assert_eq!(next_char(s, 3), 6);
+        assert_eq!(next_char(s, 7), 7);
+        assert_eq!(prev_char(s, 7), 6);
+        assert_eq!(prev_char(s, 6), 3);
+        assert_eq!(prev_char(s, 3), 1);
+        assert_eq!(prev_char(s, 1), 0);
     }
 }
