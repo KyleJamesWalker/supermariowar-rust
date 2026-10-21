@@ -24,7 +24,6 @@ use crate::common::path::{convert_path_pack, get_home_directory};
 use crate::common::score::CScore;
 use crate::common::sfx::{sfx_close, sfx_init};
 use crate::globals::*;
-use crate::smw::fps_limiter::FPSLimiter;
 use crate::smw::game_state::{GameState, GameStateManager};
 use crate::smw::gs_splash_screen::SplashScreenState;
 use crate::smw::harness;
@@ -218,8 +217,6 @@ fn draw_fps_overlay(g: &mut Game) {
 unsafe fn present(g: &mut Game, frame_start: std::time::Instant, update_end: std::time::Instant) {
     let mut gp = g.ptr();
     draw_fps_overlay(gp.get());
-    phase(1);
-    FPSLimiter::instance(gp.get()).before_flip(gp.get());
     phase(7);
     gfx_flipscreen(gp.get());
     let flip_end = std::time::Instant::now();
@@ -233,12 +230,10 @@ unsafe fn present(g: &mut Game, frame_start: std::time::Instant, update_end: std
 unsafe fn gameloop_frame(g: &mut Game) {
     let mut gp = g.ptr();
     phase(1);
-    FPSLimiter::instance(gp.get()).frame_start(g);
     let frame_start = std::time::Instant::now();
     tick(g);
     present(g, frame_start, std::time::Instant::now());
     phase(1);
-    FPSLimiter::instance(gp.get()).after_flip(gp.get());
 }
 
 /// Runs the ticks that wall time calls for at `TICKS_PER_SECOND`, at most `MAX_CATCH_UP_TICKS` of them, and presents
