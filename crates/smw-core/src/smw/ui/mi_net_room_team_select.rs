@@ -1,4 +1,4 @@
-//! A netplay room player slot: the player's sprite, and skin cycling for the local player.
+//! A netplay room player slot: the player's sprite, and skin and team picking for a local player.
 
 
 use crate::common::global_constants::ticks;
@@ -33,11 +33,13 @@ pub struct MI_NetRoomTeamSelect {
 
     /// Called when the player confirms or cancels, to send the skin to the room.
     onChangeAccepted: Box<dyn FnMut(&mut Game)>,
+    /// Called with -1 or 1 when the player presses left or right, to ask the room for the next team that way.
+    onTeamStep: Box<dyn FnMut(&mut Game, i16)>,
 }
 crate::impl_base!(MI_NetRoomTeamSelect => ui_control: UI_Control);
 
 impl MI_NetRoomTeamSelect {
-    pub fn new(g: &mut Game, x: i16, y: i16, player_id: i16, on_change_accepted: Box<dyn FnMut(&mut Game)>) -> Self {
+    pub fn new(g: &mut Game, x: i16, y: i16, player_id: i16, on_change_accepted: Box<dyn FnMut(&mut Game)>, on_team_step: Box<dyn FnMut(&mut Game, i16)>) -> Self {
         let sel = g.rm.menu_player_select;
         let mut miHoverImage = Box::new(MI_Image::new(sel, x - 6, y - 6, 32 + 18, 128 + 18, 44, 44, 1, 1, 1));
         miHoverImage.set_visible(false);
@@ -57,6 +59,7 @@ impl MI_NetRoomTeamSelect {
             miModifyImage,
             miHoverImage,
             onChangeAccepted: on_change_accepted,
+            onTeamStep: on_team_step,
         }
     }
 
@@ -66,7 +69,8 @@ impl MI_NetRoomTeamSelect {
         let p = self.owner_player as usize;
         loop {
             step(&mut g.game_values.skinids[p]);
-            if gp.get().rm.load_menu_skin(g, self.owner_player, gp.get().game_values.skinids[p], gp.get().game_values.colorids[p], false) {
+            let color = crate::smw::net::room_skin_color(g, p);
+            if gp.get().rm.load_menu_skin(g, self.owner_player, gp.get().game_values.skinids[p], color, false) {
                 break;
             }
         }
@@ -131,6 +135,12 @@ impl UI_ControlTrait for MI_NetRoomTeamSelect {
 
         let playerKeys = g.game_values.playerInput.outputControls[0];
         let count = g.skinlist.count() as i16;
+
+        if playerKeys.menu_left().fPressed {
+            (self.onTeamStep)(g, -1);
+        } else if playerKeys.menu_right().fPressed {
+            (self.onTeamStep)(g, 1);
+        }
 
         if !g.game_values.randomskin[0] {
             if playerKeys.menu_up().fPressed {

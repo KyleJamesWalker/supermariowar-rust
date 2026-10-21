@@ -315,10 +315,10 @@ impl CPlayerInput {
                 let inputControl = &*inputControl;
                 let outputControl = &mut *outputControl;
 
-                // `iPlayer` is -1 only in menus, where `iGameState` is 1, so this never indexes `playercontrol` with it.
-                let ignore_cpu = |iKey: usize| -> bool {
-                    iGameState == 0 && g.game_values.playercontrol[iPlayer as usize] != 1 && iKey < 6
-                };
+                // `iPlayer` is -1 only in menus, where `iGameState` is 1, so this never indexes `playercontrol` with it. In a
+                // net match input slot i is local player i, whose room slot may be another, so `playercontrol` says nothing.
+                let human = if g.netplay.active { (iPlayer as usize) < g.netplay.localSlots.len() } else { g.game_values.playercontrol[iPlayer as usize] == 1 };
+                let ignore_cpu = |iKey: usize| -> bool { iGameState == 0 && !human && iKey < 6 };
 
                 if iDeviceID == DEVICE_KEYBOARD {
                     if matches!(event, E::Key { down: true, .. }) {

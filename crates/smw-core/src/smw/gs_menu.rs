@@ -463,7 +463,7 @@ impl MenuState {
         for k in 0..4usize {
             if g.game_values.playercontrol[k] > 0 {
                 if g.netplay.active {
-                    if k == g.netplay.remotePlayerNumber as usize {
+                    if g.netplay.is_local_slot(k) {
                         // local player uses local skin
                         let skin = gp.rm.load_full_skin(g, gp.game_values.skinids[k], gp.game_values.colorids[k]);
                         g.rm.set_strip(g.rm.spr_player[k], skin);
@@ -1577,6 +1577,8 @@ impl MenuState {
             } else if MENU_CODE_TO_NET_NEW_ROOM_SETTINGS_MENU == code {
                 self.mCurrentMenu = MenuId::NetNewRoom;
                 self.current().reset_menu(g);
+            } else if MENU_CODE_NET_ROOM_LOCAL_PLAYERS == code {
+                gp.netplay.client.send_local_players(g);
             } else if MENU_CODE_NET_CHAT_SEND == code {
                 if !g.netplay.mychatmessage.is_empty() {
                     let message = g.netplay.mychatmessage.clone();
@@ -1611,10 +1613,7 @@ impl MenuState {
             } else if MENU_CODE_NET_ROOM_GO == code {
                 g.netplay.operationInProgress = false;
                 g.game_values.matchtype = MatchType::NetGame;
-
-                self.mTeamSelectMenu.reset_team_select(g);
-                self.mTeamSelectMenu.reset_menu(g);
-                g.score_cnt = self.mTeamSelectMenu.get_team_count(g);
+                g.score_cnt = crate::smw::net::apply_room_teams(g);
 
                 g.game_values.tournamentcontrolteam = -1;
                 g.game_values.tournamentwinner = -1;
