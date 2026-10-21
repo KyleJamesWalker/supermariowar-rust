@@ -46,6 +46,11 @@ impl CompressedData {
 pub struct FileCompressor;
 
 impl FileCompressor {
+    /// Whether a file of `len` bytes is within what `compress` takes.
+    pub fn fits(len: u64) -> bool {
+        len <= COMPRESSION_SIZE_LIMIT && compress_bound(len) <= COMPRESSION_SIZE_LIMIT
+    }
+
     /// Buffer layout: `output_header_offset` zero bytes, uncompressed size (u16), compressed size (u16), zlib data.
     /// The sizes are little-endian.
     pub fn compress(input_path: &str, output_header_offset: usize) -> CompressedData {
@@ -74,7 +79,7 @@ impl FileCompressor {
             }
             drop(input_file);
 
-            if compress_bound(input_size) > COMPRESSION_SIZE_LIMIT {
+            if !Self::fits(input_size) {
                 println!("[error] File is too big: {}", input_path);
                 return None;
             }
@@ -183,6 +188,17 @@ mod tests {
         assert!(FileCompressor::decompress(&c.data[3..], out.to_str().unwrap()));
         assert_eq!(std::fs::read(map).unwrap(), std::fs::read(&out).unwrap());
         let _ = std::fs::remove_file(out);
+    }
+
+    #[test]
+    fn a_file_over_the_limit_does_not_fit() {
+        assert!(FileCompressor::fits(19_000));
+        assert!(!FileCompressor::fits(19_990), "its compressed bound is over the limit");
+        assert!(!FileCompressor::fits(COMPRESSION_SIZE_LIMIT + 1));
+        let big = std::env::temp_dir().join(format!("smw_fc_big_{}.map", std::process::id()));
+        std::fs::write(&big, vec![7u8; 19_990]).unwrap();
+        assert!(!FileCompressor::compress(big.to_str().unwrap(), 3).is_valid());
+        let _ = std::fs::remove_file(big);
     }
 
     #[test]

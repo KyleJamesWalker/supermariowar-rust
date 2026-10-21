@@ -1743,8 +1743,7 @@ impl GameState for MenuState {
 
         if let Some(forcedMap) = harness::forced_map(g) {
             if !g.maplist.findexact(forcedMap, false) && !g.maplist.find(forcedMap) {
-                eprintln!("[harness] SMW_MAP '{}' not found", forcedMap);
-                std::process::exit(2);
+                harness::fail(format!("SMW_MAP '{}' not found", forcedMap));
             }
             g.ctl(self.mGameSettingsMenu.miMapField).load_current_map(g);
         }

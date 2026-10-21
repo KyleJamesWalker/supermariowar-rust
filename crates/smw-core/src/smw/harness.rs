@@ -21,6 +21,7 @@ use std::ffi::CString;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex, Once, Weak};
 
 extern "C" {
     fn srand(seed: u32);
@@ -73,7 +74,7 @@ pub struct Harness {
     /// SMW_FRAMES: quit after this many frames plus `shift`; -1 for no limit.
     maxFrames: i64,
     /// SMW_DUMP: the per-frame state dump.
-    dump: Option<BufWriter<File>>,
+    dump: Option<Dump>,
     /// SMW_SHOT_FRAMES: frames saved as BMP screenshots.
     shotFrames: BTreeSet<u32>,
     shotDir: String,
@@ -204,7 +205,39 @@ fn env(name: &str) -> Option<String> {
 /// Prints `msg` and exits with status 2.
 pub fn fail(msg: String) -> ! {
     eprintln!("[harness] {}", msg);
+    flush_dumps();
     std::process::exit(2);
+}
+
+type Dump = Arc<Mutex<BufWriter<File>>>;
+
+/// Every open dump, so `fail` and a panic can flush the frames buffered since the last full buffer.
+static OPEN_DUMPS: Mutex<Vec<Weak<Mutex<BufWriter<File>>>>> = Mutex::new(Vec::new());
+
+fn open_dump(file: File) -> Dump {
+    static PANIC_HOOK: Once = Once::new();
+    PANIC_HOOK.call_once(|| {
+        let previous = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |info| {
+            flush_dumps();
+            previous(info);
+        }));
+    });
+    let dump = Arc::new(Mutex::new(BufWriter::new(file)));
+    let mut open = OPEN_DUMPS.lock().unwrap_or_else(|e| e.into_inner());
+    open.retain(|d| d.strong_count() > 0);
+    open.push(Arc::downgrade(&dump));
+    dump
+}
+
+/// Skips a dump whose lock a panic inside `dump_frame` still holds.
+fn flush_dumps() {
+    let open = OPEN_DUMPS.lock().unwrap_or_else(|e| e.into_inner());
+    for dump in open.iter().filter_map(Weak::upgrade) {
+        if let Ok(mut out) = dump.try_lock() {
+            let _ = out.flush();
+        }
+    }
 }
 
 /// C `strtoul(s, nullptr, 0)`: decimal, `0x` hex or leading-zero octal prefix, stops at the first bad digit.
@@ -516,7 +549,7 @@ pub fn init(g: &mut Game) {
                 .append(true)
                 .open(&dump)
                 .unwrap_or_else(|_| fail(format!("cannot open dump {}", dump)));
-            h(gp.get()).dump = Some(BufWriter::new(file));
+            h(gp.get()).dump = Some(open_dump(file));
         }
 
         if let Some(shots) = env("SMW_SHOT_FRAMES") {
@@ -550,7 +583,7 @@ pub fn init(g: &mut Game) {
 /// Dumps to `path` from the next frame on, as SMW_DUMP does from the first.
 pub fn dump_to(g: &mut Game, path: &str) {
     let file = File::create(path).unwrap_or_else(|_| fail(format!("cannot open dump {}", path)));
-    h(g).dump = Some(BufWriter::new(file));
+    h(g).dump = Some(open_dump(file));
 }
 
 /// The seed for libc `srand`: the harness seed in seeded runs, else `fallback`.
@@ -779,10 +812,12 @@ pub fn wait_event(g: &mut Game) -> Input {
 /// End of a frame: writes the dump block, markers and screenshots, then counts the frame and quits at SMW_FRAMES.
 pub fn frame_end(g: &mut Game) {
     let mut gp = g.ptr();
-    if let Some(mut out) = h(gp.get()).dump.take() {
-        let _ = dump_frame(g, &mut out);
+    if let Some(dump) = h(gp.get()).dump.clone() {
+        let mut out = dump.lock().unwrap_or_else(|e| e.into_inner());
+        let _ = dump_frame(g, &mut *out);
+        // The web tests read the dump from MEMFS while the game runs.
+        #[cfg(target_os = "emscripten")]
         let _ = out.flush();
-        h(gp.get()).dump = Some(out);
     }
     g.sfx.sfx_events.clear();
     record_markers(g, h(gp.get()).frame);
@@ -1216,10 +1251,11 @@ fn record_wait_event(g: &mut Game) -> Input {
 /// Frames a watch plays past the last input of a recording that has no `frames=` line.
 const UNFINISHED_TAIL_FRAMES: u32 = 3 * crate::common::global_constants::TICKS_PER_SECOND;
 
-/// Writes `#@ frames=` and closes the recording, or removes a watch session's throwaway HOME.
+/// Closes the dump, writes `#@ frames=` and closes the recording, or removes a watch session's throwaway HOME.
 /// Safe to call more than once.
 pub fn finish(g: &mut Game) {
     let mut gp = g.ptr();
+    h(gp.get()).dump = None;
     if let Some(home) = h(gp.get()).watch_home.take() {
         let _ = std::fs::remove_dir_all(home);
     }

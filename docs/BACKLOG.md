@@ -16,13 +16,11 @@ These items wait on a choice, not on work.
 
 Follow-ups to the merged backlog PRs.
 
-- Enable the `bad_map` case of `tools/net_v2_adversarial_test.py` in CI. It passes locally on `main` since #250.
 - Run #248's SDL2 audio reload fix under AddressSanitizer.
 - Check by hand what the headless tests cannot reach. These are the live level editor's Shift and Ctrl (#256), and the shader error banner and window restore (#261). Also open the sound options menu with no world music packs (#271).
 
 ## Maintenance
 
-- `smw_relay` still has two clippy `result_large_err` warnings.
 - No map in `data/` uses the 1.6 format, so the 1.6 spawn-area fix in #257 has no test. Add a small 1.6 test map.
 - No editor replay presses Insert in the world editor. Add one that covers the in-memory screenshots from #256.
 
@@ -30,8 +28,6 @@ Follow-ups to the merged backlog PRs.
 
 Possible bugs found while commenting the code in #232, and gaps the fix PRs left. Gameplay fixes change the replay goldens.
 
-- Memory safety:
-  - `MI_TextField::update_cursor` can split a multi-byte character with `String::from_utf8_unchecked`.
 - Menus and world map:
   - Tour and world stage points on the scoreboard are never set, and its eye candy is never drawn.
 - Maps:
@@ -55,10 +51,7 @@ A full-codebase review on 2026-10-19, at the head of the GPU shader stack, confi
 
 - A rollback save still builds a fresh `MatchState` and re-boxes the players and objects, because GGRS's `GameStateCell::save` takes the state by value. Reusing the previous save's allocations needs a cell wrapper or a GGRS change. A load still clones the `MatchState` fields other than players and objects whole (`rollback.rs`, M).
 - The snapshot cost numbers come only from an Apple-silicon Mac. Re-measure on the RG35XX with `rollback_snapshot_cost` (S).
-- The desync checksum leaves out the mystery mushroom's `MysteryMushroomTempPlayer`, which is not a container object (`rollback.rs`, S).
 - A missing sound no longer fails at boot, but no netplay v2 test covers a joiner that lacks a sound effect the match plays. No test reproduces the in-match notice overlay or a LEAVE during the start. The harness takes screenshots at simulation frame ends, so they cannot show the lag notice during a stall (`tools/net_v2_adversarial_test.py`, M).
-- A user map over the 20,000-byte network limit makes its room silently unlisted, because the client skips the map change message. Tell the host (`net.rs`, `file_compressor.rs`, S). No shipped map is over the limit.
-- The relay's per-address limit trusts `X-Forwarded-For` from private and loopback peers, which it treats as a reverse proxy. On a LAN with the public defaults, a peer on that network can set the header to get around the limit (`limits.rs`, S).
 
 ### Later
 
@@ -71,8 +64,6 @@ A full-codebase review on 2026-10-19, at the head of the GPU shader stack, confi
 - The pause owner cannot resume after a disconnect. A disconnect ends the match today. If that changes, the pause needs a timeout or a handover (`rollback.rs`, S).
 - A dropped or failed WebRTC connection is never retried, on native or web. After a network blip the only way out is to leave the match (`smw-peer`, M). The relay caps each signaling room at 4 peers, which assumes nobody rejoins. Revisit the cap with reconnects.
 - Switching the shader while fullscreen forgets the earlier windowed size (`smw-sdl2/video.rs`, S).
-- `fps_limiter::after_flip` spins until the tick boundary, but only `SMW_NOLIMIT` runs reach it and they return early, so it is dead code beside `paced_frame`. Remove it (S).
-- `harness::frame_end` flushes the dump file every frame, which slows the headless sweeps. Flush on exit and on failure (`harness.rs`, S).
 - The netplay v2 `ticks` count includes stalled session frames. It sets "match over after N ticks" and the `frames_ahead` skip cadence, so both count stalls (`net_v2.rs`, S).
 - At CI size (48 cases per map, 30 ticks) the damaged-map fuzz test does not find the spawn-area panic without its direct check. Run a long fuzz pass nightly. Also add a byte mutator that knows the 1.8 section offsets. Then damage reaches the spawn areas, draw areas and warp exits, which `save_map` recomputes (`damaged_maps_that_load_play`, M).
 - Unconfirmed: whether anything can move the `String` that `MI_TextField::szOutValue` points to, and whether the world menu catches a world file that fails to parse. Also unconfirmed: whether a host-sent tour-stop line or menu skin can panic the joiner's parser, and how `smw-peer` behaves under TURN after a dropped connection.

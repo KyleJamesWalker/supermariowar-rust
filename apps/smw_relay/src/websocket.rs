@@ -135,7 +135,7 @@ pub fn serve(config: &Config, events: Sender<Event>) -> io::Result<u16> {
             full = false;
             // A connection from a possible proxy is counted once its X-Forwarded-For has arrived.
             let address = match stream.peer_addr().map(|a| a.ip()) {
-                Ok(ip) if !limits::may_proxy(ip) => match counts.addresses.open(ip, Instant::now()) {
+                Ok(ip) if !limits::may_proxy(ip, config.trusted_proxies) => match counts.addresses.open(ip, Instant::now()) {
                     Ok(address) => Some(address),
                     Err(_) => continue,
                 },
@@ -220,6 +220,7 @@ fn refuse(stream: &mut TcpStream, head_len: usize, status: &str, body: &str) {
 fn run_client(stream: TcpStream, id: ClientId, config: &Config, events: &Sender<Event>) {
     let mut who = stream.peer_addr().map(|a| a.to_string()).unwrap_or_default();
     let mut origin = String::new();
+    #[allow(clippy::result_large_err)] // tungstenite's handshake callback signature
     let check_origin = |request: &Request, response: Response| -> Result<Response, ErrorResponse> {
         let header = |name: &str| request.headers().get(name).and_then(|v| v.to_str().ok()).map(str::to_string);
         if let Some(forwarded) = header("x-forwarded-for") {

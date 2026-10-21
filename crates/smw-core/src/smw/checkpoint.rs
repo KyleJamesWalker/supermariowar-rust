@@ -695,8 +695,7 @@ impl GameState for SegmentState {
         MenuState::instance(g).init(g);
         GameplayState::instance(g).init(g);
         if let Err(e) = restore(g, std::mem::take(&mut self.checkpoint)) {
-            eprintln!("[harness] {}", e);
-            std::process::exit(2);
+            crate::smw::harness::fail(e.to_string());
         }
         crate::smw::net_v2::segment_started(g);
     }

@@ -1,5 +1,6 @@
 //! The relay's settings, from the command line and the environment.
 
+use crate::limits::TrustedProxies;
 use std::env;
 
 const USAGE: &str = "usage: smw_relay [--port <n>] [--config <lobby config file>] [--healthcheck]
@@ -15,9 +16,10 @@ environment:
   SMW_RELAY_MAX_CONNECTIONS  simultaneous TCP connections of any kind, handshakes included (default 256)
   SMW_RELAY_MAX_PER_ADDRESS  simultaneous connections from one client address, 0 for no limit (default 16)
   SMW_RELAY_CONNECTS_PER_MINUTE  new connections one client address may open per minute, 0 for no limit (default 60)
+  SMW_RELAY_TRUSTED_PROXIES  peers whose X-Forwarded-For names the client: none, loopback or private (loopback and
+                             private networks, for a proxy on a Docker network) (default loopback)
 
-A connection from a loopback or private address may carry the client's address in X-Forwarded-For, as a reverse proxy
-sends it. Loopback clients are exempt from the per-address limits.";
+Loopback clients are exempt from the per-address limits.";
 
 const DEFAULT_ORIGINS: &str = "https://www.kylejameswalker.com,http://localhost:8000";
 
@@ -39,6 +41,7 @@ pub struct Config {
     pub max_per_address: usize,
     /// New connections one client address may open per minute; 0 for no limit.
     pub connects_per_minute: u32,
+    pub trusted_proxies: TrustedProxies,
     /// Virtual connections one client may hold open to the lobby.
     pub max_connections_per_client: usize,
     /// Overrides the lobby's `SMW_SIGNAL_URL`; `/signal` means this relay's own signaling.
@@ -63,6 +66,7 @@ impl Config {
             max_connections: 256,
             max_per_address: 16,
             connects_per_minute: 60,
+            trusted_proxies: TrustedProxies::Loopback,
             max_connections_per_client: 8,
             signal_url: env::var_os("SMW_SIGNAL_URL").is_none().then(|| "/signal".to_string()),
             log_file: true,
@@ -83,6 +87,10 @@ impl Config {
         }
         if let Ok(rate) = env::var("SMW_RELAY_CONNECTS_PER_MINUTE") {
             config.connects_per_minute = rate.parse().map_err(|_| format!("SMW_RELAY_CONNECTS_PER_MINUTE: not a number: {rate}"))?;
+        }
+        if let Ok(trusted) = env::var("SMW_RELAY_TRUSTED_PROXIES") {
+            config.trusted_proxies =
+                TrustedProxies::parse(&trusted).ok_or_else(|| format!("SMW_RELAY_TRUSTED_PROXIES: not none, loopback or private: {trusted}"))?;
         }
 
         let mut args = env::args().skip(1);
@@ -111,6 +119,7 @@ impl Config {
             max_connections: 32,
             max_per_address: 0,
             connects_per_minute: 0,
+            trusted_proxies: TrustedProxies::Loopback,
             max_connections_per_client: 8,
             signal_url: Some("/signal".to_string()),
             log_file: false,
@@ -154,6 +163,7 @@ mod tests {
             max_connections: 1,
             max_per_address: 0,
             connects_per_minute: 0,
+            trusted_proxies: TrustedProxies::Loopback,
             max_connections_per_client: 1,
             signal_url: None,
             log_file: true,

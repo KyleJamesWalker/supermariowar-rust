@@ -51,6 +51,7 @@ fn send_to(room: &str, peer: &str, text: String) {
 
 /// One peer's signaling session in `room`, on its connection's thread, until it closes or goes quiet.
 pub fn run(stream: TcpStream, room: String, config: &Config) {
+    #[allow(clippy::result_large_err)] // tungstenite's handshake callback signature
     let check_origin = |request: &Request, response: Response| -> Result<Response, ErrorResponse> {
         let origin = request.headers().get("origin").and_then(|v| v.to_str().ok());
         if config.origin_allowed(origin) {

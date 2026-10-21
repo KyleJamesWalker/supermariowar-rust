@@ -1,4 +1,4 @@
-//! Waits out the rest of the tick after each `main::gameloop_frame`; a no-op in the browser build.
+//! Paces the level editor's frames to the tick rate; a no-op in the browser build.
 
 use crate::game::Game;
 use crate::globals::*;
