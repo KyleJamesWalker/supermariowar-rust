@@ -112,14 +112,40 @@ fn key(address: IpAddr) -> IpAddr {
     }
 }
 
-/// Whether `address` is on this host or a private network, where a reverse proxy in front of the relay would be.
-pub fn may_proxy(address: IpAddr) -> bool {
-    match address {
-        IpAddr::V4(v4) => v4.is_loopback() || v4.is_private() || v4.is_link_local(),
-        IpAddr::V6(v6) => match v6.to_ipv4_mapped() {
-            Some(v4) => may_proxy(IpAddr::V4(v4)),
-            None => v6.is_loopback() || v6.is_unique_local() || v6.is_unicast_link_local(),
-        },
+/// The peers whose `X-Forwarded-For` the relay believes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TrustedProxies {
+    None,
+    Loopback,
+    /// Loopback and private networks, such as a Docker network between Caddy and the relay.
+    Private,
+}
+
+impl TrustedProxies {
+    pub fn parse(value: &str) -> Option<TrustedProxies> {
+        match value.trim().to_ascii_lowercase().as_str() {
+            "none" => Some(TrustedProxies::None),
+            "loopback" => Some(TrustedProxies::Loopback),
+            "private" => Some(TrustedProxies::Private),
+            _ => None,
+        }
+    }
+}
+
+/// Whether a connection from `address` may be a reverse proxy in front of the relay.
+pub fn may_proxy(address: IpAddr, trusted: TrustedProxies) -> bool {
+    let address = match address {
+        IpAddr::V6(v6) => v6.to_ipv4_mapped().map_or(address, IpAddr::V4),
+        v4 => v4,
+    };
+    let private = match address {
+        IpAddr::V4(v4) => v4.is_private() || v4.is_link_local(),
+        IpAddr::V6(v6) => v6.is_unique_local() || v6.is_unicast_link_local(),
+    };
+    match trusted {
+        TrustedProxies::None => false,
+        TrustedProxies::Loopback => address.is_loopback(),
+        TrustedProxies::Private => address.is_loopback() || private,
     }
 }
 
@@ -177,8 +203,13 @@ mod tests {
 
     #[test]
     fn proxies_and_forwarded_addresses() {
-        assert!(may_proxy(ip("127.0.0.1")) && may_proxy(ip("172.18.0.3")) && may_proxy(ip("fd00::1")));
-        assert!(!may_proxy(ip("203.0.113.1")));
+        let private = TrustedProxies::Private;
+        assert!(may_proxy(ip("127.0.0.1"), private) && may_proxy(ip("172.18.0.3"), private) && may_proxy(ip("fd00::1"), private));
+        assert!(may_proxy(ip("::ffff:192.168.1.5"), private));
+        assert!(!may_proxy(ip("203.0.113.1"), private));
+        assert!(may_proxy(ip("127.0.0.1"), TrustedProxies::Loopback) && may_proxy(ip("::1"), TrustedProxies::Loopback));
+        assert!(!may_proxy(ip("192.168.1.5"), TrustedProxies::Loopback), "a LAN peer is not a proxy by default");
+        assert!(!may_proxy(ip("127.0.0.1"), TrustedProxies::None));
         let head = "GET / HTTP/1.1\r\nHost: x\r\nX-Forwarded-For: 198.51.100.7, 203.0.113.9\r\nUpgrade: websocket";
         assert_eq!(forwarded_for(head), Some(ip("203.0.113.9")));
         assert_eq!(forwarded_for("GET / HTTP/1.1\r\nHost: x"), None);
