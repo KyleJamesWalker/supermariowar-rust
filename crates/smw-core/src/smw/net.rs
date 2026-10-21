@@ -937,6 +937,9 @@ impl NetClient {
 
         let mut compressed = FileCompressor::compress(&mapfilepath, std::mem::size_of::<MessageHeader>());
         if !compressed.is_valid() {
+            let too_big = std::fs::metadata(&mapfilepath).is_ok_and(|m| !FileCompressor::fits(m.len()));
+            let notice = if too_big { "This map is too big to play online" } else { "Could not send the map to the room" };
+            g.netplay.match_notice = Some(notice.to_string());
             return;
         }
         if compressed.size() <= 4 + std::mem::size_of::<MessageHeader>() {
