@@ -813,7 +813,11 @@ pub fn wait_event(g: &mut Game) -> Input {
 pub fn frame_end(g: &mut Game) {
     let mut gp = g.ptr();
     if let Some(dump) = h(gp.get()).dump.clone() {
-        let _ = dump_frame(g, &mut *dump.lock().unwrap_or_else(|e| e.into_inner()));
+        let mut out = dump.lock().unwrap_or_else(|e| e.into_inner());
+        let _ = dump_frame(g, &mut *out);
+        // The web tests read the dump from MEMFS while the game runs.
+        #[cfg(target_os = "emscripten")]
+        let _ = out.flush();
     }
     g.sfx.sfx_events.clear();
     record_markers(g, h(gp.get()).frame);
