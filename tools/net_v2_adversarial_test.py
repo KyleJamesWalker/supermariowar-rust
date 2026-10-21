@@ -6,10 +6,10 @@
   settings  net_game, whose joiner has sound and music off and lacks every game track the host's match can play; the
             joiner must play silence and stay in sync
   bad_map   net_game, whose host plays a truncated map; neither client may crash, and each must end the match
-            or start it cleanly. Not run by default: the host's map menu still panics on a truncated map.
+            or start it cleanly
 
 Usage: tools/net_v2_adversarial_test.py [work_dir]
-  CASES            the cases to run (default: rogue settings; settings reuses rogue's options.bin)
+  CASES            the cases to run (default: rogue settings bad_map; settings reuses rogue's options.bin)
   SMW_RUST_BIN     the game (default: target/release/smw)
   SMW_RELAY_BIN    the relay (default: target/release/smw_relay)
   SMW_RUST_DATA    the data directory (default: data)
@@ -31,7 +31,7 @@ EXE = ".exe" if os.name == "nt" else ""
 smw = Path(os.environ.get("SMW_RUST_BIN", REPO / "target" / "release" / f"smw{EXE}")).resolve()
 relay = Path(os.environ.get("SMW_RELAY_BIN", REPO / "target" / "release" / f"smw_relay{EXE}")).resolve()
 data = Path(os.environ.get("SMW_RUST_DATA", REPO / "data")).resolve()
-cases = (os.environ.get("CASES") or "rogue settings").split()
+cases = (os.environ.get("CASES") or "rogue settings bad_map").split()
 # Bytes of options.bin: 4 version i32s, then spawnstyle .. teamcolors, sound, music, musicvolume, soundvolume.
 SOUND_OPTIONS = slice(23, 27)
 MUSIC = "music/game/Standard"
