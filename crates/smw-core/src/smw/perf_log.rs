@@ -22,6 +22,8 @@ pub struct PerfLog {
     upload_us: u64,
     swap_us: u64,
     split_frames: u32,
+    /// Frame time less the backend's draw and swap, which holds the vsync wait.
+    work_us: u64,
     worst_us: u64,
     over_budget: u32,
 }
@@ -48,32 +50,37 @@ impl PerfLog {
         self.update_us += update;
         self.render_us += render;
         self.flip_us += flip;
+        let mut work = total;
         if let Some((upload, swap)) = split {
             self.upload_us += upload;
             self.swap_us += swap;
             self.split_frames += 1;
+            work = total.saturating_sub(swap);
         }
-        self.worst_us = self.worst_us.max(total);
-        if total > BUDGET_US {
+        self.work_us += work;
+        self.worst_us = self.worst_us.max(work);
+        if work > BUDGET_US {
             self.over_budget += 1;
         }
         if self.frames == REPORT_FRAMES {
             let n = self.frames as u64;
             let ms = |us: u64, n: u64| us as f64 / n as f64 / 1000.0;
             let avg = (self.update_us + self.render_us + self.flip_us) / n;
+            let work = self.work_us / n;
             let split = match self.split_frames as u64 {
                 0 => String::new(),
                 k => format!(" (upload {:.2} ms, draw and swap {:.2} ms)", ms(self.upload_us, k), ms(self.swap_us, k)),
             };
             println!(
-                "[perf] {} frames: update+draw {:.2} ms, render {:.2} ms, present {:.2} ms{}, total {:.2} ms ({}% of the {:.2} ms tick), worst {:.2} ms, {} over budget",
+                "[perf] {} frames: update+draw {:.2} ms, render {:.2} ms, present {:.2} ms{}, total {:.2} ms, work {:.2} ms ({}% of the {:.2} ms tick), worst work {:.2} ms, {} over budget",
                 self.frames,
                 ms(self.update_us, n),
                 ms(self.render_us, n),
                 ms(self.flip_us, n),
                 split,
                 avg as f64 / 1000.0,
-                avg * 100 / BUDGET_US,
+                work as f64 / 1000.0,
+                work * 100 / BUDGET_US,
                 BUDGET_US as f64 / 1000.0,
                 self.worst_us as f64 / 1000.0,
                 self.over_budget
