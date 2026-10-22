@@ -1719,6 +1719,18 @@ pub fn is_exit_allowed(g: &mut Game) -> bool {
     true
 }
 
+/// Leaves a finished match from its stats page: commits its stats and its World, Tour or Tournament standings.
+pub fn leave_finished_match(g: &mut Game) {
+    g.main_loop.stats_page = false;
+    crate::smw::stats::commit(g);
+    if g.game_values.matchtype == MatchType::Tour || g.game_values.matchtype == MatchType::Tournament {
+        update_score_board(g);
+    }
+
+    clean_up(g);
+    g.game_values.appstate = AppState::Menu;
+}
+
 /// Adds a finished match to the World, Tour or Tournament standings.
 pub fn update_score_board(g: &mut Game) {
     let mut gp = g.ptr();
@@ -2178,22 +2190,16 @@ pub fn update_exit_pause_dialog(g: &mut Game, iCountDownState: i16) -> bool {
                 }
             }
 
-            if (playerKeys.game_cancel().fPressed || (playerKeys.game_start().fPressed && g.mode().gameover)) && is_exit_allowed(g) {
+            // A v2 match's rollback ticks run its end screens (`rollback::advance`).
+            let shared_end = g.netplay.v2_match && g.mode().gameover;
+            if (playerKeys.game_cancel().fPressed || (playerKeys.game_start().fPressed && g.mode().gameover)) && !shared_end && is_exit_allowed(g) {
                 if g.mode().gameover {
                     if !g.main_loop.stats_page {
                         g.main_loop.stats_page = true;
                         g.game_values.playerInput.reset_keys();
                         return false;
                     }
-                    g.main_loop.stats_page = false;
-                    crate::smw::stats::commit(g);
-                    if g.game_values.matchtype == MatchType::Tour || g.game_values.matchtype == MatchType::Tournament {
-                        update_score_board(g);
-                    }
-
-                    clean_up(g);
-                    g.game_values.appstate = AppState::Menu;
-
+                    leave_finished_match(g);
                     return true;
                 } else if !g.game_values.flags.pausegame && !g.game_values.flags.exitinggame {
                     g.rm.sprite(g.rm.menu_shade).setalpha(App::menuTransparency as u8);
@@ -2457,6 +2463,7 @@ pub fn start_gameplay(g: &mut Game) {
     set_game_mode_settings_from_menu(g);
     crate::smw::stats::reset(g);
     g.main_loop.stats_page = false;
+    g.main_loop.stats_closed = 0;
     g.game_values.appstate = AppState::Game;
 
     if g.game_values.music {

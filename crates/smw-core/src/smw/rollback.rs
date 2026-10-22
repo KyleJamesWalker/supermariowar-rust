@@ -5,7 +5,7 @@
 use crate::common::eyecandy::{CEyecandyContainer, SpotlightManager};
 use crate::common::game_mode::{CGameModeTrait, ModeId};
 use crate::common::game_values::CGameValues;
-use crate::common::input::{COutputControl, KEY_GAME_START};
+use crate::common::input::{COutputControl, KEY_GAME_CANCEL, KEY_GAME_START};
 use crate::common::map::CMap;
 use crate::common::random_number_generator::RngState;
 use crate::common::score::CScore;
@@ -70,6 +70,7 @@ pub struct MatchState {
     mode: Option<ModeState>,
     currentgamemode: i16,
     stats_page: bool,
+    stats_closed: u16,
     rng: RngState,
     sfx: SfxState,
     x_shake: i16,
@@ -121,6 +122,7 @@ pub fn save(g: &mut Game) -> MatchState {
         },
         currentgamemode: g.currentgamemode,
         stats_page: g.main_loop.stats_page,
+        stats_closed: g.main_loop.stats_closed,
         rng: g.rng.clone(),
         sfx: g.sfx.clone(),
         x_shake: g.x_shake,
@@ -194,6 +196,7 @@ pub fn load(g: &mut Game, s: &MatchState) {
     }
     g.currentgamemode = s.currentgamemode;
     g.main_loop.stats_page = s.stats_page;
+    g.main_loop.stats_closed = s.stats_closed;
     g.rng = s.rng.clone();
     let audible = g.sfx.sfx_audible;
     g.sfx = s.sfx.clone();
@@ -226,6 +229,9 @@ pub fn advance(g: &mut Game, keys: &[(KeySlot, Keys)], rerun: bool) -> bool {
     }
     let gameplay = gp.gps.as_mut().expect("rollback::advance outside a match");
     let paused = g.netplay.v2_match && shared_pause(g, keys, rerun);
+    if g.netplay.v2_match {
+        shared_stats_page(g, keys);
+    }
     if !paused {
         gameplay.wind(g);
     }
@@ -254,6 +260,24 @@ fn shared_pause(g: &mut Game, keys: &[(KeySlot, Keys)], silent: bool) -> bool {
         }
     }
     g.game_values.flags.pausegame
+}
+
+/// A v2 match's end, the same on every peer at the same tick: once the match is over, any player's start or cancel key
+/// opens the stats page, and the next one closes it. `stats_closed` then counts the ticks until `net_v2` ends the match.
+fn shared_stats_page(g: &mut Game, keys: &[(KeySlot, Keys)]) {
+    if g.main_loop.stats_closed > 0 {
+        g.main_loop.stats_closed = g.main_loop.stats_closed.saturating_add(1);
+        return;
+    }
+    let pressed = keys.iter().any(|(_, k)| k.pressed(KEY_GAME_START) || k.pressed(KEY_GAME_CANCEL));
+    if !pressed || !g.mode().gameover || g.game_values.screenfade != 0 || !crate::smw::gs_gameplay::is_exit_allowed(g) {
+        return;
+    }
+    if g.main_loop.stats_page {
+        g.main_loop.stats_closed = 1;
+    } else {
+        g.main_loop.stats_page = true;
+    }
 }
 
 /// FNV-1a over the match's harness dump (game mode, players, object counts) and the simulated state the dump leaves

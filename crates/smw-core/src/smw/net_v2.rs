@@ -46,6 +46,8 @@ const DESYNC_INTERVAL: u32 = 30;
 const DISCONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 /// Silence after which GGRS reports a peer as interrupted.
 const INTERRUPTED_AFTER: Duration = Duration::from_secs(1);
+/// Ticks from a player closing the stats page to the match's end; past the prediction window, no rollback undoes it.
+const END_TICKS: u16 = MAX_PREDICTION as u16 + 2;
 /// How long a notice stays over the match.
 const NOTICE_FRAMES: u32 = 4 * crate::common::global_constants::TICKS_PER_SECOND;
 
@@ -364,6 +366,8 @@ fn draw_dialogs(g: &mut Game, notice: &mut Notice) {
 /// Back to the menu, telling the lobby; a match that did not start (`abandon`) also cleans up its gameplay.
 fn to_menu(g: &mut Game, abandoned: bool) {
     let mut gp = g.ptr();
+    g.main_loop.stats_page = false;
+    g.main_loop.stats_closed = 0;
     if abandoned {
         crate::smw::gs_gameplay::clean_up(g);
         g.game_values.appstate = crate::common::game_values::AppState::Menu;
@@ -486,6 +490,10 @@ fn replay_tick(g: &mut Game, frame: u32) {
                         to_menu(g, true)
                     }
                     "L" => to_menu(g, false),
+                    "E" => {
+                        crate::smw::gs_gameplay::leave_finished_match(g);
+                        to_menu(g, false)
+                    }
                     _ => {}
                 }
                 ended = true;
@@ -878,6 +886,16 @@ impl V2Match {
         to_menu(g, false);
     }
 
+    /// Leaves a finished match from its stats page, as every peer does at the same tick, or once another player left it.
+    /// False, for `tick`.
+    fn end(&mut self, g: &mut Game) -> bool {
+        self.send_all(&[MSG_LEAVE]);
+        note(&mut self.rec, "eE".to_string());
+        crate::smw::gs_gameplay::leave_finished_match(g);
+        to_menu(g, false);
+        false
+    }
+
     /// A match that could not start, or that every other player left, ends for this player, who goes back to the room.
     /// False, for `tick`.
     fn abandon(&mut self, g: &mut Game) -> bool {
@@ -933,6 +951,9 @@ impl V2Match {
             }
         }
         if let Some(peer) = leaver {
+            if g.mode().gameover {
+                return self.end(g);
+            }
             notify(&mut self.rec, &mut self.notice, format!("{} left the match", peer_name(&self.names, &self.slots, peer)));
             return self.abandon(g);
         }
@@ -998,6 +1019,9 @@ impl V2Match {
         self.perf.frames += 1;
         self.perf.total_us += spent;
         self.perf.worst_us = self.perf.worst_us.max(spent);
+        if g.main_loop.stats_closed > END_TICKS {
+            return self.end(g);
+        }
         if ended || g.gsm.currentState != crate::smw::game_state::StateId::Gameplay {
             return false;
         }

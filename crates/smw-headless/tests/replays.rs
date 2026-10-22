@@ -457,6 +457,59 @@ fn v2_pause_belongs_to_the_pauser() {
     assert_eq!(paused, [(true, 1), (true, 1), (true, 1), (false, -1), (true, 3)]);
 }
 
+/// A v2 match's end screens: once the match is over, any player's start or cancel opens the stats page on every peer
+/// at the same tick, and the next one closes it, which a rollback undoes. A peer's own keys do neither outside a tick.
+#[test]
+fn v2_stats_page_opens_for_every_player() {
+    use smw::common::input::{KEY_GAME_CANCEL, KEY_GAME_START};
+    use smw::smw::rollback::{advance, load, save, KeySlot, Keys};
+
+    let out = std::env::temp_dir().join(format!("smw-headless-{}-v2-stats", std::process::id()));
+    let mut seen = Vec::new();
+    sandboxed(&repo().join("tools").join("replays").join("frenzy_cpu.txt"), &out, None, |argv, services| {
+        let g = smw::game::Game::create();
+        g.services = Some(services);
+        smw::globals::init_globals(g);
+        g.RootDataDirectory = argv[2].clone();
+        smw::smw::main::startup(g);
+        smw::smw::main::gameloop_start(g);
+        while smw::smw::harness::frame(g) < 1200 {
+            smw::smw::main::frame(g);
+        }
+        g.netplay.v2_match = true;
+        g.mode().gameover = true;
+        let slots = [KeySlot::Local(0), KeySlot::Local(1), KeySlot::Local(2), KeySlot::Local(3)];
+        let press = |g: &mut smw::game::Game, presser: Option<usize>, key: usize| {
+            let keys: Vec<(KeySlot, Keys)> =
+                slots.iter().enumerate().map(|(p, &s)| (s, if Some(p) == presser { Keys(1 << (2 * key + 1)) } else { Keys(0) })).collect();
+            advance(g, &keys, true);
+            (g.main_loop.stats_page, g.main_loop.stats_closed)
+        };
+
+        g.game_values.playerInput.outputControls[0].keys[KEY_GAME_START].fPressed = true;
+        let left = smw::smw::gs_gameplay::update_exit_pause_dialog(g, 0);
+        seen.push((left, g.main_loop.stats_page, g.main_loop.stats_closed));
+        g.game_values.playerInput.reset_keys();
+
+        seen.push((false, press(g, None, KEY_GAME_START).0, 0));
+        let (page, closed) = press(g, Some(2), KEY_GAME_START);
+        seen.push((false, page, closed));
+        let before = save(g);
+        let (page, closed) = press(g, Some(0), KEY_GAME_CANCEL);
+        seen.push((false, page, closed));
+        load(g, &before);
+        seen.push((false, g.main_loop.stats_page, g.main_loop.stats_closed));
+        let (page, closed) = press(g, Some(3), KEY_GAME_START);
+        seen.push((false, page, closed));
+        let (page, closed) = press(g, None, KEY_GAME_START);
+        seen.push((false, page, closed));
+        g.netplay.v2_match = false;
+        smw::smw::main::shutdown(g);
+    });
+    let _ = std::fs::remove_dir_all(&out);
+    assert_eq!(seen, [(false, false, 0), (false, false, 0), (false, true, 0), (false, true, 1), (false, true, 0), (false, true, 1), (false, true, 2)]);
+}
+
 /// Prints the average cost of a rollback save, a load and a plain tick over `ticks` ticks of the first match, from its
 /// 300th tick, played on `map` when given.
 fn snapshot_cost(name: &str, map: Option<&str>, ticks: u32) {
