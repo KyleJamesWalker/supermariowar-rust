@@ -471,6 +471,8 @@ pub struct NetClient {
 
     /// The room's WebRTC mesh from `NET_L2P_MATCH_ROOM`, until the match takes it.
     peer_probe: Option<PeerProbe>,
+    /// The match host's signaling peer, from `NET_L2P_HOST_PEER`; a joiner takes the match start only from it.
+    pub host_peer: Option<smw_peer::PeerId>,
     /// The running live v2 match.
     pub v2: Option<Box<crate::smw::net_v2::V2Match>>,
     /// The v2 match a replay is playing back.
@@ -503,6 +505,7 @@ impl Clone for NetClient {
             room_list_keep: self.room_list_keep,
             shown_filter: self.shown_filter.clone(),
             peer_probe: None,
+            host_peer: None,
             v2: None,
             v2_replay: None,
             lingering: None,
@@ -529,6 +532,7 @@ impl NetClient {
             room_list_keep: None,
             shown_filter: String::new(),
             peer_probe: None,
+            host_peer: None,
             v2: None,
             v2_replay: None,
             lingering: None,
@@ -577,6 +581,7 @@ impl NetClient {
     /// Drops the match sockets, says goodbye to the lobby and shuts the network layer down.
     pub fn stop(&mut self, g: &mut Game) {
         self.peer_probe = None;
+        self.host_peer = None;
         self.v2 = None;
         self.v2_replay = None;
         self.lingering = None;
@@ -815,6 +820,12 @@ impl NetClient {
     /// The host asks the lobby to start the room's match.
     pub fn send_start_room_message(&mut self, g: &mut Game) {
         let pkg = pkgs::StartRoom::new();
+        self.send_message_to_lobby_server(g, pkg.as_bytes());
+    }
+
+    /// The host's signaling peer ID, which the lobby passes to the joiners.
+    pub fn send_host_peer_message(&mut self, g: &mut Game, peer: smw_peer::PeerId) {
+        let pkg = pkgs::HostPeer::with(NET_G2L_HOST_PEER, peer.0.to_be_bytes());
         self.send_message_to_lobby_server(g, pkg.as_bytes());
     }
 
@@ -1261,6 +1272,7 @@ impl NetworkEventHandler<Game> for NetClient {
             NET_RESPONSE_CREATE_ERROR => self.fail(LobbyError::CreateFailed),
 
             NET_L2P_MATCH_ROOM => {
+                self.host_peer = None;
                 if !net_record::replaying(g) {
                     let lobby = g.netplay.savedServers.get(g.netplay.selectedServerIndex as usize).map(|s| s.hostname.clone()).unwrap_or_default();
                     self.peer_probe = Some(PeerProbe::open(&pkgs::MatchRoom::from_bytes(data), &lobby));
@@ -1268,6 +1280,10 @@ impl NetworkEventHandler<Game> for NetClient {
             }
 
             NET_L2P_MATCH_START => self.handle_match_start(g),
+
+            NET_L2P_HOST_PEER if data.len() == std::mem::size_of::<pkgs::HostPeer>() => {
+                self.host_peer = Some(smw_peer::PeerId(u128::from_be_bytes(pkgs::HostPeer::from_bytes(data).peerID)));
+            }
 
             _ => {
                 print!("Unknown: ");

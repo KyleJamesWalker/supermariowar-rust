@@ -38,10 +38,6 @@ Possible bugs found while commenting the code in #232, and gaps the fix PRs left
 
 A full-codebase review on 2026-10-19, at the head of the GPU shader stack, confirmed these against the code. The items below are what the fix PRs left. None changes simulated gameplay, so none changes the replay goldens. Each item gives its file and an effort estimate (S, M, L).
 
-### Fix now
-
-- A netplay v2 joiner takes the first peer that claims the host's slot as the host. A rogue third peer whose first `MSG_SLOT` claims that slot can win the race and control the match start. Have the lobby tell clients the host's signaling peer ID (`net_v2.rs`, `server.rs`, M).
-
 ### Next
 
 - A rollback save still builds a fresh `MatchState` and re-boxes the players and objects, because GGRS's `GameStateCell::save` takes the state by value. Reusing the previous save's allocations needs a cell wrapper or a GGRS change. A load still clones the `MatchState` fields other than players and objects whole (`rollback.rs`, M).

@@ -31,7 +31,7 @@ Menus, the world map and the screens between games stay on reliable messages. Ro
 **Transport.** WebRTC data channels in browsers and native builds, through `crates/smw-peer`. Each pair of players shares a reliable channel for match setup and an unreliable, unordered one for GGRS. Peers connect directly through STUN, and fall back to a TURN relay when NAT punching fails. `coturn` is the TURN server.
 
 - **Signaling.** `smw_relay` pairs the peers of a room on `/signal/<room>`, speaking the `matchbox_server` protocol (`apps/smw_relay/src/signal.rs`); a stock `matchbox_server` works too. Both builds speak that protocol: native builds through `webrtc` (webrtc-rs) and `tokio-tungstenite`, the web build through `web/peer_socket.js`.
-- **Lobby.** `smw_relay` keeps the room list, room names, passwords and player counts. When a room starts, the lobby gives each admitted player a random `matchbox` room ID. Only admitted players learn it, so the ID is the ticket. If that proves too weak, the relay's own signaling can check each connection against the lobby.
+- **Lobby.** `smw_relay` keeps the room list, room names, passwords and player counts. When a room starts, the lobby gives each admitted player a random `matchbox` room ID. Only admitted players learn it, so the ID is the ticket. The host reports its signaling peer ID to the lobby, which passes it to the other players (protocol 0.11), so a joiner takes the host's slot and the match start only from that peer. If that proves too weak, the relay's own signaling can check each connection against the lobby.
 
 **Game work.**
 

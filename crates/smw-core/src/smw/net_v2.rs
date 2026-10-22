@@ -70,11 +70,13 @@ pub struct V2Match {
     slots: BTreeMap<PeerId, Vec<u8>>,
     /// The host's room slot (`hostPlayerNumber`).
     host_slot: u8,
-    /// The peer whose `MSG_SLOT` claimed the host's slot; a joiner takes the match start, GO and LEAVE only from it.
+    /// The host's signaling peer: on a joiner the one the lobby named, the only peer it takes the host's slot, the match
+    /// start and GO from; on the host its own, once reported to the lobby.
     host_peer: Option<PeerId>,
     /// Peers whose slot claim was refused, so each is logged once.
     refused: Vec<PeerId>,
-    /// SMW_V2_ROGUE, for tests: a joiner that also claims the host's slot and sends its own start parts and GO.
+    /// SMW_V2_ROGUE, for tests: a joiner whose first `MSG_SLOT` claims the host's slot, and which sends its own start
+    /// parts and GO.
     rogue: bool,
     /// The host's match start (`checkpoint::capture_shared`); empty on a joiner.
     start: Vec<u8>,
@@ -614,11 +616,15 @@ fn parse_pads(token: &str) -> Option<[Option<bool>; 4]> {
 }
 
 /// Records `peer`'s claim on room `claimed`. Refuses a slot out of range or repeated, one of this client's, one another
-/// peer holds, and a peer that changes its slots, so two GGRS handles never play one player.
-fn claim_slots(slots: &mut BTreeMap<PeerId, Vec<u8>>, my_slots: &[u8], peer: PeerId, claimed: &[u8]) -> Result<(), String> {
+/// peer holds, and a peer that changes its slots, so two GGRS handles never play one player. On a joiner, `host` is the
+/// host's slot and the peer the lobby named as the host, the only one that may claim that slot.
+fn claim_slots(slots: &mut BTreeMap<PeerId, Vec<u8>>, my_slots: &[u8], host: Option<(u8, PeerId)>, peer: PeerId, claimed: &[u8]) -> Result<(), String> {
     for (i, &slot) in claimed.iter().enumerate() {
         if slot as i32 >= MAX_PLAYERS || my_slots.contains(&slot) || claimed[..i].contains(&slot) {
             return Err(format!("slot {slot} is not another player's"));
+        }
+        if host.is_some_and(|(host_slot, host_peer)| slot == host_slot && peer != host_peer) {
+            return Err(format!("slot {slot} is the host's"));
         }
         if slots.iter().any(|(&p, held)| p != peer && held.contains(&slot)) {
             return Err(format!("slot {slot} is already taken"));
@@ -673,6 +679,9 @@ impl V2Match {
 
     /// Sends this player's slot and, on the host, the match start in parts.
     fn announce(&mut self) {
+        if self.rogue {
+            self.send_all(&slot_message(&[self.host_slot], &self.pads));
+        }
         self.send_all(&slot_message(&self.my_slots.clone(), &self.pads));
         if self.host {
             let parts: Vec<Vec<u8>> = self.start.chunks(PART_BYTES).map(|c| c.to_vec()).collect();
@@ -685,7 +694,6 @@ impl V2Match {
                 self.send_all(&msg);
             }
         } else if self.rogue {
-            self.send_all(&slot_message(&[self.host_slot], &self.pads));
             self.send_all(&[MSG_START_PART, 0, 0, 0, 0]);
             self.send_all(&[MSG_START_PART, 0, 0, 1, 0, b'x']);
             self.send_all(&[MSG_GO]);
@@ -704,14 +712,14 @@ impl V2Match {
                         format!("{name} runs another game version")
                     })?;
                     let claimed: Vec<u8> = announced.iter().map(|&(slot, _)| slot).collect();
-                    let claim = claim_slots(&mut self.slots, &self.my_slots, peer, &claimed);
+                    let host = self.host_peer.filter(|_| !self.host).map(|host_peer| (self.host_slot, host_peer));
+                    let claim = claim_slots(&mut self.slots, &self.my_slots, host, peer, &claimed);
                     if claim.is_ok() {
                         for &(slot, pad) in &announced {
                             self.pads[slot as usize] = Some(pad);
                         }
                     }
                     match claim {
-                        Ok(()) if !self.host && claimed.contains(&self.host_slot) => self.host_peer = Some(peer),
                         Ok(()) => {}
                         Err(e) if !self.refused.contains(&peer) => {
                             self.refused.push(peer);
@@ -753,6 +761,15 @@ impl V2Match {
     /// The handshake: slots from everyone, the match start to the joiners, READY back to the host, then the host's GO.
     /// Every message repeats until GO, since a peer may still be connecting or not yet reading. False ends it.
     fn start_step(&mut self, g: &mut Game) -> bool {
+        let mut gp = g.ptr();
+        if self.host_peer.is_none() {
+            if !self.host {
+                self.host_peer = gp.netplay.client.host_peer;
+            } else if let Some(me) = self.socket.id() {
+                gp.netplay.client.send_host_peer_message(g, me);
+                self.host_peer = Some(me);
+            }
+        }
         let dropped = self.socket.update_peers().into_iter().find(|&(_, state)| state == PeerState::Disconnected);
         if let Some((peer, _)) = dropped {
             println!("[net] v2: peer {:08x} disconnected during the start", peer.0 >> 96);
@@ -765,9 +782,12 @@ impl V2Match {
             notify(&mut self.rec, &mut self.notice, format!("{name} could not connect"));
             return false;
         }
-        if let Err(e) = self.receive_reliable(g) {
-            notify(&mut self.rec, &mut self.notice, e);
-            return false;
+        // A joiner leaves the handshake queued until the lobby names the host, so no other peer takes the host's slot.
+        if self.host || self.host_peer.is_some() {
+            if let Err(e) = self.receive_reliable(g) {
+                notify(&mut self.rec, &mut self.notice, e);
+                return false;
+            }
         }
         if self.opened.elapsed() > START_DEADLINE {
             println!("[net] v2: the match did not start within {} s", START_DEADLINE.as_secs());
@@ -1078,14 +1098,27 @@ mod tests {
     fn slot_claims_are_unique() {
         let (a, b) = (PeerId(1), PeerId(2));
         let mut slots = BTreeMap::new();
-        assert!(claim_slots(&mut slots, &[0], a, &[1, 3]).is_ok());
-        assert!(claim_slots(&mut slots, &[0], a, &[1, 3]).is_ok(), "a repeated claim");
-        assert!(claim_slots(&mut slots, &[0], b, &[2, 3]).is_err(), "another peer's slot");
-        assert!(claim_slots(&mut slots, &[0], b, &[0]).is_err(), "this client's slot");
-        assert!(claim_slots(&mut slots, &[0], b, &[2, 2]).is_err(), "a slot twice");
-        assert!(claim_slots(&mut slots, &[0], b, &[MAX_PLAYERS as u8]).is_err(), "out of range");
-        assert!(claim_slots(&mut slots, &[0], a, &[1]).is_err(), "changed slots");
-        assert!(claim_slots(&mut slots, &[0], b, &[2]).is_ok());
+        assert!(claim_slots(&mut slots, &[0], None, a, &[1, 3]).is_ok());
+        assert!(claim_slots(&mut slots, &[0], None, a, &[1, 3]).is_ok(), "a repeated claim");
+        assert!(claim_slots(&mut slots, &[0], None, b, &[2, 3]).is_err(), "another peer's slot");
+        assert!(claim_slots(&mut slots, &[0], None, b, &[0]).is_err(), "this client's slot");
+        assert!(claim_slots(&mut slots, &[0], None, b, &[2, 2]).is_err(), "a slot twice");
+        assert!(claim_slots(&mut slots, &[0], None, b, &[MAX_PLAYERS as u8]).is_err(), "out of range");
+        assert!(claim_slots(&mut slots, &[0], None, a, &[1]).is_err(), "changed slots");
+        assert!(claim_slots(&mut slots, &[0], None, b, &[2]).is_ok());
         assert_eq!(slots, BTreeMap::from([(a, vec![1, 3]), (b, vec![2])]));
+    }
+
+    #[test]
+    fn only_the_named_host_claims_the_host_slot() {
+        let (host, rogue) = (PeerId(1), PeerId(2));
+        let named = Some((0, host));
+        let mut slots = BTreeMap::new();
+        assert!(claim_slots(&mut slots, &[1], named, rogue, &[0]).is_err(), "a rogue's first claim");
+        assert!(claim_slots(&mut slots, &[1], named, rogue, &[2, 0]).is_err(), "a couch claim with the host's slot");
+        assert!(slots.is_empty());
+        assert!(claim_slots(&mut slots, &[1], named, host, &[0]).is_ok());
+        assert!(claim_slots(&mut slots, &[1], named, rogue, &[2]).is_ok(), "the rogue's own slot");
+        assert_eq!(slots, BTreeMap::from([(host, vec![0]), (rogue, vec![2])]));
     }
 }
