@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Netplay v2 matches between mismatched or misbehaving clients, each run live through smw_relay's lobby:
 
-  rogue     net_game_3p, whose second joiner (SMW_V2_ROGUE) also claims the host's slot and sends its own start
-            parts and GO; the others must ignore it, start the match, and stay in sync
+  rogue     net_game_3p, whose second joiner (SMW_V2_ROGUE) claims the host's slot in its first MSG_SLOT and sends
+            its own start parts and GO; the others must ignore it, start the match, and stay in sync
   settings  net_game, whose joiner has sound and music off and lacks every game track the host's match can play; the
             joiner must play silence and stay in sync
   bad_map   net_game, whose host plays a truncated map; neither client may crash, and each must end the match

@@ -6,7 +6,7 @@ use super::log::verbose;
 use super::player::Player;
 use super::util::{cstr_field, strncpy_sec};
 use smw::common_netplay::protocol_definitions::*;
-use smw::common_netplay::protocol_packages::{CurrentRoom, MessageHeader, RoomChatMsg};
+use smw::common_netplay::protocol_packages::{CurrentRoom, HostPeer, MessageHeader, RoomChatMsg};
 use smw::globals::Ptr;
 
 const REMOTE_PKG_SIZE_LIMIT: usize = 20000; /* bytes in worst case */
@@ -355,6 +355,16 @@ impl Room {
             self.players[p as usize].send_data(pkg.as_bytes());
         }
         self.visible = false;
+    }
+
+    /// Tells every client but the host which signaling peer is the host.
+    pub fn send_host_peer(&mut self, peerID: [u8; 16]) {
+        let pkg = HostPeer::with(NET_L2P_HOST_PEER, peerID);
+        for p in self.client_slots().collect::<Vec<_>>() {
+            if !self.is_host(self.players[p as usize]) {
+                self.players[p as usize].send_data(pkg.as_bytes());
+            }
+        }
     }
 }
 

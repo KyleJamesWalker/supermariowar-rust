@@ -502,7 +502,9 @@ pub struct MainLoopState {
     /// Frames the current screen has waited for an all-CPU game to continue (smw/auto_advance.rs).
     pub(crate) auto_advance: u16,
     /// The after-match stats page is up (smw/stats.rs).
-    pub(crate) stats_page: bool,
+    pub stats_page: bool,
+    /// Ticks since a player closed a v2 match's stats page; 0 while it is open or closed by nobody (smw/net_v2.rs).
+    pub stats_closed: u16,
 }
 
 impl MainLoopState {
@@ -534,6 +536,7 @@ impl MainLoopState {
             fps_shown: (0, 0),
             auto_advance: 0,
             stats_page: false,
+            stats_closed: 0,
         }
     }
 }

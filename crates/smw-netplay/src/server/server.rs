@@ -9,7 +9,7 @@ use super::room::Room;
 use super::util::cstr_field;
 use smw::common_netplay::network_interface::{NetPeer, NetworkEventHandler};
 use smw::common_netplay::protocol_definitions::*;
-use smw::common_netplay::protocol_packages::{ClientConnection, JoinRoom, LocalPlayers, MatchRoom, MessageHeader, TeamChange, NewRoom, NewRoomCreated, RoomChatMsg, RoomInfo, ServerInfo};
+use smw::common_netplay::protocol_packages::{ClientConnection, HostPeer, JoinRoom, LocalPlayers, MatchRoom, MessageHeader, TeamChange, NewRoom, NewRoomCreated, RoomChatMsg, RoomInfo, ServerInfo};
 use super::match_room;
 use smw::globals::Ptr;
 use super::unordered_map::UnorderedMap;
@@ -533,6 +533,19 @@ impl SMWServer {
         log(&format!("[info] Room #{} starting.", roomID as i32));
     }
 
+    /// Passes the host's signaling peer ID to the other clients of its room, while the room's match runs.
+    fn host_shares_peer(&mut self, playerID: u64, data: &[u8]) {
+        if data.len() != std::mem::size_of::<HostPeer>() {
+            println!("[error] Corrupt package arrived from {}", playerID);
+            return;
+        }
+        let Some(room) = self.hosted_room(playerID) else { return };
+        if room.visible {
+            return;
+        }
+        room.send_host_peer(HostPeer::from_bytes(data).peerID);
+    }
+
     /// Gives every client of a starting room the same new signaling room and their own TURN credentials.
     fn send_match_room(v2: &V2Settings, room: &mut Room) -> bool {
         if v2.signal_url.is_empty() {
@@ -659,6 +672,8 @@ impl NetworkEventHandler for SMWServer {
             // Room start
             //
             NET_G2L_START_ROOM => self.player_starts_room(playerID),
+
+            NET_G2L_HOST_PEER => self.host_shares_peer(playerID, data),
 
             _ => {
                 verbose!("Unknown: {}", messageType);
@@ -977,6 +992,28 @@ mod tests {
         assert!(codes(&host).is_empty() && codes(&guest).is_empty());
         send(&mut server, 1, &host, StartRoom::new().as_bytes());
         assert_eq!(codes(&guest), [NET_L2P_MATCH_ROOM, NET_L2P_MATCH_START]);
+    }
+
+    #[test]
+    fn only_the_host_of_a_started_room_names_its_peer() {
+        let mut server = server();
+        server.v2 = V2Settings { signal_url: "/signal".into(), ..Default::default() };
+        let (_, host, guest) = host_and_guest(&mut server);
+        let peer = HostPeer::with(NET_G2L_HOST_PEER, [7; 16]);
+        send(&mut server, 1, &host, peer.as_bytes());
+        assert!(codes(&guest).is_empty(), "not before the match starts");
+        send(&mut server, 1, &host, StartRoom::new().as_bytes());
+        codes(&host);
+        codes(&guest);
+
+        send(&mut server, 2, &guest, HostPeer::with(NET_G2L_HOST_PEER, [9; 16]).as_bytes());
+        assert!(codes(&host).is_empty() && codes(&guest).is_empty(), "a joiner cannot name the host");
+        send(&mut server, 1, &host, peer.as_bytes());
+        assert!(codes(&host).is_empty());
+        let sent = guest.borrow_mut().drain(..).collect::<Vec<_>>();
+        assert_eq!(sent.len(), 1);
+        let got = HostPeer::from_bytes(&sent[0]);
+        assert_eq!((got.header.packageType, got.peerID), (NET_L2P_HOST_PEER, [7; 16]));
     }
 
     #[test]

@@ -30,17 +30,10 @@ Possible bugs found while commenting the code in #232, and gaps the fix PRs left
   - A local match on a damaged map still starts, on the empty fallback map. The map list's summary read covers only the header, so the menu cannot refuse or hide the map.
   - The readers do not check race goal and flag base positions, draw area rectangles or warp exit positions against the screen size. The fuzz test found no panic from them.
   - The readers check platform path speed only for being finite and within 65536. A platform that moves more than a screen width per tick could carry a player past the one-screen wrap. The editor allows at most 4.16 px per tick, and 3000 fuzz cases did not hit it.
-- Netplay:
-  - In the web build, dropping a `PeerSocket` leaves the browser connection open.
-  - After a v2 match, Start on the scoreboard opens the stats page only for the player who pressed it. The match's GGRS session has ended by then, so the other players stay on the scoreboard and never see the stats. Send the step to the peers, or advance every peer together.
 
 ## Review findings
 
 A full-codebase review on 2026-10-19, at the head of the GPU shader stack, confirmed these against the code. The items below are what the fix PRs left. None changes simulated gameplay, so none changes the replay goldens. Each item gives its file and an effort estimate (S, M, L).
-
-### Fix now
-
-- A netplay v2 joiner takes the first peer that claims the host's slot as the host. A rogue third peer whose first `MSG_SLOT` claims that slot can win the race and control the match start. Have the lobby tell clients the host's signaling peer ID (`net_v2.rs`, `server.rs`, M).
 
 ### Next
 

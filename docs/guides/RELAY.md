@@ -66,7 +66,7 @@ The `Relay` workflow publishes `ghcr.io/kylejameswalker/supermariowar-rust-relay
 
 ### Netplay v2 settings
 
-When a room starts, the lobby sends each of its players `NET_L2P_MATCH_ROOM`. It holds a new random signaling room under `SMW_SIGNAL_URL`, plus TURN credentials for `SMW_TURN_URL`, minted from `SMW_TURN_SECRET` and valid for six hours. Then it sends every player `NET_L2P_MATCH_START`, and the match runs over WebRTC under GGRS (`docs/design/NETPLAY_V2.md`). Without `SMW_SIGNAL_URL`, the relay uses its own signaling on `/signal`, and players reach it through the same URL as the lobby. The compose file sets the TURN settings and leaves `SMW_SIGNAL_URL` unset.
+When a room starts, the lobby sends each of its players `NET_L2P_MATCH_ROOM`. It holds a new random signaling room under `SMW_SIGNAL_URL`, plus TURN credentials for `SMW_TURN_URL`, minted from `SMW_TURN_SECRET` and valid for six hours. Then it sends every player `NET_L2P_MATCH_START`, and the match runs over WebRTC under GGRS (`docs/design/NETPLAY_V2.md`). Once signaling assigns the host its peer ID, the host sends it in `NET_G2L_HOST_PEER`, and the lobby passes it to the other players in `NET_L2P_HOST_PEER`. A joiner takes the host's slot and the match start only from that peer. Without `SMW_SIGNAL_URL`, the relay uses its own signaling on `/signal`, and players reach it through the same URL as the lobby. The compose file sets the TURN settings and leaves `SMW_SIGNAL_URL` unset.
 
 ## Limits
 

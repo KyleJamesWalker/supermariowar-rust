@@ -8,6 +8,8 @@ addToLibrary({
         relayOnly: false,
         gatherTimeoutMs: 5000,
         socket: null,
+        // Counts opens, so dropping a replaced Rust socket does not close the connection that replaced it.
+        generation: 0,
         failed: false,
         id: null,
         peers: new Map(),
@@ -38,6 +40,7 @@ addToLibrary({
 
         open: (url, iceServers, relayOnly) => {
             SMWPeer.close();
+            const generation = ++SMWPeer.generation;
             SMWPeer.iceServers = iceServers;
             SMWPeer.relayOnly = relayOnly;
             let socket;
@@ -46,7 +49,7 @@ addToLibrary({
             } catch (e) {
                 console.error('[net] signaling: ' + e.message);
                 SMWPeer.failed = true;
-                return;
+                return generation;
             }
             socket.onmessage = (e) => {
                 if (SMWPeer.socket !== socket || typeof e.data !== 'string') return;
@@ -66,6 +69,7 @@ addToLibrary({
             SMWPeer.keepAlive = setInterval(() => {
                 if (socket.readyState === 1) socket.send('"KeepAlive"');
             }, 10000);
+            return generation;
         },
 
         onEvent: (event) => {
@@ -215,6 +219,10 @@ addToLibrary({
             SMWPeer.inbox = [[], []];
             SMWPeer.inboxBytes = [0, 0];
         },
+
+        closeOpened: (generation) => {
+            if (generation === SMWPeer.generation) SMWPeer.close();
+        },
     },
 
     smw_peer_open__deps: ['$SMWPeer', '$UTF8ToString'],
@@ -263,5 +271,5 @@ addToLibrary({
     },
 
     smw_peer_close__deps: ['$SMWPeer'],
-    smw_peer_close: () => SMWPeer.close(),
+    smw_peer_close: (generation) => SMWPeer.closeOpened(generation),
 });
