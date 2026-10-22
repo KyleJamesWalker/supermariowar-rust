@@ -13,6 +13,8 @@ const REPORT_FRAMES: u32 = 300;
 #[derive(Clone, Default)]
 pub struct PerfLog {
     frames: u32,
+    /// Tick time since the last present, which loop iterations that do not present also add to.
+    pending_update_us: u64,
     update_us: u64,
     render_us: u64,
     flip_us: u64,
@@ -30,10 +32,15 @@ impl PerfLog {
         std::env::var_os("SMW_PERF").is_some_and(|v| v != "0").then(PerfLog::default)
     }
 
-    /// Adds one frame's times (update and draw, interpolated render, then present, with the backend's upload and
-    /// swap split of the present when it has one) and prints a report every `REPORT_FRAMES`.
-    pub fn record(&mut self, frame_start: Instant, render_start: Instant, render_end: Instant, flip_end: Instant, split: Option<(u64, u64)>) {
-        let update = (render_start - frame_start).as_micros() as u64;
+    /// Adds time spent ticking, counted into the next present's update and draw.
+    pub fn tick_time(&mut self, d: std::time::Duration) {
+        self.pending_update_us += d.as_micros() as u64;
+    }
+
+    /// Adds one present's times (the ticks since the last one, interpolated render, then present, with the backend's
+    /// upload and swap split of the present when it has one) and prints a report every `REPORT_FRAMES`.
+    pub fn record(&mut self, render_start: Instant, render_end: Instant, flip_end: Instant, split: Option<(u64, u64)>) {
+        let update = std::mem::take(&mut self.pending_update_us);
         let render = (render_end - render_start).as_micros() as u64;
         let flip = (flip_end - render_end).as_micros() as u64;
         let total = update + render + flip;

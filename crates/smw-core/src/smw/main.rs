@@ -214,7 +214,7 @@ fn draw_fps_overlay(g: &mut Game) {
 }
 
 /// Draws the FPS overlay, presents the screen and feeds the `SMW_PERF` log.
-unsafe fn present(g: &mut Game, frame_start: std::time::Instant, render_start: std::time::Instant, render_end: std::time::Instant) {
+unsafe fn present(g: &mut Game, render_start: std::time::Instant, render_end: std::time::Instant) {
     let mut gp = g.ptr();
     draw_fps_overlay(gp.get());
     phase(7);
@@ -222,7 +222,14 @@ unsafe fn present(g: &mut Game, frame_start: std::time::Instant, render_start: s
     let flip_end = std::time::Instant::now();
     let split = crate::services::services(gp.get()).video.present_split_us();
     if let Some(perf) = gp.main_loop.perf.get_or_insert_with(crate::smw::perf_log::PerfLog::from_env) {
-        perf.record(frame_start, render_start, render_end, flip_end, split);
+        perf.record(render_start, render_end, flip_end, split);
+    }
+}
+
+/// Adds the time since `start` to the `SMW_PERF` log's tick time.
+fn record_tick_time(g: &mut Game, start: std::time::Instant) {
+    if let Some(perf) = g.main_loop.perf.get_or_insert_with(crate::smw::perf_log::PerfLog::from_env) {
+        perf.tick_time(start.elapsed());
     }
 }
 
@@ -233,8 +240,9 @@ unsafe fn gameloop_frame(g: &mut Game) {
     phase(1);
     let frame_start = std::time::Instant::now();
     tick(g);
+    record_tick_time(gp.get(), frame_start);
     let update_end = std::time::Instant::now();
-    present(g, frame_start, update_end, update_end);
+    present(g, update_end, update_end);
     phase(1);
 }
 
@@ -269,6 +277,9 @@ unsafe fn paced_frame(g: &mut Game) {
     if ticks == MAX_CATCH_UP_TICKS {
         ml.accumulated_us = ml.accumulated_us.min(tick_us);
     }
+    if ticks > 0 {
+        record_tick_time(gp.get(), frame_start);
+    }
 
     let present_us = cap_hz.map(|hz| 1_000_000.0 / hz);
     let due = match present_us {
@@ -286,7 +297,7 @@ unsafe fn paced_frame(g: &mut Game) {
         }
         let render_end = std::time::Instant::now();
         let present_start = crate::services::services(gp.get()).clock.now_us();
-        present(gp.get(), frame_start, render_start, render_end);
+        present(gp.get(), render_start, render_end);
         if vsync && present_us.is_none() {
             // A present that did not wait for the display (a hidden window): do not spin.
             if crate::services::services(gp.get()).clock.now_us().saturating_sub(present_start) < 1000 {
