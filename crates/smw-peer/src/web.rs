@@ -5,14 +5,14 @@ use std::ffi::CString;
 use std::os::raw::c_char;
 
 extern "C" {
-    fn smw_peer_open(url: *const c_char, ice_servers_json: *const c_char, relay_only: i32);
+    fn smw_peer_open(url: *const c_char, ice_servers_json: *const c_char, relay_only: i32) -> i32;
     fn smw_peer_signaling_closed() -> i32;
     fn smw_peer_id(id: *mut u8) -> i32;
     fn smw_peer_change(id: *mut u8) -> i32;
     fn smw_peer_send(channel: i32, id: *const u8, data: *const u8, len: usize) -> i32;
     fn smw_peer_next_len(channel: i32) -> i32;
     fn smw_peer_recv(channel: i32, id: *mut u8, buf: *mut u8, cap: usize) -> i32;
-    fn smw_peer_close();
+    fn smw_peer_close(generation: i32);
 }
 
 /// The largest packet `receive` takes, in bytes; larger ones are dropped.
@@ -72,8 +72,10 @@ fn send(channel: usize, peer: PeerId, data: &[u8]) {
     unsafe { smw_peer_send(channel as i32, id.as_ptr(), data.as_ptr(), data.len()) };
 }
 
-/// The page holds one room connection, and connecting again closes the last one; dropping this does not close it.
+/// The page holds one room connection, and connecting again closes the last one. Closing or dropping this closes the
+/// page's connection only while it is still the one this opened.
 pub struct Socket {
+    generation: i32,
     unreliable_taken: bool,
 }
 
@@ -81,8 +83,9 @@ impl Socket {
     pub fn connect(room_url: &str, ice: &IceConfig) -> Socket {
         let url = CString::new(room_url).unwrap_or_default();
         let servers = CString::new(ice_servers_json(ice)).unwrap_or_default();
-        unsafe { smw_peer_open(url.as_ptr(), servers.as_ptr(), ice.relay_only as i32) };
+        let generation = unsafe { smw_peer_open(url.as_ptr(), servers.as_ptr(), ice.relay_only as i32) };
         Socket {
+            generation,
             unreliable_taken: false,
         }
     }
@@ -126,7 +129,13 @@ impl Socket {
     }
 
     pub fn close(&mut self) {
-        unsafe { smw_peer_close() };
+        unsafe { smw_peer_close(self.generation) };
+    }
+}
+
+impl Drop for Socket {
+    fn drop(&mut self) {
+        self.close();
     }
 }
 

@@ -2,6 +2,8 @@
 // Browser and native netplay v2 peers in one room: starts the smw-peer `signal` example, one native `echo_peer`,
 // and two headless Chrome pages that load web/peer_socket.js on its own (no wasm). Every pair must connect, and
 // every page must get the other page's greetings, the native peer's greetings and its own echoes on both channels.
+// Then a page closes its connection the way a dropped Rust socket does: a replaced socket's close must leave it open,
+// and the current one's must close it, which the other page must see.
 //
 // Usage: node tools/web_peer_test.mjs [out_dir]
 //   CHROME        Chrome binary (default: the macOS Google Chrome app)
@@ -85,7 +87,7 @@ const page = `<!doctype html><meta charset="utf-8"><title>peer test</title>
 window.received = [new Set(), new Set()];
 window.connected = new Set();
 window.run = (url, name, iceServers, relayOnly) => {
-    SMWPeer.open(url, iceServers, relayOnly);
+    window.generation = SMWPeer.open(url, iceServers, relayOnly);
     setInterval(() => {
         for (let c; (c = SMWPeer.changes.shift()); ) c[1] ? connected.add(c[0]) : connected.delete(c[0]);
         for (let ch = 0; ch < 2; ch++)
@@ -189,6 +191,18 @@ for (;;) {
 const nativeIds = [...native.output().matchAll(/^([0-9a-f]{32}) connected$/gm)].map((m) => m[1]);
 if (nativeIds.length !== 2) fail(`native peer saw ${nativeIds.length} connections:\n${native.output()}`);
 writeFileSync(join(out, 'pages.json'), JSON.stringify(states, null, 2));
-console.log(`PASS: 2 browser peers and 1 native peer connected in full mesh${useTurn ? ' through TURN only' : ''}; both channels delivered both ways`);
+
+const [closer, watcher] = pages;
+const closerId = states[0].id;
+await closer.evaluate('SMWPeer.closeOpened(generation - 1)');
+if (!(await closer.evaluate('SMWPeer.socket !== null'))) fail('closing a replaced socket closed the current connection');
+await closer.evaluate('SMWPeer.closeOpened(generation)');
+if (await closer.evaluate('SMWPeer.socket !== null || SMWPeer.peers.size > 0')) fail('closing the current socket left it open');
+const leaveDeadline = Date.now() + 15_000;
+while ((await watcher.evaluate('state()')).connected.includes(closerId)) {
+    if (Date.now() > leaveDeadline) fail('the other page still sees the closed page');
+    await new Promise((ok) => setTimeout(ok, 200));
+}
+console.log(`PASS: 2 browser peers and 1 native peer connected in full mesh${useTurn ? ' through TURN only' : ''}; both channels delivered both ways; a closed page left the mesh`);
 cleanup();
 process.exit(0);

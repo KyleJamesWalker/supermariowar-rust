@@ -31,7 +31,6 @@ Possible bugs found while commenting the code in #232, and gaps the fix PRs left
   - The readers do not check race goal and flag base positions, draw area rectangles or warp exit positions against the screen size. The fuzz test found no panic from them.
   - The readers check platform path speed only for being finite and within 65536. A platform that moves more than a screen width per tick could carry a player past the one-screen wrap. The editor allows at most 4.16 px per tick, and 3000 fuzz cases did not hit it.
 - Netplay:
-  - In the web build, dropping a `PeerSocket` leaves the browser connection open.
   - After a v2 match, Start on the scoreboard opens the stats page only for the player who pressed it. The match's GGRS session has ended by then, so the other players stay on the scoreboard and never see the stats. Send the step to the peers, or advance every peer together.
 
 ## Review findings
