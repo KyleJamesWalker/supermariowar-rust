@@ -214,14 +214,15 @@ fn draw_fps_overlay(g: &mut Game) {
 }
 
 /// Draws the FPS overlay, presents the screen and feeds the `SMW_PERF` log.
-unsafe fn present(g: &mut Game, frame_start: std::time::Instant, update_end: std::time::Instant) {
+unsafe fn present(g: &mut Game, frame_start: std::time::Instant, render_start: std::time::Instant, render_end: std::time::Instant) {
     let mut gp = g.ptr();
     draw_fps_overlay(gp.get());
     phase(7);
     gfx_flipscreen(gp.get());
     let flip_end = std::time::Instant::now();
+    let split = crate::services::services(gp.get()).video.present_split_us();
     if let Some(perf) = gp.main_loop.perf.get_or_insert_with(crate::smw::perf_log::PerfLog::from_env) {
-        perf.record(frame_start, update_end, flip_end);
+        perf.record(frame_start, render_start, render_end, flip_end, split);
     }
 }
 
@@ -232,7 +233,8 @@ unsafe fn gameloop_frame(g: &mut Game) {
     phase(1);
     let frame_start = std::time::Instant::now();
     tick(g);
-    present(g, frame_start, std::time::Instant::now());
+    let update_end = std::time::Instant::now();
+    present(g, frame_start, update_end, update_end);
     phase(1);
 }
 
@@ -277,12 +279,14 @@ unsafe fn paced_frame(g: &mut Game) {
         if let Some(interval) = present_us {
             ml.next_present_us = if now as f64 - ml.next_present_us > interval { now as f64 + interval } else { ml.next_present_us + interval };
         }
+        let render_start = std::time::Instant::now();
         if ml.interpolate && ml.display_fresh && !ml.display[1].is_empty() {
             let alpha = (ml.accumulated_us / tick_us).clamp(0.0, 1.0) as f32;
             crate::common::gfx::display_list::render(gp.screen, &ml.display[0], &ml.display[1], alpha);
         }
+        let render_end = std::time::Instant::now();
         let present_start = crate::services::services(gp.get()).clock.now_us();
-        present(gp.get(), frame_start, std::time::Instant::now());
+        present(gp.get(), frame_start, render_start, render_end);
         if vsync && present_us.is_none() {
             // A present that did not wait for the display (a hidden window): do not spin.
             if crate::services::services(gp.get()).clock.now_us().saturating_sub(present_start) < 1000 {

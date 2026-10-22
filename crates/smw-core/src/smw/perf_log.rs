@@ -10,11 +10,16 @@ const BUDGET_US: u64 = 1_000_000 / TICKS_PER_SECOND as u64;
 const REPORT_FRAMES: u32 = 300;
 
 /// Frame time totals for the current report, in microseconds.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct PerfLog {
     frames: u32,
     update_us: u64,
+    render_us: u64,
     flip_us: u64,
+    /// The backend's split of `flip_us`, and how many frames reported one.
+    upload_us: u64,
+    swap_us: u64,
+    split_frames: u32,
     worst_us: u64,
     over_budget: u32,
 }
@@ -22,37 +27,51 @@ pub struct PerfLog {
 impl PerfLog {
     /// A log when `SMW_PERF` is set to anything but 0.
     pub fn from_env() -> Option<Self> {
-        std::env::var_os("SMW_PERF")
-            .is_some_and(|v| v != "0")
-            .then_some(PerfLog { frames: 0, update_us: 0, flip_us: 0, worst_us: 0, over_budget: 0 })
+        std::env::var_os("SMW_PERF").is_some_and(|v| v != "0").then(PerfLog::default)
     }
 
-    /// Adds one frame's times (update and draw, then present) and prints a report every `REPORT_FRAMES`.
-    pub fn record(&mut self, frame_start: Instant, update_end: Instant, flip_end: Instant) {
-        let update = (update_end - frame_start).as_micros() as u64;
-        let flip = (flip_end - update_end).as_micros() as u64;
+    /// Adds one frame's times (update and draw, interpolated render, then present, with the backend's upload and
+    /// swap split of the present when it has one) and prints a report every `REPORT_FRAMES`.
+    pub fn record(&mut self, frame_start: Instant, render_start: Instant, render_end: Instant, flip_end: Instant, split: Option<(u64, u64)>) {
+        let update = (render_start - frame_start).as_micros() as u64;
+        let render = (render_end - render_start).as_micros() as u64;
+        let flip = (flip_end - render_end).as_micros() as u64;
+        let total = update + render + flip;
         self.frames += 1;
         self.update_us += update;
+        self.render_us += render;
         self.flip_us += flip;
-        self.worst_us = self.worst_us.max(update + flip);
-        if update + flip > BUDGET_US {
+        if let Some((upload, swap)) = split {
+            self.upload_us += upload;
+            self.swap_us += swap;
+            self.split_frames += 1;
+        }
+        self.worst_us = self.worst_us.max(total);
+        if total > BUDGET_US {
             self.over_budget += 1;
         }
         if self.frames == REPORT_FRAMES {
             let n = self.frames as u64;
-            let avg = (self.update_us + self.flip_us) / n;
+            let ms = |us: u64, n: u64| us as f64 / n as f64 / 1000.0;
+            let avg = (self.update_us + self.render_us + self.flip_us) / n;
+            let split = match self.split_frames as u64 {
+                0 => String::new(),
+                k => format!(" (upload {:.2} ms, draw and swap {:.2} ms)", ms(self.upload_us, k), ms(self.swap_us, k)),
+            };
             println!(
-                "[perf] {} frames: update+draw {:.2} ms, present {:.2} ms, total {:.2} ms ({}% of the {:.2} ms tick), worst {:.2} ms, {} over budget",
+                "[perf] {} frames: update+draw {:.2} ms, render {:.2} ms, present {:.2} ms{}, total {:.2} ms ({}% of the {:.2} ms tick), worst {:.2} ms, {} over budget",
                 self.frames,
-                self.update_us as f64 / n as f64 / 1000.0,
-                self.flip_us as f64 / n as f64 / 1000.0,
+                ms(self.update_us, n),
+                ms(self.render_us, n),
+                ms(self.flip_us, n),
+                split,
                 avg as f64 / 1000.0,
                 avg * 100 / BUDGET_US,
                 BUDGET_US as f64 / 1000.0,
                 self.worst_us as f64 / 1000.0,
                 self.over_budget
             );
-            *self = PerfLog { frames: 0, update_us: 0, flip_us: 0, worst_us: 0, over_budget: 0 };
+            *self = PerfLog::default();
         }
     }
 }
