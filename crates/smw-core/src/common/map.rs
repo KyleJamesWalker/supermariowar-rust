@@ -2558,15 +2558,15 @@ impl CMap {
 
     /// Draws draw layer `iLayer`'s permanent platforms; layer 2 also draws the temporary ones.
     pub fn draw_platforms(&mut self, g: &mut Game, iLayer: i16) {
-        for &platform in &self.platformdrawlayer[iLayer as usize].clone() {
-            let mut p = platform;
+        for i in 0..self.platformdrawlayer[iLayer as usize].len() {
+            let mut p = self.platformdrawlayer[iLayer as usize][i];
             crate::common::gfx::display_list::set_owner(crate::common::gfx::display_list::owner_of(self.platform(p)));
             self.platform(p).draw(g);
         }
 
         if iLayer == 2 {
-            for &platform in &self.tempPlatforms.clone() {
-                let mut p = platform;
+            for i in 0..self.tempPlatforms.len() {
+                let mut p = self.tempPlatforms[i];
                 crate::common::gfx::display_list::set_owner(crate::common::gfx::display_list::owner_of(self.platform(p)));
                 self.platform(p).draw(g);
             }
@@ -2576,8 +2576,8 @@ impl CMap {
 
     /// Draws draw layer `iLayer`'s permanent platforms at half scale, offset by (`iOffsetX`, `iOffsetY`), for the map preview.
     pub fn draw_platforms_offset(&mut self, g: &mut Game, iOffsetX: i16, iOffsetY: i16, iLayer: i16) {
-        for &platform in &self.platformdrawlayer[iLayer as usize].clone() {
-            let mut p = platform;
+        for i in 0..self.platformdrawlayer[iLayer as usize].len() {
+            let mut p = self.platformdrawlayer[iLayer as usize][i];
             self.platform(p).draw_offset(g, iOffsetX, iOffsetY);
         }
     }

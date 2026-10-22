@@ -2655,7 +2655,7 @@ impl GameplayState {
             let (state, offsets) = (self.iCountDownState, self.iScoreTextOffset);
             crate::common::gfx::display_list::begin(g.screen, true);
             self.draw_everything(g, state, offsets);
-            let _ = crate::common::gfx::display_list::end();
+            crate::common::gfx::display_list::recycle(crate::common::gfx::display_list::end());
             return;
         }
         let (state, offsets) = (self.iCountDownState, self.iScoreTextOffset);

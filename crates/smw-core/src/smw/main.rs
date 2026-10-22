@@ -492,7 +492,8 @@ pub struct MainLoopState {
 
 impl MainLoopState {
     pub(crate) fn store_display(&mut self, draw: crate::common::gfx::display_list::Draw) {
-        self.display[0] = std::mem::replace(&mut self.display[1], draw);
+        let newer = std::mem::replace(&mut self.display[1], draw);
+        crate::common::gfx::display_list::recycle(std::mem::replace(&mut self.display[0], newer));
         self.display_fresh = true;
     }
 

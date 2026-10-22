@@ -363,6 +363,8 @@ struct Touch {
     images: Option<Arc<[OverlayImage]>>,
     /// Bumped whenever `images` is rebuilt.
     generation: u64,
+    /// The last overlay, kept so each present reuses its quad buffer.
+    frame: Option<Overlay>,
 }
 
 /// The Android touch controls' state inside `Game`.
@@ -416,7 +418,7 @@ pub fn init(g: &mut Game) {
     st(gp.get()).first = st(gp.get()).session_on && !pads;
     if live {
         crate::smw::harness::record_touch(g);
-        st(gp.get()).touch = Some(Touch { controls: Controls::new(load_mode(g), Layout::default()), visible: !pads, alpha: if pads { 0.0 } else { 1.0 }, cutouts: Vec::new(), images: None, generation: 0 });
+        st(gp.get()).touch = Some(Touch { controls: Controls::new(load_mode(g), Layout::default()), visible: !pads, alpha: if pads { 0.0 } else { 1.0 }, cutouts: Vec::new(), images: None, generation: 0, frame: None });
         println!("[touch] on, {}", if pads { "hidden while a pad is connected" } else { "player 1" });
     }
 }
@@ -490,7 +492,7 @@ pub fn flush(g: &mut Game) {
 }
 
 /// What to draw over the presented frame, outside the game's 640x480 logical viewport.
-pub fn overlay(g: &mut Game) -> Option<Overlay> {
+pub fn overlay(g: &mut Game) -> Option<&Overlay> {
     let mut gp = g.ptr();
     let t = st(gp.get()).touch.as_mut()?;
     let video = &crate::services::services(gp.get()).video;
@@ -498,8 +500,8 @@ pub fn overlay(g: &mut Game) -> Option<Overlay> {
     if w <= 0 || h <= 0 {
         return None;
     }
-    let cutouts = CUTOUTS.lock().unwrap_or_else(|e| e.into_inner()).clone();
-    if t.controls.layout.w != w as f32 || t.controls.layout.h != h as f32 || t.cutouts != cutouts {
+    let cutouts = CUTOUTS.lock().unwrap_or_else(|e| e.into_inner());
+    if t.controls.layout.w != w as f32 || t.controls.layout.h != h as f32 || t.cutouts != *cutouts {
         t.cutouts = cutouts.clone();
         let dp = match video.display_dpi() {
             Some(dpi) => dpi / 160.0,
@@ -514,7 +516,11 @@ pub fn overlay(g: &mut Game) -> Option<Overlay> {
     if t.alpha <= 0.0 {
         return None;
     }
-    Some(Overlay { generation: t.generation, images: t.images.clone()?, quads: quads(t) })
+    let images = t.images.clone()?;
+    let mut buf = t.frame.take().map(|f| f.quads).unwrap_or_default();
+    quads(t, &mut buf);
+    t.frame = Some(Overlay { generation: t.generation, images, quads: buf });
+    t.frame.as_ref()
 }
 
 /// Indexes into the images `build_images` makes; `ARM` is four images, one per direction.
@@ -535,10 +541,11 @@ const STICK_KNOB: usize = 16;
 const TEXTURES: usize = 17;
 
 /// The overlay's quads in window pixels for the current mode and held keys.
-fn quads(t: &Touch) -> Vec<OverlayQuad> {
+fn quads(t: &Touch, out: &mut Vec<OverlayQuad>) {
     let c = &t.controls;
     let l = c.layout;
-    let out = std::cell::RefCell::new(Vec::new());
+    out.clear();
+    let out = std::cell::RefCell::new(out);
     let tint = std::cell::Cell::new([255u8; 3]);
     let put = |index: usize, x: f32, y: f32, w: f32, h: f32, alpha: f32| {
         out.borrow_mut().push(OverlayQuad {
@@ -599,7 +606,6 @@ fn quads(t: &Touch) -> Vec<OverlayQuad> {
         }
     }
     rect(if c.mode == Mode::Dpad { TOGGLE_DPAD } else { TOGGLE_STICK }, l.toggle, 1.0);
-    out.into_inner()
 }
 
 type Rgba = [f32; 4];
@@ -817,15 +823,17 @@ mod tests {
     fn the_overlay_draws_each_control_once_and_tints_the_held_arm() {
         let g = crate::game::Game::create();
         let l = pixel();
-        let mut t = Touch { controls: Controls::new(Mode::Dpad, l), visible: true, alpha: 1.0, cutouts: Vec::new(), images: None, generation: 0 };
+        let mut t = Touch { controls: Controls::new(Mode::Dpad, l), visible: true, alpha: 1.0, cutouts: Vec::new(), images: None, generation: 0, frame: None };
         let images = build_images(&l);
         assert_eq!(images.len(), TEXTURES);
         assert!(images.iter().all(|i| i.rgba.len() == (i.w * i.h * 4) as usize));
-        let idle = quads(&t);
+        let mut idle = Vec::new();
+        quads(&t, &mut idle);
         assert_eq!(idle.iter().map(|q| q.image as usize).collect::<Vec<_>>(), [DPAD_BASE, ARM, ARM + 1, ARM + 2, ARM + 3, DPAD_CENTER, JUMP, RUN, ITEM, BACK, START, TOGGLE_DPAD]);
         assert!(idle.iter().all(|q| q.alpha == 255 && q.color == [255; 3]));
         t.controls.down(g, 1, l.dpad.x + l.dpad.r * 0.8, l.dpad.y);
-        let held = quads(&t);
+        let mut held = Vec::new();
+        quads(&t, &mut held);
         assert_eq!(held.iter().map(|q| q.color).collect::<Vec<_>>()[1..5], [[255; 3], [255; 3], [255; 3], [255, 204, 51]]);
     }
 

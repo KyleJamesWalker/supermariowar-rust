@@ -67,6 +67,8 @@ const MAX_SLIDE: i32 = 48;
 
 thread_local! {
     static RECORD: RefCell<Option<Draw>> = const { RefCell::new(None) };
+    /// A finished draw handed back by [`recycle`], whose buffers the next [`begin`] records into.
+    static SPARE: RefCell<Option<Draw>> = const { RefCell::new(None) };
     static SCREEN: Cell<*mut Surface> = const { Cell::new(std::ptr::null_mut()) };
     static OWNER: Cell<(Owner, u16)> = const { Cell::new((Owner::None, 0)) };
     static RECORD_ONLY: Cell<bool> = const { Cell::new(false) };
@@ -86,7 +88,16 @@ pub fn begin(screen: *mut Surface, record_only: bool) {
     RECORD_ONLY.set(record_only);
     OWNER.set((Owner::None, 0));
     SOURCES.with_borrow_mut(Vec::clear);
-    RECORD.with_borrow_mut(|r| *r = Some(Draw::new()));
+    let draw = SPARE.with_borrow_mut(Option::take).unwrap_or(Draw::new());
+    RECORD.with_borrow_mut(|r| *r = Some(draw));
+}
+
+/// Hands a draw that is no longer needed back, so the next [`begin`] reuses its allocations.
+pub fn recycle(mut draw: Draw) {
+    draw.cmds.clear();
+    draw.snapshots.clear();
+    draw.patches.clear();
+    SPARE.with_borrow_mut(|s| *s = Some(draw));
 }
 
 /// Stops recording and returns the writes since [`begin`].
