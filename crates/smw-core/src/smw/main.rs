@@ -248,8 +248,8 @@ unsafe fn gameloop_frame(g: &mut Game) {
 
 /// Runs the ticks that wall time calls for at `TICKS_PER_SECOND`, at most `MAX_CATCH_UP_TICKS` of them, and presents
 /// separately: every display refresh under vsync, or at most the Graphics Options frame rate (or `SMW_PRESENT_HZ`).
-/// Frames between ticks render from the last two gameplay draws. Without a present or tick due, it sleeps until the
-/// sooner of the two.
+/// When presents come faster than ticks, frames between ticks render from the last two gameplay draws. Without a
+/// present or tick due, it sleeps until the sooner of the two.
 #[cfg(not(target_os = "emscripten"))]
 unsafe fn paced_frame(g: &mut Game) {
     const MAX_CATCH_UP_TICKS: u32 = 5;
@@ -257,10 +257,21 @@ unsafe fn paced_frame(g: &mut Game) {
     let tick_us = 1_000_000.0 / (TICKS_PER_SECOND as f64 * harness::speed(g) as f64);
     let now = crate::services::services(g).clock.now_us();
     let vsync = crate::services::services(g).video.vsync();
+    let refresh_hz = if vsync { crate::services::services(g).video.refresh_hz().map(f64::from) } else { None };
     let ml = &mut gp.get().main_loop;
     let present_hz = *ml.present_hz.get_or_insert_with(|| std::env::var("SMW_PRESENT_HZ").ok().and_then(|v| v.parse::<f64>().ok()).filter(|&hz| hz > 0.0));
     let cap_hz = present_hz.or(frame_rate_cap(gp.game_values.framelimiter).map(f64::from));
-    ml.interpolate = (vsync || cap_hz.is_some()) && crate::common::gfx::display_list::interpolation_allowed();
+    let present_rate = match (cap_hz, refresh_hz) {
+        (Some(cap), Some(refresh)) => Some(cap.min(refresh)),
+        (cap, refresh) => cap.or(refresh),
+    };
+    // A 60.06 Hz panel (RG35XX) presents no more often than the ticks, so there is nothing to interpolate.
+    let presents_faster = present_rate.is_none_or(|hz| hz > TICKS_PER_SECOND as f64 + 1.0);
+    let interpolate = (vsync || cap_hz.is_some()) && presents_faster && crate::common::gfx::display_list::interpolation_allowed();
+    if interpolate && !ml.interpolate {
+        ml.clear_display();
+    }
+    ml.interpolate = interpolate;
     match ml.last_us {
         Some(last) => ml.accumulated_us += now.saturating_sub(last) as f64,
         None => ml.accumulated_us = tick_us,
@@ -512,6 +523,14 @@ impl MainLoopState {
         let newer = std::mem::replace(&mut self.display[1], draw);
         crate::common::gfx::display_list::recycle(std::mem::replace(&mut self.display[0], newer));
         self.display_fresh = true;
+    }
+
+    /// Drops both draws, so turning interpolation back on never blends with a draw from before it was off.
+    fn clear_display(&mut self) {
+        for draw in &mut self.display {
+            crate::common::gfx::display_list::recycle(std::mem::replace(draw, crate::common::gfx::display_list::Draw::new()));
+        }
+        self.display_fresh = false;
     }
 
     pub const fn new() -> Self {

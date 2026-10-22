@@ -97,6 +97,12 @@ impl Video for Sdl3Video {
         self.vsync
     }
 
+    fn refresh_hz(&self) -> Option<f32> {
+        // SAFETY: SDL rejects a null window and an invalid display with null.
+        let mode = unsafe { SDL_GetCurrentDisplayMode(SDL_GetDisplayForWindow(self.window)).as_ref() }?;
+        (mode.refresh_rate > 0.0).then_some(mode.refresh_rate)
+    }
+
     fn show_cursor(&mut self, on: bool) {
         // SAFETY: takes no pointers.
         unsafe {
