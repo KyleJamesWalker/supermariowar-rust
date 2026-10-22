@@ -60,7 +60,6 @@ A read-only profile on 2026-10-20 of a headless 4-CPU replay on an Apple-silicon
 
 Two RG35XX handhelds measured the performance PRs (#255, #262, #263, #265, #284). Menus went from 9.3 to 3.2 ms of update and draw. A local Frenzy match went from 4.8 to 2.7 ms, on another map. A 3-player Greed netplay match on Log Balancing ran 5.4 to 5.9 ms on the host. Its GGRS frames took 1.1 to 1.3 ms, with no frame over budget and no desync. Present stays at 3.8 to 4.0 ms, now more than half of a match frame.
 
-- On a 60 Hz display, interpolation records each tick and replays it once per present, for no visual gain. Rasterize directly when the refresh rate is at or below the tick rate (`main.rs`, `gs_gameplay.rs`, S).
 - The map browser takes about 200 ms per page the first time it writes its cached thumbnails (`mi_map_browser.rs`, S). Shipping `maps/cache/` or writing the thumbnails off the frame would remove it.
 - Startup on the device is unmeasured: about 230 PNGs decode through `flate2`'s Rust backend, and a missing `maps/cache/mapsummary.txt` loads every map. Log per-phase startup times first, then consider `zlib-rs` and shipping the cache (S).
 
