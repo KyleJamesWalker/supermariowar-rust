@@ -28,6 +28,12 @@ pub struct PerfLog {
     over_budget: u32,
 }
 
+/// Whether `SMW_PERF` is on, read once.
+pub fn enabled() -> bool {
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ON.get_or_init(|| PerfLog::from_env().is_some())
+}
+
 impl PerfLog {
     /// A log when `SMW_PERF` is set to anything but 0.
     pub fn from_env() -> Option<Self> {

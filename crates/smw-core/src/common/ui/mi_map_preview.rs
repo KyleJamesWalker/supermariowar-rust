@@ -18,15 +18,6 @@ use crate::smw::objects::overmap::over_map_object::io_over_map_object_draw_offse
 use crate::smw::objects::overmap::wo_orbit_hazard::OMO_OrbitHazard;
 use crate::smw::objects::overmap::wo_straight_path_hazard::OMO_StraightPathHazard;
 
-/// A 10 ms sleep between preview loading steps; none in the browser, which cannot block.
-#[cfg(not(target_os = "emscripten"))]
-fn small_delay(g: &mut Game) {
-    let mut gp = g.ptr();
-    crate::services::delay(gp.get(), 10);
-}
-#[cfg(target_os = "emscripten")]
-fn small_delay(_g: &mut Game) {}
-
 /// `src` up to its first NUL, at most 255 bytes.
 pub(crate) fn copy_map_name(src: &str) -> String {
     let bytes = src.as_bytes();
@@ -166,28 +157,33 @@ impl MI_MapPreview {
     /// Loads the map at `szMapPath` into `Game::g_map`, renders the preview layers, and spawns its hazards.
     pub fn load_map(&mut self, g: &mut Game, szMapPath: &str) {
         let mut gp = g.ptr();
+        let start = std::time::Instant::now();
         gp.g_map.load_map(g, szMapPath, read_type_preview);
-        small_delay(g); //Sleeps to help the music from skipping
-
+        let loaded = std::time::Instant::now();
         load_current_map_background(g);
-        small_delay(g);
+        let background = std::time::Instant::now();
 
         gp.get().g_map.pre_draw_preview_background_spr(g, &gp.get().rm.sprite(gp.get().rm.spr_background), self.surfaceMapBackground.get_surface(), false);
-        small_delay(g);
 
         gp.g_map.pre_draw_preview_blocks(g, self.surfaceMapBlockLayer.get_surface(), false);
-        small_delay(g);
 
         gp.g_map.pre_draw_preview_map_items(g, self.surfaceMapBackground.get_surface(), false);
-        small_delay(g);
 
         gp.g_map.pre_draw_preview_foreground(g, self.surfaceMapForeground.get_surface(), false);
-        small_delay(g);
 
         gp.get().g_map.pre_draw_preview_warps(g, if gp.get().game_values.toplayer { self.surfaceMapForeground.get_surface() } else { self.surfaceMapBackground.get_surface() }, false);
-        small_delay(g);
 
         load_map_hazards(g, true);
+        if crate::smw::perf_log::enabled() {
+            let ms = |d: std::time::Duration| d.as_secs_f64() * 1000.0;
+            println!(
+                "[perf] map preview {}: load {:.1} ms, background {:.1} ms, total {:.1} ms",
+                self.szMapName,
+                ms(loaded - start),
+                ms(background - loaded),
+                ms(start.elapsed())
+            );
+        }
     }
 
     /// Selects the map named `paramSzMapName` (world-only maps first with `fWorld`) and previews it; false if not found.

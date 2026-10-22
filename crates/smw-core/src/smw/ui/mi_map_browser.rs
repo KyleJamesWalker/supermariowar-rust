@@ -12,15 +12,6 @@ use crate::common::uicontrol::{UI_Control, UI_ControlTrait};
 use crate::globals::*;
 use crate::smw::gs_gameplay::lookup_team_id;
 
-/// Pauses 10 ms between thumbnail renders; a no-op on the web.
-#[cfg(not(target_os = "emscripten"))]
-fn small_delay(g: &mut Game) {
-    let mut gp = g.ptr();
-    crate::services::delay(gp.get(), 10);
-}
-#[cfg(target_os = "emscripten")]
-fn small_delay(_g: &mut Game) {}
-
 /// Full-screen grid of map thumbnails; [`Self::reset`] sets the mode before it opens.
 pub struct MI_MapBrowser {
     pub ui_control: UI_Control,
@@ -118,9 +109,7 @@ impl MI_MapBrowser {
             if !file_exists(&sConvertedPath) {
                 let filename = g.maplist.node_at(itr).filename.clone();
                 gp.g_map.load_map(g, &filename, read_type_preview);
-                small_delay(g); //Sleeps to help the music from skipping
                 gp.g_map.save_thumbnail(g, &sConvertedPath, false);
-                small_delay(g);
             }
 
             let m = iMap as usize;
