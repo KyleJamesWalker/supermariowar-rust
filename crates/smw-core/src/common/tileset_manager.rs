@@ -287,6 +287,10 @@ impl CTilesetManager {
         container_helpers::sort(&mut m_tilesets, |a, b| a.name().as_bytes() < b.name().as_bytes());
 
         let m_classicTilesetIndex = m_tilesets.iter().position(|t| t.name() == "Classic").unwrap_or(usize::MAX);
+        crate::common::gfx::blit::prefetch(
+            m_tilesets.iter().flat_map(|t| ["large.png", "medium.png", "small.png"].map(|f| t.m_tileset_dir.join(f))).collect(),
+            Some(crate::common::gfx::color::colors::MAGENTA),
+        );
 
         CTilesetManager {
             m_tilesets,
