@@ -431,6 +431,8 @@ fn lower_blit(src: &Pixels, state: &BlitState, sr: &Rect, dst: &mut PixelsMut, d
     match (state.blend == BlendMode::Blend, key, state.alpha_mod != 255) {
         (false, key, false) => blit_rows(src, sr, dst, dx, dy, key, |s, _| Some(s)),
         (false, key, true) => blit_rows(src, sr, dst, dx, dy, key, |s, _| Some((s & RGB_MASK) | (mult_div_255(s >> 24, alpha_mod) << 24))),
+        (true, None, false) if src.alpha && dst.alpha => blit_rows_pixel_alpha::<true>(src, sr, dst, dx, dy),
+        (true, None, false) if src.alpha => blit_rows_pixel_alpha::<false>(src, sr, dst, dx, dy),
         (true, None, false) => blit_rows(src, sr, dst, dx, dy, None, blend_pixel_alpha),
         (true, None, true) => blit_rows(src, sr, dst, dx, dy, None, |s, d| Some(blend_modulate(s, d, alpha_mod))),
         (true, key, false) => blit_rows(src, sr, dst, dx, dy, key, |s, d| Some(blend_slow(s, d, None))),
@@ -480,6 +482,38 @@ fn blit_rows_with<const KEYED: bool, const SRC_ALPHA: bool, const DST_ALPHA: boo
                 None => {}
             }
         }
+    }
+}
+
+/// `blend_pixel_alpha` from an ARGB8888 source, copying runs of opaque pixels and skipping runs of transparent ones
+/// a chunk at a time.
+fn blit_rows_pixel_alpha<const DST_ALPHA: bool>(src: &Pixels, sr: &Rect, dst: &mut PixelsMut, dx: i32, dy: i32) {
+    const CHUNK: usize = 16;
+    let blend = |s: &[u32], d: &mut [u32]| {
+        for (s, d) in s.iter().zip(d.iter_mut()) {
+            match blend_pixel_alpha(*s, *d) {
+                Some(out) => *d = if DST_ALPHA { out } else { out | 0xFF00_0000 },
+                None if !DST_ALPHA => *d |= 0xFF00_0000,
+                None => {}
+            }
+        }
+    };
+    for row in 0..sr.h {
+        let s0 = (sr.y + row) as usize * src.pitch + sr.x as usize;
+        let d0 = (dy + row) as usize * dst.pitch + dx as usize;
+        let srow = &src.pixels[s0..s0 + sr.w as usize];
+        let drow = &mut dst.pixels[d0..d0 + sr.w as usize];
+        let mut schunks = srow.chunks_exact(CHUNK);
+        let mut dchunks = drow.chunks_exact_mut(CHUNK);
+        for (s, d) in schunks.by_ref().zip(dchunks.by_ref()) {
+            let (all, any) = s.iter().fold((u32::MAX, 0), |(all, any), &p| (all & p, any | p));
+            if all >> 24 == 255 {
+                d.copy_from_slice(s);
+            } else if !(DST_ALPHA && any >> 24 == 0) {
+                blend(s, d);
+            }
+        }
+        blend(schunks.remainder(), dchunks.into_remainder());
     }
 }
 
@@ -790,6 +824,73 @@ pub(crate) mod tests {
         for _ in 0..1_000_000 {
             let (s, d) = (rng.pixel(), rng.next());
             assert_eq!(blend_pixel_alpha(s, d).unwrap_or(d), factor_blend(s | 0xFF00_0000, d, s >> 24), "src {s:08x} dst {d:08x}");
+        }
+    }
+
+    /// A surface of opaque, transparent and partial runs, so whole chunks take each shortcut.
+    fn runs_surface(rng: &mut Rng, w: i32, h: i32) -> Surface {
+        let mut s = Surface::new(w, h);
+        let mut left = 0;
+        let mut alpha = 255;
+        for p in &mut s.pixels {
+            if left == 0 {
+                left = rng.range(1, 40);
+                alpha = [0, 255, 255, 0, 128][rng.range(0, 4) as usize];
+            }
+            left -= 1;
+            let a = if alpha == 128 { rng.next() & 0xFF } else { alpha };
+            *p = (a << 24) | (rng.next() & RGB_MASK);
+        }
+        s
+    }
+
+    #[test]
+    fn chunked_pixel_alpha_matches_per_pixel() {
+        let mut rng = Rng::new(9);
+        for case in 0..400 {
+            let (sw, sh) = (rng.range(1, 100), rng.range(1, 8));
+            let (dw, dh) = (rng.range(sw, 110), rng.range(sh, 10));
+            let src = runs_surface(&mut rng, sw, sh);
+            let dst = random_surface(&mut rng, dw, dh);
+            let (x, y) = (rng.range(0, sw - 1), rng.range(0, sh - 1));
+            let sr = Rect::new(x, y, rng.range(1, sw - x), rng.range(1, sh - y));
+            let (dx, dy) = (rng.range(0, dw - sr.w), rng.range(0, dh - sr.h));
+            let view = Pixels { w: sw, h: sh, pitch: sw as usize, pixels: &src.pixels, alpha: true };
+            for dst_alpha in [true, false] {
+                let mut fast = dst.clone();
+                let mut slow = dst.clone();
+                if dst_alpha {
+                    blit_rows_pixel_alpha::<true>(&view, &sr, &mut fast.view_mut(), dx, dy);
+                } else {
+                    blit_rows_pixel_alpha::<false>(&view, &sr, &mut PixelsMut { alpha: false, ..fast.view_mut() }, dx, dy);
+                }
+                blit_rows(&view, &sr, &mut PixelsMut { alpha: dst_alpha, ..slow.view_mut() }, dx, dy, Option::None, blend_pixel_alpha);
+                if let Some(d) = first_difference(&fast.pixels, &slow.pixels, dw) {
+                    panic!("case {case} dst_alpha {dst_alpha}: {d}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    #[ignore = "timing; run with --release --ignored --nocapture"]
+    fn pixel_alpha_blit_timing() {
+        let mut rng = Rng::new(10);
+        let opaque = Surface { pixels: (0..640 * 480).map(|_| 0xFF00_0000 | rng.next()).collect(), ..Surface::new(640, 480) };
+        let runs = runs_surface(&mut rng, 640, 480);
+        for (name, src) in [("opaque", &opaque), ("runs", &runs)] {
+            let mut dst = Surface::new(640, 480);
+            let full = Rect::new(0, 0, 640, 480);
+            let start = std::time::Instant::now();
+            for _ in 0..1000 {
+                blit_rows(&src.view(), &full, &mut dst.view_mut(), 0, 0, Option::None, blend_pixel_alpha);
+            }
+            let per_pixel = start.elapsed() / 1000;
+            let start = std::time::Instant::now();
+            for _ in 0..1000 {
+                upper_blit(src, Option::None, &mut dst, Option::None);
+            }
+            eprintln!("{name}: per pixel {per_pixel:?}, chunked {:?}", start.elapsed() / 1000);
         }
     }
 
