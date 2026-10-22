@@ -429,12 +429,27 @@ impl MatchRoom {
     }
 }
 
+/// `NET_G2L_HOST_PEER` and `NET_L2P_HOST_PEER`: the host's signaling peer ID, its UUID's bytes in order.
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct HostPeer {
+    pub header: MessageHeader,
+    pub peerID: [u8; 16],
+}
+
+impl HostPeer {
+    pub fn with(packageType: u8, peerID: [u8; 16]) -> Self {
+        HostPeer { header: MessageHeader::new(packageType), peerID }
+    }
+}
+
 crate::net_package!(
     MessageHeader,
     ServerInfo,
     ClientConnection,
     ConnectOk,
     MatchRoom,
+    HostPeer,
     ClientDisconnection,
     RoomList,
     RoomInfo,
@@ -462,6 +477,7 @@ mod tests {
         assert_eq!((size_of::<ClientConnection>(), offset_of!(ClientConnection, playerName)), (19, 3));
         assert_eq!((size_of::<ConnectOk>(), offset_of!(ConnectOk, playerName)), (19, 3));
         assert_eq!((size_of::<MatchRoom>(), offset_of!(MatchRoom, roomURL), offset_of!(MatchRoom, turnCredential)), (356, 4, 324));
+        assert_eq!((size_of::<HostPeer>(), offset_of!(HostPeer, peerID)), (19, 3));
         assert_eq!(size_of::<ClientDisconnection>(), 3);
         assert_eq!(size_of::<RoomList>(), 3);
         assert_eq!(

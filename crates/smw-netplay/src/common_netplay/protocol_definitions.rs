@@ -2,7 +2,7 @@
 
 /// Client and lobby must match in both parts; the lobby answers any other version with `NET_RESPONSE_BADPROTOCOL`.
 pub const NET_PROTOCOL_VERSION_MAJOR: u8 = 0;
-pub const NET_PROTOCOL_VERSION_MINOR: u8 = 10;
+pub const NET_PROTOCOL_VERSION_MINOR: u8 = 11;
 /// The port a lobby connection targets; the relay's switch refuses connections to any other.
 pub const NET_LOBBYSERVER_PORT: u16 = 12521;
 /// Field sizes in bytes, the terminating NUL included.
@@ -52,5 +52,9 @@ pub const NET_G2L_START_ROOM: u8 = 50;
 pub const NET_L2P_MATCH_ROOM: u8 = 53;
 /// The room's match starts.
 pub const NET_L2P_MATCH_START: u8 = 54;
+/// `HostPeer` from the host, once signaling assigned its peer ID; the lobby passes it on as `NET_L2P_HOST_PEER`.
+pub const NET_G2L_HOST_PEER: u8 = 55;
+/// `HostPeer` to the room's other clients: the only peer they take the match start from.
+pub const NET_L2P_HOST_PEER: u8 = 56;
 /// The host is back in the room after a match; the lobby lists the room again.
 pub const NET_G2L_GAME_RESULTS: u8 = 58;
