@@ -1157,7 +1157,10 @@ fn follow_path(g: &mut Game, this: &mut CPlayerAI, actionType: i16, mut keys: Pt
     };
     this.nav_age = this.nav_age.saturating_add(1);
     if this.nav.is_none() || (!g.g_map.platforms.is_empty() && this.nav_age >= 8) {
-        this.nav = Some(NavGraph::build(g));
+        match &mut this.nav {
+            Some(nav) => nav.rebuild(g),
+            None => this.nav = Some(NavGraph::build(g)),
+        }
         this.nav_age = 0;
     }
     let pPlayer = this.pPlayer;
