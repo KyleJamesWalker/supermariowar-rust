@@ -19,10 +19,6 @@ Follow-ups to the merged backlog PRs.
 - Run #248's SDL2 audio reload fix under AddressSanitizer.
 - Check by hand what the headless tests cannot reach. These are the live level editor's Shift and Ctrl (#256), and the shader error banner and window restore (#261). Also open the sound options menu with no world music packs (#271).
 
-## Maintenance
-
-- No editor replay presses Insert in the world editor. Add one that covers the in-memory screenshots from #256.
-
 ## Bugs
 
 Possible bugs found while commenting the code in #232, and gaps the fix PRs left. Gameplay fixes change the replay goldens.
