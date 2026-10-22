@@ -268,14 +268,6 @@ pub static iStandardOffset: [i16; 3] = [0, 32, 48];
 /// Bullet bill path dot spacing per unit of speed, by draw size.
 pub static dBulletBillFrequency: [f32; 3] = [10.0, 5.0, 2.5];
 
-#[cfg(not(target_os = "emscripten"))]
-fn small_delay(g: &mut Game) {
-    let mut gp = g.ptr();
-    crate::services::delay(gp.get(), 10);
-}
-#[cfg(target_os = "emscripten")]
-fn small_delay(_g: &mut Game) {}
-
 /// Screen width in pixels at draw size `iSize` (0 full, 1 half, 2 quarter); panics on any other size.
 fn get_screen_width(iSize: i32) -> i32 {
     match iSize {
@@ -2175,17 +2167,13 @@ impl CMap {
     /// Draws the background tile layers at preview or thumbnail size.
     pub fn pre_draw_preview_background(&mut self, g: &mut Game, targetSurface: *mut Surface, fThumbnail: bool) {
         self.draw_preview(g, targetSurface, 0, fThumbnail);
-        small_delay(g);
 
         self.draw_preview(g, targetSurface, 1, fThumbnail);
-        small_delay(g);
 
         if !g.game_values.toplayer {
             self.draw_preview(g, targetSurface, 2, fThumbnail);
-            small_delay(g);
 
             self.draw_preview(g, targetSurface, 3, fThumbnail);
-            small_delay(g);
         }
     }
 
@@ -2205,7 +2193,6 @@ impl CMap {
 
         background.draw_stretch(&srcrect, targetSurface, &dstrect);
 
-        small_delay(g);
         self.pre_draw_preview_background(g, targetSurface, fThumbnail);
     }
 
@@ -2216,7 +2203,6 @@ impl CMap {
                 crate::common::gfx::blit::fill_rect(targetSurface, null(), (*targetSurface).map_rgb(255, 0, 255));
                 (*targetSurface).color_key = Some((*targetSurface).map_rgb(255, 0, 255));
             }
-            small_delay(g);
         }
 
         self.draw_preview_blocks(g, targetSurface, fThumbnail);
@@ -2230,7 +2216,6 @@ impl CMap {
                 crate::common::gfx::blit::fill_rect(targetSurface, null(), (*targetSurface).map_rgb(255, 0, 255));
                 (*targetSurface).color_key = Some((*targetSurface).map_rgb(255, 0, 255));
             }
-            small_delay(g);
         }
 
         if !g.game_values.toplayer {
@@ -2238,7 +2223,6 @@ impl CMap {
         }
 
         self.draw_preview(g, targetSurface, 2, fThumbnail);
-        small_delay(g);
         self.draw_preview(g, targetSurface, 3, fThumbnail);
     }
 
