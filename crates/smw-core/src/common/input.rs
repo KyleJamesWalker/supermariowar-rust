@@ -594,6 +594,7 @@ mod tests {
     #[test]
     fn menu_input_with_player_one_on_a_pad() {
         let g = crate::game::Game::create();
+        crate::globals::init_globals(g);
         g.game_values.inputConfiguration[0][1].iDevice = 0;
         let mut input = CPlayerInput::new();
         input.inputControls[0] = Some((0, 1));
