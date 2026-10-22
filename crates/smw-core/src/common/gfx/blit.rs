@@ -63,24 +63,32 @@ pub unsafe fn fill_rect(dst: *mut Surface, rect: *const Rect, color: u32) -> i32
     0
 }
 
-/// PNGs `prefetch` decoded ahead of their first load, by path.
-static PREFETCHED: std::sync::Mutex<Option<std::collections::HashMap<std::path::PathBuf, crate::common::gfx::soft_image::Decoded>>> = std::sync::Mutex::new(None);
+type PrefetchKey = (std::path::PathBuf, Option<crate::common::gfx::color::RGB>);
+
+/// Images `prefetch` loaded ahead of their first use, by path and color key.
+static PREFETCHED: std::sync::Mutex<Option<std::collections::HashMap<PrefetchKey, Surface>>> = std::sync::Mutex::new(None);
 
 /// The decoded PNG at `path`.
 pub fn decode_for_load(path: &std::path::Path) -> Option<crate::common::gfx::soft_image::Decoded> {
-    let ready = PREFETCHED.lock().unwrap_or_else(|e| e.into_inner()).as_mut().and_then(|m| m.remove(path));
-    ready.or_else(|| crate::common::gfx::soft_image::decode_png(&std::fs::read(path).ok()?))
+    crate::common::gfx::soft_image::decode_png(&std::fs::read(path).ok()?)
 }
 
-/// Decodes `paths` on a background thread so their first `decode_for_load` skips the decode.
-pub fn prefetch(paths: Vec<std::path::PathBuf>) {
+/// `path` decoded and converted to the screen format with `color_key`, as a load would, if `prefetch` has it ready.
+pub fn take_prefetched(path: &std::path::Path, color_key: Option<crate::common::gfx::color::RGB>) -> Option<Surface> {
+    PREFETCHED.lock().unwrap_or_else(|e| e.into_inner()).as_mut()?.remove(&(path.to_path_buf(), color_key))
+}
+
+/// Loads `paths` with `color_key` on a background thread so their first load takes them from `take_prefetched`.
+pub fn prefetch(paths: Vec<std::path::PathBuf>, color_key: Option<crate::common::gfx::color::RGB>) {
     if cfg!(target_os = "emscripten") {
         return;
     }
     let _ = std::thread::Builder::new().name("png-prefetch".into()).spawn(move || {
         for path in paths {
-            let Some(image) = std::fs::read(&path).ok().and_then(|bytes| crate::common::gfx::soft_image::decode_png(&bytes)) else { continue };
-            PREFETCHED.lock().unwrap_or_else(|e| e.into_inner()).get_or_insert_with(Default::default).insert(path, image);
+            let Some(image) = decode_for_load(&path) else { continue };
+            let key = color_key.map(|c| image.map_rgb(c.r, c.g, c.b));
+            let surface = crate::common::gfx::soft_image::convert_to_screen(&image, key);
+            PREFETCHED.lock().unwrap_or_else(|e| e.into_inner()).get_or_insert_with(Default::default).insert((path, color_key), surface);
         }
     });
 }

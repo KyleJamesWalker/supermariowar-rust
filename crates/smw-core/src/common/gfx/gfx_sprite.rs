@@ -42,11 +42,16 @@ fn try_load_image(_g: &mut Game, path: &Path, _optimize: bool, color_key: Option
     print!("{}", out);
     let _ = std::io::stdout().flush();
 
-    let Some(image) = blit::decode_for_load(path) else {
-        return Err(format!("Couldn't load {}: not a readable PNG", path_str));
+    let mut img = match blit::take_prefetched(path, color_key) {
+        Some(img) => img,
+        None => {
+            let Some(image) = blit::decode_for_load(path) else {
+                return Err(format!("Couldn't load {}: not a readable PNG", path_str));
+            };
+            let key = color_key.map(|c| image.map_rgb(c.r, c.g, c.b));
+            soft_image::convert_to_screen(&image, key)
+        }
     };
-    let key = color_key.map(|c| image.map_rgb(c.r, c.g, c.b));
-    let mut img = soft_image::convert_to_screen(&image, key);
     if let Some(alpha) = alpha {
         img.blend = BlendMode::Blend;
         img.alpha_mod = alpha;
