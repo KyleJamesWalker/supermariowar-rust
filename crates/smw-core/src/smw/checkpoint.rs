@@ -4,6 +4,7 @@
 //! settings, the menu's choices, the RNG, the virtual mixer and the files the match loaded. A segment
 //! replay loads the game data, `restore`s the checkpoint and enters gameplay where the menu would have,
 //! so its dump from that frame on equals the full replay's.
+#![deny(clippy::all)]
 
 use crate::game::Game;
 use crate::common::game_values::AppState;
@@ -360,15 +361,15 @@ fn walk(g: &mut Game, s: &mut Snap) {
 
         // Which input configuration each player reads, as `inputConfiguration` index * 2 + keyboard/joystick.
         let mut inputs = [0u8; 4];
-        for p in 0..4 {
-            if let Some((set, kind)) = gv.playerInput.inputControls[p] {
-                inputs[p] = set * 2 + kind;
+        for (input, control) in inputs.iter_mut().zip(gv.playerInput.inputControls) {
+            if let Some((set, kind)) = control {
+                *input = set * 2 + kind;
             }
         }
         s.io(&mut inputs);
         if s.load {
-            for p in 0..4 {
-                let i = inputs[p] as usize % 8;
+            for (p, &input) in inputs.iter().enumerate() {
+                let i = input as usize % 8;
                 gv.cgame_config.playerInput.inputControls[p] = Some(((i / 2) as u8, (i % 2) as u8));
             }
         }

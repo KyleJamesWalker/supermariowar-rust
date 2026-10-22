@@ -24,7 +24,7 @@ How the code in this repository is written. smw-core started as a line-by-line t
 | Overloads | keep the most common unsuffixed; suffix the others by what differs (`get_integer`, `get_integer_range`; `convert_path`, `convert_path_pack`) |
 | Default arguments | pass every argument explicitly at the call site |
 
-The crate root sets `#![allow(non_snake_case, non_camel_case_types, non_upper_case_globals, static_mut_refs, dead_code, ...)]`, so C++ names compile without noise.
+The crate root sets `#![allow(non_snake_case, non_camel_case_types, non_upper_case_globals, static_mut_refs, dead_code, ...)]`, so C++ names compile without noise. It also allows `clippy::all`, which the port's own modules (`smw/rollback.rs`, `net_v2.rs`, `checkpoint.rs`, `harness.rs`, `video_settings.rs`, `stats.rs`) deny again, so CI's clippy fails on them.
 
 ## Numeric semantics
 

@@ -2,6 +2,7 @@
 //!
 //! Outside a recording, every entry point is a no-op unless its SMW_* environment variable is set;
 //! docs/guides/REPLAY.md is the byte-level spec.
+#![deny(clippy::all)]
 
 use crate::common::keys::*;
 use crate::game::Game;
@@ -124,6 +125,12 @@ pub struct Harness {
 /// started from its checkpoint (smw/checkpoint.rs).
 struct Segment {
     checkpoint: Vec<u8>,
+}
+
+impl Default for Harness {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Harness {
@@ -823,7 +830,7 @@ pub fn frame_end(g: &mut Game) {
     record_markers(g, h(gp.get()).frame);
 
     let f = h(gp.get()).frame;
-    let periodic = h(gp.get()).shotEvery > 0 && f >= h(gp.get()).shotFrom && f <= h(gp.get()).shotTo && (f - h(gp.get()).shotFrom) % h(gp.get()).shotEvery == 0;
+    let periodic = h(gp.get()).shotEvery > 0 && f >= h(gp.get()).shotFrom && f <= h(gp.get()).shotTo && (f - h(gp.get()).shotFrom).is_multiple_of(h(gp.get()).shotEvery);
     if periodic {
         if let Some(out) = h(gp.get()).shotStream.as_mut() {
             if crate::common::gfx::gfx_write_screen_raw(g, out).and_then(|_| out.flush()).is_err() {
@@ -886,7 +893,7 @@ const BASE64: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
 
 /// Standard base64 with padding.
 pub fn base64_encode(data: &[u8]) -> String {
-    let mut out = String::with_capacity((data.len() + 2) / 3 * 4);
+    let mut out = String::with_capacity(data.len().div_ceil(3) * 4);
     for chunk in data.chunks(3) {
         let b = [chunk[0], *chunk.get(1).unwrap_or(&0), *chunk.get(2).unwrap_or(&0)];
         let n = (b[0] as u32) << 16 | (b[1] as u32) << 8 | b[2] as u32;
@@ -1190,7 +1197,7 @@ fn record_frame_start(g: &mut Game, frame: u32) {
         web_dpad::init(g);
     }
     // A browser tab can close at any moment without finish(), and muOS kills apps; keep the file current.
-    if frame % 60 == 0 {
+    if frame.is_multiple_of(60) {
         let _ = r.out.flush();
     }
     push_live_script(g, r, frame);
@@ -1286,7 +1293,7 @@ pub fn prepare_watch(g: &mut Game, file: &str, speed: Option<f32>, segment: Opti
     let path = std::fs::canonicalize(file).unwrap_or_else(|_| fail(format!("cannot open replay {}", file)));
     let text = read_recording(&path).unwrap_or_else(|| fail(format!("cannot read replay {}", path.display())));
     let directive = |key: &str| {
-        text.lines().filter_map(|l| l.strip_prefix("#@ ")).filter_map(|l| l.strip_prefix(key)).filter_map(|l| l.strip_prefix('=')).last().map(|v| v.to_string())
+        text.lines().filter_map(|l| l.strip_prefix("#@ ")).filter_map(|l| l.strip_prefix(key)).filter_map(|l| l.strip_prefix('=')).next_back().map(|v| v.to_string())
     };
     let home = std::env::temp_dir().join(format!("smw-watch-{}", std::process::id()));
     #[cfg(not(windows))]

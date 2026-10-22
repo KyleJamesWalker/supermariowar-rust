@@ -1,5 +1,6 @@
 //! Gameplay stats (docs/design/GAMEPLAY_STATS.md): match counters, the after-match page and saved lifetime totals.
 //! Match counters live in `game_values` so rollback restores them; nothing in the simulation reads them.
+#![deny(clippy::all)]
 
 use crate::common::player_kill_styles::KillStyle;
 use crate::game::Game;

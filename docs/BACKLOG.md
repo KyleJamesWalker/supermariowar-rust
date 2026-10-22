@@ -50,7 +50,6 @@ A full-codebase review on 2026-10-19, at the head of the GPU shader stack, confi
 
 ### Later
 
-- `smw-core` silences every clippy lint. Turn `clippy::all` on for the port's newer modules (rollback, netplay v2, checkpoint, harness, video settings, stats) and gate on it (S).
 - A room has no CPU slots, so an online match plays only its humans. Let the host fill empty slots with bots (`net_room_menu.rs`, lobby protocol, M).
 - A couch player's room name is the client's lobby name with a number (`Kyle 2`). `NET_REQUEST_LOCAL_PLAYERS` already carries names; the room menu needs a field to type them (`net_room_menu.rs`, S).
 - The SDL3 audio thread still allocates each packet `lewton` decodes (`smw-sdl3/audio.rs`, S).

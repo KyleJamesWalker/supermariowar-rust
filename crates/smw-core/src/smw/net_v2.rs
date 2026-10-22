@@ -1,5 +1,6 @@
 //! Netplay v2 matches: every peer restores the host's match start, then the match runs under a GGRS P2P session over
 //! the room's WebRTC connections. Recordings keep each frame as a `#@ v2` line, which a replay plays without the network.
+#![deny(clippy::all)]
 
 use crate::common::global_constants::MAX_PLAYERS;
 use crate::common::input::{COutputControl, DEVICE_KEYBOARD};
@@ -776,7 +777,7 @@ impl V2Match {
             return false;
         }
         self.ticks += 1;
-        if self.ticks % RESEND_TICKS == 0 {
+        if self.ticks.is_multiple_of(RESEND_TICKS) {
             self.announce();
             if self.restored && !self.host {
                 self.send_all(&[MSG_READY]);
@@ -930,7 +931,7 @@ impl V2Match {
             return true;
         }
         // GGRS's time sync: a peer ahead of the others skips a frame now and then.
-        if session.frames_ahead() > 0 && self.ticks % 4 == 0 {
+        if session.frames_ahead() > 0 && self.ticks.is_multiple_of(4) {
             self.ticks += 1;
             return true;
         }
@@ -960,7 +961,7 @@ impl V2Match {
         }
         self.rollback_ticks += advances.saturating_sub(1);
         self.ticks += 1;
-        if self.ticks % 600 == 0 {
+        if self.ticks.is_multiple_of(600) {
             let p = std::mem::take(&mut self.perf);
             println!(
                 "[net] v2: {} ticks, {} re-run ticks, {} desyncs; last 600: GGRS frames avg {:.2} ms, worst {:.2} ms, {} waits for input",

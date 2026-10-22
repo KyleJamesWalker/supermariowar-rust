@@ -1,4 +1,5 @@
 //! The shader preset and integer scaling settings: the presets on disk, `video.txt`, and applying them to the window.
+#![deny(clippy::all)]
 
 use crate::common::path::get_home_directory;
 use crate::game::Game;
