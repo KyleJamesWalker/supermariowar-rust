@@ -3306,6 +3306,48 @@ pub(crate) mod tests {
         assert!(catch_runtime_error(|| map_reader::check_spawn_area(&SpawnArea { width: 5, ..area })).is_some());
     }
 
+    /// An empty 1.6 map with one spawn area, given as it is stored: `[left, top, width or right, height or bottom, size]`.
+    fn map_1600(version: [i32; 4], area: [i32; 5]) -> Vec<u8> {
+        let v161 = version >= [1, 6, 1, 0];
+        let mut words = version.to_vec();
+        for _ in 0..MAPWIDTH * MAPHEIGHT {
+            words.extend([300; MAPLAYERS as usize]);
+            words.extend([-1, WARP_UNDEFINED, 0, 0]);
+            if v161 {
+                words.push(0);
+            }
+        }
+        // Background, eyecandy, no warp exits, then the spawn area list.
+        words.extend([0, 1, 0, 1]);
+        words.extend(area);
+        if v161 {
+            words.push(0);
+        }
+        words.iter().flat_map(|w| w.to_le_bytes()).collect()
+    }
+
+    #[test]
+    fn spawn_areas_of_1600_maps_load_into_every_spawn_type() {
+        let g = map_game();
+        let mut gp = g.ptr();
+        let _g = lock_globals();
+        let cases = [([1, 6, 0, 0], (2, 3, 10, 9)), ([1, 6, 0, 10], (2, 3, 8, 6)), ([1, 6, 1, 0], (2, 3, 8, 6))];
+        for (version, expected) in cases {
+            let (loaded, caught) = load_bytes(g, &map_1600(version, [2, 3, 10, 9, 63]), read_type_full);
+            assert!(loaded && caught.is_empty(), "{version:?}: {caught:?}");
+            for t in 0..NUMSPAWNAREATYPES as usize {
+                let a = gp.g_map.spawnareas[t][0];
+                assert_eq!((gp.g_map.numspawnareas[t], gp.g_map.totalspawnsize[t]), (1, 63), "{version:?} type {t}");
+                assert_eq!((a.left, a.top, a.width, a.height), expected, "{version:?} type {t}");
+                let (mut x, mut y) = (0, 0);
+                assert!(gp.g_map.findspawnpoint(g, t as i16, &mut x, &mut y, 22, 25, false));
+                let (left, top) = (a.left as i32 * TILESIZE, a.top as i32 * TILESIZE);
+                let (right, bottom) = (left + (a.width as i32 + 1) * TILESIZE, top + (a.height as i32 + 1) * TILESIZE);
+                assert!((left..=right - 22).contains(&(x as i32)) && (top..=bottom - 25).contains(&(y as i32)), "{version:?} type {t}: {x},{y}");
+            }
+        }
+    }
+
     #[test]
     fn warp_entrance_without_exit_fails_to_load() {
         let g = map_game();

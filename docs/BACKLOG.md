@@ -21,7 +21,6 @@ Follow-ups to the merged backlog PRs.
 
 ## Maintenance
 
-- No map in `data/` uses the 1.6 format, so the 1.6 spawn-area fix in #257 has no test. Add a small 1.6 test map.
 - No editor replay presses Insert in the world editor. Add one that covers the in-memory screenshots from #256.
 
 ## Bugs
