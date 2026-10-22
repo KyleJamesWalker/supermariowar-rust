@@ -315,9 +315,10 @@ impl CPlayerInput {
                 let inputControl = &*inputControl;
                 let outputControl = &mut *outputControl;
 
-                // `iPlayer` is -1 only in menus, where `iGameState` is 1, so this never indexes `playercontrol` with it. In a
-                // net match input slot i is local player i, whose room slot may be another, so `playercontrol` says nothing.
-                let human = if g.netplay.active { (iPlayer as usize) < g.netplay.localSlots.len() } else { g.game_values.playercontrol[iPlayer as usize] == 1 };
+                // Only gameplay (`iGameState` 0) asks; `iPlayer` is -1 only in menus. In a net match input slot i is local
+                // player i, whose room slot may be another, so `playercontrol` says nothing.
+                let human = iGameState != 0
+                    || if g.netplay.active { (iPlayer as usize) < g.netplay.localSlots.len() } else { g.game_values.playercontrol[iPlayer as usize] == 1 };
                 let ignore_cpu = |iKey: usize| -> bool { iGameState == 0 && !human && iKey < 6 };
 
                 if iDeviceID == DEVICE_KEYBOARD {
@@ -580,6 +581,28 @@ impl CPlayerInput {
                 //if (fFound)
                 //break;
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use smw_platform::{Keycode, PadSlot};
+
+    /// Player 1 on a pad in a menu takes the keyboard fallback slot, `iPlayer` -1.
+    #[test]
+    fn menu_input_with_player_one_on_a_pad() {
+        let g = crate::game::Game::create();
+        crate::globals::init_globals(g);
+        g.game_values.inputConfiguration[0][1].iDevice = 0;
+        let mut input = CPlayerInput::new();
+        input.inputControls[0] = Some((0, 1));
+        for event in [
+            InputEvent::Key { key: Keycode(13), scancode: 0, mods: 0, down: true, repeat: false, window: 0 },
+            InputEvent::PadButton { pad: PadSlot(0), button: 0, down: true },
+        ] {
+            input.update_input(g, &Input { timestamp: 0, event }, 1);
         }
     }
 }
