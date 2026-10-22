@@ -19,11 +19,6 @@ Follow-ups to the merged backlog PRs.
 - Run #248's SDL2 audio reload fix under AddressSanitizer.
 - Check by hand what the headless tests cannot reach. These are the live level editor's Shift and Ctrl (#256), and the shader error banner and window restore (#261). Also open the sound options menu with no world music packs (#271).
 
-## Maintenance
-
-- No map in `data/` uses the 1.6 format, so the 1.6 spawn-area fix in #257 has no test. Add a small 1.6 test map.
-- No editor replay presses Insert in the world editor. Add one that covers the in-memory screenshots from #256.
-
 ## Bugs
 
 Possible bugs found while commenting the code in #232, and gaps the fix PRs left. Gameplay fixes change the replay goldens.
@@ -55,10 +50,8 @@ A full-codebase review on 2026-10-19, at the head of the GPU shader stack, confi
 
 ### Later
 
-- `smw-core` silences every clippy lint. Turn `clippy::all` on for the port's newer modules (rollback, netplay v2, checkpoint, harness, video settings, stats) and gate on it (S).
 - A room has no CPU slots, so an online match plays only its humans. Let the host fill empty slots with bots (`net_room_menu.rs`, lobby protocol, M).
 - A couch player's room name is the client's lobby name with a number (`Kyle 2`). `NET_REQUEST_LOCAL_PLAYERS` already carries names; the room menu needs a field to type them (`net_room_menu.rs`, S).
-- Fuzz the `bincode` decode of GGRS packets from peers (`smw-peer`, S).
 - The SDL3 audio thread still allocates each packet `lewton` decodes (`smw-sdl3/audio.rs`, S).
 - The rollback snapshot carries the full mixer state. Trim it with the snapshot work above (`rollback.rs`, S).
 - The pause owner cannot resume after a disconnect. A disconnect ends the match today. If that changes, the pause needs a timeout or a handover (`rollback.rs`, S).

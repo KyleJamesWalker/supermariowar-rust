@@ -142,20 +142,29 @@ impl PeerSocket {
     }
 }
 
-/// `ggrs::NonBlockingSocket` over the unreliable channel. Both builds encode messages the same way.
+/// A GGRS message as it goes on the wire; both builds encode the same way.
+pub fn encode_ggrs_message(msg: &ggrs::Message) -> Vec<u8> {
+    bincode::serialize(msg).expect("a GGRS message always serializes")
+}
+
+/// A packet from a peer as a GGRS message; None when it does not decode.
+pub fn decode_ggrs_message(packet: &[u8]) -> Option<ggrs::Message> {
+    bincode::deserialize(packet).ok()
+}
+
+/// `ggrs::NonBlockingSocket` over the unreliable channel.
 pub struct GgrsSocket(imp::Channel);
 
 impl ggrs::NonBlockingSocket<PeerId> for GgrsSocket {
     fn send_to(&mut self, msg: &ggrs::Message, addr: &PeerId) {
-        let packet = bincode::serialize(msg).expect("a GGRS message always serializes");
-        self.0.send(*addr, &packet);
+        self.0.send(*addr, &encode_ggrs_message(msg));
     }
 
     fn receive_all_messages(&mut self) -> Vec<(PeerId, ggrs::Message)> {
         self.0
             .receive()
             .into_iter()
-            .filter_map(|(peer, packet)| bincode::deserialize(&packet).ok().map(|msg| (peer, msg)))
+            .filter_map(|(peer, packet)| decode_ggrs_message(&packet).map(|msg| (peer, msg)))
             .collect()
     }
 }

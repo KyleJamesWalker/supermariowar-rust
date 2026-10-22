@@ -1,5 +1,6 @@
 //! Rollback for netplay v2 (docs/design/NETPLAY_V2.md): a snapshot of everything a match tick reads and writes, the
 //! tick itself with given keys, and a state checksum. GGRS decides when to save, load and re-run.
+#![deny(clippy::all)]
 
 use crate::common::eyecandy::{CEyecandyContainer, SpotlightManager};
 use crate::common::game_mode::{CGameModeTrait, ModeId};

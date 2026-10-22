@@ -1,0 +1,23 @@
+# Paint land on the first world without saving, then take the Insert screenshots, which draw the
+# world in memory. Painting after them shows the edits survive; the frame limit quits.
+#@ frames=60
+#@ shots=20,30,45
+#@ files=data/worlds/screenshots/Contest_Arctic World.png,data/worlds/screenshots/Contest_Arctic World_preview.png,data/worlds/screenshots/Contest_Arctic World_thumb.png,data/worlds/ZZworldeditor.txt
+
+# Land: picker page 1, column 1 row 0 = solid land (set_tile 1), painted into the sea
+5 down 2
+6 up 2
+8 mousedown left 48 16
+9 mouseup left 48 16
+12 mousemove 48 400
+13 mousedown left 48 400
+14 mousemove 80 400
+15 mousemove 112 400
+16 mousemove 144 400
+17 mouseup left 144 400
+
+25 down Insert
+26 up Insert
+
+35 mousedown left 208 400
+36 mouseup left 208 400
