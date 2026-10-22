@@ -38,7 +38,12 @@ pub struct MI_MapField {
 
     /// Leaves room beside the preview for the map's filter tags.
     pub fShowtags: bool,
+    /// Ticks a direction has been held; past `HOLD_DELAY` it repeats every `HOLD_STEP`.
+    pub iHoldTicks: i16,
 }
+
+const HOLD_DELAY: i16 = ticks(25) as i16;
+const HOLD_STEP: i16 = ticks(6) as i16;
 crate::impl_base!(MI_MapField => mi_map_preview: MI_MapPreview);
 
 impl MI_MapField {
@@ -64,6 +69,7 @@ impl MI_MapField {
             sSearchString: String::new(),
             iSearchStringTimer: 0,
             fShowtags: showtags,
+            iHoldTicks: 0,
         };
 
         if this.fShowtags {
@@ -159,20 +165,24 @@ impl UI_ControlTrait for MI_MapField {
 
         for iPlayer in 0..4usize {
             let out = playerInput.outputControls[iPlayer];
-            if out.menu_right().fPressed || out.menu_down().fPressed {
-                if self.move_next(g, out.menu_scrollfast().fDown) {
-                    return MENU_CODE_MAP_CHANGED;
+            let next = out.menu_right().fPressed || out.menu_down().fPressed;
+            let prev = out.menu_left().fPressed || out.menu_up().fPressed;
+            let next_held = out.menu_right().fDown || out.menu_down().fDown;
+            let prev_held = out.menu_left().fDown || out.menu_up().fDown;
+            if next || prev || next_held || prev_held {
+                if next || prev {
+                    self.iHoldTicks = 0;
+                } else {
+                    self.iHoldTicks += 1;
+                    if self.iHoldTicks < HOLD_DELAY {
+                        return MENU_CODE_NONE;
+                    }
+                    self.iHoldTicks = HOLD_DELAY - HOLD_STEP;
                 }
 
-                return MENU_CODE_NONE;
-            }
-
-            if out.menu_left().fPressed || out.menu_up().fPressed {
-                if self.move_prev(g, out.menu_scrollfast().fDown) {
-                    return MENU_CODE_MAP_CHANGED;
-                }
-
-                return MENU_CODE_NONE;
+                let fast = out.menu_scrollfast().fDown;
+                let moved = if next || (!prev && next_held) { self.move_next(g, fast) } else { self.move_prev(g, fast) };
+                return if moved { MENU_CODE_MAP_CHANGED } else { MENU_CODE_NONE };
             }
 
             if out.menu_random().fPressed {
