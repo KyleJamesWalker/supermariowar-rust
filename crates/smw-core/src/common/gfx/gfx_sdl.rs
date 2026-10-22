@@ -81,8 +81,8 @@ impl GraphicsSDL {
         #[cfg(not(target_os = "emscripten"))]
         let overlay = crate::smw::touch::overlay(g);
         #[cfg(target_os = "emscripten")]
-        let overlay: Option<smw_platform::Overlay> = Option::None;
-        services(gp.get()).video.present(Frame { pixels }, overlay.as_ref());
+        let overlay: Option<&smw_platform::Overlay> = Option::None;
+        services(gp.get()).video.present(Frame { pixels }, overlay);
     }
 
     pub fn change_full_screen(&self, g: &mut Game, fullscreen: bool) {

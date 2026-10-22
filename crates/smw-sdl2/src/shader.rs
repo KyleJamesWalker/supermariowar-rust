@@ -94,22 +94,24 @@ impl ShaderPresenter {
     }
 
     /// Safety: `window` is the window `new` was given.
-    pub unsafe fn present(&mut self, window: *mut SDL_Window, frame: Frame<'_>, overlay: Option<&Overlay>) {
+    /// Returns how long the frame upload took.
+    pub unsafe fn present(&mut self, window: *mut SDL_Window, frame: Frame<'_>, overlay: Option<&Overlay>) -> std::time::Duration {
         let (dw, dh) = drawable_size(window);
         let (scale, _, _) = letterbox(dw, dh);
         let size = Size::new((SCREEN_W as f32 * scale) as u32, (SCREEN_H as f32 * scale) as u32);
         if size.width == 0 || size.height == 0 {
-            return;
+            return std::time::Duration::ZERO;
         }
         let out = match self.output(size) {
             Ok(tex) => tex,
             Err(e) => {
                 eprintln!("[gfx] Shader output texture: {e}");
-                return;
+                return std::time::Duration::ZERO;
             }
         };
         let gl = &self.gl;
         let bytes = std::slice::from_raw_parts(frame.pixels.as_ptr() as *const u8, std::mem::size_of_val(frame.pixels));
+        let upload = std::time::Instant::now();
         gl.bind_texture(glow::TEXTURE_2D, Some(self.input));
         // ARGB8888 words are B, G, R, A bytes on a little-endian target.
         gl.tex_sub_image_2d(
@@ -123,6 +125,7 @@ impl ShaderPresenter {
             glow::UNSIGNED_BYTE,
             glow::PixelUnpackData::Slice(Some(bytes)),
         );
+        let upload = upload.elapsed();
         let input = GLImage { handle: Some(self.input), format: glow::RGBA8, size: Size::new(SCREEN_W as u32, SCREEN_H as u32) };
         let output = GLImage { handle: Some(out), format: glow::RGBA8, size };
         let viewport = Viewport { x: 0.0, y: 0.0, mvp: Option::None, output: &output, size };
@@ -150,6 +153,7 @@ impl ShaderPresenter {
             save_shot(gl, dw, dh, self.frame_count - 1);
         }
         SDL_GL_SwapWindow(window);
+        upload
     }
 }
 

@@ -96,6 +96,11 @@ unsafe fn create_renderer(window: *mut SDL_Window) -> (*mut SDL_Renderer, bool) 
         if renderer_info.flags & SDL_RendererFlags::SDL_RENDERER_ACCELERATED as u32 != 0 { "accelerated" } else { "software" },
         if vsync { ", vsync" } else { "" }
     );
+    let formats: Vec<_> = renderer_info.texture_formats[..renderer_info.num_texture_formats as usize]
+        .iter()
+        .map(|&f| CStr::from_ptr(SDL_GetPixelFormatName(f)).to_string_lossy())
+        .collect();
+    println!("[gfx] Renderer texture formats: {}", formats.join(", "));
 
     (renderer, vsync)
 }
@@ -126,6 +131,7 @@ pub struct Sdl2Video {
     overlay_textures: Vec<*mut SDL_Texture>,
     vsync: bool,
     integer_scale: bool,
+    present_split_us: (u64, u64),
     #[cfg(feature = "shaders")]
     shader: Option<crate::shader::ShaderPresenter>,
     #[cfg(feature = "gl")]
@@ -147,6 +153,7 @@ impl Sdl2Video {
             overlay_textures: Vec::new(),
             vsync: false,
             integer_scale: false,
+            present_split_us: (0, 0),
             #[cfg(feature = "shaders")]
             shader: Option::None,
             #[cfg(feature = "gl")]
@@ -172,6 +179,31 @@ impl Drop for Sdl2Video {
 }
 
 impl Sdl2Video {
+    /// Draws `frame` and presents it; returns how long the frame upload took.
+    fn present_frame(&mut self, frame: Frame<'_>, overlay: Option<&Overlay>) -> std::time::Duration {
+        // SAFETY: `Frame` holds SCREEN_W * SCREEN_H pixels, the texture's size; SDL rejects the nulls before `open`.
+        unsafe {
+            #[cfg(feature = "shaders")]
+            if let Some(shader) = self.shader.as_mut() {
+                return shader.present(self.window, frame, overlay);
+            }
+            #[cfg(feature = "gl")]
+            if let Some(lite) = self.lite.as_mut() {
+                return lite.present(self.window, frame, overlay);
+            }
+            let upload = std::time::Instant::now();
+            SDL_UpdateTexture(self.texture, null(), frame.pixels.as_ptr() as *const _, (SCREEN_W * 4) as i32);
+            let upload = upload.elapsed();
+            SDL_RenderClear(self.renderer);
+            SDL_RenderCopy(self.renderer, self.texture, null(), null());
+            if let Some(overlay) = overlay {
+                self.draw_overlay(overlay);
+            }
+            SDL_RenderPresent(self.renderer);
+            upload
+        }
+    }
+
     /// Makes the window and its presenter: the built-in one for a `builtin:<name>` preset, the librashader one for
     /// a `.slangp` file, else the renderer. Err says why the preset did not load; the window then uses the renderer.
     unsafe fn create(&mut self, fullscreen: bool, preset: Option<&std::path::Path>, place: Option<Placement>) -> Result<(), String> {
@@ -371,26 +403,13 @@ impl Video for Sdl2Video {
     }
 
     fn present(&mut self, frame: Frame<'_>, overlay: Option<&Overlay>) {
-        // SAFETY: `Frame` holds SCREEN_W * SCREEN_H pixels, the texture's size; SDL rejects the nulls before `open`.
-        unsafe {
-            #[cfg(feature = "shaders")]
-            if let Some(shader) = self.shader.as_mut() {
-                shader.present(self.window, frame, overlay);
-                return;
-            }
-            #[cfg(feature = "gl")]
-            if let Some(lite) = self.lite.as_mut() {
-                lite.present(self.window, frame, overlay);
-                return;
-            }
-            SDL_UpdateTexture(self.texture, null(), frame.pixels.as_ptr() as *const _, (SCREEN_W * 4) as i32);
-            SDL_RenderClear(self.renderer);
-            SDL_RenderCopy(self.renderer, self.texture, null(), null());
-            if let Some(overlay) = overlay {
-                self.draw_overlay(overlay);
-            }
-            SDL_RenderPresent(self.renderer);
-        }
+        let start = std::time::Instant::now();
+        let upload = self.present_frame(frame, overlay);
+        self.present_split_us = (upload.as_micros() as u64, start.elapsed().saturating_sub(upload).as_micros() as u64);
+    }
+
+    fn present_split_us(&self) -> Option<(u64, u64)> {
+        Some(self.present_split_us)
     }
 
     fn output_size(&self) -> (i32, i32) {

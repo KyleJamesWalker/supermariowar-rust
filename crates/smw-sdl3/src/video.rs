@@ -19,11 +19,12 @@ pub struct Sdl3Video {
     /// One per overlay image, null where SDL could not create it.
     overlay_textures: Vec<*mut SDL_Texture>,
     vsync: bool,
+    present_split_us: (u64, u64),
 }
 
 impl Sdl3Video {
     pub fn new() -> Self {
-        Sdl3Video { window: null_mut(), renderer: null_mut(), texture: null_mut(), overlay_generation: None, overlay_textures: Vec::new(), vsync: false }
+        Sdl3Video { window: null_mut(), renderer: null_mut(), texture: null_mut(), overlay_generation: None, overlay_textures: Vec::new(), vsync: false, present_split_us: (0, 0) }
     }
 
     /// Turns the letterboxed 640x480 logical presentation on, or off to draw in window pixels.
@@ -148,8 +149,11 @@ impl Video for Sdl3Video {
 
     fn present(&mut self, frame: Frame<'_>, overlay: Option<&Overlay>) {
         // SAFETY: `Frame` holds SCREEN_W * SCREEN_H pixels, the texture's size; SDL rejects the nulls before `open`.
+        let start = std::time::Instant::now();
+        let upload;
         unsafe {
             SDL_UpdateTexture(self.texture, null(), frame.pixels.as_ptr() as *const _, (SCREEN_W * 4) as i32);
+            upload = start.elapsed();
             SDL_RenderClear(self.renderer);
             SDL_RenderTexture(self.renderer, self.texture, null(), null());
             if let Some(overlay) = overlay {
@@ -157,6 +161,11 @@ impl Video for Sdl3Video {
             }
             SDL_RenderPresent(self.renderer);
         }
+        self.present_split_us = (upload.as_micros() as u64, start.elapsed().saturating_sub(upload).as_micros() as u64);
+    }
+
+    fn present_split_us(&self) -> Option<(u64, u64)> {
+        Some(self.present_split_us)
     }
 
     fn output_size(&self) -> (i32, i32) {

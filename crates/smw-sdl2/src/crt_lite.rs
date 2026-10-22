@@ -345,7 +345,8 @@ impl CrtLite {
     }
 
     /// Safety: `window` is the window `new` was given.
-    pub unsafe fn present(&mut self, window: *mut SDL_Window, frame: Frame<'_>, overlay: Option<&Overlay>) {
+    /// Returns how long the frame upload took.
+    pub unsafe fn present(&mut self, window: *mut SDL_Window, frame: Frame<'_>, overlay: Option<&Overlay>) -> std::time::Duration {
         let gl = &self.gl;
         let (dw, dh) = drawable_size(window);
         let (scale, ox, oy) = letterbox(dw, dh);
@@ -362,7 +363,9 @@ impl CrtLite {
         gl.bind_texture(glow::TEXTURE_2D, Some(self.input));
         let bytes = std::slice::from_raw_parts(frame.pixels.as_ptr() as *const u8, std::mem::size_of_val(frame.pixels));
         let (w, h) = (SCREEN_W as i32, SCREEN_H as i32);
+        let upload = std::time::Instant::now();
         gl.tex_sub_image_2d(glow::TEXTURE_2D, 0, 0, 0, w, h, glow::RGBA, glow::UNSIGNED_BYTE, glow::PixelUnpackData::Slice(Some(bytes)));
+        let upload = upload.elapsed();
         gl.bind_buffer(glow::ARRAY_BUFFER, Some(self.vbo));
         gl.vertex_attrib_pointer_f32(0, 2, glow::FLOAT, false, 0, 0);
         gl.enable_vertex_attrib_array(0);
@@ -376,6 +379,7 @@ impl CrtLite {
         }
         self.frame_count += 1;
         SDL_GL_SwapWindow(window);
+        upload
     }
 }
 

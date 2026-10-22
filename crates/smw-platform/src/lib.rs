@@ -89,6 +89,10 @@ pub trait Video {
     }
     /// Scales the picture only by whole multiples of 640x480 when `on`.
     fn set_integer_scale(&mut self, _on: bool) {}
+    /// The last `present`'s frame upload and the rest of it, drawing through the swap or vsync wait, in microseconds.
+    fn present_split_us(&self) -> Option<(u64, u64)> {
+        None
+    }
 }
 
 /// The platform's input event queue.
