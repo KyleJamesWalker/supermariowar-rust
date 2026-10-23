@@ -327,6 +327,15 @@ impl Video for Sdl2Video {
         self.vsync
     }
 
+    fn refresh_hz(&self) -> Option<f32> {
+        // SAFETY: SDL rejects a null window with -1, and writes `mode` only on success.
+        unsafe {
+            let index = SDL_GetWindowDisplayIndex(self.window);
+            let mut mode: SDL_DisplayMode = std::mem::zeroed();
+            (index >= 0 && SDL_GetCurrentDisplayMode(index, &mut mode) == 0 && mode.refresh_rate > 0).then_some(mode.refresh_rate as f32)
+        }
+    }
+
     fn show_cursor(&mut self, on: bool) {
         // SAFETY: takes no pointers.
         unsafe { SDL_ShowCursor(if on { SDL_ENABLE } else { SDL_DISABLE } as i32) };

@@ -67,6 +67,10 @@ pub trait Video {
     fn vsync(&self) -> bool {
         false
     }
+    /// The refresh rate of the display the window is on, if the platform reports one.
+    fn refresh_hz(&self) -> Option<f32> {
+        None
+    }
     /// Whether `set_shader` can present through a shader preset.
     fn supports_shaders(&self) -> bool {
         false
