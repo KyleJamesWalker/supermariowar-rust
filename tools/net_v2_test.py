@@ -13,6 +13,8 @@ Usage: tools/net_v2_test.py [work_dir]
   SMW_PEER_LOSS    percent of GGRS packets dropped (default 10)
   LAN=1            no smw_relay: the host runs SMW_LAN_HOST=1 and both clients list
                    ws://127.0.0.1:12523, as players on a network without internet do
+  RECONNECT=1      every client drops its signaling connection and the offering side restarts ICE mid-match; each
+                   must resume signaling, and no peer may drop out
   SMW_RUST_BIN     the game (default: target/release/smw); net_game_run.sh starts smw_relay
 """
 import os
@@ -49,6 +51,9 @@ env = dict(
     SMW_PEER_LAG_MS=os.environ.get("SMW_PEER_LAG_MS", "60"),
     SMW_PEER_LOSS=os.environ.get("SMW_PEER_LOSS", "10"),
 )
+reconnect = os.environ.get("RECONNECT") == "1"
+if reconnect:
+    env.update(SMW_PEER_TEST_RESTART_MS="3000", SMW_PEER_TEST_DROP_SIGNAL_MS="5000")
 if lan:
     env.update(NET_SERVER_ENTRY="ws://127.0.0.1:12523", NET_NO_SERVER="1", HOST_ENV="SMW_LAN_HOST=1")
 
@@ -82,6 +87,13 @@ for game in games.split():
         desyncs = [l for l in log.splitlines() if "[net] v2: desync" in l]
         if desyncs:
             problems.append(f"{role}: {desyncs[0]}")
+        if reconnect:
+            if "[net] signaling resumed" not in log:
+                problems.append(f"{role} never resumed signaling")
+            if re.search(r"\[net\] v2: peer \w+ disconnected", log):
+                problems.append(f"{role} dropped a peer")
+    if reconnect and not any("[net] restarting ICE" in log for log in logs.values()):
+        problems.append("nobody restarted ICE")
     reruns = sum(int(m) for log in logs.values() for m in re.findall(r"(\d+) re-run ticks", log)[-1:])
     live_logs = {role: states / f"{game}_home-{role}.log" for role in roles}
     compared = 0
