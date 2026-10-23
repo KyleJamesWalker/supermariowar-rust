@@ -180,15 +180,14 @@ fn handle_connection(
             }
         }
     };
-    let (path, upgrade) = parse_request_head(&head);
+    let (path, query, upgrade) = parse_request_head(&head);
     if let Some(room) = path.strip_prefix("/signal/").filter(|r| upgrade && !r.is_empty()) {
         let Some(_slot) = Slot::take(&counts.signaling, config.max_clients) else {
             println!("[relay] refused a signaling client: relay full");
             refuse(&mut stream, head_len, "503 Service Unavailable", "relay full\n");
             return;
         };
-        let room = room.split('?').next().unwrap_or_default().to_string();
-        crate::signal::run(stream, room, config);
+        crate::signal::run(stream, room.to_string(), crate::signal::parse_resume(&query), config);
         return;
     }
     if !upgrade || path == "/healthz" {
@@ -327,15 +326,16 @@ fn peek_request_head(stream: &TcpStream) -> Option<(String, usize)> {
 }
 
 /// The path, and whether the request asks for a WebSocket.
-fn parse_request_head(head: &str) -> (String, bool) {
+fn parse_request_head(head: &str) -> (String, String, bool) {
     let mut lines = head.lines();
     let target = lines.next().and_then(|l| l.split_whitespace().nth(1)).unwrap_or("");
-    let path = target.split('?').next().unwrap_or("").to_string();
+    let (path, query) = target.split_once('?').unwrap_or((target, ""));
+    let (path, query) = (path.to_string(), query.to_string());
     let upgrade = lines.any(|l| {
         let (name, value) = l.split_once(':').unwrap_or((l, ""));
         name.trim().eq_ignore_ascii_case("upgrade") && value.to_ascii_lowercase().contains("websocket")
     });
-    (path, upgrade)
+    (path, query, upgrade)
 }
 
 fn respond(stream: &mut TcpStream, status: &str, body: &str) {
@@ -388,6 +388,21 @@ mod tests {
             Ok(_) => false,
             Err(e) => !matches!(e.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut),
         }
+    }
+
+    /// The value of a signaling message's `key`, skipping other messages.
+    fn read_field(ws: &mut WebSocket<MaybeTlsStream<TcpStream>>, key: &str) -> Option<String> {
+        loop {
+            let value: serde_json::Value = serde_json::from_str(&read_text(ws)?).ok()?;
+            if let Some(field) = value.get(key) {
+                return Some(field.as_str().map_or_else(|| field.to_string(), str::to_string));
+            }
+        }
+    }
+
+    /// Every message until the read times out.
+    fn drain(ws: &mut WebSocket<MaybeTlsStream<TcpStream>>) -> Vec<String> {
+        std::iter::from_fn(|| read_text(ws)).collect()
     }
 
     fn signal(port: u16, room: &str) -> Result<WebSocket<MaybeTlsStream<TcpStream>>, String> {
@@ -477,12 +492,53 @@ mod tests {
     }
 
     #[test]
+    fn a_dropped_signaling_peer_resumes_its_place() {
+        let (port, _events) = relay(|_| {});
+        let mut first = signal(port, "resume").unwrap();
+        let id = read_field(&mut first, "IdAssigned").unwrap();
+        let token = read_field(&mut first, "ResumeToken").unwrap();
+        let mut second = signal(port, "resume").unwrap();
+        let second_id = read_field(&mut second, "IdAssigned").unwrap();
+        assert_eq!(read_field(&mut first, "NewPeer").unwrap(), second_id);
+
+        // A connection lost without a close frame keeps its place.
+        drop(first);
+        assert!(!drain(&mut second).iter().any(|t| t.contains("PeerLeft")), "no PeerLeft while the place is held");
+
+        assert_eq!(read_text(&mut signal(port, &format!("resume?resume={id}&token=wrong")).unwrap()), None);
+        let mut resumed = signal(port, &format!("resume?resume={id}&token={token}")).unwrap();
+        assert_eq!(read_field(&mut resumed, "IdAssigned").unwrap(), id);
+        assert!(!drain(&mut second).iter().any(|t| t.contains("NewPeer")), "a resume is not a new peer");
+        let hello = serde_json::json!({ "Signal": { "receiver": id, "data": "hello" } });
+        second.send(Message::Text(hello.to_string().into())).unwrap();
+        assert_eq!(read_field(&mut resumed, "Signal").unwrap(), serde_json::json!({ "sender": second_id, "data": "hello" }).to_string());
+
+        // A close frame leaves at once.
+        resumed.close(None).unwrap();
+        let _ = resumed.flush();
+        assert_eq!(read_field(&mut second, "PeerLeft").unwrap(), id);
+    }
+
+    #[test]
+    fn a_held_place_expires() {
+        let (port, _events) = relay(|_| {});
+        let mut first = signal(port, "expire").unwrap();
+        let id = read_field(&mut first, "IdAssigned").unwrap();
+        let token = read_field(&mut first, "ResumeToken").unwrap();
+        let mut second = signal(port, "expire").unwrap();
+        read_field(&mut second, "IdAssigned").unwrap();
+        crate::signal::hold_for_test("expire", &id, Duration::from_millis(200));
+        assert_eq!(read_field(&mut second, "PeerLeft").unwrap(), id);
+        assert_eq!(read_text(&mut signal(port, &format!("expire?resume={id}&token={token}")).unwrap()), None);
+    }
+
+    #[test]
     fn request_heads() {
-        assert_eq!(parse_request_head("GET /healthz HTTP/1.1\r\nHost: x"), ("/healthz".to_string(), false));
+        assert_eq!(parse_request_head("GET /healthz HTTP/1.1\r\nHost: x"), ("/healthz".to_string(), String::new(), false));
         assert_eq!(
             parse_request_head("GET /?a=b HTTP/1.1\r\nHost: x\r\nConnection: Upgrade\r\nUpgrade: WebSocket"),
-            ("/".to_string(), true)
+            ("/".to_string(), "a=b".to_string(), true)
         );
-        assert_eq!(parse_request_head(""), (String::new(), false));
+        assert_eq!(parse_request_head(""), (String::new(), String::new(), false));
     }
 }
