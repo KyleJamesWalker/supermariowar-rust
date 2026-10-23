@@ -48,7 +48,7 @@ A full-codebase review on 2026-10-19, at the head of the GPU shader stack, confi
 - The SDL3 audio thread still allocates each packet `lewton` decodes (`smw-sdl3/audio.rs`, S).
 - The rollback snapshot carries the full mixer state. Trim it with the snapshot work above (`rollback.rs`, S).
 - The pause owner cannot resume after a disconnect. A disconnect ends the match today. If that changes, the pause needs a timeout or a handover (`rollback.rs`, S).
-- A dropped or failed WebRTC connection is never retried, on native or web. After a network blip the only way out is to leave the match (`smw-peer`, M). The relay caps each signaling room at 4 peers, which assumes nobody rejoins. Revisit the cap with reconnects.
+- A peer that GGRS has dropped (20 s of silence) cannot rejoin the match. The relay caps each signaling room at 4 peers and holds a dropped peer's place for 30 s; revisit both if rejoining is added (`smw-peer`, `net_v2.rs`, L).
 - Switching the shader while fullscreen forgets the earlier windowed size (`smw-sdl2/video.rs`, S).
 - The netplay v2 `ticks` count includes stalled session frames. It sets "match over after N ticks" and the `frames_ahead` skip cadence, so both count stalls (`net_v2.rs`, S).
 - At CI size (48 cases per map, 30 ticks) the damaged-map fuzz test does not find the spawn-area panic without its direct check. Run a long fuzz pass nightly. Also add a byte mutator that knows the 1.8 section offsets. Then damage reaches the spawn areas, draw areas and warp exits, which `save_map` recomputes (`damaged_maps_that_load_play`, M).
