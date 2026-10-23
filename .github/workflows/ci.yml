@@ -227,8 +227,9 @@ jobs:
       - name: Browser and native peers on smw_relay signaling, resumed and ICE restarted
         timeout-minutes: 3
         run: |
-          SMW_RELAY_ALLOWED_ORIGINS='*' target/release/smw_relay --port 18431 > "$RUNNER_TEMP/web-peer-relay.log" 2>&1 &
-          sleep 1
+          mkdir -p "$RUNNER_TEMP/web-peer-relay"
+          SMW_RELAY_ALLOWED_ORIGINS='*' target/release/smw_relay --port 18431 > "$RUNNER_TEMP/web-peer-relay/relay.log" 2>&1 &
+          curl -sf --retry 20 --retry-connrefused --retry-delay 1 http://127.0.0.1:18431/healthz
           SIGNAL_URL=ws://127.0.0.1:18431/signal node tools/web_peer_test.mjs "$RUNNER_TEMP/web-peer-relay"
 
       - name: Browser and native peers through TURN only
@@ -253,6 +254,7 @@ jobs:
           name: web-peer
           path: |
             ${{ runner.temp }}/web-peer
+            ${{ runner.temp }}/web-peer-relay
             ${{ runner.temp }}/web-peer-turn
             ${{ runner.temp }}/web-peer-turn.log
           retention-days: 7
