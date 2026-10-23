@@ -2,14 +2,17 @@
 // Browser and native netplay v2 peers in one room: starts the smw-peer `signal` example, one native `echo_peer`,
 // and two headless Chrome pages that load web/peer_socket.js on its own (no wasm). Every pair must connect, and
 // every page must get the other page's greetings, the native peer's greetings and its own echoes on both channels.
-// Then a page closes its connection the way a dropped Rust socket does: a replaced socket's close must leave it open,
-// and the current one's must close it, which the other page must see.
+// On a server that hands out resume tokens (smw_relay), a page then loses its signaling connection and must resume
+// it with the same ID, and an ICE restart must keep both channels working. Then a page closes its connection the way
+// a dropped Rust socket does: a replaced socket's close must leave it open, and the current one's must close it, which
+// the other page must see.
 //
 // Usage: node tools/web_peer_test.mjs [out_dir]
 //   CHROME        Chrome binary (default: the macOS Google Chrome app)
 //   EXAMPLES_DIR  where `cargo build -p smw-peer --examples --release` put signal and echo_peer
 //                 (default: target/release/examples)
-//   SIGNAL_URL    an already running signaling server, e.g. ws://127.0.0.1:3536 for matchbox_server
+//   SIGNAL_URL    an already running signaling server, e.g. ws://127.0.0.1:3536 for matchbox_server, or
+//                 ws://127.0.0.1:<port>/signal for smw_relay (SMW_RELAY_ALLOWED_ORIGINS='*')
 //                 (default: start the signal example)
 //   TURN_URL      with TURN_SECRET: every peer connects through this TURN server only (relay-only ICE),
 //                 with credentials minted from the secret as the lobby does
@@ -99,6 +102,25 @@ window.run = (url, name, iceServers, relayOnly) => {
     }, 500);
 };
 window.state = () => ({ id: SMWPeer.id, connected: [...connected], received: received.map((s) => [...s].sort()) });
+window.forget = () => received.forEach((s) => s.clear());
+// Lost without a close, as a connection is when the network changes.
+window.dropSignaling = () => {
+    const socket = SMWPeer.socket;
+    socket.onclose = null;
+    socket.onmessage = null;
+    SMWPeer.lost(SMWPeer.generation, false, true);
+};
+window.resumed = () => SMWPeer.lostAt === null && SMWPeer.socket !== null && SMWPeer.socket.readyState === 1;
+window.restartAll = () => {
+    let restarted = 0;
+    for (const [id, peer] of SMWPeer.peers) {
+        if (peer.offerer) {
+            SMWPeer.restart(id, peer);
+            restarted++;
+        }
+    }
+    return restarted;
+};
 </script>`;
 const server = createServer((req, res) => {
     if (req.url === '/peer_socket.js') {
@@ -192,6 +214,34 @@ const nativeIds = [...native.output().matchAll(/^([0-9a-f]{32}) connected$/gm)].
 if (nativeIds.length !== 2) fail(`native peer saw ${nativeIds.length} connections:\n${native.output()}`);
 writeFileSync(join(out, 'pages.json'), JSON.stringify(states, null, 2));
 
+const waitFor = async (what, check, ms) => {
+    const end = Date.now() + ms;
+    while (!(await check())) {
+        if (Date.now() > end) {
+            writeFileSync(join(out, 'console.log'), consoleLines.join('\n'));
+            fail(what);
+        }
+        await new Promise((ok) => setTimeout(ok, 200));
+    }
+};
+const resumable = await pages[0].evaluate('SMWPeer.token !== null');
+if (resumable) {
+    const id = states[0].id;
+    await pages[0].evaluate('dropSignaling()');
+    await waitFor('the page did not resume signaling', () => pages[0].evaluate('resumed()'), 15_000);
+    if ((await pages[0].evaluate('SMWPeer.id')) !== id) fail('the resumed page has another ID');
+    const restarts = (await Promise.all(pages.map((p) => p.evaluate('restartAll()')))).reduce((a, b) => a + b, 0);
+    if (restarts === 0) fail('no page offered a connection to restart');
+    await Promise.all(pages.map((p) => p.evaluate('forget()')));
+    await waitFor('packets stopped after the ICE restart', async () => {
+        const now = await Promise.all(pages.map((p) => p.evaluate('state()')));
+        return now.every((s, i) => {
+            const other = pages[1 - i].name;
+            return s.connected.length === 2 && [0, 1].every((ch) => s.received[ch].includes(`${other}-hello/${ch}`));
+        });
+    }, 20_000);
+}
+
 const [closer, watcher] = pages;
 const closerId = states[0].id;
 await closer.evaluate('SMWPeer.closeOpened(generation - 1)');
@@ -203,6 +253,6 @@ while ((await watcher.evaluate('state()')).connected.includes(closerId)) {
     if (Date.now() > leaveDeadline) fail('the other page still sees the closed page');
     await new Promise((ok) => setTimeout(ok, 200));
 }
-console.log(`PASS: 2 browser peers and 1 native peer connected in full mesh${useTurn ? ' through TURN only' : ''}; both channels delivered both ways; a closed page left the mesh`);
+console.log(`PASS: 2 browser peers and 1 native peer connected in full mesh${useTurn ? ' through TURN only' : ''}; both channels delivered both ways;${resumable ? ' signaling resumed and an ICE restart kept them;' : ''} a closed page left the mesh`);
 cleanup();
 process.exit(0);
