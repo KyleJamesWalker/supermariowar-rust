@@ -25,8 +25,8 @@ EXE = ".exe" if os.name == "nt" else ""
 smw = Path(os.environ.get("SMW_RUST_BIN", REPO / "target" / "release" / f"smw{EXE}")).resolve()
 relay = Path(os.environ.get("SMW_RELAY_BIN", REPO / "target" / "release" / f"smw_relay{EXE}")).resolve()
 data = Path(os.environ.get("SMW_RUST_DATA", REPO / "data")).resolve()
-# The match stalls once the joiner is gone, and the host waits out GGRS's 10 s disconnect timeout.
-FRAMES = 2400
+# The match stalls once the joiner is gone, and the host waits out GGRS's 20 s disconnect timeout.
+FRAMES = 3000
 
 
 def settings_dir(home):

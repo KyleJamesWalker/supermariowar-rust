@@ -42,8 +42,9 @@ const INPUT_DELAY: usize = 2;
 const MAX_PREDICTION: usize = 8;
 /// GGRS frames between checksum comparisons.
 const DESYNC_INTERVAL: u32 = 30;
-/// A peer is dropped for good after this much silence; GGRS's 2 s default is shorter than a Wi-Fi mesh's node hop.
-const DISCONNECT_TIMEOUT: Duration = Duration::from_secs(10);
+/// A peer is dropped for good after this much silence: room for a handheld to rejoin Wi-Fi and its connection to
+/// resume (smw-peer). GGRS's 2 s default is shorter than a Wi-Fi mesh's node hop.
+const DISCONNECT_TIMEOUT: Duration = Duration::from_secs(20);
 /// Silence after which GGRS reports a peer as interrupted.
 const INTERRUPTED_AFTER: Duration = Duration::from_secs(1);
 /// Ticks from a player closing the stats page to the match's end; past the prediction window, no rollback undoes it.

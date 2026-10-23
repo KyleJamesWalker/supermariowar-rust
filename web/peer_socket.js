@@ -7,7 +7,23 @@ addToLibrary({
         iceServers: [],
         relayOnly: false,
         gatherTimeoutMs: 5000,
+        // As in crates/smw-peer/src/native.rs: keep-alive, silence before a resumable connection counts as lost, how
+        // long it tries to resume, and how often the offering side checks a connection and repeats an ICE restart.
+        keepAliveMs: 2000,
+        silenceMs: 6000,
+        resumeWindowMs: 25000,
+        restartCheckMs: 1000,
+        restartEveryMs: 4000,
+        url: null,
         socket: null,
+        // From the relay; null when the server cannot resume a dropped connection.
+        token: null,
+        lostAt: null,
+        retryMs: 250,
+        heardAt: 0,
+        // Signals queued while the connection resumes.
+        outbox: [],
+        restartTimer: null,
         // Counts opens, so dropping a replaced Rust socket does not close the connection that replaced it.
         generation: 0,
         failed: false,
@@ -34,8 +50,10 @@ addToLibrary({
         },
 
         signal: (receiver, data) => {
+            const text = JSON.stringify({ Signal: { receiver, data } });
             const socket = SMWPeer.socket;
-            if (socket && socket.readyState === 1) socket.send(JSON.stringify({ Signal: { receiver, data } }));
+            if (socket && socket.readyState === 1) socket.send(text);
+            else if (SMWPeer.lostAt !== null) SMWPeer.outbox.push(text);
         },
 
         open: (url, iceServers, relayOnly) => {
@@ -43,16 +61,33 @@ addToLibrary({
             const generation = ++SMWPeer.generation;
             SMWPeer.iceServers = iceServers;
             SMWPeer.relayOnly = relayOnly;
+            SMWPeer.url = url;
+            SMWPeer.connect(generation, url, false);
+            SMWPeer.restartTimer = setInterval(SMWPeer.checkPeers, SMWPeer.restartCheckMs);
+            return generation;
+        },
+
+        // One signaling connection. Lost without a close (an error, or silence once the relay handed out a token), it
+        // resumes the same peer ID; a resume the relay refuses, or one that outlasts resumeWindowMs, fails the socket.
+        connect: (generation, target, resuming) => {
             let socket;
             try {
-                socket = new WebSocket(url);
+                socket = new WebSocket(target);
             } catch (e) {
                 console.error('[net] signaling: ' + e.message);
-                SMWPeer.failed = true;
-                return generation;
+                SMWPeer.lost(generation, resuming, false);
+                return;
             }
+            let heardAny = false;
+            const current = () => SMWPeer.generation === generation && SMWPeer.socket === socket;
+            socket.onopen = () => {
+                if (!current()) return;
+                SMWPeer.heardAt = performance.now();
+                for (const text of SMWPeer.outbox.splice(0)) socket.send(text);
+            };
             socket.onmessage = (e) => {
-                if (SMWPeer.socket !== socket || typeof e.data !== 'string') return;
+                if (!current() || typeof e.data !== 'string') return;
+                SMWPeer.heardAt = performance.now();
                 let event;
                 try {
                     event = JSON.parse(e.data);
@@ -60,16 +95,78 @@ addToLibrary({
                     console.warn('[net] signaling: ' + err.message);
                     return;
                 }
-                if (event && typeof event === 'object') SMWPeer.onEvent(event);
+                if (!heardAny && resuming) console.log('[net] signaling resumed');
+                heardAny = true;
+                SMWPeer.lostAt = null;
+                SMWPeer.retryMs = 250;
+                if (event && typeof event === 'object') {
+                    if (typeof event.ResumeToken === 'string') SMWPeer.token = event.ResumeToken;
+                    SMWPeer.onEvent(event);
+                }
             };
             socket.onclose = () => {
-                if (SMWPeer.socket === socket) SMWPeer.failed = true;
+                if (current()) SMWPeer.lost(generation, resuming, heardAny);
             };
             SMWPeer.socket = socket;
+            if (SMWPeer.keepAlive) clearInterval(SMWPeer.keepAlive);
+            SMWPeer.heardAt = performance.now();
             SMWPeer.keepAlive = setInterval(() => {
+                if (!current()) return;
+                if (SMWPeer.token && performance.now() - SMWPeer.heardAt >= SMWPeer.silenceMs) {
+                    console.warn('[net] signaling went silent');
+                    // Abandoned, not closed: a close frame would make the relay give the place up.
+                    socket.onclose = null;
+                    socket.onmessage = null;
+                    SMWPeer.lost(generation, resuming, heardAny);
+                    return;
+                }
                 if (socket.readyState === 1) socket.send('"KeepAlive"');
-            }, 10000);
-            return generation;
+            }, SMWPeer.keepAliveMs);
+        },
+
+        lost: (generation, resuming, heardAny) => {
+            SMWPeer.socket = null;
+            if (!SMWPeer.token || !SMWPeer.id || (resuming && !heardAny)) {
+                SMWPeer.failed = true;
+                return;
+            }
+            const now = performance.now();
+            if (SMWPeer.lostAt === null) SMWPeer.lostAt = now;
+            if (now - SMWPeer.lostAt >= SMWPeer.resumeWindowMs) {
+                console.warn('[net] signaling did not come back');
+                SMWPeer.failed = true;
+                return;
+            }
+            const join = SMWPeer.url.includes('?') ? '&' : '?';
+            const target = `${SMWPeer.url}${join}resume=${encodeURIComponent(SMWPeer.id)}&token=${encodeURIComponent(SMWPeer.token)}`;
+            setTimeout(() => {
+                if (SMWPeer.generation === generation) SMWPeer.connect(generation, target, true);
+            }, SMWPeer.retryMs);
+            SMWPeer.retryMs = Math.min(SMWPeer.retryMs * 2, 2000);
+        },
+
+        // The offering side restarts ICE on a connected peer whose connection is down; a restart whose answer was lost
+        // waits in 'checking', so anything short of connected retries.
+        checkPeers: () => {
+            const now = performance.now();
+            for (const [id, peer] of SMWPeer.peers) {
+                if (!peer.offerer || !peer.connected || peer.gone) continue;
+                const state = peer.pc.iceConnectionState;
+                if (state === 'connected' || state === 'completed') continue;
+                if (peer.restartedAt !== null && now - peer.restartedAt < SMWPeer.restartEveryMs) continue;
+                peer.restartedAt = now;
+                console.log('[net] restarting ICE with ' + id);
+                SMWPeer.restart(id, peer);
+            }
+        },
+
+        restart: async (id, peer) => {
+            try {
+                await peer.pc.setLocalDescription(await peer.pc.createOffer({ iceRestart: true }));
+                SMWPeer.signal(id, { Offer: peer.pc.localDescription.sdp });
+            } catch (e) {
+                console.warn('[net] ICE restart: ' + e.message);
+            }
         },
 
         onEvent: (event) => {
@@ -85,7 +182,7 @@ addToLibrary({
                 iceServers: SMWPeer.iceServers,
                 iceTransportPolicy: SMWPeer.relayOnly ? 'relay' : 'all',
             });
-            const peer = { pc, channels: [], open: 0, connected: false, gone: false, remoteSet: false, candidates: [], pending: [] };
+            const peer = { pc, channels: [], open: 0, connected: false, gone: false, remoteSet: false, candidates: [], pending: [], offerer: false, restartedAt: null };
             // Firefox drops the connection without a handler here (matchbox issue 36).
             pc.oniceconnectionstatechange = () => {};
             pc.onicecandidate = (e) => {
@@ -142,6 +239,7 @@ addToLibrary({
 
         offer: async (id) => {
             const peer = SMWPeer.peer(id);
+            peer.offerer = true;
             try {
                 await peer.pc.setLocalDescription(await peer.pc.createOffer());
                 await SMWPeer.gathered(peer.pc);
@@ -160,7 +258,8 @@ addToLibrary({
                     await peer.pc.setRemoteDescription({ type: 'offer', sdp: data.Offer });
                     await SMWPeer.remoteSet(id, peer);
                     await peer.pc.setLocalDescription(await peer.pc.createAnswer());
-                    await SMWPeer.gathered(peer.pc);
+                    // A renegotiation answers at once; its candidates trickle.
+                    if (!peer.connected) await SMWPeer.gathered(peer.pc);
                     SMWPeer.signal(id, { Answer: peer.pc.localDescription.sdp });
                 } else if (data.Answer !== undefined && peer) {
                     await peer.pc.setRemoteDescription({ type: 'answer', sdp: data.Answer });
@@ -170,6 +269,10 @@ addToLibrary({
                     else peer.candidates.push(data.IceCandidate);
                 }
             } catch (e) {
+                if (peer && peer.connected) {
+                    console.warn('[net] renegotiation: ' + e.message);
+                    return;
+                }
                 console.error('[net] handshake: ' + e.message);
                 SMWPeer.drop(id);
             }
@@ -209,10 +312,16 @@ addToLibrary({
 
         close: () => {
             if (SMWPeer.keepAlive) clearInterval(SMWPeer.keepAlive);
+            if (SMWPeer.restartTimer) clearInterval(SMWPeer.restartTimer);
             for (const id of [...SMWPeer.peers.keys()]) SMWPeer.drop(id);
             if (SMWPeer.socket) SMWPeer.socket.close();
             SMWPeer.socket = null;
             SMWPeer.keepAlive = null;
+            SMWPeer.restartTimer = null;
+            SMWPeer.token = null;
+            SMWPeer.lostAt = null;
+            SMWPeer.retryMs = 250;
+            SMWPeer.outbox = [];
             SMWPeer.failed = false;
             SMWPeer.id = null;
             SMWPeer.changes = [];
