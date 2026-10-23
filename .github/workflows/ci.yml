@@ -215,7 +215,8 @@ jobs:
           targets: wasm32-unknown-emscripten
       - uses: Swatinem/rust-cache@v2
       - run: cargo check --locked --package smw-peer --target wasm32-unknown-emscripten
-      - run: cargo build --release --locked --package smw-peer --examples --package smw_relay
+      - run: cargo build --release --locked --package smw-peer --examples
+      - run: cargo build --release --locked --package smw_relay --bin smw_relay
 
       - name: Allow Chrome's sandbox
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
