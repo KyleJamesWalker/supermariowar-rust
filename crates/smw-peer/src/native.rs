@@ -7,22 +7,44 @@ use serde_json::{json, Value};
 use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
+use tokio::sync::oneshot;
 use tokio_tungstenite::tungstenite::Message;
+use webrtc::api::setting_engine::SettingEngine;
 use webrtc::api::{APIBuilder, API};
 use webrtc::data_channel::data_channel_init::RTCDataChannelInit;
 use webrtc::data_channel::RTCDataChannel;
 use webrtc::ice_transport::ice_candidate::RTCIceCandidateInit;
+use webrtc::ice_transport::ice_connection_state::RTCIceConnectionState;
 use webrtc::ice_transport::ice_server::RTCIceServer;
 use webrtc::peer_connection::configuration::RTCConfiguration;
+use webrtc::peer_connection::offer_answer_options::RTCOfferOptions;
 use webrtc::peer_connection::peer_connection_state::RTCPeerConnectionState;
 use webrtc::peer_connection::policy::ice_transport_policy::RTCIceTransportPolicy;
 use webrtc::peer_connection::sdp::session_description::RTCSessionDescription;
 use webrtc::peer_connection::RTCPeerConnection;
 
-/// How often an open signaling connection sends `KeepAlive`.
-const KEEP_ALIVE: Duration = Duration::from_secs(10);
+/// How often an open signaling connection sends `KeepAlive`, which a relay that resumes peers echoes.
+const KEEP_ALIVE: Duration = Duration::from_secs(2);
+/// A resumable signaling connection silent this long is lost, though TCP may not notice for minutes.
+const SIGNALING_SILENCE: Duration = Duration::from_secs(6);
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
+/// How long a lost signaling connection tries to resume. The relay holds the place for 30 s.
+const RESUME_WINDOW: Duration = Duration::from_secs(25);
+/// ICE reports a silent connection disconnected after this, and failed after `ICE_FAILED`.
+const ICE_DISCONNECTED: Duration = Duration::from_secs(3);
+const ICE_FAILED: Duration = Duration::from_secs(30);
+/// How often the offering side checks a connection, and repeats an ICE restart while it stays down.
+const RESTART_CHECK: Duration = Duration::from_secs(1);
+const RESTART_EVERY: Duration = Duration::from_secs(4);
+
+/// Test hooks: `SMW_PEER_TEST_RESTART_MS` makes the offering side restart ICE that long after connecting, and
+/// `SMW_PEER_TEST_DROP_SIGNAL_MS` drops the signaling connection, without a close, that long after it opened. Each
+/// fires once.
+fn test_delay(name: &str) -> Option<Duration> {
+    std::env::var(name).ok().and_then(|v| v.parse().ok()).map(Duration::from_millis)
+}
 
 /// Test conditions for the unreliable channel: `SMW_PEER_LAG_MS` delays each packet, `SMW_PEER_LOSS` drops that
 /// percentage of them.
@@ -277,15 +299,10 @@ async fn run(
     mut commands: UnboundedReceiver<Command>,
 ) {
     let _ = rustls::crypto::ring::default_provider().install_default();
-    let stream = match tokio_tungstenite::connect_async(url.as_str()).await {
-        Ok((stream, _)) => stream,
-        Err(e) => {
-            eprintln!("[net] signaling {url}: {e}");
-            return;
-        }
-    };
-    let (mut ws_tx, mut ws_rx) = stream.split();
-    let (outgoing, mut outgoing_rx) = unbounded_channel::<String>();
+    let (outgoing, outgoing_rx) = unbounded_channel::<String>();
+    let (incoming, mut incoming_rx) = unbounded_channel::<Value>();
+    let (close_signaling, close_rx) = oneshot::channel();
+    tokio::spawn(signaling(url, outgoing_rx, incoming, close_rx));
     let (gone, mut gone_rx) = unbounded_channel::<Gone>();
     let context = Context {
         ice: rtc_configuration(&ice),
@@ -293,35 +310,23 @@ async fn run(
         outgoing,
         gone,
     };
-    let api = Arc::new(APIBuilder::new().build());
+    let mut settings = SettingEngine::default();
+    settings.set_ice_timeouts(Some(ICE_DISCONNECTED), Some(ICE_FAILED), None);
+    let api = Arc::new(APIBuilder::new().with_setting_engine(settings).build());
     let mut peers: HashMap<PeerId, Peer> = HashMap::new();
-    let mut keep_alive = tokio::time::interval(KEEP_ALIVE);
     let impairment = Impairment::from_env();
     let mut signaling_open = true;
+    let mut close_signaling = Some(close_signaling);
 
     loop {
         tokio::select! {
-            message = ws_rx.next(), if signaling_open => match message {
-                Some(Ok(Message::Text(text))) => {
-                    if let Ok(event) = serde_json::from_str::<Value>(&text) {
-                        on_event(&api, &context, &mut peers, &event).await;
-                    }
-                }
-                Some(Ok(_)) => {}
-                _ => {
+            event = incoming_rx.recv(), if signaling_open => match event {
+                Some(event) => on_event(&api, &context, &mut peers, &event).await,
+                None => {
                     signaling_open = false;
                     lock(&shared).signaling_closed = true;
                 }
             },
-            Some(text) = outgoing_rx.recv(), if signaling_open => {
-                if ws_tx.send(Message::Text(text.into())).await.is_err() {
-                    signaling_open = false;
-                    lock(&shared).signaling_closed = true;
-                }
-            }
-            _ = keep_alive.tick(), if signaling_open => {
-                let _ = ws_tx.send(Message::Text("\"KeepAlive\"".into())).await;
-            }
             Some((peer, serial)) = gone_rx.recv() => drop_peer(&shared, &mut peers, peer, serial).await,
             command = commands.recv() => match command {
                 Some(Command::Send(channel, peer, data)) => {
@@ -347,11 +352,134 @@ async fn run(
                     for peer in peers.keys().copied().collect::<Vec<_>>() {
                         drop_peer(&shared, &mut peers, peer, None).await;
                     }
-                    let _ = ws_tx.close().await;
+                    if let Some(close) = close_signaling.take() {
+                        let (done, finished) = oneshot::channel();
+                        if close.send(done).is_ok() {
+                            let _ = finished.await;
+                        }
+                    }
                     return;
                 }
             },
         }
+    }
+}
+
+/// The signaling connection: sends `outgoing` and passes on what the server sends. A connection lost without a close
+/// resumes the same peer ID for `RESUME_WINDOW` when the server handed out a `ResumeToken`; otherwise, or after that,
+/// `incoming` closes. Messages queued while it reconnects go out after.
+async fn signaling(
+    url: String,
+    mut outgoing: UnboundedReceiver<String>,
+    incoming: UnboundedSender<Value>,
+    mut close: oneshot::Receiver<oneshot::Sender<()>>,
+) {
+    let mut id: Option<String> = None;
+    let mut token: Option<String> = None;
+    let mut lost_at: Option<Instant> = None;
+    let mut retry = Duration::from_millis(250);
+    let mut test_drop = test_delay("SMW_PEER_TEST_DROP_SIGNAL_MS");
+    loop {
+        let target = match (&id, &token, lost_at) {
+            (Some(id), Some(token), Some(_)) => {
+                let join = if url.contains('?') { '&' } else { '?' };
+                format!("{url}{join}resume={id}&token={token}")
+            }
+            _ => url.clone(),
+        };
+        let attempt = tokio::time::timeout(CONNECT_TIMEOUT, tokio_tungstenite::connect_async(target.as_str()));
+        let stream = tokio::select! {
+            result = attempt => match result {
+                Ok(Ok((stream, _))) => Some(stream),
+                Ok(Err(e)) => {
+                    eprintln!("[net] signaling {url}: {e}");
+                    None
+                }
+                Err(_) => {
+                    eprintln!("[net] signaling {url}: timed out");
+                    None
+                }
+            },
+            Ok(done) = &mut close => {
+                let _ = done.send(());
+                return;
+            }
+        };
+        let resuming = lost_at.is_some();
+        let mut heard_any = false;
+        if let Some(stream) = stream {
+            let (mut ws_tx, mut ws_rx) = stream.split();
+            let mut keep_alive = tokio::time::interval(KEEP_ALIVE);
+            let mut heard = Instant::now();
+            let opened = Instant::now();
+            loop {
+                let drop_at = test_drop.map(|d| opened + d);
+                tokio::select! {
+                    message = ws_rx.next() => match message {
+                        Some(Ok(Message::Text(text))) => {
+                            heard = Instant::now();
+                            let Ok(event) = serde_json::from_str::<Value>(&text) else { continue };
+                            if !heard_any && resuming {
+                                eprintln!("[net] signaling resumed");
+                            }
+                            heard_any = true;
+                            lost_at = None;
+                            retry = Duration::from_millis(250);
+                            if let Some(t) = event.get("ResumeToken").and_then(Value::as_str) {
+                                token = Some(t.to_string());
+                            }
+                            if let Some(i) = event.get("IdAssigned").and_then(Value::as_str) {
+                                id = Some(i.to_string());
+                            }
+                            if incoming.send(event).is_err() {
+                                return;
+                            }
+                        }
+                        Some(Ok(_)) => heard = Instant::now(),
+                        _ => break,
+                    },
+                    Some(text) = outgoing.recv() => {
+                        if ws_tx.send(Message::Text(text.into())).await.is_err() {
+                            break;
+                        }
+                    }
+                    _ = keep_alive.tick() => {
+                        if token.is_some() && heard.elapsed() >= SIGNALING_SILENCE {
+                            eprintln!("[net] signaling went silent");
+                            break;
+                        }
+                        let _ = ws_tx.send(Message::Text("\"KeepAlive\"".into())).await;
+                    }
+                    _ = tokio::time::sleep_until(drop_at.unwrap_or(opened).into()), if drop_at.is_some() => {
+                        eprintln!("[net] test: dropping the signaling connection");
+                        test_drop = None;
+                        break;
+                    }
+                    Ok(done) = &mut close => {
+                        let _ = ws_tx.close().await;
+                        let _ = done.send(());
+                        return;
+                    }
+                }
+            }
+        }
+        // A refused resume closes at once; so does a server that never sent a token.
+        if token.is_none() || id.is_none() || (resuming && !heard_any) {
+            return;
+        }
+        let since = *lost_at.get_or_insert_with(Instant::now);
+        if since.elapsed() >= RESUME_WINDOW {
+            eprintln!("[net] signaling did not come back");
+            return;
+        }
+        tokio::select! {
+            _ = tokio::time::sleep(retry) => {}
+            Ok(done) = &mut close => {
+                let _ = done.send(());
+                return;
+            }
+        }
+        retry = (retry * 2).min(Duration::from_secs(2));
     }
 }
 
@@ -485,6 +613,7 @@ async fn new_peer(api: &API, context: &Context, id: PeerId, offerer: bool) -> Op
         offerer,
         remote_set,
         pending,
+        connected: connected.clone(),
     };
     tokio::spawn(handshake.run(signals_rx));
     Some(Peer {
@@ -497,6 +626,8 @@ async fn new_peer(api: &API, context: &Context, id: PeerId, offerer: bool) -> Op
 }
 
 /// One peer's offer, answer and ICE candidates; candidates wait on both sides until the remote description is set.
+/// Once connected, the offering side restarts ICE while the connection is down, and a failed renegotiation step is
+/// only logged.
 struct Handshake {
     connection: Arc<RTCPeerConnection>,
     context: Context,
@@ -505,6 +636,7 @@ struct Handshake {
     offerer: bool,
     remote_set: Arc<AtomicBool>,
     pending: Arc<Mutex<Vec<String>>>,
+    connected: Arc<AtomicBool>,
 }
 
 impl Handshake {
@@ -524,36 +656,82 @@ impl Handshake {
             connection.set_local_description(offer).await?;
             context.signal(id, json!({ "Offer": sdp }));
         }
-        while let Some(signal) = signals.recv().await {
-            let remote = match signal {
-                Signal::Offer(sdp) if !self.offerer => RTCSessionDescription::offer(sdp)?,
-                Signal::Answer(sdp) if self.offerer => RTCSessionDescription::answer(sdp)?,
-                Signal::IceCandidate(json) => {
-                    match serde_json::from_str::<RTCIceCandidateInit>(&json) {
-                        Ok(candidate) if self.remote_set.load(Ordering::Acquire) => {
-                            connection.add_ice_candidate(candidate).await?
+        let mut check = tokio::time::interval(RESTART_CHECK);
+        check.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+        let mut last_restart: Option<Instant> = None;
+        let mut test_restart = test_delay("SMW_PEER_TEST_RESTART_MS");
+        let mut connected_at: Option<Instant> = None;
+        loop {
+            let signal = tokio::select! {
+                signal = signals.recv() => match signal {
+                    Some(signal) => signal,
+                    None => return Ok(()),
+                },
+                _ = check.tick(), if self.offerer => {
+                    if !self.connected.load(Ordering::Acquire) {
+                        continue;
+                    }
+                    let connected_at = *connected_at.get_or_insert_with(Instant::now);
+                    let forced = test_restart.is_some_and(|d| connected_at.elapsed() >= d);
+                    // A restart whose answer was lost waits in Checking, so anything short of connected retries.
+                    let down = !matches!(connection.ice_connection_state(), RTCIceConnectionState::Connected | RTCIceConnectionState::Completed);
+                    if forced || (down && last_restart.is_none_or(|t| t.elapsed() >= RESTART_EVERY)) {
+                        test_restart = test_restart.filter(|_| !forced);
+                        last_restart = Some(Instant::now());
+                        eprintln!("[net] restarting ICE with {:032x}", id.0);
+                        if let Err(e) = self.restart().await {
+                            eprintln!("[net] ICE restart with {:032x}: {e}", id.0);
                         }
-                        Ok(candidate) => early_candidates.push(candidate),
-                        Err(_) => {}
                     }
                     continue;
                 }
-                _ => continue,
             };
-            connection.set_remote_description(remote).await?;
-            self.remote_set.store(true, Ordering::Release);
-            for json in std::mem::take(&mut *lock(&self.pending)) {
-                context.signal(id, json!({ "IceCandidate": json }));
+            match self.apply(signal, &mut early_candidates).await {
+                Err(e) if self.connected.load(Ordering::Acquire) => eprintln!("[net] renegotiation with {:032x}: {e}", id.0),
+                result => result?,
             }
-            for candidate in early_candidates.drain(..) {
-                connection.add_ice_candidate(candidate).await?;
+        }
+    }
+
+    /// A new offer with fresh ICE credentials; the answer comes back through `apply`.
+    async fn restart(&self) -> Result<(), webrtc::Error> {
+        let options = RTCOfferOptions { ice_restart: true, ..Default::default() };
+        let offer = self.connection.create_offer(Some(options)).await?;
+        let sdp = offer.sdp.clone();
+        self.connection.set_local_description(offer).await?;
+        self.context.signal(self.id, json!({ "Offer": sdp }));
+        Ok(())
+    }
+
+    /// One offer, answer or ICE candidate from the peer.
+    async fn apply(&self, signal: Signal, early_candidates: &mut Vec<RTCIceCandidateInit>) -> Result<(), webrtc::Error> {
+        let (connection, context, id) = (&self.connection, &self.context, self.id);
+        let remote = match signal {
+            Signal::Offer(sdp) if !self.offerer => RTCSessionDescription::offer(sdp)?,
+            Signal::Answer(sdp) if self.offerer => RTCSessionDescription::answer(sdp)?,
+            Signal::IceCandidate(json) => {
+                match serde_json::from_str::<RTCIceCandidateInit>(&json) {
+                    Ok(candidate) if self.remote_set.load(Ordering::Acquire) => connection.add_ice_candidate(candidate).await?,
+                    Ok(candidate) => early_candidates.push(candidate),
+                    Err(_) => {}
+                }
+                return Ok(());
             }
-            if !self.offerer {
-                let answer = connection.create_answer(None).await?;
-                let sdp = answer.sdp.clone();
-                connection.set_local_description(answer).await?;
-                context.signal(id, json!({ "Answer": sdp }));
-            }
+            _ => return Ok(()),
+        };
+        connection.set_remote_description(remote).await?;
+        self.remote_set.store(true, Ordering::Release);
+        for json in std::mem::take(&mut *lock(&self.pending)) {
+            context.signal(id, json!({ "IceCandidate": json }));
+        }
+        for candidate in early_candidates.drain(..) {
+            connection.add_ice_candidate(candidate).await?;
+        }
+        if !self.offerer {
+            let answer = connection.create_answer(None).await?;
+            let sdp = answer.sdp.clone();
+            connection.set_local_description(answer).await?;
+            context.signal(id, json!({ "Answer": sdp }));
         }
         Ok(())
     }
