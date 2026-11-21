@@ -58,11 +58,15 @@ The `Relay` workflow publishes `ghcr.io/kylejameswalker/supermariowar-rust-relay
 2. On the server, create the shared network: `docker network create caddy`.
 3. Copy `deploy/docker-compose.yml`, `deploy/Caddyfile` and `deploy/turnserver.conf` to one directory. If Caddy already runs on the `caddy` network, add the Caddyfile's site block to its config and remove the `caddy` service.
 4. Create a `.env` file there with `TURN_SECRET=<hex>`, for example from `openssl rand -hex 32`. Use hex only: the coturn image evaluates its arguments in a shell. The lobby needs the same secret to issue TURN credentials.
-5. Open TCP and UDP port 3478 and UDP ports 49160-49259 for `coturn`. It uses host networking.
+5. Open TCP and UDP port 3478 and UDP ports 49160-49459 for `coturn`. It uses host networking.
 6. Run `docker compose up -d`. Caddy gets the certificate and proxies everything to `smw-relay:8080`.
 7. Check that `curl https://smw-relay.vps.pocketsquirrel.com/healthz` returns `ok`. A WebSocket client can join `wss://smw-relay.vps.pocketsquirrel.com/signal/<room>`, for example `SIGNAL_URL=wss://smw-relay.vps.pocketsquirrel.com/signal node tools/web_peer_test.mjs`.
 
 `coturn` relays only to public addresses (`denied-peer-ip` in `turnserver.conf`), so it cannot reach the server's private network.
+
+### Shared TURN server
+
+Last Harvest's relay (`lh-relay.vps.pocketsquirrel.com`) uses this `coturn` on the same server, and this `turnserver.conf` is the one config for both games. Give Last Harvest's relay the same `TURN_SECRET` and `turn:smw-relay.vps.pocketsquirrel.com:3478` (or any name for this host). Each relay names its credentials by client address (`smw-…` and `lh-…`), so `user-quota=24` caps one address in each game. `total-quota=300` matches the 300 relay ports and is shared, and `bps-capacity` is 300 × `max-bps`. Change quotas or ports here, not in a copy.
 
 ### Netplay v2 settings
 
