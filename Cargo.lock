@@ -1205,6 +1205,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "glow"
+version = "0.18.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "263218b0ba2b0715c3370fb04674f5f8aa331594b521c94ff0a8e4a8472d1386"
+dependencies = [
+ "js-sys",
+ "slotmap",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
 name = "glslang"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1695,7 +1707,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7937193027dfed8c5e8278d20212f56332a78a4f5fb47112808fc1c99e50e459"
 dependencies = [
  "bitflags 2.13.2",
- "glow",
+ "glow 0.17.0",
  "halfbrown",
  "num-traits",
  "rustc-hash 2.1.3",
@@ -1796,7 +1808,7 @@ checksum = "acb9210eab8cf808c7aa2d6ae27ebcac0ceab311d663381dbef58fd9531d112f"
 dependencies = [
  "array-init",
  "bytemuck",
- "glow",
+ "glow 0.17.0",
  "librashader-cache",
  "librashader-common",
  "librashader-pack",
@@ -3114,7 +3126,7 @@ version = "0.1.0"
 name = "smw-sdl2"
 version = "0.1.0"
 dependencies = [
- "glow",
+ "glow 0.18.0",
  "librashader",
  "sdl2",
  "smw-headless",

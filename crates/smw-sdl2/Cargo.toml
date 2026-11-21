@@ -13,7 +13,7 @@ shaders = ["gl", "dep:librashader"]
 smw-platform = { path = "../smw-platform" }
 sdl2 = { version = "0.38", features = ["mixer"] }
 librashader = { version = "0.12.1", default-features = false, features = ["runtime-gl", "presets", "preprocess", "stable"], optional = true }
-glow = { version = "0.17", optional = true }
+glow = { version = "0.18", optional = true }
 
 [dev-dependencies]
 smw-headless = { path = "../smw-headless" }
