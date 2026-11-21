@@ -1,8 +1,8 @@
 //! Netplay v2 signaling on `/signal/<room>`: the matchbox protocol (`IdAssigned`, `NewPeer`, `PeerLeft`, `Signal`)
 //! as `matchbox_server` speaks it, so a relay alone can pair a room's WebRTC peers, e.g. on a LAN without internet.
 //! A peer also gets a `ResumeToken`: when its connection drops without a close, it keeps its place and ID for
-//! `RESUME_GRACE`, and `/signal/<room>?resume=<id>&token=<token>` takes them back without a `PeerLeft`. The relay
-//! echoes `KeepAlive`.
+//! `RESUME_GRACE`, and `/signal/<room>?resume` with `{"Resume": {"id", "token"}}` as its first message takes them back
+//! without a `PeerLeft`. The relay echoes `KeepAlive`, and closes a peer alone in its room for `Config::lonely_timeout`.
 
 use crate::config::Config;
 use crate::websocket::Poll;
@@ -29,6 +29,10 @@ const MAX_MESSAGE_LEN: usize = 16 * 1024;
 const MAX_ROOM_PEERS: usize = 4;
 /// How long a dropped peer keeps its place for a resume. Longer than a match's GGRS disconnect timeout.
 const RESUME_GRACE: Duration = Duration::from_secs(30);
+/// How long a `?resume` connection has to send its `Resume` message.
+const RESUME_MESSAGE_TIMEOUT: Duration = Duration::from_secs(5);
+/// How often a session checks whether its peer is alone in the room.
+const LONELY_CHECK: Duration = Duration::from_secs(1);
 
 /// A room's peer: the queue of messages to its connection, none while it is dropped, and the secret that resumes it.
 struct Member {
@@ -72,18 +76,57 @@ fn send_to(room: &str, peer: &str, text: String) {
     }
 }
 
-/// The `resume` and `token` of a `/signal` request's query string.
-pub fn parse_resume(query: &str) -> Option<(String, String)> {
+/// A signaling connection's request for a held place.
+#[derive(Debug, PartialEq, Eq)]
+pub enum Resume {
+    /// `?resume=<id>&token=<token>`.
+    Query(String, String),
+    /// `?resume`, with the ID and token in the first message.
+    FirstMessage,
+}
+
+/// The resume a `/signal` request's query string asks for.
+pub fn parse_resume(query: &str) -> Option<Resume> {
     let mut resume = None;
     let mut token = None;
     for pair in query.split('&') {
-        match pair.split_once('=') {
-            Some(("resume", v)) => resume = Some(v.to_string()),
-            Some(("token", v)) => token = Some(v.to_string()),
+        let (key, value) = pair.split_once('=').unwrap_or((pair, ""));
+        match key {
+            "resume" => resume = Some(value.to_string()),
+            "token" => token = Some(value.to_string()),
             _ => {}
         }
     }
-    Some((resume?, token?))
+    match (resume?, token) {
+        (id, Some(token)) if !id.is_empty() => Some(Resume::Query(id, token)),
+        _ => Some(Resume::FirstMessage),
+    }
+}
+
+/// The ID and token of a `{"Resume": {"id", "token"}}` first message; None on anything else or after
+/// `RESUME_MESSAGE_TIMEOUT`.
+fn read_resume_message(ws: &mut tungstenite::WebSocket<TcpStream>) -> Option<(String, String)> {
+    let deadline = Instant::now() + RESUME_MESSAGE_TIMEOUT;
+    loop {
+        match ws.read() {
+            Ok(Message::Text(text)) => {
+                let request: Value = serde_json::from_str(&text).ok()?;
+                let resume = request.get("Resume")?;
+                let field = |key: &str| resume.get(key).and_then(Value::as_str).map(str::to_string);
+                return Some((field("id")?, field("token")?));
+            }
+            Ok(Message::Ping(_) | Message::Pong(_)) => {}
+            Err(tungstenite::Error::Io(e)) if matches!(e.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) => {}
+            _ => return None,
+        }
+        if Instant::now() >= deadline {
+            return None;
+        }
+    }
+}
+
+fn room_size(room: &str) -> usize {
+    rooms().lock().unwrap().get(room).map_or(0, HashMap::len)
 }
 
 /// How a peer joins its room: a new peer is told to the others, a resumed one is not.
@@ -149,7 +192,7 @@ fn hold(room: String, me: String, replaced: Arc<AtomicBool>, grace: Duration) {
 }
 
 /// One peer's signaling session in `room`, on its connection's thread, until it closes or goes quiet.
-pub fn run(stream: TcpStream, room: String, resume: Option<(String, String)>, config: &Config) {
+pub fn run(stream: TcpStream, room: String, resume: Option<Resume>, config: &Config) {
     #[allow(clippy::result_large_err)] // tungstenite's handshake callback signature
     let check_origin = |request: &Request, response: Response| -> Result<Response, ErrorResponse> {
         let origin = request.headers().get("origin").and_then(|v| v.to_str().ok());
@@ -164,6 +207,19 @@ pub fn run(stream: TcpStream, room: String, resume: Option<(String, String)>, co
     let Ok(mut ws) = tungstenite::accept_hdr_with_config(stream, check_origin, Some(ws_config)) else { return };
     let mut poll = Poll::new(ws.get_ref());
 
+    let resume = match resume {
+        Some(Resume::Query(id, token)) => Some((id, token)),
+        Some(Resume::FirstMessage) => {
+            let Some(resume) = read_resume_message(&mut ws) else {
+                println!("[relay] refused a signaling peer: no resume message");
+                let _ = ws.close(None);
+                let _ = ws.flush();
+                return;
+            };
+            Some(resume)
+        }
+        None => None,
+    };
     let resuming = resume.is_some();
     let (me, token) = resume.unwrap_or_else(|| (new_peer_id(), new_token()));
     let (tx, outgoing) = sync_channel::<String>(OUTBOX_LEN);
@@ -189,9 +245,22 @@ pub fn run(stream: TcpStream, room: String, resume: Option<(String, String)>, co
 
     let mut last_heard = Instant::now();
     let mut closed = false;
+    let (mut checked, mut alone_since) = (Instant::now(), None);
     'session: loop {
         if replaced.load(Ordering::Acquire) {
             return;
+        }
+        if checked.elapsed() >= LONELY_CHECK.min(config.lonely_timeout) {
+            checked = Instant::now();
+            if room_size(&room) > 1 {
+                alone_since = None;
+            } else if alone_since.get_or_insert(checked).elapsed() >= config.lonely_timeout {
+                println!("[relay] closed a signaling peer: alone in its room");
+                let _ = ws.close(None);
+                let _ = ws.flush();
+                closed = true;
+                break;
+            }
         }
         loop {
             match ws.read() {

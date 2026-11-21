@@ -37,7 +37,8 @@ const MAX_REQUEST_HEAD: usize = 8 * 1024;
 
 /// What a lobby client's thread tells the main thread.
 pub enum Event {
-    Open { id: ClientId, outbox: Outbox },
+    /// `address` is the client's, from `X-Forwarded-For` behind a trusted proxy.
+    Open { id: ClientId, outbox: Outbox, address: IpAddr },
     Message { id: ClientId, data: Vec<u8> },
     Closed { id: ClientId },
 }
@@ -167,11 +168,12 @@ fn handle_connection(
     let _ = stream.set_nodelay(true);
 
     let Some((head, head_len)) = peek_request_head(&stream) else { return };
+    let peer = stream.peer_addr().map_or(IpAddr::V4(Ipv4Addr::LOCALHOST), |a| a.ip());
+    let client = if address.is_some() { peer } else { limits::forwarded_for(&head).unwrap_or(peer) };
     let _address = match address {
         Some(address) => address,
         None => {
-            let peer = stream.peer_addr().map_or(IpAddr::V4(Ipv4Addr::LOCALHOST), |a| a.ip());
-            match counts.addresses.open(limits::forwarded_for(&head).unwrap_or(peer), Instant::now()) {
+            match counts.addresses.open(client, Instant::now()) {
                 Ok(address) => address,
                 Err(_) => {
                     refuse(&mut stream, head_len, "429 Too Many Requests", "too many connections\n");
@@ -206,7 +208,7 @@ fn handle_connection(
         refuse(&mut stream, head_len, "503 Service Unavailable", "relay full\n");
         return;
     };
-    run_client(stream, id, config, events);
+    run_client(stream, id, client, config, events);
 }
 
 fn refuse(stream: &mut TcpStream, head_len: usize, status: &str, body: &str) {
@@ -216,7 +218,7 @@ fn refuse(stream: &mut TcpStream, head_len: usize, status: &str, body: &str) {
 }
 
 /// One lobby client's WebSocket, until it closes, falls behind or goes quiet.
-fn run_client(stream: TcpStream, id: ClientId, config: &Config, events: &Sender<Event>) {
+fn run_client(stream: TcpStream, id: ClientId, address: IpAddr, config: &Config, events: &Sender<Event>) {
     let mut who = stream.peer_addr().map(|a| a.to_string()).unwrap_or_default();
     let mut origin = String::new();
     #[allow(clippy::result_large_err)] // tungstenite's handshake callback signature
@@ -246,7 +248,7 @@ fn run_client(stream: TcpStream, id: ClientId, config: &Config, events: &Sender<
     let mut poll = Poll::new(ws.get_ref());
     let (tx, outgoing) = sync_channel(OUTBOX_LEN);
     let overflow = Arc::new(AtomicBool::new(false));
-    if events.send(Event::Open { id, outbox: Outbox { tx, overflow: overflow.clone() } }).is_err() {
+    if events.send(Event::Open { id, outbox: Outbox { tx, overflow: overflow.clone() }, address }).is_err() {
         return;
     }
 
@@ -421,6 +423,21 @@ mod tests {
         tungstenite::client::client(request, MaybeTlsStream::Plain(stream)).map(|(ws, _)| ws).map_err(|e| e.to_string())
     }
 
+    /// Whether the relay closes `ws` within `limit`; `poke` runs before each read.
+    fn closed_within(ws: &mut WebSocket<MaybeTlsStream<TcpStream>>, limit: Duration, poke: impl Fn(&mut WebSocket<MaybeTlsStream<TcpStream>>)) -> bool {
+        let deadline = Instant::now() + limit;
+        while Instant::now() < deadline {
+            poke(ws);
+            match ws.read() {
+                Ok(Message::Close(_)) => return true,
+                Ok(_) => {}
+                Err(tungstenite::Error::Io(e)) if matches!(e.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) => {}
+                Err(_) => return true,
+            }
+        }
+        false
+    }
+
     fn read_text(ws: &mut WebSocket<MaybeTlsStream<TcpStream>>) -> Option<String> {
         match ws.read() {
             Ok(Message::Text(text)) => Some(text.to_string()),
@@ -506,7 +523,11 @@ mod tests {
         assert!(!drain(&mut second).iter().any(|t| t.contains("PeerLeft")), "no PeerLeft while the place is held");
 
         assert_eq!(read_text(&mut signal(port, &format!("resume?resume={id}&token=wrong")).unwrap()), None);
-        let mut resumed = signal(port, &format!("resume?resume={id}&token={token}")).unwrap();
+        let mut wrong = signal(port, "resume?resume").unwrap();
+        wrong.send(Message::Text(serde_json::json!({ "Resume": { "id": id, "token": "wrong" } }).to_string().into())).unwrap();
+        assert_eq!(read_text(&mut wrong), None);
+        let mut resumed = signal(port, "resume?resume").unwrap();
+        resumed.send(Message::Text(serde_json::json!({ "Resume": { "id": id, "token": token } }).to_string().into())).unwrap();
         assert_eq!(read_field(&mut resumed, "IdAssigned").unwrap(), id);
         assert!(!drain(&mut second).iter().any(|t| t.contains("NewPeer")), "a resume is not a new peer");
         let hello = serde_json::json!({ "Signal": { "receiver": id, "data": "hello" } });
@@ -517,6 +538,50 @@ mod tests {
         resumed.close(None).unwrap();
         let _ = resumed.flush();
         assert_eq!(read_field(&mut second, "PeerLeft").unwrap(), id);
+    }
+
+    #[test]
+    fn a_resume_by_url_token_still_works() {
+        let (port, _events) = relay(|_| {});
+        let mut first = signal(port, "legacy").unwrap();
+        let id = read_field(&mut first, "IdAssigned").unwrap();
+        let token = read_field(&mut first, "ResumeToken").unwrap();
+        let _second = signal(port, "legacy").unwrap();
+        drop(first);
+        let mut resumed = signal(port, &format!("legacy?resume={id}&token={token}")).unwrap();
+        assert_eq!(read_field(&mut resumed, "IdAssigned").unwrap(), id);
+    }
+
+    #[test]
+    fn a_resume_without_its_message_is_refused() {
+        let (port, _events) = relay(|_| {});
+        let mut silent = signal(port, "no-message?resume").unwrap();
+        assert!(closed_within(&mut silent, Duration::from_secs(8), |_| {}));
+        let mut other = signal(port, "no-message?resume").unwrap();
+        other.send(Message::Text("\"KeepAlive\"".into())).unwrap();
+        assert!(closed_within(&mut other, Duration::from_secs(1), |_| {}), "only a Resume message resumes");
+    }
+
+    #[test]
+    fn a_peer_alone_in_its_room_is_closed() {
+        let (port, _events) = relay(|c| c.lonely_timeout = Duration::from_millis(300));
+        let mut alone = signal(port, "lonely").unwrap();
+        let mut pair = [signal(port, "paired").unwrap(), signal(port, "paired").unwrap()];
+        let keep_alive = || Message::Text("\"KeepAlive\"".into());
+        assert!(closed_within(&mut alone, Duration::from_secs(3), |ws| drop(ws.send(keep_alive()))), "the lonely peer was kept");
+        for peer in &mut pair {
+            peer.send(keep_alive()).unwrap();
+            assert!(drain(peer).iter().any(|t| t.contains("KeepAlive")), "peers with company stay");
+        }
+    }
+
+    #[test]
+    fn resume_queries() {
+        use crate::signal::{parse_resume, Resume};
+        assert_eq!(parse_resume(""), None);
+        assert_eq!(parse_resume("resume"), Some(Resume::FirstMessage));
+        assert_eq!(parse_resume("x=1&resume="), Some(Resume::FirstMessage));
+        assert_eq!(parse_resume("resume=a&token=b"), Some(Resume::Query("a".into(), "b".into())));
     }
 
     #[test]

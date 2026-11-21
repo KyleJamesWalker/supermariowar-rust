@@ -5,6 +5,7 @@ use smw::common_netplay::protocol_definitions::NET_LOBBYSERVER_PORT;
 use smw::common_netplay::relay_frame::{self as frame, *};
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
+use std::net::IpAddr;
 use std::rc::Rc;
 
 /// A WebSocket client, numbered from 1 in accept order.
@@ -17,6 +18,8 @@ struct Client {
     /// The virtual address the client got in its `WELCOME`.
     host: [u8; 4],
     port: u16,
+    /// Its real address, IPv6 by its /56.
+    address: Option<IpAddr>,
     /// Its open virtual connections to the lobby.
     conns: HashSet<u16>,
 }
@@ -56,10 +59,10 @@ impl Switch {
     }
 
     /// Registers a new client and sends it its virtual address in a `WELCOME`.
-    pub fn open(&mut self, id: ClientId, sink: Sink) {
+    pub fn open(&mut self, id: ClientId, sink: Sink, address: Option<IpAddr>) {
         let host = self.allocate_host();
         let port = 20000 + (self.next_address % 40000) as u16;
-        let client = Client { sink, host, port, conns: HashSet::new() };
+        let client = Client { sink, host, port, address: address.map(crate::limits::key), conns: HashSet::new() };
         client.send(WELCOME, 0, &frame::encode_address(host, port));
         println!("[relay] client {} is {}.{}.{}.{}:{}", id, host[0], host[1], host[2], host[3], port);
         self.by_host.insert(host, id);
@@ -71,7 +74,7 @@ impl Switch {
         let Some(client) = self.clients.remove(&id) else { return };
         self.by_host.remove(&client.host);
         for conn in client.conns {
-            self.lobby_event(LobbyEvent::Disconnect(self.lobby_peer(id, conn, &client.sink, client.host, client.port)));
+            self.lobby_event(LobbyEvent::Disconnect(self.lobby_peer(id, conn, &client.sink, client.host, client.port, client.address)));
         }
         println!("[relay] client {} left", id);
     }
@@ -100,7 +103,7 @@ impl Switch {
     /// Accepts a connection to the lobby port only, up to `max_conns` per client, and refuses the rest.
     fn connect(&mut self, id: ClientId, conn: u16, payload: &[u8]) {
         let Some(client) = self.clients.get_mut(&id) else { return };
-        let (sink, my_host, my_port) = (client.sink.clone(), client.host, client.port);
+        let (sink, my_host, my_port, address) = (client.sink.clone(), client.host, client.port, client.address);
         let lobby = frame::decode_address(payload).is_some_and(|(_, port)| port == NET_LOBBYSERVER_PORT);
         if !lobby || client.conns.contains(&conn) || client.conns.len() >= self.max_conns {
             (sink)(frame::encode(REFUSED, conn, &[]));
@@ -108,29 +111,29 @@ impl Switch {
         }
         client.conns.insert(conn);
         (sink)(frame::encode(ACCEPTED, conn, &[]));
-        let peer = self.lobby_peer(id, conn, &sink, my_host, my_port);
+        let peer = self.lobby_peer(id, conn, &sink, my_host, my_port, address);
         self.lobby_event(LobbyEvent::Connect(peer));
     }
 
     fn forward(&mut self, id: ClientId, conn: u16, payload: &[u8]) {
         let Some(client) = self.clients.get(&id) else { return };
         if client.conns.contains(&conn) {
-            let peer = self.lobby_peer(id, conn, &client.sink, client.host, client.port);
+            let peer = self.lobby_peer(id, conn, &client.sink, client.host, client.port, client.address);
             self.lobby_event(LobbyEvent::Receive(peer, payload.to_vec()));
         }
     }
 
     fn disconnect(&mut self, id: ClientId, conn: u16) {
         let Some(client) = self.clients.get_mut(&id) else { return };
-        let (sink, host, port) = (client.sink.clone(), client.host, client.port);
+        let (sink, host, port, address) = (client.sink.clone(), client.host, client.port, client.address);
         if client.conns.remove(&conn) {
-            let peer = self.lobby_peer(id, conn, &sink, host, port);
+            let peer = self.lobby_peer(id, conn, &sink, host, port, address);
             self.lobby_event(LobbyEvent::Disconnect(peer));
         }
     }
 
-    fn lobby_peer(&self, client: ClientId, conn: u16, sink: &Sink, host: [u8; 4], port: u16) -> RelayPeer {
-        RelayPeer { client, conn, host, port, sink: sink.clone(), io: self.lobby.clone() }
+    fn lobby_peer(&self, client: ClientId, conn: u16, sink: &Sink, host: [u8; 4], port: u16, address: Option<IpAddr>) -> RelayPeer {
+        RelayPeer { client, conn, host, port, address, sink: sink.clone(), io: self.lobby.clone() }
     }
 
     fn lobby_event(&self, event: LobbyEvent) {
@@ -167,8 +170,8 @@ mod tests {
         let io = Rc::new(RefCell::new(LobbyIo::default()));
         let mut switch = Switch::new(io.clone(), 4);
         let (a, b) = (Outbox::default(), Outbox::default());
-        switch.open(1, sink(&a));
-        switch.open(2, sink(&b));
+        switch.open(1, sink(&a), None);
+        switch.open(2, sink(&b), None);
         (switch, io, a, b)
     }
 
@@ -205,6 +208,19 @@ mod tests {
         switch.apply_lobby_disconnects();
         switch.receive(1, &frame::encode(DATA, 3, &[0, 5, 1]));
         assert!(io.borrow().events.is_empty());
+    }
+
+    #[test]
+    fn lobby_peers_carry_the_clients_address_by_56() {
+        let io = Rc::new(RefCell::new(LobbyIo::default()));
+        let mut switch = Switch::new(io.clone(), 4);
+        switch.open(1, sink(&Outbox::default()), Some("2001:db8:1:2::7".parse().unwrap()));
+        switch.receive(1, &frame::encode(CONNECT, 1, &frame::encode_address([0; 4], NET_LOBBYSERVER_PORT)));
+        let address = match io.borrow().events.front() {
+            Some(LobbyEvent::Connect(p)) => p.client_address(),
+            _ => panic!("expected a connect"),
+        };
+        assert_eq!(address, Some("2001:db8:1::".parse().unwrap()));
     }
 
     #[test]

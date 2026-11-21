@@ -1,6 +1,7 @@
 //! The interface between a network layer and the lobby client or server that handles its events.
 
 use std::any::Any;
+use std::net::IpAddr;
 
 /// One connection of a network layer. `same_peer` compares the underlying connection.
 pub trait NetPeer: Any {
@@ -27,6 +28,11 @@ pub trait NetPeer: Any {
 
     fn same_peer(&self, other: &dyn NetPeer) -> bool;
     fn as_any(&self) -> &dyn Any;
+
+    /// The client's real network address, IPv6 by its /56, where the layer knows it; one per household, not per player.
+    fn client_address(&self) -> Option<IpAddr> {
+        None
+    }
 }
 
 impl PartialEq for dyn NetPeer {

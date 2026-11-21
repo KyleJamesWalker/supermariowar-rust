@@ -13,6 +13,7 @@ use smw::common_netplay::protocol_packages::{ClientConnection, HostPeer, JoinRoo
 use super::match_room;
 use smw::globals::Ptr;
 use super::unordered_map::UnorderedMap;
+use std::net::IpAddr;
 
 /// How long a new connection has to send `NET_REQUEST_CONNECT` before a full lobby may drop it.
 const IDENTIFY_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
@@ -57,13 +58,15 @@ impl V2Settings {
         V2Settings { signal_url: var("SMW_SIGNAL_URL"), turn_url: var("SMW_TURN_URL"), turn_secret: var("SMW_TURN_SECRET") }
     }
 
-    /// The `NET_L2P_MATCH_ROOM` for the player at `index` of `players` in signaling room `id`; None when it does not fit.
-    fn package(&self, id: &str, now_unix: u64, index: usize, players: u8) -> Option<MatchRoom> {
+    /// The `NET_L2P_MATCH_ROOM` for the player at `index` of `players` in signaling room `id`, connecting from
+    /// `address`; None when it does not fit.
+    fn package(&self, id: &str, now_unix: u64, index: usize, players: u8, address: Option<IpAddr>) -> Option<MatchRoom> {
         let url = format!("{}/{}", self.signal_url.trim_end_matches('/'), id);
         let (username, credential) = if self.turn_url.is_empty() || self.turn_secret.is_empty() {
             (String::new(), String::new())
         } else {
-            match_room::turn_credentials(&self.turn_secret, now_unix, &format!("{}-{}", &id[..8], index))
+            let name = address.map_or_else(|| format!("{}-{}", &id[..8], index), |a| match_room::turn_name(&self.turn_secret, a));
+            match_room::turn_credentials(&self.turn_secret, now_unix, &name)
         };
         let turn_url = if username.is_empty() { "" } else { self.turn_url.as_str() };
         MatchRoom::with(players, &url, turn_url, &username, &credential)
@@ -71,7 +74,7 @@ impl V2Settings {
 
     /// Whether every match's `NET_L2P_MATCH_ROOM` fits these settings.
     pub fn fit(&self) -> bool {
-        self.signal_url.is_empty() || self.package(&match_room::new_room_id(), unix_now(), 3, 4).is_some()
+        self.signal_url.is_empty() || self.package(&match_room::new_room_id(), unix_now(), 3, 4, Some(IpAddr::from([0xffff; 8]))).is_some()
     }
 }
 
@@ -555,7 +558,8 @@ impl SMWServer {
         let slots: Vec<usize> = (0..4).filter(|&p| !room.players[p].is_null() && room.local[p] == 0).collect();
         let now = unix_now();
         for (index, &slot) in slots.iter().enumerate() {
-            let Some(pkg) = v2.package(&id, now, index, slots.len() as u8) else {
+            let address = room.players[slot].network_client.as_ref().and_then(|c| c.client_address());
+            let Some(pkg) = v2.package(&id, now, index, slots.len() as u8, address) else {
                 log(&format!("[error] Netplay v2 settings too long for NET_L2P_MATCH_ROOM: {}", v2.signal_url));
                 return false;
             };
@@ -757,6 +761,10 @@ mod tests {
         fn as_any(&self) -> &dyn Any {
             self
         }
+        /// Peers whose IDs are a multiple of 100 apart share an address.
+        fn client_address(&self) -> Option<IpAddr> {
+            Some(IpAddr::from([203, 0, 113, (self.id % 100) as u8]))
+        }
     }
 
     struct NoLayer;
@@ -908,6 +916,30 @@ mod tests {
         assert_eq!(cstr_field(&host.turnURL), "turn:example.test:3478");
         assert_ne!(cstr_field(&host.turnUsername), cstr_field(&guest.turnUsername));
         assert!(!cstr_field(&guest.turnCredential).is_empty());
+    }
+
+    #[test]
+    fn players_from_one_address_share_a_turn_name() {
+        let mut server = server();
+        server.v2 = V2Settings { signal_url: "/signal".into(), turn_url: "turn:example.test:3478".into(), turn_secret: "0123abcd".into() };
+        let host = connect(&mut server, 1, "Host");
+        send(&mut server, 1, &host, NewRoom::with("Room", "").as_bytes());
+        let created = host.borrow().iter().find(|m| m[2] == NET_RESPONSE_CREATE_OK).cloned().unwrap();
+        let room = NewRoomCreated::from_bytes(&created).roomID;
+        let (same, other) = (connect(&mut server, 101, "Same"), connect(&mut server, 2, "Other"));
+        send(&mut server, 101, &same, JoinRoom::with(room, "").as_bytes());
+        send(&mut server, 2, &other, JoinRoom::with(room, "").as_bytes());
+        let name = |outbox: &Outbox| {
+            let username = cstr_field(&match_rooms(outbox).last().unwrap().turnUsername);
+            username.split_once(':').unwrap().1.to_string()
+        };
+        send(&mut server, 1, &host, StartRoom::new().as_bytes());
+        let first = name(&host);
+        assert_eq!(first, match_room::turn_name("0123abcd", IpAddr::from([203, 0, 113, 1])));
+        assert_eq!(name(&same), first);
+        assert_ne!(name(&other), first);
+        send(&mut server, 1, &host, StartRoom::new().as_bytes());
+        assert_eq!(name(&host), first, "starting again does not mint a new name");
     }
 
     #[test]
@@ -1218,5 +1250,56 @@ mod tests {
         codes(&other);
         send(&mut server, 2, &other, NewRoom::with("Second", "").as_bytes());
         assert_eq!(codes(&other), [NET_RESPONSE_CREATE_ERROR]);
+    }
+
+    /// Random messages, mostly of the right size for their type, from clients that come and go: the lobby must not panic.
+    #[test]
+    fn random_messages_do_not_panic_the_lobby() {
+        let mut server = server();
+        server.v2 = V2Settings { signal_url: "/signal".into(), turn_url: "turn:example.test:3478".into(), turn_secret: "00ff".into() };
+        server.set_max_players(4);
+        let types = [
+            NET_REQUEST_SERVERINFO, NET_REQUEST_CONNECT, NET_REQUEST_LEAVE_SERVER, NET_REQUEST_ROOM_LIST, NET_REQUEST_JOIN_ROOM,
+            NET_REQUEST_LEAVE_ROOM, NET_NOTICE_MAP_CHANGE, NET_NOTICE_GAMEMODESETTINGS, NET_NOTICE_SKIN_CHANGE, NET_NOTICE_ROOM_CHAT_MSG,
+            NET_REQUEST_CREATE_ROOM, NET_REQUEST_LOCAL_PLAYERS, NET_REQUEST_TEAM, NET_G2L_START_ROOM, NET_G2L_HOST_PEER, NET_G2L_GAME_RESULTS, 0, 255,
+        ];
+        let sizes = [
+            std::mem::size_of::<ClientConnection>(), std::mem::size_of::<NewRoom>(), std::mem::size_of::<JoinRoom>(),
+            std::mem::size_of::<LocalPlayers>(), std::mem::size_of::<TeamChange>(), std::mem::size_of::<RoomChatMsg>(),
+            std::mem::size_of::<HostPeer>(), 0, 2, 3, 4, 8, 9, 64,
+        ];
+        let mut seed = 0x2545_f491_4f6c_dd1du64;
+        let mut next = move |n: usize| {
+            seed ^= seed << 13;
+            seed ^= seed >> 7;
+            seed ^= seed << 17;
+            (seed % n as u64) as usize
+        };
+        let outboxes: Vec<Outbox> = (0..6).map(|_| Outbox::default()).collect();
+        for _ in 0..200_000 {
+            let id = next(6) as u64 + 1;
+            let outbox = &outboxes[id as usize - 1];
+            match next(40) {
+                0 => server.on_connect(&mut (), Box::new(TestPeer { id, outbox: outbox.clone() })),
+                1 => server.on_disconnect(&mut (), &mut TestPeer { id, outbox: outbox.clone() }),
+                _ => {
+                    let len = if next(4) == 0 { next(300) } else { sizes[next(sizes.len())] };
+                    let mut data: Vec<u8> = (0..len).map(|_| next(256) as u8).collect();
+                    // Small values, so room IDs, slots, counts and teams often hit something real.
+                    for byte in data.iter_mut().skip(3) {
+                        if next(2) == 0 {
+                            *byte = next(4) as u8;
+                        }
+                    }
+                    if data.len() >= 3 {
+                        data[0] = NET_PROTOCOL_VERSION_MAJOR;
+                        data[1] = NET_PROTOCOL_VERSION_MINOR;
+                        data[2] = types[next(types.len())];
+                    }
+                    send(&mut server, id, outbox, &data);
+                }
+            }
+            outbox.borrow_mut().clear();
+        }
     }
 }
