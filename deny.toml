@@ -8,8 +8,6 @@ ignore = [
     { id = "RUSTSEC-2024-0384", reason = "instant: ggrs 0.13 depends on it" },
     { id = "RUSTSEC-2025-0141", reason = "bincode 1: ggrs 0.13 depends on it" },
     { id = "RUSTSEC-2026-0249", reason = "smartstring: librashader 0.12 depends on it" },
-    { id = "RUSTSEC-2026-0387", reason = "crypto-bigint 0.5: webrtc 0.17's dtls depends on it through p256/p384 0.13; fixed only in 0.7.6" },
-    { id = "RUSTSEC-2026-0441", reason = "pin-utils: webrtc 0.17's webrtc-util depends on it through nix 0.26" },
 ]
 
 [licenses]
