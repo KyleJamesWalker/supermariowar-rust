@@ -83,6 +83,7 @@ addToLibrary({
             socket.onopen = () => {
                 if (!current()) return;
                 SMWPeer.heardAt = performance.now();
+                if (resuming) socket.send(JSON.stringify({ Resume: { id: SMWPeer.id, token: SMWPeer.token } }));
                 for (const text of SMWPeer.outbox.splice(0)) socket.send(text);
             };
             socket.onmessage = (e) => {
@@ -93,6 +94,14 @@ addToLibrary({
                     event = JSON.parse(e.data);
                 } catch (err) {
                     console.warn('[net] signaling: ' + err.message);
+                    return;
+                }
+                // A relay that cannot resume from a first message hands out a new ID instead.
+                if (resuming && event && typeof event.IdAssigned === 'string' && event.IdAssigned !== SMWPeer.id) {
+                    console.warn('[net] signaling could not resume');
+                    SMWPeer.failed = true;
+                    socket.onclose = null;
+                    socket.close();
                     return;
                 }
                 if (!heardAny && resuming) console.log('[net] signaling resumed');
@@ -138,7 +147,7 @@ addToLibrary({
                 return;
             }
             const join = SMWPeer.url.includes('?') ? '&' : '?';
-            const target = `${SMWPeer.url}${join}resume=${encodeURIComponent(SMWPeer.id)}&token=${encodeURIComponent(SMWPeer.token)}`;
+            const target = `${SMWPeer.url}${join}resume`;
             setTimeout(() => {
                 if (SMWPeer.generation === generation) SMWPeer.connect(generation, target, true);
             }, SMWPeer.retryMs);
