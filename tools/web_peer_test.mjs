@@ -23,10 +23,11 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { targetDir } from './cargo_target.mjs';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const chrome = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-const examples = resolve(process.env.EXAMPLES_DIR ?? join(repo, 'target', 'release', 'examples'));
+const examples = resolve(process.env.EXAMPLES_DIR ?? join(targetDir(repo), 'release', 'examples'));
 const out = resolve(process.argv[2] ?? join(tmpdir(), 'smw-web-peer'));
 mkdirSync(out, { recursive: true });
 

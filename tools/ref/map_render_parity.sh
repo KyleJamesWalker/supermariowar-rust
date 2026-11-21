@@ -31,7 +31,7 @@ PY
 )
 SDL_VIDEODRIVER=dummy $CPP "$DATA" $OUT/cpp "${MAPS[@]}" > $OUT/cpp.log 2>&1
 RUST=${SMW_RUST_RENDER:-}
-if [ -z "$RUST" ]; then (cd $PORT && cargo build -q --release --example map_render); RUST=$PORT/target/release/examples/map_render; fi
+if [ -z "$RUST" ]; then (cd $PORT && cargo build -q --release --example map_render); . $PORT/tools/cargo_target.sh; RUST=$(cargo_target)/release/examples/map_render; fi
 SDL_VIDEODRIVER=dummy $RUST "$DATA" $OUT/rust "${MAPS[@]}" > $OUT/rust.log 2>&1
 fail=0
 for i in "${!MAPS[@]}"; do

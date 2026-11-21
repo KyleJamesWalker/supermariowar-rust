@@ -14,8 +14,9 @@
 # tree with the map added) and a host seed (`#@ net_seed=<n>`, so the game spawns alike every run).
 HERE=$(cd "$(dirname "$0")" && pwd)
 PORT=$(cd "$HERE/../.." && pwd)
-RUST=${SMW_RUST_BIN:-$PORT/target/release/smw}
-RELAY=${SMW_RELAY_BIN:-$PORT/target/release/smw_relay}
+. "$PORT/tools/cargo_target.sh"
+RUST=${SMW_RUST_BIN:-$(cargo_target)/release/smw}
+RELAY=${SMW_RELAY_BIN:-$(cargo_target)/release/smw_relay}
 RUST_DATA=${SMW_RUST_DATA:-$PORT/data}
 if [ -z "$SMW_NO_BUILD" ]; then
   cargo build --release --quiet --locked --manifest-path "$PORT/Cargo.toml" --bin smw --bin smw_relay || exit 2

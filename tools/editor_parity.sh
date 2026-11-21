@@ -9,6 +9,7 @@ set -uo pipefail
 
 tools="$(cd "$(dirname "$0")" && pwd)"
 port="$(dirname "$tools")"
+. "$tools/cargo_target.sh"
 out_root="${PARITY_OUT:-${TMPDIR:-/tmp}/smw-editor-parity}"
 scripts=("$@")
 if [[ ${#scripts[@]} -eq 0 ]]; then
@@ -18,6 +19,7 @@ fi
 if [[ -z "${SMW_NO_BUILD:-}" ]]; then
     cargo build --release --quiet --manifest-path "$port/Cargo.toml" || exit 2
 fi
+bins="$(cargo_target)/release"
 
 # PNG encoders differ between SDL_image builds; the pixels must not.
 same_file() {
@@ -33,7 +35,7 @@ for script in "${scripts[@]}"; do
     out="$out_root/$editor/$name"
     echo "=== $editor/$name"
 
-    SMW_BIN="$port/target/release/${editor%it}itor${SMW_EDITOR_BIN_SUFFIX:-}" SMW_DATA_DIR="$port/data" \
+    SMW_BIN="$bins/${editor%it}itor${SMW_EDITOR_BIN_SUFFIX:-}" SMW_DATA_DIR="$port/data" \
         "$tools/run_editor.sh" "$editor" "$script" "$out" > /dev/null
     status=$?
     if [[ $status -ne 0 ]]; then

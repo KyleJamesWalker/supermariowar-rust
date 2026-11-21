@@ -47,6 +47,10 @@ The repository is a Cargo workspace with one `Cargo.lock` at the root, and every
 | `smw`, `leveleditor`, `worldeditor` | `apps/<name>/` | one package per binary |
 | `smw_relay` | `apps/smw_relay/` | the netplay lobby and signaling server, over WebSocket |
 
+### Worktrees
+
+Make worktrees under `.claude/worktrees/` and run `tools/share-target.sh` once in the main checkout: every worktree there then compiles into the main checkout's `target/`, so the dependencies build once instead of once per worktree. Each checkout's own outputs (`dist/`, `target/android`) stay in its own tree. The binaries are whichever worktree built last, so the tools find them through `cargo metadata` (`tools/cargo_target.sh`, `.py` and `.mjs`) and build and run them in one go; parallel builds wait on cargo's lock.
+
 ## Anbernic (muOS)
 
 Each `v*` release carries `SuperMarioWar-<version>.muxapp`, a one-file install for Anbernic handhelds running muOS: copy it to the SD card's `ARCHIVE/` folder and install it with Applications > Archive Manager. [`device/muos/README.md`](device/muos/README.md) covers installing, controls, where settings, recordings and logs go, troubleshooting and building the package.

@@ -7,6 +7,7 @@ set -euo pipefail
 
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 out="$repo/target/android"
+. "$repo/tools/cargo_target.sh"
 project="$out/project"
 api=24
 abis=("${@:-arm64-v8a}")
@@ -37,7 +38,7 @@ for abi in "${abis[@]}"; do
     SMW_SDL_LIB_DIR="$sdl/lib" cargo ndk -t "$abi" -P "$api" \
         --manifest-path "$repo/crates/smw-core/Cargo.toml" rustc --lib --crate-type cdylib --release --locked --features gl
     mkdir -p "$project/app/libs/$abi"
-    cp "$repo/target/$triple/release/libsmw.so" "$project/app/libs/$abi/libmain.so"
+    cp "$(cargo_target)/$triple/release/libsmw.so" "$project/app/libs/$abi/libmain.so"
     cp "$sdl"/lib/libSDL2{,_image,_mixer}.so "$project/app/libs/$abi/"
 done
 

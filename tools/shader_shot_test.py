@@ -17,6 +17,7 @@ import zlib
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from cargo_target import target_dir  # noqa: E402
 from diffreplay import load_image  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
@@ -59,7 +60,7 @@ def capture(name, preset, scale, work):
         SMW_NOLIMIT="1",
         SDL_AUDIODRIVER="dummy",
     )
-    smw = os.environ.get("SMW_BIN", str(REPO / "target" / "release" / "smw"))
+    smw = os.environ.get("SMW_BIN") or str(target_dir(REPO) / "release" / "smw")
     data = os.environ.get("SMW_DATA_DIR", str(REPO / "data"))
     log = out / "stdout.log"
     with open(log, "w") as f:

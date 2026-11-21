@@ -23,13 +23,15 @@ import tempfile
 import time
 from pathlib import Path
 
+from cargo_target import target_dir
+
 REPO = Path(__file__).resolve().parent.parent
 REF = REPO / "tools" / "ref"
 work = Path(sys.argv[1] if len(sys.argv) > 1 else tempfile.mkdtemp(prefix="smw-net-v2-adv-")).resolve()
 work.mkdir(parents=True, exist_ok=True)
 EXE = ".exe" if os.name == "nt" else ""
-smw = Path(os.environ.get("SMW_RUST_BIN", REPO / "target" / "release" / f"smw{EXE}")).resolve()
-relay = Path(os.environ.get("SMW_RELAY_BIN", REPO / "target" / "release" / f"smw_relay{EXE}")).resolve()
+smw = Path(os.environ.get("SMW_RUST_BIN") or target_dir(REPO) / "release" / f"smw{EXE}").resolve()
+relay = Path(os.environ.get("SMW_RELAY_BIN") or target_dir(REPO) / "release" / f"smw_relay{EXE}").resolve()
 data = Path(os.environ.get("SMW_RUST_DATA", REPO / "data")).resolve()
 cases = (os.environ.get("CASES") or "rogue settings bad_map").split()
 # Bytes of options.bin: 4 version i32s, then spawnstyle .. teamcolors, sound, music, musicvolume, soundvolume.
