@@ -7,6 +7,7 @@ use smw::common_netplay::relay_frame::{self as frame, DATA, DISCONNECT};
 use std::any::Any;
 use std::cell::RefCell;
 use std::collections::VecDeque;
+use std::net::IpAddr;
 use std::rc::Rc;
 
 /// A switch event the lobby handles on its next `listen`.
@@ -32,6 +33,8 @@ pub struct RelayPeer {
     /// The client's virtual address.
     pub host: [u8; 4],
     pub port: u16,
+    /// The client's real address, IPv6 by its /56.
+    pub address: Option<IpAddr>,
     pub sink: Sink,
     pub io: Rc<RefCell<LobbyIo>>,
 }
@@ -84,6 +87,10 @@ impl NetPeer for RelayPeer {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    fn client_address(&self) -> Option<IpAddr> {
+        self.address
     }
 }
 

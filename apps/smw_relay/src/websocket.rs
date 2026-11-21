@@ -37,7 +37,8 @@ const MAX_REQUEST_HEAD: usize = 8 * 1024;
 
 /// What a lobby client's thread tells the main thread.
 pub enum Event {
-    Open { id: ClientId, outbox: Outbox },
+    /// `address` is the client's, from `X-Forwarded-For` behind a trusted proxy.
+    Open { id: ClientId, outbox: Outbox, address: IpAddr },
     Message { id: ClientId, data: Vec<u8> },
     Closed { id: ClientId },
 }
@@ -167,11 +168,12 @@ fn handle_connection(
     let _ = stream.set_nodelay(true);
 
     let Some((head, head_len)) = peek_request_head(&stream) else { return };
+    let peer = stream.peer_addr().map_or(IpAddr::V4(Ipv4Addr::LOCALHOST), |a| a.ip());
+    let client = if address.is_some() { peer } else { limits::forwarded_for(&head).unwrap_or(peer) };
     let _address = match address {
         Some(address) => address,
         None => {
-            let peer = stream.peer_addr().map_or(IpAddr::V4(Ipv4Addr::LOCALHOST), |a| a.ip());
-            match counts.addresses.open(limits::forwarded_for(&head).unwrap_or(peer), Instant::now()) {
+            match counts.addresses.open(client, Instant::now()) {
                 Ok(address) => address,
                 Err(_) => {
                     refuse(&mut stream, head_len, "429 Too Many Requests", "too many connections\n");
@@ -206,7 +208,7 @@ fn handle_connection(
         refuse(&mut stream, head_len, "503 Service Unavailable", "relay full\n");
         return;
     };
-    run_client(stream, id, config, events);
+    run_client(stream, id, client, config, events);
 }
 
 fn refuse(stream: &mut TcpStream, head_len: usize, status: &str, body: &str) {
@@ -216,7 +218,7 @@ fn refuse(stream: &mut TcpStream, head_len: usize, status: &str, body: &str) {
 }
 
 /// One lobby client's WebSocket, until it closes, falls behind or goes quiet.
-fn run_client(stream: TcpStream, id: ClientId, config: &Config, events: &Sender<Event>) {
+fn run_client(stream: TcpStream, id: ClientId, address: IpAddr, config: &Config, events: &Sender<Event>) {
     let mut who = stream.peer_addr().map(|a| a.to_string()).unwrap_or_default();
     let mut origin = String::new();
     #[allow(clippy::result_large_err)] // tungstenite's handshake callback signature
@@ -246,7 +248,7 @@ fn run_client(stream: TcpStream, id: ClientId, config: &Config, events: &Sender<
     let mut poll = Poll::new(ws.get_ref());
     let (tx, outgoing) = sync_channel(OUTBOX_LEN);
     let overflow = Arc::new(AtomicBool::new(false));
-    if events.send(Event::Open { id, outbox: Outbox { tx, overflow: overflow.clone() } }).is_err() {
+    if events.send(Event::Open { id, outbox: Outbox { tx, overflow: overflow.clone() }, address }).is_err() {
         return;
     }
 
