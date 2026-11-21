@@ -27,7 +27,7 @@ png = "0.18.1"
 
 [dev-dependencies]
 smw-sdl2 = { path = "../smw-sdl2" }
-sdl2 = { version = "0.38", features = ["image"] }
+sdl2 = { version = "0.39", features = ["image"] }
 
 [target.'cfg(target_os = "android")'.dependencies]
 smw-sdl2 = { path = "../smw-sdl2" }
