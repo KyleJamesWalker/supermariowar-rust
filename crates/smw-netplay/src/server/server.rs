@@ -1251,4 +1251,55 @@ mod tests {
         send(&mut server, 2, &other, NewRoom::with("Second", "").as_bytes());
         assert_eq!(codes(&other), [NET_RESPONSE_CREATE_ERROR]);
     }
+
+    /// Random messages, mostly of the right size for their type, from clients that come and go: the lobby must not panic.
+    #[test]
+    fn random_messages_do_not_panic_the_lobby() {
+        let mut server = server();
+        server.v2 = V2Settings { signal_url: "/signal".into(), turn_url: "turn:example.test:3478".into(), turn_secret: "00ff".into() };
+        server.set_max_players(4);
+        let types = [
+            NET_REQUEST_SERVERINFO, NET_REQUEST_CONNECT, NET_REQUEST_LEAVE_SERVER, NET_REQUEST_ROOM_LIST, NET_REQUEST_JOIN_ROOM,
+            NET_REQUEST_LEAVE_ROOM, NET_NOTICE_MAP_CHANGE, NET_NOTICE_GAMEMODESETTINGS, NET_NOTICE_SKIN_CHANGE, NET_NOTICE_ROOM_CHAT_MSG,
+            NET_REQUEST_CREATE_ROOM, NET_REQUEST_LOCAL_PLAYERS, NET_REQUEST_TEAM, NET_G2L_START_ROOM, NET_G2L_HOST_PEER, NET_G2L_GAME_RESULTS, 0, 255,
+        ];
+        let sizes = [
+            std::mem::size_of::<ClientConnection>(), std::mem::size_of::<NewRoom>(), std::mem::size_of::<JoinRoom>(),
+            std::mem::size_of::<LocalPlayers>(), std::mem::size_of::<TeamChange>(), std::mem::size_of::<RoomChatMsg>(),
+            std::mem::size_of::<HostPeer>(), 0, 2, 3, 4, 8, 9, 64,
+        ];
+        let mut seed = 0x2545_f491_4f6c_dd1du64;
+        let mut next = move |n: usize| {
+            seed ^= seed << 13;
+            seed ^= seed >> 7;
+            seed ^= seed << 17;
+            (seed % n as u64) as usize
+        };
+        let outboxes: Vec<Outbox> = (0..6).map(|_| Outbox::default()).collect();
+        for _ in 0..200_000 {
+            let id = next(6) as u64 + 1;
+            let outbox = &outboxes[id as usize - 1];
+            match next(40) {
+                0 => server.on_connect(&mut (), Box::new(TestPeer { id, outbox: outbox.clone() })),
+                1 => server.on_disconnect(&mut (), &mut TestPeer { id, outbox: outbox.clone() }),
+                _ => {
+                    let len = if next(4) == 0 { next(300) } else { sizes[next(sizes.len())] };
+                    let mut data: Vec<u8> = (0..len).map(|_| next(256) as u8).collect();
+                    // Small values, so room IDs, slots, counts and teams often hit something real.
+                    for byte in data.iter_mut().skip(3) {
+                        if next(2) == 0 {
+                            *byte = next(4) as u8;
+                        }
+                    }
+                    if data.len() >= 3 {
+                        data[0] = NET_PROTOCOL_VERSION_MAJOR;
+                        data[1] = NET_PROTOCOL_VERSION_MINOR;
+                        data[2] = types[next(types.len())];
+                    }
+                    send(&mut server, id, outbox, &data);
+                }
+            }
+            outbox.borrow_mut().clear();
+        }
+    }
 }
