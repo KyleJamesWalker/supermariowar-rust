@@ -24,6 +24,7 @@ TOOLS = Path(__file__).resolve().parent
 PORT = TOOLS.parent
 sys.path.insert(0, str(TOOLS))
 import gen_replays as g  # noqa: E402
+from cargo_target import target_dir  # noqa: E402
 
 DATA = PORT / "data"
 MAPS = sorted(p.name for p in (DATA / "maps").glob("*.map"))
@@ -177,7 +178,7 @@ def main():
     ap.add_argument("--frames", type=int, default=5000)
     ap.add_argument("--flow-share", type=float, default=0.0, help="share of cases that run a tournament/tour/world/minigame flow")
     ap.add_argument("--out", type=Path, default=Path(os.environ.get("TMPDIR", "/tmp")) / "smw-soak")
-    ap.add_argument("--rust-bin", type=Path, default=PORT / "target/release/smw")
+    ap.add_argument("--rust-bin", type=Path, default=target_dir(PORT) / "release/smw")
     ap.add_argument("--ref-dir", type=Path, default=Path.home() / "work/supermariowar-cpp-reference")
     args = ap.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)

@@ -65,7 +65,6 @@ Two RG35XX handhelds measured the performance PRs (#255, #262, #263, #265, #284)
 
 ## Parked
 
-- Upgrade `webrtc` past 0.17.2: 0.21 turns methods `smw-peer` awaits into synchronous calls, so it needs a port (57 compile errors on the bump). Until then, `.github/dependabot.yml` ignores its minor and major updates. Remove that entry when this starts. The upgrade also drops the second `sha1` (0.10) that `dtls` 0.17 pulls in.
 - CPU AI, from the Risks and open questions in `design/CPU_AI.md`; each idea tried so far was mixed or neutral in the benchmark:
   - Riding a moving platform along its path: the navigation graph sees a platform only where it is. Planning rides along the whole path was mixed in the benchmark.
   - Springs and breakable blocks in the navigation graph.

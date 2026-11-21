@@ -24,11 +24,13 @@ import sys
 import tempfile
 from pathlib import Path
 
+from cargo_target import target_dir
+
 REPO = Path(__file__).resolve().parent.parent
 work = Path(sys.argv[1] if len(sys.argv) > 1 else tempfile.mkdtemp(prefix="smw-net-v2-")).resolve()
 work.mkdir(parents=True, exist_ok=True)
 games = os.environ.get("NET_GAMES") or " ".join(sorted(p.name for p in (REPO / "tools" / "ref").glob("net_game*") if p.is_dir()))
-smw = Path(os.environ.get("SMW_RUST_BIN", REPO / "target" / "release" / "smw")).resolve()
+smw = Path(os.environ.get("SMW_RUST_BIN") or target_dir(REPO) / "release" / "smw").resolve()
 states = work / "states"
 states.mkdir(exist_ok=True)
 

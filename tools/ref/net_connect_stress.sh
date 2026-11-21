@@ -11,8 +11,10 @@ SERVER=${SMW_RELAY_BIN:-}
 RUST=${SMW_RUST_NET:-}
 if [ -z "$SERVER" ] || [ -z "$RUST" ]; then
   cargo build -q --release --locked --manifest-path "$PORT/Cargo.toml" --bin smw_relay --example lobby_connect || exit 2
-  SERVER=${SERVER:-$PORT/target/release/smw_relay}
-  RUST=${RUST:-$PORT/target/release/examples/lobby_connect}
+  . "$PORT/tools/cargo_target.sh"
+  bins=$(cargo_target)/release
+  SERVER=${SERVER:-$bins/smw_relay}
+  RUST=${RUST:-$bins/examples/lobby_connect}
 fi
 WORK=$(mktemp -d)
 trap 'kill $spid 2>/dev/null; wait $spid 2>/dev/null; rm -rf "${WORK:?}"' EXIT
