@@ -85,7 +85,7 @@ pub fn run_embedded(port: u16) {
 
 fn handle(switch: &mut Switch, event: Event) {
     match event {
-        Event::Open { id, outbox } => switch.open(id, outbox.into_sink()),
+        Event::Open { id, outbox, address } => switch.open(id, outbox.into_sink(), Some(address)),
         Event::Message { id, data } => switch.receive(id, &data),
         Event::Closed { id } => switch.close(id),
     }

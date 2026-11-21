@@ -380,12 +380,13 @@ async fn signaling(
     let mut retry = Duration::from_millis(250);
     let mut test_drop = test_delay("SMW_PEER_TEST_DROP_SIGNAL_MS");
     loop {
-        let target = match (&id, &token, lost_at) {
-            (Some(id), Some(token), Some(_)) => {
-                let join = if url.contains('?') { '&' } else { '?' };
-                format!("{url}{join}resume={id}&token={token}")
-            }
-            _ => url.clone(),
+        let resume = match (&id, &token, lost_at) {
+            (Some(id), Some(token), Some(_)) => Some(json!({ "Resume": { "id": id, "token": token } }).to_string()),
+            _ => None,
+        };
+        let target = match resume {
+            Some(_) => format!("{url}{}resume", if url.contains('?') { '&' } else { '?' }),
+            None => url.clone(),
         };
         let attempt = tokio::time::timeout(CONNECT_TIMEOUT, tokio_tungstenite::connect_async(target.as_str()));
         let stream = tokio::select! {
@@ -409,6 +410,9 @@ async fn signaling(
         let mut heard_any = false;
         if let Some(stream) = stream {
             let (mut ws_tx, mut ws_rx) = stream.split();
+            if let Some(resume) = resume {
+                let _ = ws_tx.send(Message::Text(resume.into())).await;
+            }
             let mut keep_alive = tokio::time::interval(KEEP_ALIVE);
             let mut heard = Instant::now();
             let opened = Instant::now();
@@ -419,6 +423,13 @@ async fn signaling(
                         Some(Ok(Message::Text(text))) => {
                             heard = Instant::now();
                             let Ok(event) = serde_json::from_str::<Value>(&text) else { continue };
+                            // A relay that cannot resume from a first message hands out a new ID instead.
+                            let assigned = event.get("IdAssigned").and_then(Value::as_str);
+                            if resuming && assigned.is_some_and(|i| id.as_deref() != Some(i)) {
+                                eprintln!("[net] signaling could not resume");
+                                let _ = ws_tx.close().await;
+                                return;
+                            }
                             if !heard_any && resuming {
                                 eprintln!("[net] signaling resumed");
                             }
