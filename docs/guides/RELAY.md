@@ -59,11 +59,11 @@ The `Relay` workflow publishes `ghcr.io/kylejameswalker/supermariowar-rust-relay
 2. On the server, create the shared network: `docker network create caddy`.
 3. Copy `deploy/docker-compose.yml`, `deploy/Caddyfile` and `deploy/turnserver.conf` to one directory. If Caddy already runs on the `caddy` network, add the Caddyfile's site block to its config and remove the `caddy` service.
 4. Create a `.env` file there with `TURN_SECRET=<hex>`, for example from `openssl rand -hex 32`. Use hex only: the coturn image evaluates its arguments in a shell. The lobby needs the same secret to issue TURN credentials.
-5. Open TCP and UDP port 3478 and UDP ports 49160-49459 for `coturn`. It uses host networking.
+5. Open TCP and UDP port 3478 and UDP ports 49160-49459 for `coturn`. It runs on its own bridge network, `turn`, at the fixed address 172.20.0.2; pick another subnet in the compose file and `turnserver.conf` if 172.20.0.0/16 is taken.
 6. Run `docker compose up -d`. Caddy gets the certificate and proxies everything to `smw-relay:8080`.
 7. Check that `curl https://smw-relay.vps.pocketsquirrel.com/healthz` returns `ok`. A WebSocket client can join `wss://smw-relay.vps.pocketsquirrel.com/signal/<room>`, for example `SIGNAL_URL=wss://smw-relay.vps.pocketsquirrel.com/signal node tools/web_peer_test.mjs`.
 
-`coturn` relays only to public addresses (`denied-peer-ip` in `turnserver.conf`), so it cannot reach the server's private network.
+`coturn` relays only to public addresses (`denied-peer-ip` in `turnserver.conf`), so it cannot reach the server's private network. The one exception, `allowed-peer-ip=172.20.0.2`, is coturn itself: on a bridge network, a relay address of this server resolves to the container's address, and without it two players who both need TURN get `403 Forbidden IP`.
 
 ### Shared TURN server
 

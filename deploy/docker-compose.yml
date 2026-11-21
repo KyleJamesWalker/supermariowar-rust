@@ -16,7 +16,14 @@ services:
   coturn:
     image: coturn/coturn:4.7.0
     restart: unless-stopped
-    network_mode: host
+    ports:
+      - "3478:3478/tcp"
+      - "3478:3478/udp"
+      - "49160-49459:49160-49459/udp"
+    # Pinned to match allowed-peer-ip in turnserver.conf.
+    networks:
+      turn:
+        ipv4_address: 172.20.0.2
     volumes:
       - ./turnserver.conf:/etc/coturn/turnserver.conf:ro
     command:
@@ -42,6 +49,10 @@ services:
 networks:
   caddy:
     external: true
+  turn:
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
 
 volumes:
   caddy_data:
