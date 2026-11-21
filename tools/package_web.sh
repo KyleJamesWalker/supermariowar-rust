@@ -23,8 +23,10 @@ RUSTFLAGS="--remap-path-prefix=$cargo_home=cargo --remap-path-prefix=$repo=." \
 build="$target_dir/wasm32-unknown-emscripten/release"
 rm -rf "$out"
 mkdir -p "$out"
-cp "$build/smw.wasm" "$build/deps/smw.data" "$out/"
-sed "s|\"[^\"]*/deps/smw\.data\"|\"smw.data\"|g" "$build/smw.js" > "$out/smw.js"
+# The file packager names the data file by its absolute path; where the linker writes it varies across Rust versions.
+data="$(grep -o 'PACKAGE_NAME="[^"]*/smw\.data"' "$build/smw.js" | head -1 | cut -d'"' -f2)"
+cp "$build/smw.wasm" "$data" "$out/"
+sed "s|\"[^\"]*/smw\.data\"|\"smw.data\"|g" "$build/smw.js" > "$out/smw.js"
 if grep -qE "$HOME|$repo|$target_dir" "$out/smw.js" "$out/smw.wasm"; then
     echo "error: a build path leaked into dist/web" >&2
     exit 1
