@@ -423,6 +423,21 @@ mod tests {
         tungstenite::client::client(request, MaybeTlsStream::Plain(stream)).map(|(ws, _)| ws).map_err(|e| e.to_string())
     }
 
+    /// Whether the relay closes `ws` within `limit`; `poke` runs before each read.
+    fn closed_within(ws: &mut WebSocket<MaybeTlsStream<TcpStream>>, limit: Duration, poke: impl Fn(&mut WebSocket<MaybeTlsStream<TcpStream>>)) -> bool {
+        let deadline = Instant::now() + limit;
+        while Instant::now() < deadline {
+            poke(ws);
+            match ws.read() {
+                Ok(Message::Close(_)) => return true,
+                Ok(_) => {}
+                Err(tungstenite::Error::Io(e)) if matches!(e.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) => {}
+                Err(_) => return true,
+            }
+        }
+        false
+    }
+
     fn read_text(ws: &mut WebSocket<MaybeTlsStream<TcpStream>>) -> Option<String> {
         match ws.read() {
             Ok(Message::Text(text)) => Some(text.to_string()),
@@ -508,7 +523,11 @@ mod tests {
         assert!(!drain(&mut second).iter().any(|t| t.contains("PeerLeft")), "no PeerLeft while the place is held");
 
         assert_eq!(read_text(&mut signal(port, &format!("resume?resume={id}&token=wrong")).unwrap()), None);
-        let mut resumed = signal(port, &format!("resume?resume={id}&token={token}")).unwrap();
+        let mut wrong = signal(port, "resume?resume").unwrap();
+        wrong.send(Message::Text(serde_json::json!({ "Resume": { "id": id, "token": "wrong" } }).to_string().into())).unwrap();
+        assert_eq!(read_text(&mut wrong), None);
+        let mut resumed = signal(port, "resume?resume").unwrap();
+        resumed.send(Message::Text(serde_json::json!({ "Resume": { "id": id, "token": token } }).to_string().into())).unwrap();
         assert_eq!(read_field(&mut resumed, "IdAssigned").unwrap(), id);
         assert!(!drain(&mut second).iter().any(|t| t.contains("NewPeer")), "a resume is not a new peer");
         let hello = serde_json::json!({ "Signal": { "receiver": id, "data": "hello" } });
@@ -519,6 +538,37 @@ mod tests {
         resumed.close(None).unwrap();
         let _ = resumed.flush();
         assert_eq!(read_field(&mut second, "PeerLeft").unwrap(), id);
+    }
+
+    #[test]
+    fn a_resume_by_url_token_still_works() {
+        let (port, _events) = relay(|_| {});
+        let mut first = signal(port, "legacy").unwrap();
+        let id = read_field(&mut first, "IdAssigned").unwrap();
+        let token = read_field(&mut first, "ResumeToken").unwrap();
+        let _second = signal(port, "legacy").unwrap();
+        drop(first);
+        let mut resumed = signal(port, &format!("legacy?resume={id}&token={token}")).unwrap();
+        assert_eq!(read_field(&mut resumed, "IdAssigned").unwrap(), id);
+    }
+
+    #[test]
+    fn a_resume_without_its_message_is_refused() {
+        let (port, _events) = relay(|_| {});
+        let mut silent = signal(port, "no-message?resume").unwrap();
+        assert!(closed_within(&mut silent, Duration::from_secs(8), |_| {}));
+        let mut other = signal(port, "no-message?resume").unwrap();
+        other.send(Message::Text("\"KeepAlive\"".into())).unwrap();
+        assert!(closed_within(&mut other, Duration::from_secs(1), |_| {}), "only a Resume message resumes");
+    }
+
+    #[test]
+    fn resume_queries() {
+        use crate::signal::{parse_resume, Resume};
+        assert_eq!(parse_resume(""), None);
+        assert_eq!(parse_resume("resume"), Some(Resume::FirstMessage));
+        assert_eq!(parse_resume("x=1&resume="), Some(Resume::FirstMessage));
+        assert_eq!(parse_resume("resume=a&token=b"), Some(Resume::Query("a".into(), "b".into())));
     }
 
     #[test]
