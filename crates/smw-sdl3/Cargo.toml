@@ -11,7 +11,7 @@ build-from-source = ["sdl3-sys/build-from-source-static"]
 
 [dependencies]
 smw-platform = { path = "../smw-platform" }
-sdl3-sys = "=0.7.2"
+sdl3-sys = "=0.7.3"
 lewton = "=0.10.2"
 
 # SDL3's video runs on the main thread only.
