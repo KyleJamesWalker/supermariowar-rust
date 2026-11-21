@@ -459,8 +459,8 @@ fn walk(g: &mut Game, s: &mut Snap) {
             }
         }
 
-        for k in 0..4 {
-            let mut sc = g.score[k].as_ptr();
+        for score in &mut g.score {
+            let mut sc = score.as_ptr();
             s.io(&mut sc.score);
             s.io(&mut sc.subscore);
             s.io(&mut sc.x);
