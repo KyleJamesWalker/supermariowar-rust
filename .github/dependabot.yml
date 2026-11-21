@@ -12,6 +12,9 @@ updates:
     ignore:
       - dependency-name: bincode
         versions: ['>= 2']
+      # librashader's GL runtime takes glow types in its API; move with it.
+      - dependency-name: glow
+        versions: ['>= 0.18']
 
   - package-ecosystem: github-actions
     directories:
