@@ -14,7 +14,8 @@ out="$(cd "$(dirname "$out")" && pwd)/$(basename "$out")"
 bin="${1:-}"
 if [[ -z "$bin" ]]; then
     LIBZ_SYS_STATIC=1 cargo build --release --locked --bin smw --manifest-path "$root/Cargo.toml"
-    bin="$root/target/release/smw"
+    . "$root/tools/cargo_target.sh"
+    bin="$(cargo_target)/release/smw"
 fi
 git -C "$root" submodule update --init data
 

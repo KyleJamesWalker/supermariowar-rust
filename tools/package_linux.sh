@@ -5,19 +5,21 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
+. "$root/tools/cargo_target.sh"
 out="${PACKAGE_OUT:-$root/dist/SuperMarioWar-linux.tar.gz}"
 mkdir -p "$(dirname "$out")"
 out="$(cd "$(dirname "$out")" && pwd)/$(basename "$out")"
 
 cargo build --release --locked --bins --features smw/shaders --manifest-path "$root/Cargo.toml"
 git -C "$root" submodule update --init data shaders/slang-shaders
+bins="$(cargo_target)/release"
 
 stage="$(mktemp -d)"
 trap 'rm -rf "${stage:?}"' EXIT
 app="$stage/SuperMarioWar"
 mkdir -p "$app"
 for bin in smw leveleditor worldeditor; do
-    cp "$root/target/release/$bin" "$app/$bin"
+    cp "$bins/$bin" "$app/$bin"
     strip "$app/$bin"
 done
 rsync -a --exclude .git --exclude maps/cache/mapsummary.txt "$root/data/" "$app/data/"

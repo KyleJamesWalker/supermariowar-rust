@@ -5,8 +5,9 @@
 set -uo pipefail
 tools="$(cd "$(dirname "$0")" && pwd)"
 port="$(dirname "$tools")"
+. "$tools/cargo_target.sh"
 [[ -n "${SMW_NO_BUILD:-}" ]] || cargo build --release --quiet --locked --manifest-path "$port/Cargo.toml" --bin smw || exit 2
-bin="${SMW_BIN:-$port/target/release/smw}"
+bin="${SMW_BIN:-$(cargo_target)/release/smw}"
 data="${SMW_DATA_DIR:-$port/data}"
 
 fail=0

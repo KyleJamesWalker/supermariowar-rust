@@ -10,7 +10,8 @@ repo="$(cd "$(dirname "$0")/.." && pwd)"
 emsdk="${EMSDK:-$HOME/work/emsdk}"
 # shellcheck disable=SC1091
 source "$emsdk/emsdk_env.sh" > /dev/null 2>&1
-target_dir="${CARGO_TARGET_DIR:-$repo/target}"
+. "$repo/tools/cargo_target.sh"
+target_dir="$(cargo_target)"
 out="$repo/dist/web"
 
 # The page is published, so keep build-machine paths out of it: dependency panic locations are

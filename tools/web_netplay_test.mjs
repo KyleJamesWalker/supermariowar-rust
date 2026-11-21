@@ -18,17 +18,18 @@ import { createServer as createNetServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { targetDir } from './cargo_target.mjs';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const web = resolve(process.env.WEB_DIR ?? join(repo, 'dist', 'web'));
-const relayBin = resolve(process.env.RELAY_BIN ?? join(repo, 'target', 'release', 'smw_relay'));
+const relayBin = resolve(process.env.RELAY_BIN ?? join(targetDir(repo), 'release', 'smw_relay'));
 const chrome = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const out = resolve(process.argv[2] ?? join(tmpdir(), 'smw-web-netplay'));
 mkdirSync(out, { recursive: true });
 
 const MIXED = process.env.MIXED === '1' || process.env.MIXED === 'host';
 const nativeRole = process.env.MIXED === 'host' ? 'host' : 'join';
-const nativeBin = resolve(process.env.SMW_BIN ?? join(repo, 'target', 'release', 'smw'));
+const nativeBin = resolve(process.env.SMW_BIN ?? join(targetDir(repo), 'release', 'smw'));
 const games = (process.env.NET_GAMES ?? 'net_game net_game_blocks net_game_frenzy net_game_stomp net_game_coins net_game_classic net_game_stompkill net_game_stompkill_powerup').split(/\s+/).filter(Boolean);
 
 // The native scripts assume both clients start together. Pages load at different speeds, so the

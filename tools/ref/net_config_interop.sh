@@ -8,7 +8,8 @@ WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 "$HERE/net_config_ref.sh" "$WORK/cpp" || exit 2
 cargo build --release --quiet --example net_config --manifest-path "$PORT/Cargo.toml" 2> /dev/null || exit 2
-RUST=$PORT/target/release/examples/net_config
+. "$PORT/tools/cargo_target.sh"
+RUST=$(cargo_target)/release/examples/net_config
 fail=0
 for seed in $(seq 1 "${1:-200}"); do
   for side in cpp rust; do

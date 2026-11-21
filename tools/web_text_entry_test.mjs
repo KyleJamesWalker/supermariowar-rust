@@ -18,10 +18,11 @@ import { createServer as createNetServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { targetDir } from './cargo_target.mjs';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const web = resolve(process.env.WEB_DIR ?? join(repo, 'dist', 'web'));
-const relayBin = resolve(process.env.RELAY_BIN ?? join(repo, 'target', 'release', 'smw_relay'));
+const relayBin = resolve(process.env.RELAY_BIN ?? join(targetDir(repo), 'release', 'smw_relay'));
 const chrome = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const out = resolve(process.argv[2] ?? join(tmpdir(), 'smw-web-text-entry'));
 mkdirSync(out, { recursive: true });

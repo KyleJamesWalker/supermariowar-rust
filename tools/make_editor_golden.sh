@@ -7,6 +7,7 @@ set -euo pipefail
 
 tools="$(cd "$(dirname "$0")" && pwd)"
 port="$(dirname "$tools")"
+. "$tools/cargo_target.sh"
 scripts=("$@")
 if [[ ${#scripts[@]} -eq 0 ]]; then
     scripts=("$tools"/editor_replays/*/*.txt)
@@ -22,7 +23,7 @@ one() {
     if [[ -n "${CPP:-}" ]]; then
         "$tools/run_editor.sh" "$editor" "$script" "$out" > /dev/null
     else
-        SMW_BIN="$port/target/release/${editor%it}itor" SMW_DATA_DIR="$port/data" \
+        SMW_BIN="$bins/${editor%it}itor" SMW_DATA_DIR="$port/data" \
             "$tools/run_editor.sh" "$editor" "$script" "$out" > /dev/null
     fi
     for bmp in "$out"/frame_*.bmp; do
@@ -35,7 +36,8 @@ one() {
     echo "$editor/$name: $(gzip -dc "$out/dump.txt.gz" | grep -c '^F ') frames"
 }
 export -f one
-export tools port
+bins="$(cargo_target)/release"
+export tools port bins
 if [[ -z "${CPP:-}" && -z "${SMW_NO_BUILD:-}" ]]; then
     cargo build --release --quiet --manifest-path "$port/Cargo.toml"
 fi

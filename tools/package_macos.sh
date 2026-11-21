@@ -5,6 +5,7 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
+. "$root/tools/cargo_target.sh"
 app="$root/dist/Super Mario War.app"
 version="$(sed -n 's/^version *= *"\(.*\)"/\1/p' "$root/Cargo.toml" | head -n 1)"
 
@@ -13,7 +14,7 @@ git -C "$root" submodule update --init data shaders/slang-shaders
 
 rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources" "$app/Contents/Frameworks"
-cp "$root/target/release/smw" "$app/Contents/MacOS/smw"
+cp "$(cargo_target)/release/smw" "$app/Contents/MacOS/smw"
 rsync -a --exclude .git --exclude maps/cache/mapsummary.txt "$root/data/" "$app/Contents/Resources/data/"
 python3 "$root/tools/shader_bundle.py" "$app/Contents/Resources/shaders"
 

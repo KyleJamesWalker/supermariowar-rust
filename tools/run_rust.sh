@@ -5,10 +5,11 @@ set -euo pipefail
 
 tools="$(cd "$(dirname "$0")" && pwd)"
 port="$(dirname "$tools")"
+. "$tools/cargo_target.sh"
 
 if [[ -z "${SMW_NO_BUILD:-}" ]]; then
     cargo build --release --quiet --manifest-path "$port/Cargo.toml"
 fi
 
-SMW_BIN="${SMW_BIN:-$port/target/release/smw}" SMW_DATA_DIR="${SMW_DATA_DIR:-$port/data}" \
+SMW_BIN="${SMW_BIN:-$(cargo_target)/release/smw}" SMW_DATA_DIR="${SMW_DATA_DIR:-$port/data}" \
     exec "$tools/run_ref.sh" "$@"
