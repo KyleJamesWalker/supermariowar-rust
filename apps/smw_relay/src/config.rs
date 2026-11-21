@@ -2,6 +2,7 @@
 
 use crate::limits::TrustedProxies;
 use std::env;
+use std::time::Duration;
 
 const USAGE: &str = "usage: smw_relay [--port <n>] [--config <lobby config file>] [--healthcheck]
 
@@ -18,10 +19,12 @@ environment:
   SMW_RELAY_CONNECTS_PER_MINUTE  new connections one client address may open per minute, 0 for no limit (default 60)
   SMW_RELAY_TRUSTED_PROXIES  peers whose X-Forwarded-For names the client: none, loopback or private (loopback and
                              private networks, for a proxy on a Docker network) (default loopback)
+  SMW_RELAY_LONELY_SECONDS   seconds a signaling peer may stay alone in its room (default 900)
 
 Loopback clients are exempt from the per-address limits.";
 
 const DEFAULT_ORIGINS: &str = "https://www.kylejameswalker.com,http://localhost:8000";
+const DEFAULT_LONELY_TIMEOUT: Duration = Duration::from_secs(15 * 60);
 
 #[derive(Clone, Debug)]
 pub struct Config {
@@ -48,6 +51,8 @@ pub struct Config {
     pub signal_url: Option<String>,
     /// Whether the lobby writes `serverlog.txt`.
     pub log_file: bool,
+    /// How long a signaling peer may stay alone in its room.
+    pub lonely_timeout: Duration,
     /// The lobby's player limit, overriding its config file.
     pub lobby_max_players: Option<u32>,
     /// The lobby's room limit; `None` for no limit.
@@ -70,6 +75,7 @@ impl Config {
             max_connections_per_client: 8,
             signal_url: env::var_os("SMW_SIGNAL_URL").is_none().then(|| "/signal".to_string()),
             log_file: true,
+            lonely_timeout: DEFAULT_LONELY_TIMEOUT,
             lobby_max_players: None,
             lobby_max_rooms: None,
         };
@@ -87,6 +93,10 @@ impl Config {
         }
         if let Ok(rate) = env::var("SMW_RELAY_CONNECTS_PER_MINUTE") {
             config.connects_per_minute = rate.parse().map_err(|_| format!("SMW_RELAY_CONNECTS_PER_MINUTE: not a number: {rate}"))?;
+        }
+        if let Ok(seconds) = env::var("SMW_RELAY_LONELY_SECONDS") {
+            let seconds: u64 = seconds.parse().map_err(|_| format!("SMW_RELAY_LONELY_SECONDS: not a number: {seconds}"))?;
+            config.lonely_timeout = Duration::from_secs(seconds);
         }
         if let Ok(trusted) = env::var("SMW_RELAY_TRUSTED_PROXIES") {
             config.trusted_proxies =
@@ -123,6 +133,7 @@ impl Config {
             max_connections_per_client: 8,
             signal_url: Some("/signal".to_string()),
             log_file: false,
+            lonely_timeout: DEFAULT_LONELY_TIMEOUT,
             lobby_max_players: Some(4),
             lobby_max_rooms: Some(1),
         }
@@ -167,6 +178,7 @@ mod tests {
             max_connections_per_client: 1,
             signal_url: None,
             log_file: true,
+            lonely_timeout: DEFAULT_LONELY_TIMEOUT,
             lobby_max_players: None,
             lobby_max_rooms: None,
         }

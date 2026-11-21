@@ -563,6 +563,19 @@ mod tests {
     }
 
     #[test]
+    fn a_peer_alone_in_its_room_is_closed() {
+        let (port, _events) = relay(|c| c.lonely_timeout = Duration::from_millis(300));
+        let mut alone = signal(port, "lonely").unwrap();
+        let mut pair = [signal(port, "paired").unwrap(), signal(port, "paired").unwrap()];
+        let keep_alive = || Message::Text("\"KeepAlive\"".into());
+        assert!(closed_within(&mut alone, Duration::from_secs(3), |ws| drop(ws.send(keep_alive()))), "the lonely peer was kept");
+        for peer in &mut pair {
+            peer.send(keep_alive()).unwrap();
+            assert!(drain(peer).iter().any(|t| t.contains("KeepAlive")), "peers with company stay");
+        }
+    }
+
+    #[test]
     fn resume_queries() {
         use crate::signal::{parse_resume, Resume};
         assert_eq!(parse_resume(""), None);

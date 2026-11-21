@@ -2,7 +2,7 @@
 //! as `matchbox_server` speaks it, so a relay alone can pair a room's WebRTC peers, e.g. on a LAN without internet.
 //! A peer also gets a `ResumeToken`: when its connection drops without a close, it keeps its place and ID for
 //! `RESUME_GRACE`, and `/signal/<room>?resume` with `{"Resume": {"id", "token"}}` as its first message takes them back
-//! without a `PeerLeft`. The relay echoes `KeepAlive`.
+//! without a `PeerLeft`. The relay echoes `KeepAlive`, and closes a peer alone in its room for `Config::lonely_timeout`.
 
 use crate::config::Config;
 use crate::websocket::Poll;
@@ -31,6 +31,8 @@ const MAX_ROOM_PEERS: usize = 4;
 const RESUME_GRACE: Duration = Duration::from_secs(30);
 /// How long a `?resume` connection has to send its `Resume` message.
 const RESUME_MESSAGE_TIMEOUT: Duration = Duration::from_secs(5);
+/// How often a session checks whether its peer is alone in the room.
+const LONELY_CHECK: Duration = Duration::from_secs(1);
 
 /// A room's peer: the queue of messages to its connection, none while it is dropped, and the secret that resumes it.
 struct Member {
@@ -121,6 +123,10 @@ fn read_resume_message(ws: &mut tungstenite::WebSocket<TcpStream>) -> Option<(St
             return None;
         }
     }
+}
+
+fn room_size(room: &str) -> usize {
+    rooms().lock().unwrap().get(room).map_or(0, HashMap::len)
 }
 
 /// How a peer joins its room: a new peer is told to the others, a resumed one is not.
@@ -239,9 +245,22 @@ pub fn run(stream: TcpStream, room: String, resume: Option<Resume>, config: &Con
 
     let mut last_heard = Instant::now();
     let mut closed = false;
+    let (mut checked, mut alone_since) = (Instant::now(), None);
     'session: loop {
         if replaced.load(Ordering::Acquire) {
             return;
+        }
+        if checked.elapsed() >= LONELY_CHECK.min(config.lonely_timeout) {
+            checked = Instant::now();
+            if room_size(&room) > 1 {
+                alone_since = None;
+            } else if alone_since.get_or_insert(checked).elapsed() >= config.lonely_timeout {
+                println!("[relay] closed a signaling peer: alone in its room");
+                let _ = ws.close(None);
+                let _ = ws.flush();
+                closed = true;
+                break;
+            }
         }
         loop {
             match ws.read() {
