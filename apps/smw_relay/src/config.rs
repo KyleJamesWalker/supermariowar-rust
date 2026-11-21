@@ -13,8 +13,8 @@ const USAGE: &str = "usage: smw_relay [--port <n>] [--config <lobby config file>
 environment:
   SMW_RELAY_ALLOWED_ORIGINS  comma-separated page origins allowed to connect, or * for any; native games send none
                              (default: https://www.kylejameswalker.com,http://localhost:8000)
-  SMW_RELAY_MAX_CLIENTS      simultaneous lobby clients, and separately signaling peers (default 64)
-  SMW_RELAY_MAX_CONNECTIONS  simultaneous TCP connections of any kind, handshakes included (default 256)
+  SMW_RELAY_MAX_CLIENTS      simultaneous lobby clients, and separately signaling peers (default 128)
+  SMW_RELAY_MAX_CONNECTIONS  simultaneous TCP connections of any kind, handshakes included (default 320)
   SMW_RELAY_MAX_PER_ADDRESS  simultaneous connections from one client address, 0 for no limit (default 16)
   SMW_RELAY_CONNECTS_PER_MINUTE  new connections one client address may open per minute, 0 for no limit (default 60)
   SMW_RELAY_TRUSTED_PROXIES  peers whose X-Forwarded-For names the client: none, loopback or private (loopback and
@@ -67,8 +67,8 @@ impl Config {
             lobby_config: "serverconfig".to_string(),
             healthcheck: false,
             allowed_origins: parse_origins(&env::var("SMW_RELAY_ALLOWED_ORIGINS").unwrap_or_else(|_| DEFAULT_ORIGINS.to_string())),
-            max_clients: 64,
-            max_connections: 256,
+            max_clients: 128,
+            max_connections: 320,
             max_per_address: 16,
             connects_per_minute: 60,
             trusted_proxies: TrustedProxies::Loopback,
