@@ -15,9 +15,9 @@ abis=("${@:-arm64-v8a}")
 : "${ANDROID_HOME:?ANDROID_HOME must point at the Android SDK}"
 : "${ANDROID_NDK_HOME:?ANDROID_NDK_HOME must point at the NDK}"
 export ANDROID_NDK_ROOT="$ANDROID_NDK_HOME"
-# 32-bit ABIs run sdl2-sys's bindgen; the host libclang can't parse the NDK's clang headers.
-LIBCLANG_PATH="$(echo "$ANDROID_NDK_HOME"/toolchains/llvm/prebuilt/*/lib)"
-export LIBCLANG_PATH
+# 32-bit ABIs run sdl2-sys's bindgen, which needs a libclang that can parse the NDK's clang headers.
+ndk_libclang="$(find "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt" -maxdepth 3 -name 'libclang.*' -print -quit)"
+[[ -z "$ndk_libclang" ]] || export LIBCLANG_PATH="$(dirname "$ndk_libclang")"
 
 version="$(sed -n 's/^version = "\(.*\)"/\1/p' "$repo/Cargo.toml" | head -1)"
 IFS=. read -r major minor patch <<< "$version"
