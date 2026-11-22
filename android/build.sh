@@ -15,6 +15,9 @@ abis=("${@:-arm64-v8a}")
 : "${ANDROID_HOME:?ANDROID_HOME must point at the Android SDK}"
 : "${ANDROID_NDK_HOME:?ANDROID_NDK_HOME must point at the NDK}"
 export ANDROID_NDK_ROOT="$ANDROID_NDK_HOME"
+# 32-bit ABIs run sdl2-sys's bindgen, which needs a libclang that can parse the NDK's clang headers.
+ndk_libclang="$(find "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt" -maxdepth 3 -name 'libclang.*' -print -quit)"
+[[ -z "$ndk_libclang" ]] || export LIBCLANG_PATH="$(dirname "$ndk_libclang")"
 
 version="$(sed -n 's/^version = "\(.*\)"/\1/p' "$repo/Cargo.toml" | head -1)"
 IFS=. read -r major minor patch <<< "$version"
@@ -35,7 +38,7 @@ for abi in "${abis[@]}"; do
     esac
     triple_env="$(tr a-z- A-Z_ <<< "$triple")"
     export "CARGO_TARGET_${triple_env}_RUSTFLAGS=-C link-arg=-Wl,-z,max-page-size=16384"
-    SMW_SDL_LIB_DIR="$sdl/lib" cargo ndk -t "$abi" -P "$api" \
+    SMW_SDL_LIB_DIR="$sdl/lib" SDL2_INCLUDE_PATH="$sdl/include/SDL2" C_INCLUDE_PATH="$sdl/include" cargo ndk -t "$abi" -P "$api" \
         --manifest-path "$repo/crates/smw-core/Cargo.toml" rustc --lib --crate-type cdylib --release --locked --features gl
     mkdir -p "$project/app/libs/$abi"
     cp "$(cargo_target)/$triple/release/libsmw.so" "$project/app/libs/$abi/libmain.so"
