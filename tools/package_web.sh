@@ -17,6 +17,8 @@ out="$repo/dist/web"
 # The page is published, so keep build-machine paths out of it: dependency panic locations are
 # remapped, and the data package name the file packager derives from the output path is reset.
 cargo_home="${CARGO_HOME:-$HOME/.cargo}"
+embuilder build sdl2 sdl2_mixer > /dev/null
+export BINDGEN_EXTRA_CLANG_ARGS_wasm32_unknown_emscripten="--sysroot=$EMSDK/upstream/emscripten/cache/sysroot"
 RUSTFLAGS="--remap-path-prefix=$cargo_home=cargo --remap-path-prefix=$repo=." \
     cargo build --release --target wasm32-unknown-emscripten --bin smw --features smw/gl \
     --manifest-path "$repo/Cargo.toml" --target-dir "$target_dir"

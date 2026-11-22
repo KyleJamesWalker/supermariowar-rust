@@ -15,5 +15,9 @@ sdl2 = { version = "0.39", features = ["mixer"] }
 librashader = { version = "0.12.1", default-features = false, features = ["runtime-gl", "presets", "preprocess", "stable"], optional = true }
 glow = { version = "0.17", optional = true }
 
+# sdl2-sys's pregenerated bindings assert 64-bit struct layouts.
+[target.'cfg(target_pointer_width = "32")'.dependencies]
+sdl2 = { version = "0.39", features = ["use-bindgen"] }
+
 [dev-dependencies]
 smw-headless = { path = "../smw-headless" }
